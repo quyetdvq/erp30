@@ -16,6 +16,13 @@ Database Concept, Authorization Design và định hướng kiến trúc ERP.
 
 **Version 1.7**
 
+**Trạng thái:** Nội dung chốt trước triển khai, đã đồng bộ với
+`Mini_ERP_Authorization_Database_Design_v1.2.md`.
+
+**Authority boundary:** Database Design v1.2 là authority cho table, column,
+relationship, key, index và migration order. Tài liệu này là baseline nghiệp
+vụ/kiến trúc và không được diễn giải vượt quá Database Design.
+
 ------------------------------------------------------------------------
 
 # 2. Mục tiêu hệ thống
@@ -372,17 +379,14 @@ Ngoại lệ:
 
 # 7. Department và Position
 
-Quan hệ:
+Department và Position là master độc lập theo Database Design v1.2.
 
-    Organization Context
-     |
-    Department
-     |
-    Position
-     |
-    Employee Assignment
+Department có hierarchy riêng thông qua `parent_id`. Position có `level` và
+không có `organization_id`. Hai master này không sinh Permission, không tự
+mapping Role và không được hiểu là các bảng con vật lý của organizations.
 
-Position thuộc Department thuộc Organization Context.
+Employee chỉ liên kết Department, Position và Organization thông qua
+`employee_assignments`.
 
 Position:
 
@@ -390,13 +394,10 @@ Position:
 -   Không tự mapping Role.
 -   Chỉ thể hiện cơ cấu tổ chức.
 
-Department có thể thuộc:
-
--   Group.
--   Company.
--   Branch.
--   Plant.
--   Warehouse.
+Department có thể được sử dụng trong Assignment của Employee tại bất kỳ
+Organization Context nào: Group, Company, Branch, Plant hoặc Warehouse.
+Điều này là quan hệ nghiệp vụ qua `employee_assignments`, không phải
+`departments.organization_id`.
 
 ------------------------------------------------------------------------
 
@@ -485,8 +486,9 @@ Resource Instance:
 
     Invoice #INV00001
 
-Resource Authorization có thể mở rộng tới Resource Instance khi cần các
-rule chi tiết trên từng đối tượng cụ thể.
+Resource Instance chỉ là khái niệm nghiệp vụ minh họa. Database Design v1.2
+chỉ triển khai authorization ở Resource Type level; không có
+`resource_instance_id`, instance authorization hoặc condition rule.
 
 Permission Catalog:
 
@@ -655,8 +657,9 @@ Ví dụ:
 Authorization hỗ trợ:
 
 -   Resource Type.
--   Resource Instance.
 -   State.
+
+Resource Instance không thuộc phạm vi triển khai của baseline này.
 
 Chưa hỗ trợ Condition Rule theo giá trị nghiệp vụ.
 
@@ -751,18 +754,12 @@ Organization hiển thị dạng cây:
 
         Group
         └── Company
-            ├── Department
-            │   ├── Trưởng phòng
-            │   └── Phó phòng
             ├── Branch
-            │   ├── Department
-            │   ├── Plant
-            │   └── Warehouse
             ├── Plant
-            │   ├── Department
-            │   └── Warehouse
             └── Warehouse
-                └── Department
+
+Department và Position được hiển thị trong context của Organization thông qua
+Employee Assignment; chúng không phải node con vật lý của organizations.
 
 ## 14.1. Khi click Organization Node:
 
@@ -1080,24 +1077,24 @@ hồ trong thiết kế.
     PLANT
     WAREHOUSE
 ```
-## 23.2 Department và Position trong Organization Tree
+## 23.2 Department và Position trong Organization Context
 
-Department và Position nằm chung trong Organization Tree.
+Department và Position là master độc lập, không có `organization_id`.
 
-Ví dụ:
+Khi hiển thị theo Organization Context, hệ thống lấy quan hệ từ
+`employee_assignments`:
 
-    Group
-     |
-     Company
-     |
-     Department
-     |
-     Position
-     |
-     Employee
+    Organization Context
+            |
+    Employee Assignment
+        /           \
+    Department    Position
+            |
+        Employee
 
-Department có thể thuộc Warehouse vì Warehouse cũng là Organization
-Context.
+Department có hierarchy riêng qua `parent_id`; Position có `level`. Không
+được tạo foreign key hoặc column `organization_id` trong departments hoặc
+positions chỉ để biểu diễn màn hình cây.
 
 ## 23.3 Policy Inheritance
 
@@ -1128,22 +1125,17 @@ dụng Policy.
 Role vẫn đồng thời có thể sử dụng trong Profile để quản lý Permission
 nhanh.
 
-## 23.5 Resource Instance Authorization
+## 23.5 Resource Authorization Boundary
 
-Resource Instance Authorization được hỗ trợ mặc định.
-
-Authorization hiện hỗ trợ Resource Type, Resource Instance và State.
-
-Chưa hỗ trợ Condition Rule theo giá trị nghiệp vụ như amount, value
-limitation.
-
-Không cần cấu hình riêng để kích hoạt.
-
-Authorization có thể đánh giá ở mức:
+Theo Database Design v1.2, authorization chỉ đánh giá ở:
 
 -   Resource Type.
--   Resource Instance.
--   State.
+-   Workflow State.
+
+Resource Instance Authorization không được triển khai trong baseline này.
+Không có `resource_instance_id` và không hỗ trợ Condition Rule theo giá trị
+nghiệp vụ như amount hoặc value limitation. Đây là giới hạn thiết kế, không
+phải tùy chọn cấu hình runtime.
 
 ## 23.6 Permission Evaluation Default Rule
 
@@ -1259,8 +1251,8 @@ UI Design hoặc ERP Architecture sẽ được xây dựng riêng khi cần.
 ## Resource Authorization
 
 -   Hỗ trợ Resource Type.
--   Hỗ trợ Resource Instance.
--   Chưa hỗ trợ Condition Rule theo giá trị.
+-   Không hỗ trợ Resource Instance Authorization.
+-   Không hỗ trợ Condition Rule theo giá trị.
 
 ## Workflow
 
