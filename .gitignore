@@ -1,0 +1,32 @@
+# Local environment and secrets
+.env
+.env.*
+!.env.example
+
+# Runtime output
+**/writable/cache/*
+**/writable/debugbar/*
+**/writable/logs/*
+**/writable/session/*
+**/writable/uploads/*
+**/test-results/*
+**/playwright-report/*
+
+# Dependencies and generated frontend output
+**/vendor/
+**/node_modules/
+**/dist/
+**/coverage/
+
+# IDE and operating system files
+.vscode/
+.idea/
+Thumbs.db
+.DS_Store
+
+# Local database and logs
+*.sqlite
+*.sqlite3
+*.db
+*.log
+*.sql
