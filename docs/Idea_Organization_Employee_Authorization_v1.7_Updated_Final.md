@@ -72,7 +72,7 @@ Cấu trúc chuẩn:
      |
      WAREHOUSE
 
-Quy tắc:
+Quy tắc: 
 
 -   Một hệ thống có thể có nhiều Group.
 -   Cấp trên không thể là con của cấp dưới.
