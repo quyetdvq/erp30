@@ -15,8 +15,10 @@
         "codeigniter4/shield": "^1.4"
     },
     "require-dev": {
+        "codeigniter/phpstan-codeigniter": "^2.1",
         "fakerphp/faker": "^1.9",
         "mikey179/vfsstream": "^1.6",
+        "phpstan/phpstan": "^2.2",
         "phpunit/phpunit": "^10.5.16"
     },
     "autoload": {

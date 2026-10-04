@@ -1,0 +1,23 @@
+includes:
+    - vendor/codeigniter/phpstan-codeigniter/extension.neon
+
+parameters:
+    level: 8
+
+    paths:
+        - app
+
+    bootstrapFiles:
+        - tools/phpstan-bootstrap.php
+
+    tmpDir: writable/cache/phpstan
+
+    excludePaths:
+        analyse:
+            - app/Config/*
+            - app/Views/errors/*
+
+    codeigniter:
+        additionalServices:
+            - CodeIgniter\Shield\Config\Services
+        schemaCacheDirectory: writable/cache/phpstan/schema

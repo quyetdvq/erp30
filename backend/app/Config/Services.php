@@ -2,6 +2,7 @@
 
 namespace Config;
 
+use App\Authorization\AuthorizationService;
 use CodeIgniter\Config\BaseService;
 
 /**
@@ -19,6 +20,15 @@ use CodeIgniter\Config\BaseService;
  */
 class Services extends BaseService
 {
+    public static function authorization(bool $getShared = true): AuthorizationService
+    {
+        if ($getShared) {
+            return static::getSharedInstance('authorization');
+        }
+
+        return new AuthorizationService();
+    }
+
     /*
      * public static function example($getShared = true)
      * {

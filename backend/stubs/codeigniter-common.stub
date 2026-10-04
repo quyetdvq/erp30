@@ -1,0 +1,27 @@
+<?php
+
+/**
+ * @return \CodeIgniter\Session\Session
+ */
+function session(?string $name = null) {}
+
+/**
+ * @return mixed
+ */
+function setting(string $key, $default = null) {}
+
+/**
+ * @return mixed
+ */
+function service(?string $name = null, ...$params) {}
+
+/**
+ * @return string
+ */
+function view(string $name, array $data = [], array $options = []) {}
+
+function helper($helpers) {}
+
+function esc($data, string $context = 'html', ?string $encoding = null) {}
+
+function lang(string $line, array $args = []) {}
