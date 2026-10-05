@@ -2,7 +2,6 @@
 
 namespace Config;
 
-use App\Authorization\AuthorizationService;
 use App\Infrastructure\Lock\DomainLockService;
 use App\Infrastructure\Lock\MariaDbDomainLockService;
 use App\Infrastructure\Settings\BusinessTimezoneResolver;
@@ -25,15 +24,6 @@ use CodeIgniter\Config\BaseService;
  */
 class Services extends BaseService
 {
-    public static function authorization(bool $getShared = true): AuthorizationService
-    {
-        if ($getShared) {
-            return static::getSharedInstance('authorization');
-        }
-
-        return new AuthorizationService();
-    }
-
     public static function clock(bool $getShared = true): Clock
     {
         if ($getShared) {

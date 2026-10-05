@@ -45,14 +45,6 @@ class AuthGroups extends ShieldAuthGroups
             'title'       => 'System Admin',
             'description' => 'Privileged ERP authorization group.',
         ],
-        'systemadmin' => [
-            'title'       => 'Super Admin',
-            'description' => 'Complete control of the site.',
-        ],
-        'orgadmin' => [
-            'title'       => 'Admin',
-            'description' => 'Day to day administrators of the site.',
-        ],
         'developer' => [
             'title'       => 'Developer',
             'description' => 'Site programmers.',
@@ -94,18 +86,6 @@ class AuthGroups extends ShieldAuthGroups
      * This defines group-level permissions.
      */
     public array $matrix = [
-        'systemadmin' => [
-            'admin.*',
-            'users.*',
-            'beta.*',
-        ],
-        'orgadmin' => [
-            'admin.access',
-            'users.create',
-            'users.edit',
-            'users.delete',
-            'beta.access',
-        ],
         'developer' => [
             'admin.access',
             'admin.settings',

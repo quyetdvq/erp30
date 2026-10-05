@@ -4,9 +4,9 @@ This ledger is lightweight operational evidence. It is not architecture
 authority and does not replace UR, FRS, DBD, the Implementation Contract, the
 Implementation Plan, API Design, or UI Design.
 
-As of the P1-CTX-002 task commit, the registry contains exactly 100 P1 tasks.
-Repository evidence verifies 32 completed tasks: Gate 0 is 10/10, Gate 1 is
-14/14, and Gate 2 is 8/8. The previously supplied 28/100 and 4/8 checkpoint is
+As of the P1-IAM-001 task commit, the registry contains exactly 100 P1 tasks.
+Repository evidence verifies 33 completed tasks: Gate 0 is 10/10, Gate 1 is
+14/14, Gate 2 is 8/8, and Gate 3 has opened at 1/10. The previously supplied 28/100 and 4/8 checkpoint is
 stale: the accepted `c4049f0` P1-ORG-002 commit is present in current history.
 No task is downgraded to force that stale count.
 
@@ -14,11 +14,11 @@ No task is downgraded to force that stale count.
 
 | Measure | Progress |
 |---|---:|
-| P1 tasks DONE | 32/100 |
+| P1 tasks DONE | 33/100 |
 | Gate 0 | 10/10 DONE |
 | Gate 1 | 14/14 DONE |
 | Gate 2 | 8/8 DONE |
-| Gate 3 | 0/10 DONE |
+| Gate 3 | 1/10 DONE |
 | Gate 4 | 0/7 DONE |
 | Gate 5 | 0/11 DONE |
 | Gate 6 | 0/9 DONE |
@@ -62,7 +62,7 @@ No task is downgraded to force that stale count.
 | P1-EMP-003 | DONE | de71390, 1d95f5e | high-risk | Corrective real concurrent Primary Assignment regression: two independent connections, one commit, overlap failure, and final-state proof. |
 | P1-CTX-001 | DONE | 45b0184 | high-risk | Authoritative Evaluation Organization resolver and HIGH-risk assessment evidence. |
 | P1-CTX-002 | DONE | efdca4f | service-standard | Company owner resolver delegates to canonical OrganizationService hierarchy resolution; focused and backend quality gates pass. |
-| P1-IAM-001 | NOT_STARTED | — | high-risk | No accepted implementation evidence. |
+| P1-IAM-001 | DONE | c9c43e2 | high-risk | Shield identity/group/direct-permission adapter; legacy privileged/public PBAC entrypoints removed; HIGH-risk assessment evidence recorded. |
 | P1-IAM-002 | NOT_STARTED | — | high-risk | No accepted implementation evidence. |
 | P1-AUTH-001 | NOT_STARTED | — | high-risk | No accepted implementation evidence. |
 | P1-AUTH-002 | NOT_STARTED | — | high-risk | No accepted implementation evidence. |

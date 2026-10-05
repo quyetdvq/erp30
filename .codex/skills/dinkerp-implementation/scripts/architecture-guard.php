@@ -69,6 +69,25 @@ if (is_dir($controllerRoot)) {
     }
 }
 
+$publicAdapterRoots = ['Commands', 'Filters', 'Adapters', 'Import'];
+foreach ($publicAdapterRoots as $adapterRoot) {
+    $rootPath = $root . DIRECTORY_SEPARATOR . 'backend' . DIRECTORY_SEPARATOR . 'app' . DIRECTORY_SEPARATOR . $adapterRoot;
+    if (!is_dir($rootPath)) {
+        continue;
+    }
+    $iterator = new RecursiveIteratorIterator(new RecursiveDirectoryIterator($rootPath));
+    foreach ($iterator as $file) {
+        if (!$file->isFile() || $file->getExtension() !== 'php') {
+            continue;
+        }
+        $relative = str_replace($root . DIRECTORY_SEPARATOR, '', $file->getPathname());
+        $contents = (string) file_get_contents($file->getPathname());
+        if (preg_match('~^use\s+App\\\\Repositories\\\\~m', $contents) === 1) {
+            $violations[] = "{$relative}: public adapter imports a repository directly";
+        }
+    }
+}
+
 $serviceRoot = $root . DIRECTORY_SEPARATOR . 'backend' . DIRECTORY_SEPARATOR . 'app' . DIRECTORY_SEPARATOR . 'Services';
 $localeKeys = ['vi' => [], 'en' => []];
 foreach (glob($serviceRoot . DIRECTORY_SEPARATOR . '*.php') ?: [] as $servicePath) {

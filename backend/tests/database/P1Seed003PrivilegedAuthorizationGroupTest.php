@@ -3,7 +3,8 @@
 declare(strict_types=1);
 
 use App\Database\Seeds\PrivilegedAuthorizationGroupSeeder;
-use App\Authorization\ProfileResolver;
+use App\Authorization\ShieldIdentityAdapter;
+use CodeIgniter\Shield\Models\UserModel;
 use CodeIgniter\Test\CIUnitTestCase;
 use CodeIgniter\Test\DatabaseTestTrait;
 
@@ -96,9 +97,14 @@ final class P1Seed003PrivilegedAuthorizationGroupTest extends CIUnitTestCase
         $this->assertSame(1, $this->db->table('users')->where('id', $userId)->countAllResults());
         $this->assertSame(0, $this->db->table('employees')->where('user_id', $userId)->countAllResults());
         $this->assertSame(0, $this->db->table('auth_permissions_users')->where('user_id', $userId)->countAllResults());
-        $profile = (new ProfileResolver($this->db))->resolve($userId);
-        $this->assertContains('system_admin', $profile->groupCodes);
-        $this->assertSame(92, count(array_merge(...array_values($profile->permissions))));
+        $user = model(UserModel::class)->findById($userId);
+        $this->assertInstanceOf(\CodeIgniter\Shield\Entities\User::class, $user);
+        $adapter = new ShieldIdentityAdapter($this->db);
+        $identity = $adapter->resolveIdentity($user);
+        $groups = $adapter->resolveActiveAuthorizationGroups($identity);
+        $permissions = $adapter->resolveGroupBasePermissions($groups);
+        $this->assertContains('SYSTEM_ADMIN', array_map(static fn ($group): string => $group->code, $groups));
+        $this->assertCount(92, $permissions);
     }
 
     private function seedCatalog(): void
