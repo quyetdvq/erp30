@@ -2,7 +2,6 @@
 
 declare(strict_types=1);
 
-use App\Exceptions\ConcurrencyException;
 use App\Exceptions\DomainException;
 use App\Infrastructure\Lock\DomainLockService;
 use App\Infrastructure\Mutation\MutationContext;
@@ -151,20 +150,85 @@ final class P1Emp003EmployeeAssignmentServiceTest extends CIUnitTestCase
         }
     }
 
-    public function testRealMariaDbLockPreventsSecondConcurrentMutation(): void
+    public function testConcurrentOverlappingPrimaryAssignmentsCannotBothCommit(): void
     {
         [$employeeId, $organizationId] = $this->references();
-        $secondConnection = db_connect('tests', false);
-        $holder = new \App\Infrastructure\Lock\MariaDbDomainLockService($this->db, 0);
-        $key = 'employee-assignment:' . $employeeId;
-        $holder->acquire($key, 0);
+        $directory = sys_get_temp_dir() . DIRECTORY_SEPARATOR . 'dinkerp-emp3-' . bin2hex(random_bytes(8));
+        mkdir($directory);
+        $worker = realpath(__DIR__ . '/../fixtures/employee_assignment_concurrency_worker.php');
+        $this->assertNotFalse($worker);
+        $startPath = $directory . DIRECTORY_SEPARATOR . 'start';
+        $processes = [];
+        $resultPaths = [];
         try {
-            $service = new EmployeeAssignmentService(null, $secondConnection);
-            $this->expectException(ConcurrencyException::class);
-            $service->create($this->assignment($employeeId, $organizationId, true, '2026-01-01', null));
+            foreach (['a', 'b'] as $workerName) {
+                $readyPath = $directory . DIRECTORY_SEPARATOR . 'ready-' . $workerName;
+                $resultPath = $directory . DIRECTORY_SEPARATOR . 'result-' . $workerName . '.json';
+                $resultPaths[] = $resultPath;
+                $command = implode(' ', array_map('escapeshellarg', [
+                    PHP_BINARY,
+                    $worker,
+                    (string) $employeeId,
+                    (string) $organizationId,
+                    $readyPath,
+                    $startPath,
+                    $resultPath,
+                ]));
+                $processes[$workerName] = proc_open($command, [
+                    0 => ['pipe', 'r'],
+                    1 => ['pipe', 'w'],
+                    2 => ['pipe', 'w'],
+                ], $pipes);
+                $this->assertIsResource($processes[$workerName]);
+                fclose($pipes[0]);
+                fclose($pipes[1]);
+                fclose($pipes[2]);
+            }
+            $deadline = microtime(true) + 10.0;
+            while ((! is_file($directory . DIRECTORY_SEPARATOR . 'ready-a') || ! is_file($directory . DIRECTORY_SEPARATOR . 'ready-b')) && microtime(true) < $deadline) {
+                usleep(10000);
+            }
+            $this->assertFileExists($directory . DIRECTORY_SEPARATOR . 'ready-a');
+            $this->assertFileExists($directory . DIRECTORY_SEPARATOR . 'ready-b');
+            file_put_contents($startPath, 'go');
+
+            foreach ($processes as $process) {
+                $this->assertSame(0, proc_close($process));
+            }
+            $results = array_map(static function (string $path): array {
+                $contents = file_get_contents($path);
+                if ($contents === false) {
+                    throw new RuntimeException('Concurrency worker did not write a result.');
+                }
+
+                return json_decode($contents, true, 512, JSON_THROW_ON_ERROR);
+            }, $resultPaths);
+            $winners = array_values(array_filter($results, static fn (array $result): bool => ($result['ok'] ?? false) === true));
+            $failures = array_values(array_filter($results, static fn (array $result): bool => ($result['ok'] ?? false) !== true));
+            $this->assertCount(1, $winners);
+            $this->assertCount(1, $failures);
+            $this->assertSame(EmployeeAssignmentService::ERROR_PRIMARY_OVERLAP, $failures[0]['code']);
+
+            $freshConnection = db_connect('tests', false);
+            $committed = $freshConnection->table('employee_assignments')
+                ->where('employee_id', $employeeId)
+                ->where('is_primary', 1)
+                ->where('status', 'ACTIVE')
+                ->get()
+                ->getResultArray();
+            $freshConnection->close();
+            $this->assertCount(1, $committed);
         } finally {
-            $holder->release($key);
-            $secondConnection->close();
+            foreach ($processes as $process) {
+                if (is_resource($process)) {
+                    @proc_terminate($process);
+                    @proc_close($process);
+                }
+            }
+            foreach (glob($directory . DIRECTORY_SEPARATOR . '*') ?: [] as $path) {
+                @unlink($path);
+            }
+            @rmdir($directory);
         }
     }
 

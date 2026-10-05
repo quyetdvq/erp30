@@ -59,7 +59,7 @@ No task is downgraded to force that stale count.
 | P1-CON-001 | DONE | 9c895e2 | service-standard | Contact repository/service implementation. |
 | P1-EMP-001 | DONE | cafc23e, 2ccfb27, 838fa34 | high-risk | Implementation plus stable-code/localization corrections. |
 | P1-EMP-002 | DONE | 876c158 | service-standard | Employee assignment repository implementation. |
-| P1-EMP-003 | DONE | de71390 | high-risk | EmployeeAssignmentService invariants, exact assignment-path resolution, and serialized primary overlap protection. |
+| P1-EMP-003 | DONE | de71390, 1d95f5e | high-risk | Corrective real concurrent Primary Assignment regression: two independent connections, one commit, overlap failure, and final-state proof. |
 | P1-CTX-001 | NOT_STARTED | — | high-risk | No accepted implementation evidence. |
 | P1-CTX-002 | NOT_STARTED | — | service-standard | No accepted implementation evidence. |
 | P1-IAM-001 | NOT_STARTED | — | high-risk | No accepted implementation evidence. |
