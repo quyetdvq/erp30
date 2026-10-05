@@ -10,6 +10,22 @@ Implementation Contract, Implementation Plan, API Design, or UI Design.
 - `workflow_states.name` is display data only.
 - Bootstrap `name` must equal `code`.
 
+## DEC-WF-002 — Canonical Lifecycle Target Adapter
+
+- P1 does not create a generic Resource Instance/state table.
+- `LifecycleService` uses the `LifecycleTargetAdapter` application port.
+- Concrete resources provide an explicitly registered adapter when they persist
+  workflow state; unknown resources fail closed.
+- The adapter supplies canonical resource type, target snapshot/current state,
+  applicable lifecycle, authoritative Evaluation Organization, target lock and
+  concurrency re-read, and expected-state-to-destination mutation.
+- `LifecycleService` contains no business table/column knowledge. It resolves
+  transition before authorization, authorizes the current state, and performs
+  lock/re-read, exact catalog destination mutation, and required audit in the
+  adapter transaction.
+- Client-supplied current state, lifecycle, destination, and organization are
+  never authoritative. There is no System Admin special path or new schema.
+
 ## DEC-SEC-001 — Privileged Authorization Group bootstrap
 
 - Group code: `SYSTEM_ADMIN`.

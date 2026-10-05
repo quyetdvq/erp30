@@ -5,8 +5,8 @@ authority and does not replace UR, FRS, DBD, the Implementation Contract, the
 Implementation Plan, API Design, or UI Design.
 
 As of the P1-WF-001 task commit, the registry contains exactly 100 P1 tasks.
-Repository evidence verifies 40 completed tasks: Gate 0 is 10/10, Gate 1 is
-14/14, Gate 2 is 8/8, and Gate 3 has opened at 8/10. The previously supplied 28/100 and 4/8 checkpoint is
+Repository evidence verifies 41 completed tasks: Gate 0 is 10/10, Gate 1 is
+14/14, Gate 2 is 8/8, and Gate 3 has opened at 9/10. The previously supplied 28/100 and 4/8 checkpoint is
 stale: the accepted `c4049f0` P1-ORG-002 commit is present in current history.
 No task is downgraded to force that stale count.
 
@@ -14,11 +14,11 @@ No task is downgraded to force that stale count.
 
 | Measure | Progress |
 |---|---:|
-| P1 tasks DONE | 40/100 |
+| P1 tasks DONE | 41/100 |
 | Gate 0 | 10/10 DONE |
 | Gate 1 | 14/14 DONE |
 | Gate 2 | 8/8 DONE |
-| Gate 3 | 8/10 DONE |
+| Gate 3 | 9/10 DONE |
 | Gate 4 | 0/7 DONE |
 | Gate 5 | 0/11 DONE |
 | Gate 6 | 0/9 DONE |
@@ -70,7 +70,7 @@ No task is downgraded to force that stale count.
 | P1-AUTH-004 | DONE | 44aef17 | high-risk | Insert-only Authorization audit persistence for approve/delete/setstate, trusted decision mapping, deterministic decisive-policy representative, and typed failure propagation. Evidence: `docs/implementation/evidence/P1-AUTH-004/01_authorization_audit_assessment.md`. |
 | P1-AUTH-005 | DONE | 8579fb2, b8f094b | high-risk | Security administration services plus corrective concurrency, denial, sensitive-action, EffectiveProfile, and SYSTEM_ADMIN regression evidence. |
 | P1-WF-001 | DONE | 26d3cd38e302 | service-standard | LifecycleRepository persistence adapter, trusted audit stamping, deterministic state/transition lookup, and lifecycle row lock. |
-| P1-WF-002 | NOT_STARTED | — | high-risk | No accepted implementation evidence. |
+| P1-WF-002 | DONE | 4b77e08 | high-risk | LifecycleService configuration invariants, LifecycleTargetAdapter orchestration, validation-before-authorization, concurrency re-read, exact transition mutation, and AUTH-004 audit integration. Evidence: `docs/implementation/evidence/P1-WF-002/01_lifecycle_service_assessment.md`. |
 | P1-AUTH-090 | NOT_STARTED | — | high-risk | No accepted implementation evidence. |
 | P1-NUM-001 | NOT_STARTED | — | high-risk | No accepted implementation evidence. |
 | P1-NUM-002 | NOT_STARTED | — | high-risk | No accepted implementation evidence. |

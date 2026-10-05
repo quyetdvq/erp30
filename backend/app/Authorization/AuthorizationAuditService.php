@@ -8,10 +8,11 @@ use App\Exceptions\DomainException;
 use App\Infrastructure\Id\PositiveId;
 use App\Repositories\AuthorizationLogRepository;
 use App\Repositories\PolicyRepository;
+use App\Services\LifecycleAuditPort;
 use CodeIgniter\Database\ConnectionInterface;
 
 /** Maps trusted internal decisions into the immutable P1 audit schema. */
-final class AuthorizationAuditService
+final class AuthorizationAuditService implements LifecycleAuditPort
 {
     public const ERROR_DECISION_INVALID = 'AUTHORIZATION_AUDIT_DECISION_INVALID';
     public const ERROR_RESOURCE_INVALID = 'AUTHORIZATION_AUDIT_RESOURCE_INVALID';
