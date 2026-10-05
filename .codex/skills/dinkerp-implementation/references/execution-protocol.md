@@ -57,6 +57,18 @@ stage paths explicitly and never use `git add .` or `git add -A`. Run
 `git diff --check` before a DONE commit. Keep the worktree clean between tasks
 unless an explicitly recorded pre-existing change remains outside the task.
 
+## Durable execution ledger
+
+- A DONE task updates `docs/implementation/P1_EXECUTION_LEDGER.md` in the same
+  task commit.
+- A corrective commit appends its hash to the existing Task row; it does not
+  replace the original accepted commit.
+- HIGH-risk, Gate, and release tasks additionally create or update compact
+  assessment evidence of approximately 30–60 lines. LOW/MEDIUM normal tasks
+  do not require a separate assessment unless exceptional behavior occurred.
+- The ledger is operational evidence only. It never overrides architecture
+  authority, task registry semantics, or validation requirements.
+
 ## Batch closeout
 
 After all task-scoped gates pass and each task has its independent commit, run
