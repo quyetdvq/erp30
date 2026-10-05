@@ -62,7 +62,7 @@ No task is downgraded to force that stale count.
 | P1-EMP-003 | DONE | de71390, 1d95f5e | high-risk | Corrective real concurrent Primary Assignment regression: two independent connections, one commit, overlap failure, and final-state proof. |
 | P1-CTX-001 | DONE | 45b0184 | high-risk | Authoritative Evaluation Organization resolver and HIGH-risk assessment evidence. |
 | P1-CTX-002 | DONE | efdca4f | service-standard | Company owner resolver delegates to canonical OrganizationService hierarchy resolution; focused and backend quality gates pass. |
-| P1-IAM-001 | DONE | c9c43e2 | high-risk | Shield identity/group/direct-permission adapter; legacy privileged/public PBAC entrypoints removed; HIGH-risk assessment evidence recorded. |
+| P1-IAM-001 | DONE | a63781c | high-risk | Shield identity/group/direct-permission adapter; active legacy privileged/public PBAC entrypoints removed. Boundary deviation (preflight required STOP/BLOCK on bypass) is recorded in the assessment; removal is accepted as security containment because these were unapproved legacy routes and Shield auth remains enabled. |
 | P1-IAM-002 | NOT_STARTED | — | high-risk | No accepted implementation evidence. |
 | P1-AUTH-001 | NOT_STARTED | — | high-risk | No accepted implementation evidence. |
 | P1-AUTH-002 | NOT_STARTED | — | high-risk | No accepted implementation evidence. |

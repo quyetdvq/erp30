@@ -7,11 +7,13 @@
 - Dependency: P1-SEED-001 is DONE and its canonical Resource/Action catalog is used.
 - Scope is limited to the Shield bridge and removal of obsolete pre-P1 security entrypoints.
 - P1-IAM-002 EffectiveProfile union and P1-AUTH authorization decisions remain out of scope.
+- Task-boundary deviation: the preflight rule required STOP/BLOCK when a bypass was found, but `a63781c` removed the active legacy bypass routes and their internal PBAC stack in the same commit. This is accepted after audit as security containment: the routes were not approved P1 API paths, and their removal preserves the Shield authentication surface and removes no required P1 capability.
 
 ## Security preflight
 
 - The initial preflight found legacy `Admin` membership authorization and a client-supplied organization context.
 - Those obsolete public routes/controllers and the old PBAC/profile stack were removed before implementation.
+- Public route contract change is explicit: `/api/v1/authorization/profile`, `/api/v1/authorization/check`, and all `/api/v1/admin/*` routes were removed; `/api/v1/auth/*` and Shield routes remain registered.
 - No public Controller, Command, Import, Background, or Adapter imports an application Repository directly.
 - Architecture guard statically scans Controllers plus Commands, Filters, Adapters, and Import surfaces.
 - No `isSystemAdmin`, root flag, privileged-user runtime shortcut, or unconditional authorization allow path remains.
@@ -34,8 +36,7 @@
 | Check | Result |
 |---|---|
 | `task-context.php P1-IAM-001` | PASS; authority cache valid |
-| Focused IAM PHPUnit | PASS; 8 tests, 19 assertions |
-| IAM + privileged seed PHPUnit | PASS; 12 tests, 42 assertions |
+| Focused IAM + privileged seed PHPUnit | PASS; 12 tests, 42 assertions |
 | Full backend PHPUnit `--no-coverage` | PASS; 102 tests, 1,834 assertions |
 | PHPStan level 8 | PASS; no errors |
 | Architecture guard | PASS; 7 application files checked |
