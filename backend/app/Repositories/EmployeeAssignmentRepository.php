@@ -133,6 +133,67 @@ final class EmployeeAssignmentRepository
         return array_values($result->getResultArray());
     }
 
+    /** @return list<array<string, mixed>> */
+    public function findOverlappingPrimary(
+        int $employeeId,
+        string $effectiveFrom,
+        ?string $effectiveTo = null,
+        ?int $excludeId = null,
+    ): array {
+        $builder = $this->db->table('employee_assignments')
+            ->where('employee_id', $employeeId)
+            ->where('is_primary', 1)
+            ->where('status', 'ACTIVE')
+            ->where('effective_from <=', $effectiveTo ?? '9999-12-31')
+            ->groupStart()
+            ->where('effective_to IS NULL', null, false)
+            ->orWhere('effective_to >=', $effectiveFrom)
+            ->groupEnd()
+            ->orderBy('effective_from', 'ASC')
+            ->orderBy('id', 'ASC');
+        if ($excludeId !== null) {
+            $builder->where('id !=', $excludeId);
+        }
+        try {
+            $result = $builder->get();
+        } catch (\Throwable $exception) {
+            throw new PersistenceException(self::ERROR_PERSISTENCE_FAILED, 'findOverlappingPrimary', $exception);
+        }
+        if ($result === false) {
+            throw new PersistenceException(self::ERROR_PERSISTENCE_FAILED, 'findOverlappingPrimary');
+        }
+
+        return array_values($result->getResultArray());
+    }
+
+    public function departmentIsActive(int $departmentId): bool
+    {
+        return $this->activeReferenceExists('departments', $departmentId, 'departmentIsActive');
+    }
+
+    public function positionIsActive(int $positionId): bool
+    {
+        return $this->activeReferenceExists('positions', $positionId, 'positionIsActive');
+    }
+
+    private function activeReferenceExists(string $table, int $id, string $operation): bool
+    {
+        try {
+            $result = $this->db->table($table)
+                ->select('id')
+                ->where('id', $id)
+                ->where('status', 'ACTIVE')
+                ->get();
+        } catch (\Throwable $exception) {
+            throw new PersistenceException(self::ERROR_PERSISTENCE_FAILED, $operation, $exception);
+        }
+        if ($result === false) {
+            throw new PersistenceException(self::ERROR_PERSISTENCE_FAILED, $operation);
+        }
+
+        return $result->getRowArray() !== null;
+    }
+
     /**
      * @param array<string, mixed> $data
      * @param list<string> $required
