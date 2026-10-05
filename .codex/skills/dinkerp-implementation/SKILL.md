@@ -1,66 +1,86 @@
 ---
 name: dinkerp-implementation
-description: Implement, review, or plan DinkERP P1 code changes from a Task ID, vertical slice, bug, API endpoint, UI screen, migration, authorization rule, Auto Numbering behavior, import flow, or i18n change. Use in the DinkERP repository when Codex must trace work to the baseline docs, preserve PBAC and schema invariants, inspect existing code before editing, run the required backend/frontend quality gates, and report evidence without inventing missing requirements.
+description: Implement, review, or plan DinkERP P1 work through bounded authority reading, gate registries, scoped validation, and isolated task commits.
 ---
 
-# DinkERP Implementation
+# DinkERP Implementation Control Plane
 
-Use the repository's current `AGENTS.md` as always-on guidance. Treat this skill as the repeatable execution workflow for one task or one coherent slice.
+Use this skill for one approved DinkERP task, vertical slice, review, or
+planning outcome. `AGENTS.md` remains the governing repository instruction.
 
-## Workflow
+## Execution flow
 
-1. Identify the requested Task ID, slice, bug, or concrete outcome.
-2. Read only the relevant parts of the current project documents under `docs/`.
-3. Apply this authority order when sources differ:
-   - User Requirements: business intent and scope.
-   - FRS: functional semantics.
-   - Database Design: persistence/schema invariants.
-   - Implementation Contract: wire/runtime conventions.
-   - Implementation Plan: sequencing, Task IDs, dependencies, quality gates.
-   - API Design: downstream HTTP contract.
-   - UI Design: downstream UI/UX contract.
-4. Inspect existing repository code before proposing file locations, abstractions, commands, or conventions. Reuse established structure unless it conflicts with an authority document.
-5. Before editing, state a compact task contract:
-   - source references;
-   - scope and out-of-scope;
-   - dependencies;
-   - database impact;
-   - authorization context/action impact;
-   - transaction/concurrency impact;
-   - API/OpenAPI impact;
-   - UI/i18n impact;
-   - tests required.
-6. If an unresolved conflict would require inventing business semantics, schema, Resource/Action, public API behavior, or persistence, stop and mark the task `BLOCKED`. Do not guess.
-7. Implement the smallest coherent change that satisfies the task contract. Do not opportunistically refactor unrelated code.
-8. Run the applicable quality gates. Fix failures caused by the change; do not suppress them merely to pass.
-9. Self-review against `references/review-checklists.md`.
-10. Report what changed, tests/evidence, unresolved items, and the next dependency.
+1. **Task ID and gate**: identify the concrete Task ID/outcome and load only
+   its registry at `references/tasks-gate<N>.md`.
+2. **Bounded authority**: follow the registry's authority IDs/headings into the
+   baseline documents. Read the smallest relevant ranges; expand only for a
+   dependency, conflict, or debugging question.
+3. **Repository inspection**: run `git status --short`, record pre-existing
+   changes, and inspect current paths, commands, contracts, and tests before
+   proposing edits.
+4. **Task contract**: state scope/out-of-scope, dependencies and READY status,
+   DB, authorization/context, transaction/concurrency, API/OpenAPI, UI/i18n,
+   and test impact.
+5. **Risk and validation**: classify LOW/MEDIUM/HIGH and select a profile from
+   `references/validation-profiles.md`. HIGH-risk work is never batched by
+   default.
+6. **Implement**: make the smallest coherent change within the task boundary;
+   preserve the authority order and project invariants.
+7. **Scoped validation**: run the selected profile, plus the relevant review
+   checklist. Do not run the full repository regression suite after every
+   LOW/MEDIUM task.
+8. **Independent checkpoint**: if DONE, run `git diff --check`, inspect the
+   diff/status, stage only task files explicitly, and create exactly one commit
+   containing the Task ID. Never stage unrelated work.
+9. **Batch progression**: after successful task commits, run the `batch-full`
+   profile. If it finds a regression, make a corrective commit; do not amend,
+   rebase, or rewrite prior task commits.
+10. **Compact report**: record outcome, files/behavior, critical contract
+    checks, validation as `command/check | PASS | count/version`, commit,
+    blocker, and next dependency. Keep normal assessments about 30–60 lines.
 
-## High-risk rules
+## Progressive loading
 
-Read `references/project-invariants.md` before work involving authorization, Organization context, migrations, Auto Numbering, Product/COMBO/Pricing, Import, API transport, or localization.
+Never read all architecture documents by default. Given a Task ID, identify its
+gate registry, locate exact authority sections, read bounded ranges, and expand
+only when dependency closure, a source conflict, or debugging requires it. Do
+not reread accepted assessment documents unless the current task depends on
+their implementation or evidence state.
 
-Read `references/review-checklists.md` before finalizing any implementation task.
+## Authority and safety
 
-## Planning behavior
+Use this order when sources differ: UR -> FRS -> DBD -> Implementation Contract
+-> Implementation Plan -> API Design -> UI Design. Stop and report an
+unresolved conflict instead of inventing semantics, schema, Resource/Action,
+API behavior, or persistence. Read `project-invariants.md` for high-risk work
+and `review-checklists.md` before finalizing.
 
-For a substantial feature or multi-file refactor, make a short execution plan first. Keep it task-specific. Do not restate the full project documentation.
+Preserve PBAC/Evaluation Organization rules, atomic multi-table mutations,
+DomainLock conventions, decimal arithmetic, Auto Number transaction semantics,
+Product/COMBO/Pricing/Import boundaries, API serialization/error contracts,
+and `vi`/`en` i18n rules. Migrations are forward-only.
 
-When the user asks only for analysis/review, do not modify code unless explicitly requested.
+## Required references
 
-## Output format
+- `references/execution-protocol.md` — batching, stop conditions, and Git
+  isolation.
+- `references/validation-profiles.md` — scoped and batch validation.
+- `references/tasks-gate0.md` through `references/tasks-gate9.md` — task
+  navigation pointers only; authoritative requirements stay in `docs/`.
+- `references/project-invariants.md` — compact guardrails.
+- `references/review-checklists.md` — final self-review.
 
-At completion, use this compact structure:
+## Completion shape
 
 ```text
 Task: <id/title>
-Status: DONE | BLOCKED | PARTIAL
+Status: DONE | BLOCKED | PARTIAL | NEEDS_FIX
 
 Implemented:
-- ...
+- <changed output and behavior>
 
 Validation:
-- <command/check>: PASS | FAIL | NOT RUN
+- <command/check> | PASS | <relevant count/version>
 
 Contract notes:
 - DB: ...
@@ -68,56 +88,19 @@ Contract notes:
 - API/OpenAPI: ...
 - UI/i18n: ...
 
+Commit: <hash or NOT CREATED>
 Remaining / blocker:
 - ...
 ```
 
-If blocked, name the exact source conflict or missing decision and the smallest decision needed to continue.
+For a batch, use:
 
-
-## Git commit policy
-
-Treat one approved implementation task as one Git checkpoint.
-
-Before starting a task:
-1. Run `git status --short`.
-2. Record pre-existing modified/untracked files.
-3. Never overwrite, stage, revert, or commit unrelated pre-existing changes.
-
-At task completion:
-
-### If task status is DONE
-1. Run all applicable validation required by the task.
-2. Run `git diff --check`.
-3. Inspect `git status` and `git diff`.
-4. Confirm every changed file belongs to the current Task ID.
-5. Stage only task-related files explicitly.
-6. Do not use `git add -A` or blindly stage the entire repository.
-7. Create exactly one task commit unless repository history/convention requires otherwise.
-8. Include the Task ID in the commit subject.
-9. Report the resulting commit hash.
-
-Preferred commit subject:
-
-`<type>(<task-id>): <concise outcome>`
-
-Examples:
-
-`chore(P1-ENV-004): establish isolated test database harness`
-`feat(P1-DB-010): add foundation location migrations`
-`fix(P1-AUTH-002): correct assignment lane resolution`
-`docs(P1-DB-001): define P1 migration execution plan`
-
-### If task status is PARTIAL, BLOCKED, or NEEDS_FIX
-- Do not create a task-completion commit.
-- Do not automatically revert work.
-- Report all modified/untracked files.
-- Report why the task cannot be committed as DONE.
-- Wait for the next instruction.
-
-### Safety
-Never:
-- commit `.env`, credentials, secrets, database dumps, or local machine configuration;
-- amend, squash, rebase, force-push, or rewrite existing history unless explicitly instructed;
-- commit unrelated changes made before the task;
-- bypass failing required quality gates just to produce a commit.
+```text
+Batch: <gate/tasks>
+Status: DONE | BLOCKED | PARTIAL
+Task | Status | Scoped gate | Commit | Blocker
+Batch gates:
+- ...
+Worktree: <clean or details>
+Next recommended batch: <gate/tasks>
+```
