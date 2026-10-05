@@ -4,13 +4,18 @@ declare(strict_types=1);
 
 namespace App\Repositories;
 
+use App\Exceptions\DomainException;
 use CodeIgniter\Database\BaseConnection;
 use CodeIgniter\Database\ConnectionInterface;
-use InvalidArgumentException;
-use RuntimeException;
 
 final class EmployeeRepository
 {
+    public const ERROR_PERSISTENCE_FAILED = 'EMP_PERSISTENCE_FAILED';
+    public const ERROR_CONNECTION_INVALID = 'EMP_CONNECTION_INVALID';
+    public const ERROR_UPDATE_EMPTY = 'EMP_UPDATE_EMPTY';
+    public const ERROR_FIELD_UNSUPPORTED = 'EMP_FIELD_UNSUPPORTED';
+    public const ERROR_FIELD_REQUIRED = 'EMP_FIELD_REQUIRED';
+
     /** @var list<string> */
     private const FIELDS = [
         'user_id', 'employee_code', 'employee_name', 'gender', 'date_of_birth',
@@ -80,10 +85,10 @@ final class EmployeeRepository
     {
         $payload = $this->payload($data, ['employee_code', 'employee_name', 'status']);
         if (! $this->db->table('employees')->insert($payload)) {
-            throw new RuntimeException('Unable to persist employee.');
+            throw new DomainException(self::ERROR_PERSISTENCE_FAILED, ['operation' => 'insert']);
         }
         if (! $this->db instanceof BaseConnection) {
-            throw new RuntimeException('Employee persistence requires a writable database connection.');
+            throw new DomainException(self::ERROR_CONNECTION_INVALID, ['operation' => 'insert']);
         }
 
         return (int) $this->db->insertID();
@@ -94,7 +99,7 @@ final class EmployeeRepository
     {
         $payload = $this->payload($data);
         if ($payload === []) {
-            throw new InvalidArgumentException('Employee update cannot be empty.');
+            throw new DomainException(self::ERROR_UPDATE_EMPTY, ['operation' => 'update']);
         }
 
         return $this->db->table('employees')->where('id', $id)->update($payload);
@@ -109,12 +114,12 @@ final class EmployeeRepository
     {
         foreach ($data as $field => $_value) {
             if (! in_array($field, self::FIELDS, true)) {
-                throw new InvalidArgumentException('Unsupported employee field: ' . $field);
+                throw new DomainException(self::ERROR_FIELD_UNSUPPORTED, ['field' => $field]);
             }
         }
         foreach ($required as $field) {
             if (! array_key_exists($field, $data)) {
-                throw new InvalidArgumentException('Missing employee field: ' . $field);
+                throw new DomainException(self::ERROR_FIELD_REQUIRED, ['field' => $field]);
             }
         }
 

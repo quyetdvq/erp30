@@ -11,4 +11,9 @@ return [
     'ORG_WARD_PROVINCE_MISMATCH'   => 'The Ward does not belong to the selected Province.',
     'ORG_REFERENCE_INVALID'        => 'The Organization reference is invalid.',
     'ORG_MUTATION_FAILED'          => 'The Organization could not be updated. Please try again.',
+    'ORG_PERSISTENCE_FAILED'       => 'The Organization could not be saved.',
+    'ORG_CONNECTION_INVALID'       => 'The database connection cannot write Organizations.',
+    'ORG_UPDATE_EMPTY'             => 'The Organization update cannot be empty.',
+    'ORG_FIELD_UNSUPPORTED'        => 'The Organization field is not supported.',
+    'ORG_FIELD_REQUIRED'           => 'A required Organization field is missing.',
 ];

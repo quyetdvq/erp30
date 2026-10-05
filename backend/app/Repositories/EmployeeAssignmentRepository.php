@@ -4,13 +4,18 @@ declare(strict_types=1);
 
 namespace App\Repositories;
 
+use App\Exceptions\DomainException;
 use CodeIgniter\Database\BaseConnection;
 use CodeIgniter\Database\ConnectionInterface;
-use InvalidArgumentException;
-use RuntimeException;
 
 final class EmployeeAssignmentRepository
 {
+    public const ERROR_PERSISTENCE_FAILED = 'EMP_ASSIGNMENT_PERSISTENCE_FAILED';
+    public const ERROR_CONNECTION_INVALID = 'EMP_ASSIGNMENT_CONNECTION_INVALID';
+    public const ERROR_UPDATE_EMPTY = 'EMP_ASSIGNMENT_UPDATE_EMPTY';
+    public const ERROR_FIELD_UNSUPPORTED = 'EMP_ASSIGNMENT_FIELD_UNSUPPORTED';
+    public const ERROR_FIELD_REQUIRED = 'EMP_ASSIGNMENT_FIELD_REQUIRED';
+
     /** @var list<string> */
     private const FIELDS = [
         'employee_id', 'organization_id', 'department_id', 'position_id', 'is_primary',
@@ -41,10 +46,10 @@ final class EmployeeAssignmentRepository
     {
         $payload = $this->payload($data, ['employee_id', 'organization_id', 'effective_from', 'status']);
         if (! $this->db->table('employee_assignments')->insert($payload)) {
-            throw new RuntimeException('Unable to persist employee assignment.');
+            throw new DomainException(self::ERROR_PERSISTENCE_FAILED, ['operation' => 'insert']);
         }
         if (! $this->db instanceof BaseConnection) {
-            throw new RuntimeException('Assignment persistence requires a writable database connection.');
+            throw new DomainException(self::ERROR_CONNECTION_INVALID, ['operation' => 'insert']);
         }
 
         return (int) $this->db->insertID();
@@ -55,7 +60,7 @@ final class EmployeeAssignmentRepository
     {
         $payload = $this->payload($data);
         if ($payload === []) {
-            throw new InvalidArgumentException('Assignment update cannot be empty.');
+            throw new DomainException(self::ERROR_UPDATE_EMPTY, ['operation' => 'update']);
         }
 
         return $this->db->table('employee_assignments')->where('id', $id)->update($payload);
@@ -106,12 +111,12 @@ final class EmployeeAssignmentRepository
     {
         foreach ($data as $field => $_value) {
             if (! in_array($field, self::FIELDS, true)) {
-                throw new InvalidArgumentException('Unsupported assignment field: ' . $field);
+                throw new DomainException(self::ERROR_FIELD_UNSUPPORTED, ['field' => $field]);
             }
         }
         foreach ($required as $field) {
             if (! array_key_exists($field, $data)) {
-                throw new InvalidArgumentException('Missing assignment field: ' . $field);
+                throw new DomainException(self::ERROR_FIELD_REQUIRED, ['field' => $field]);
             }
         }
 

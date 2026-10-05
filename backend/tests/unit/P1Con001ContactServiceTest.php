@@ -2,6 +2,7 @@
 
 declare(strict_types=1);
 
+use App\Exceptions\DomainException;
 use App\Repositories\ContactRepository;
 use App\Services\ContactService;
 use CodeIgniter\Test\CIUnitTestCase;
@@ -40,8 +41,39 @@ final class P1Con001ContactServiceTest extends CIUnitTestCase
         $otherProvinceId = $this->insertProvince('Province B');
         $wardId = $this->insertWard($otherProvinceId, 'Ward B');
 
-        $this->expectException(InvalidArgumentException::class);
-        $service->create($this->contact('ORGANIZATION', $organizationId, 'Invalid', $provinceId, $wardId));
+        try {
+            $service->create($this->contact('ORGANIZATION', $organizationId, 'Invalid', $provinceId, $wardId));
+            $this->fail('Expected Ward/Province mismatch rejection.');
+        } catch (DomainException $exception) {
+            $this->assertSame(ContactService::ERROR_WARD_PROVINCE_MISMATCH, $exception->getErrorCode());
+        }
+    }
+
+    public function testContactErrorsUseStableCodesAndBilingualCatalogs(): void
+    {
+        $service = new ContactService(new ContactRepository($this->db), $this->db);
+        $codes = [];
+        foreach (['vi', 'en'] as $locale) {
+            \App\Infrastructure\RequestContext::begin('contact-locale-test', $locale);
+            try {
+                $service->listForOwner('INVALID', 1);
+                $this->fail('Expected unsupported contact type rejection.');
+            } catch (DomainException $exception) {
+                $codes[] = $exception->getErrorCode();
+            } finally {
+                \App\Infrastructure\RequestContext::reset();
+            }
+        }
+
+        $this->assertSame([
+            ContactService::ERROR_TYPE_UNSUPPORTED,
+            ContactService::ERROR_TYPE_UNSUPPORTED,
+        ], $codes);
+        $this->assertNotSame(
+            lang('Contact.' . ContactService::ERROR_TYPE_UNSUPPORTED, [], 'vi'),
+            lang('Contact.' . ContactService::ERROR_TYPE_UNSUPPORTED, [], 'en'),
+        );
+        $this->assertStringNotContainsString('lang(', (string) file_get_contents(APPPATH . 'Services/ContactService.php'));
     }
 
     /** @return array<string, int|string> */

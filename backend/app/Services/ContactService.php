@@ -4,13 +4,20 @@ declare(strict_types=1);
 
 namespace App\Services;
 
+use App\Exceptions\DomainException;
 use App\Repositories\ContactRepository;
 use CodeIgniter\Database\ConnectionInterface;
-use InvalidArgumentException;
-use RuntimeException;
 
 final class ContactService
 {
+    public const ERROR_OWNER_TRANSFER_UNSUPPORTED = 'CONTACT_OWNER_TRANSFER_UNSUPPORTED';
+    public const ERROR_STATUS_INVALID = 'CONTACT_STATUS_INVALID';
+    public const ERROR_TYPE_REQUIRED = 'CONTACT_TYPE_REQUIRED';
+    public const ERROR_OWNER_REFERENCE_REQUIRED = 'CONTACT_OWNER_REFERENCE_REQUIRED';
+    public const ERROR_TYPE_UNSUPPORTED = 'CONTACT_TYPE_UNSUPPORTED';
+    public const ERROR_OWNER_NOT_FOUND = 'CONTACT_OWNER_NOT_FOUND';
+    public const ERROR_WARD_PROVINCE_MISMATCH = 'CONTACT_WARD_PROVINCE_MISMATCH';
+
     /** @var array<string, string> */
     private const OWNER_TABLES = [
         'EMPLOYEE' => 'employees',
@@ -43,7 +50,7 @@ final class ContactService
     public function update(int $id, array $data): bool
     {
         if (array_key_exists('contact_type', $data) || array_key_exists('contact_ref_id', $data)) {
-            throw new InvalidArgumentException('Contact owner transfer is not supported.');
+            throw new DomainException(self::ERROR_OWNER_TRANSFER_UNSUPPORTED);
         }
         $this->assertWardBelongsToProvince($data);
 
@@ -53,7 +60,7 @@ final class ContactService
     public function inactivate(int $id, string $status = 'INACTIVE'): bool
     {
         if (! in_array($status, ['INACTIVE', 'CLOSED'], true)) {
-            throw new InvalidArgumentException('Contact status must be INACTIVE or CLOSED.');
+            throw new DomainException(self::ERROR_STATUS_INVALID, ['status' => $status]);
         }
 
         return $this->repo()->update($id, [
@@ -89,7 +96,7 @@ final class ContactService
     private function ownerType(array $data): string
     {
         if (! isset($data['contact_type']) || ! is_string($data['contact_type'])) {
-            throw new InvalidArgumentException('Contact type is required.');
+            throw new DomainException(self::ERROR_TYPE_REQUIRED, ['field' => 'contact_type']);
         }
 
         return $this->normalizeType($data['contact_type']);
@@ -99,7 +106,7 @@ final class ContactService
     private function ownerId(array $data): int
     {
         if (! isset($data['contact_ref_id']) || ! is_int($data['contact_ref_id']) && ! is_numeric($data['contact_ref_id'])) {
-            throw new InvalidArgumentException('Contact owner id is required.');
+            throw new DomainException(self::ERROR_OWNER_REFERENCE_REQUIRED, ['field' => 'contact_ref_id']);
         }
 
         return (int) $data['contact_ref_id'];
@@ -109,7 +116,7 @@ final class ContactService
     {
         $normalized = strtoupper($type);
         if (! array_key_exists($normalized, self::OWNER_TABLES)) {
-            throw new InvalidArgumentException('Unsupported contact type: ' . $type);
+            throw new DomainException(self::ERROR_TYPE_UNSUPPORTED, ['contact_type' => $type]);
         }
 
         return $normalized;
@@ -119,7 +126,10 @@ final class ContactService
     {
         $result = $this->db->table(self::OWNER_TABLES[$type])->select('id')->where('id', $ownerId)->get();
         if ($result === false || $result->getRowArray() === null) {
-            throw new InvalidArgumentException('Contact owner does not exist.');
+            throw new DomainException(self::ERROR_OWNER_NOT_FOUND, [
+                'contact_type' => $type,
+                'contact_ref_id' => $ownerId,
+            ]);
         }
     }
 
@@ -139,7 +149,10 @@ final class ContactService
             ->where('province_id', (int) $data['province_id'])
             ->get();
         if ($result === false || $result->getRowArray() === null) {
-            throw new InvalidArgumentException('Ward does not belong to province.');
+            throw new DomainException(self::ERROR_WARD_PROVINCE_MISMATCH, [
+                'province_id' => (int) $data['province_id'],
+                'ward_id' => (int) $data['ward_id'],
+            ]);
         }
     }
 }

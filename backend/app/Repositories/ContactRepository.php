@@ -4,13 +4,19 @@ declare(strict_types=1);
 
 namespace App\Repositories;
 
+use App\Exceptions\DomainException;
 use CodeIgniter\Database\BaseConnection;
 use CodeIgniter\Database\ConnectionInterface;
-use InvalidArgumentException;
-use RuntimeException;
 
 final class ContactRepository
 {
+    public const ERROR_PERSISTENCE_FAILED = 'CONTACT_PERSISTENCE_FAILED';
+    public const ERROR_CONNECTION_INVALID = 'CONTACT_CONNECTION_INVALID';
+    public const ERROR_OWNER_IMMUTABLE = 'CONTACT_OWNER_IMMUTABLE';
+    public const ERROR_UPDATE_EMPTY = 'CONTACT_UPDATE_EMPTY';
+    public const ERROR_FIELD_UNSUPPORTED = 'CONTACT_FIELD_UNSUPPORTED';
+    public const ERROR_FIELD_REQUIRED = 'CONTACT_FIELD_REQUIRED';
+
     /** @var list<string> */
     private const FIELDS = [
         'contact_type', 'contact_ref_id', 'description', 'status', 'name', 'email',
@@ -44,10 +50,10 @@ final class ContactRepository
     {
         $payload = $this->payload($data, ['contact_type', 'contact_ref_id', 'status']);
         if (! $this->db->table('contacts')->insert($payload)) {
-            throw new RuntimeException('Unable to persist contact.');
+            throw new DomainException(self::ERROR_PERSISTENCE_FAILED, ['operation' => 'insert']);
         }
         if (! $this->db instanceof BaseConnection) {
-            throw new RuntimeException('Contact persistence requires a writable database connection.');
+            throw new DomainException(self::ERROR_CONNECTION_INVALID, ['operation' => 'insert']);
         }
 
         return (int) $this->db->insertID();
@@ -58,12 +64,12 @@ final class ContactRepository
     {
         foreach (self::OWNER_FIELDS as $field) {
             if (array_key_exists($field, $data)) {
-                throw new InvalidArgumentException('Contact owner cannot be changed by update.');
+                throw new DomainException(self::ERROR_OWNER_IMMUTABLE, ['field' => $field]);
             }
         }
         $payload = $this->payload($data);
         if ($payload === []) {
-            throw new InvalidArgumentException('Contact update cannot be empty.');
+            throw new DomainException(self::ERROR_UPDATE_EMPTY, ['operation' => 'update']);
         }
 
         return $this->db->table('contacts')->where('id', $id)->update($payload);
@@ -120,12 +126,12 @@ final class ContactRepository
     {
         foreach ($data as $field => $_value) {
             if (! in_array($field, self::FIELDS, true)) {
-                throw new InvalidArgumentException('Unsupported contact field: ' . $field);
+                throw new DomainException(self::ERROR_FIELD_UNSUPPORTED, ['field' => $field]);
             }
         }
         foreach ($required as $field) {
             if (! array_key_exists($field, $data)) {
-                throw new InvalidArgumentException('Missing contact field: ' . $field);
+                throw new DomainException(self::ERROR_FIELD_REQUIRED, ['field' => $field]);
             }
         }
 

@@ -11,4 +11,9 @@ return [
     'ORG_WARD_PROVINCE_MISMATCH'   => 'Ward không thuộc Province đã chọn.',
     'ORG_REFERENCE_INVALID'        => 'Tham chiếu Organization không hợp lệ.',
     'ORG_MUTATION_FAILED'          => 'Không thể cập nhật Organization. Vui lòng thử lại.',
+    'ORG_PERSISTENCE_FAILED'       => 'Không thể lưu Organization.',
+    'ORG_CONNECTION_INVALID'       => 'Kết nối cơ sở dữ liệu không hỗ trợ ghi Organization.',
+    'ORG_UPDATE_EMPTY'             => 'Dữ liệu cập nhật Organization không được để trống.',
+    'ORG_FIELD_UNSUPPORTED'        => 'Trường Organization không được hỗ trợ.',
+    'ORG_FIELD_REQUIRED'           => 'Thiếu trường Organization bắt buộc.',
 ];

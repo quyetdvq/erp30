@@ -4,12 +4,18 @@ declare(strict_types=1);
 
 namespace App\Repositories;
 
+use App\Exceptions\DomainException;
 use CodeIgniter\Database\ConnectionInterface;
 use CodeIgniter\Database\BaseConnection;
-use InvalidArgumentException;
 
 final class OrganizationRepository
 {
+    public const ERROR_PERSISTENCE_FAILED = 'ORG_PERSISTENCE_FAILED';
+    public const ERROR_CONNECTION_INVALID = 'ORG_CONNECTION_INVALID';
+    public const ERROR_UPDATE_EMPTY = 'ORG_UPDATE_EMPTY';
+    public const ERROR_FIELD_UNSUPPORTED = 'ORG_FIELD_UNSUPPORTED';
+    public const ERROR_FIELD_REQUIRED = 'ORG_FIELD_REQUIRED';
+
     /** @var list<string> */
     private const FIELDS = [
         'parent_id', 'type', 'code', 'name', 'legal_name', 'tax_code', 'address',
@@ -67,11 +73,11 @@ final class OrganizationRepository
     {
         $payload = $this->payload($data, ['type', 'code', 'name', 'status']);
         if (! $this->db->table('organizations')->insert($payload)) {
-            throw new \RuntimeException('Unable to persist organization.');
+            throw new DomainException(self::ERROR_PERSISTENCE_FAILED, ['operation' => 'insert']);
         }
 
         if (! $this->db instanceof BaseConnection) {
-            throw new \RuntimeException('Organization persistence requires a writable database connection.');
+            throw new DomainException(self::ERROR_CONNECTION_INVALID, ['operation' => 'insert']);
         }
 
         return (int) $this->db->insertID();
@@ -82,7 +88,7 @@ final class OrganizationRepository
     {
         $payload = $this->payload($data);
         if ($payload === []) {
-            throw new InvalidArgumentException('Organization update cannot be empty.');
+            throw new DomainException(self::ERROR_UPDATE_EMPTY, ['operation' => 'update']);
         }
 
         return $this->db->table('organizations')->where('id', $id)->update($payload);
@@ -97,12 +103,12 @@ final class OrganizationRepository
     {
         foreach ($data as $field => $_value) {
             if (! in_array($field, self::FIELDS, true)) {
-                throw new InvalidArgumentException('Unsupported organization field: ' . $field);
+                throw new DomainException(self::ERROR_FIELD_UNSUPPORTED, ['field' => $field]);
             }
         }
         foreach ($required as $field) {
             if (! array_key_exists($field, $data)) {
-                throw new InvalidArgumentException('Missing organization field: ' . $field);
+                throw new DomainException(self::ERROR_FIELD_REQUIRED, ['field' => $field]);
             }
         }
 

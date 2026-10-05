@@ -2,6 +2,7 @@
 
 declare(strict_types=1);
 
+use App\Exceptions\DomainException;
 use App\Repositories\OrganizationRepository;
 use CodeIgniter\Test\CIUnitTestCase;
 use CodeIgniter\Test\DatabaseTestTrait;
@@ -31,10 +32,24 @@ final class P1Org001OrganizationRepositoryTest extends CIUnitTestCase
     public function testRepositoryRejectsUnknownFieldsAndEmptyUpdates(): void
     {
         $repository = new OrganizationRepository($this->db);
-        $this->expectException(InvalidArgumentException::class);
-        $repository->insert([
-            'type' => 'GROUP', 'code' => 'ORG-REPO-002', 'name' => 'Invalid',
-            'status' => 'ACTIVE', 'not_a_column' => true,
-        ]);
+        try {
+            $repository->insert([
+                'type' => 'GROUP', 'code' => 'ORG-REPO-002', 'name' => 'Invalid',
+                'status' => 'ACTIVE', 'not_a_column' => true,
+            ]);
+            $this->fail('Expected unsupported field rejection.');
+        } catch (DomainException $exception) {
+            $this->assertSame(OrganizationRepository::ERROR_FIELD_UNSUPPORTED, $exception->getErrorCode());
+            $this->assertSame('not_a_column', $exception->getContext()['field']);
+        }
+    }
+
+    public function testRepositoryCatalogUsesStableCodesInBothLocales(): void
+    {
+        $code = OrganizationRepository::ERROR_FIELD_UNSUPPORTED;
+        $this->assertNotSame(
+            lang('Organization.' . $code, [], 'vi'),
+            lang('Organization.' . $code, [], 'en'),
+        );
     }
 }
