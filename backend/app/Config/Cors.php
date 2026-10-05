@@ -38,7 +38,10 @@ class Cors extends BaseConfig
             'http://erp.dinktech.vn',
             'http://erp.monmin.net',
             'http://localhost:5174',
-            'http://127.0.0.1:5174',],
+            'http://127.0.0.1:5174', 
+            'http://localhost:5173',
+            'http://127.0.0.1:5173',
+            ],
 
         /**
          * Origin regex patterns for the `Access-Control-Allow-Origin` header.
