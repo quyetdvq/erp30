@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace App\Authorization;
 
+use App\Infrastructure\Time\Clock;
+use App\Infrastructure\Time\EvaluationTime;
 use CodeIgniter\Database\ConnectionInterface;
 
 final class AuthorizationLogger
@@ -14,12 +16,13 @@ final class AuthorizationLogger
     private ConnectionInterface $db;
 
     /** @param ConnectionInterface<mixed, mixed>|null $db */
-    public function __construct(?ConnectionInterface $db = null)
+    public function __construct(?ConnectionInterface $db = null, ?Clock $clock = null)
     {
-        
-
         $this->db = $db ?? db_connect();
+        $this->clock = $clock ?? service('clock');
     }
+
+    private Clock $clock;
 
     public function log(AuthorizationRequest $request, AuthorizationDecision $decision): void
     {
@@ -41,7 +44,7 @@ final class AuthorizationLogger
             'matched_policy_id' => $decision->matchedPolicyIds[0] ?? null,
             'reason' => $decision->reason,
             'request_id' => $request->requestId,
-            'created_at' => date('Y-m-d H:i:s'),
+            'created_at' => EvaluationTime::capture($this->clock)->utc()->format('Y-m-d H:i:s'),
         ]);
     }
 }

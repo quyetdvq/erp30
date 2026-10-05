@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Repositories;
 
 use App\Exceptions\DomainException;
+use App\Exceptions\PersistenceException;
 use CodeIgniter\Database\ConnectionInterface;
 use CodeIgniter\Database\BaseConnection;
 
@@ -35,8 +36,15 @@ final class OrganizationRepository
     /** @return array<string, mixed>|null */
     public function find(int $id): ?array
     {
-        $result = $this->db->table('organizations')->where('id', $id)->get();
-        $row = $result === false ? null : $result->getRowArray();
+        try {
+            $result = $this->db->table('organizations')->where('id', $id)->get();
+        } catch (\Throwable $exception) {
+            throw new PersistenceException(self::ERROR_PERSISTENCE_FAILED, 'find', $exception);
+        }
+        if ($result === false) {
+            throw new PersistenceException(self::ERROR_PERSISTENCE_FAILED, 'find');
+        }
+        $row = $result->getRowArray();
 
         return $row === null ? null : $row;
     }
@@ -44,8 +52,15 @@ final class OrganizationRepository
     /** @return array<string, mixed>|null */
     public function findByCode(string $code): ?array
     {
-        $result = $this->db->table('organizations')->where('code', $code)->get();
-        $row = $result === false ? null : $result->getRowArray();
+        try {
+            $result = $this->db->table('organizations')->where('code', $code)->get();
+        } catch (\Throwable $exception) {
+            throw new PersistenceException(self::ERROR_PERSISTENCE_FAILED, 'findByCode', $exception);
+        }
+        if ($result === false) {
+            throw new PersistenceException(self::ERROR_PERSISTENCE_FAILED, 'findByCode');
+        }
+        $row = $result->getRowArray();
 
         return $row === null ? null : $row;
     }
@@ -63,9 +78,44 @@ final class OrganizationRepository
             }
         }
 
-        $result = $builder->get();
+        try {
+            $result = $builder->get();
+        } catch (\Throwable $exception) {
+            throw new PersistenceException(self::ERROR_PERSISTENCE_FAILED, 'findAll', $exception);
+        }
+        if ($result === false) {
+            throw new PersistenceException(self::ERROR_PERSISTENCE_FAILED, 'findAll');
+        }
 
-        return $result === false ? [] : array_values($result->getResultArray());
+        return array_values($result->getResultArray());
+    }
+
+    public function provinceExists(int $provinceId): bool
+    {
+        return $this->referenceExists('provinces', $provinceId, 'provinceExists');
+    }
+
+    public function wardExists(int $wardId): bool
+    {
+        return $this->referenceExists('wards', $wardId, 'wardExists');
+    }
+
+    public function wardBelongsToProvince(int $wardId, int $provinceId): bool
+    {
+        try {
+            $result = $this->db->table('wards')
+                ->select('id')
+                ->where('id', $wardId)
+                ->where('province_id', $provinceId)
+                ->get();
+        } catch (\Throwable $exception) {
+            throw new PersistenceException(self::ERROR_PERSISTENCE_FAILED, 'wardBelongsToProvince', $exception);
+        }
+        if ($result === false) {
+            throw new PersistenceException(self::ERROR_PERSISTENCE_FAILED, 'wardBelongsToProvince');
+        }
+
+        return $result->getRowArray() !== null;
     }
 
     /** @param array<string, mixed> $data */
@@ -91,7 +141,30 @@ final class OrganizationRepository
             throw new DomainException(self::ERROR_UPDATE_EMPTY, ['operation' => 'update']);
         }
 
-        return $this->db->table('organizations')->where('id', $id)->update($payload);
+        try {
+            $updated = $this->db->table('organizations')->where('id', $id)->update($payload);
+        } catch (\Throwable $exception) {
+            throw new PersistenceException(self::ERROR_PERSISTENCE_FAILED, 'update', $exception);
+        }
+        if ($updated === false) {
+            throw new PersistenceException(self::ERROR_PERSISTENCE_FAILED, 'update');
+        }
+
+        return true;
+    }
+
+    private function referenceExists(string $table, int $id, string $operation): bool
+    {
+        try {
+            $result = $this->db->table($table)->select('id')->where('id', $id)->get();
+        } catch (\Throwable $exception) {
+            throw new PersistenceException(self::ERROR_PERSISTENCE_FAILED, $operation, $exception);
+        }
+        if ($result === false) {
+            throw new PersistenceException(self::ERROR_PERSISTENCE_FAILED, $operation);
+        }
+
+        return $result->getRowArray() !== null;
     }
 
     /**

@@ -15,9 +15,16 @@ final class BusinessTimezoneResolver
     {
     }
 
-    public function resolve(int $organizationId): ?DateTimeZone
+    public function resolve(?int $companyId, ?int $groupId = null): ?DateTimeZone
     {
-        foreach (["organization:$organizationId", "company:$organizationId", "group:$organizationId", (string) $organizationId] as $context) {
+        $contexts = [];
+        if ($companyId !== null) {
+            $contexts[] = "company:$companyId";
+        }
+        if ($groupId !== null) {
+            $contexts[] = "group:$groupId";
+        }
+        foreach ($contexts as $context) {
             $timezone = $this->readSetting($context);
             if (is_string($timezone) && $timezone !== '') {
                 return $this->timezone($timezone);

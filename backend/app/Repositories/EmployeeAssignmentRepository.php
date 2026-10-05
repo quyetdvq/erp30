@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Repositories;
 
 use App\Exceptions\DomainException;
+use App\Exceptions\PersistenceException;
 use CodeIgniter\Database\BaseConnection;
 use CodeIgniter\Database\ConnectionInterface;
 
@@ -35,8 +36,15 @@ final class EmployeeAssignmentRepository
     /** @return array<string, mixed>|null */
     public function find(int $id): ?array
     {
-        $result = $this->db->table('employee_assignments')->where('id', $id)->get();
-        $row = $result === false ? null : $result->getRowArray();
+        try {
+            $result = $this->db->table('employee_assignments')->where('id', $id)->get();
+        } catch (\Throwable $exception) {
+            throw new PersistenceException(self::ERROR_PERSISTENCE_FAILED, 'find', $exception);
+        }
+        if ($result === false) {
+            throw new PersistenceException(self::ERROR_PERSISTENCE_FAILED, 'find');
+        }
+        $row = $result->getRowArray();
 
         return $row === null ? null : $row;
     }
@@ -63,7 +71,16 @@ final class EmployeeAssignmentRepository
             throw new DomainException(self::ERROR_UPDATE_EMPTY, ['operation' => 'update']);
         }
 
-        return $this->db->table('employee_assignments')->where('id', $id)->update($payload);
+        try {
+            $updated = $this->db->table('employee_assignments')->where('id', $id)->update($payload);
+        } catch (\Throwable $exception) {
+            throw new PersistenceException(self::ERROR_PERSISTENCE_FAILED, 'update', $exception);
+        }
+        if ($updated === false) {
+            throw new PersistenceException(self::ERROR_PERSISTENCE_FAILED, 'update');
+        }
+
+        return true;
     }
 
     /** @return list<array<string, mixed>> */
@@ -76,9 +93,16 @@ final class EmployeeAssignmentRepository
         if ($status !== null) {
             $builder->where('status', $status);
         }
-        $result = $builder->get();
+        try {
+            $result = $builder->get();
+        } catch (\Throwable $exception) {
+            throw new PersistenceException(self::ERROR_PERSISTENCE_FAILED, 'findByEmployee', $exception);
+        }
+        if ($result === false) {
+            throw new PersistenceException(self::ERROR_PERSISTENCE_FAILED, 'findByEmployee');
+        }
 
-        return $result === false ? [] : array_values($result->getResultArray());
+        return array_values($result->getResultArray());
     }
 
     /** @return list<array<string, mixed>> */
@@ -97,9 +121,16 @@ final class EmployeeAssignmentRepository
         if ($primaryOnly) {
             $builder->where('is_primary', 1);
         }
-        $result = $builder->get();
+        try {
+            $result = $builder->get();
+        } catch (\Throwable $exception) {
+            throw new PersistenceException(self::ERROR_PERSISTENCE_FAILED, 'findEffective', $exception);
+        }
+        if ($result === false) {
+            throw new PersistenceException(self::ERROR_PERSISTENCE_FAILED, 'findEffective');
+        }
 
-        return $result === false ? [] : array_values($result->getResultArray());
+        return array_values($result->getResultArray());
     }
 
     /**

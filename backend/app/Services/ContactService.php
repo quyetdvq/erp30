@@ -5,6 +5,10 @@ declare(strict_types=1);
 namespace App\Services;
 
 use App\Exceptions\DomainException;
+use App\Infrastructure\Id\PositiveId;
+use App\Infrastructure\Mutation\MutationContext;
+use App\Infrastructure\Mutation\OperationContext;
+use App\Infrastructure\Time\Clock;
 use App\Repositories\ContactRepository;
 use CodeIgniter\Database\ConnectionInterface;
 
@@ -17,6 +21,7 @@ final class ContactService
     public const ERROR_TYPE_UNSUPPORTED = 'CONTACT_TYPE_UNSUPPORTED';
     public const ERROR_OWNER_NOT_FOUND = 'CONTACT_OWNER_NOT_FOUND';
     public const ERROR_WARD_PROVINCE_MISMATCH = 'CONTACT_WARD_PROVINCE_MISMATCH';
+    public const ERROR_NOT_FOUND = 'CONTACT_NOT_FOUND';
 
     /** @var array<string, string> */
     private const OWNER_TABLES = [
@@ -31,6 +36,8 @@ final class ContactService
     public function __construct(
         private readonly ?ContactRepository $repository = null,
         ?ConnectionInterface $db = null,
+        private readonly ?MutationContext $mutationContext = null,
+        private readonly ?Clock $clock = null,
     ) {
         $this->db = $db ?? db_connect();
     }
@@ -38,12 +45,16 @@ final class ContactService
     /** @param array<string, mixed> $data */
     public function create(array $data): int
     {
-        $type = $this->ownerType($data);
-        $ownerId = $this->ownerId($data);
+        $operation = $this->operation();
+        $payload = $this->withoutAuditFields($data);
+        $type = $this->ownerType($payload);
+        $ownerId = $this->ownerId($payload);
+        $payload['contact_type'] = $type;
+        $payload['contact_ref_id'] = $ownerId;
         $this->assertOwnerExists($type, $ownerId);
-        $this->assertWardBelongsToProvince($data);
+        $this->assertWardBelongsToProvince($payload);
 
-        return $this->repo()->insert($data);
+        return $this->repo()->insert(array_merge($payload, $operation->createdAudit()));
     }
 
     /** @param array<string, mixed> $data */
@@ -52,9 +63,16 @@ final class ContactService
         if (array_key_exists('contact_type', $data) || array_key_exists('contact_ref_id', $data)) {
             throw new DomainException(self::ERROR_OWNER_TRANSFER_UNSUPPORTED);
         }
-        $this->assertWardBelongsToProvince($data);
+        $operation = $this->operation();
+        $current = $this->repo()->find($id);
+        if ($current === null) {
+            throw new DomainException(self::ERROR_NOT_FOUND, ['contact_id' => $id]);
+        }
+        $payload = $this->withoutAuditFields($data);
+        $candidate = array_merge($current, $payload);
+        $this->assertWardBelongsToProvince($candidate);
 
-        return $this->repo()->update($id, $data);
+        return $this->repo()->update($id, array_merge($payload, $operation->updatedAudit()));
     }
 
     public function inactivate(int $id, string $status = 'INACTIVE'): bool
@@ -63,19 +81,17 @@ final class ContactService
             throw new DomainException(self::ERROR_STATUS_INVALID, ['status' => $status]);
         }
 
-        return $this->repo()->update($id, [
-            'status' => $status,
-            'updated_at' => date('Y-m-d H:i:s'),
-        ]);
+        return $this->update($id, ['status' => $status]);
     }
 
     /** @return list<array<string, mixed>> */
     public function listForOwner(string $contactType, int $contactRefId, ?string $status = null): array
     {
         $normalizedType = $this->normalizeType($contactType);
-        $this->assertOwnerExists($normalizedType, $contactRefId);
+        $normalizedOwnerId = PositiveId::normalize($contactRefId, 'contact_ref_id', self::ERROR_OWNER_REFERENCE_REQUIRED);
+        $this->assertOwnerExists($normalizedType, $normalizedOwnerId);
 
-        return $this->repo()->findByOwner($normalizedType, $contactRefId, $status);
+        return $this->repo()->findByOwner($normalizedType, $normalizedOwnerId, $status);
     }
 
     /**
@@ -105,11 +121,11 @@ final class ContactService
     /** @param array<string, mixed> $data */
     private function ownerId(array $data): int
     {
-        if (! isset($data['contact_ref_id']) || ! is_int($data['contact_ref_id']) && ! is_numeric($data['contact_ref_id'])) {
+        if (! array_key_exists('contact_ref_id', $data)) {
             throw new DomainException(self::ERROR_OWNER_REFERENCE_REQUIRED, ['field' => 'contact_ref_id']);
         }
 
-        return (int) $data['contact_ref_id'];
+        return PositiveId::normalize($data['contact_ref_id'], 'contact_ref_id', self::ERROR_OWNER_REFERENCE_REQUIRED);
     }
 
     private function normalizeType(string $type): string
@@ -124,8 +140,7 @@ final class ContactService
 
     private function assertOwnerExists(string $type, int $ownerId): void
     {
-        $result = $this->db->table(self::OWNER_TABLES[$type])->select('id')->where('id', $ownerId)->get();
-        if ($result === false || $result->getRowArray() === null) {
+        if (! $this->repo()->ownerExists(self::OWNER_TABLES[$type], $ownerId)) {
             throw new DomainException(self::ERROR_OWNER_NOT_FOUND, [
                 'contact_type' => $type,
                 'contact_ref_id' => $ownerId,
@@ -143,16 +158,31 @@ final class ContactService
             return;
         }
 
-        $result = $this->db->table('wards')
-            ->select('id')
-            ->where('id', (int) $data['ward_id'])
-            ->where('province_id', (int) $data['province_id'])
-            ->get();
-        if ($result === false || $result->getRowArray() === null) {
+        $provinceId = PositiveId::normalize($data['province_id'], 'province_id', self::ERROR_WARD_PROVINCE_MISMATCH);
+        $wardId = PositiveId::normalize($data['ward_id'], 'ward_id', self::ERROR_WARD_PROVINCE_MISMATCH);
+        if (! $this->repo()->wardBelongsToProvince($wardId, $provinceId)) {
             throw new DomainException(self::ERROR_WARD_PROVINCE_MISMATCH, [
-                'province_id' => (int) $data['province_id'],
-                'ward_id' => (int) $data['ward_id'],
+                'province_id' => $provinceId,
+                'ward_id' => $wardId,
             ]);
         }
+    }
+
+    private function operation(): OperationContext
+    {
+        $context = $this->mutationContext ?? MutationContext::system($this->clock ?? service('clock'));
+
+        return $context->begin();
+    }
+
+    /**
+     * @param array<string, mixed> $data
+     * @return array<string, mixed>
+     */
+    private function withoutAuditFields(array $data): array
+    {
+        unset($data['created_by'], $data['updated_by'], $data['created_at'], $data['updated_at']);
+
+        return $data;
     }
 }

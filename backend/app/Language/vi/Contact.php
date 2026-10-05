@@ -10,6 +10,7 @@ return [
     'CONTACT_TYPE_UNSUPPORTED' => 'Loại Contact không được hỗ trợ.',
     'CONTACT_OWNER_NOT_FOUND' => 'Không tìm thấy chủ sở hữu Contact.',
     'CONTACT_WARD_PROVINCE_MISMATCH' => 'Ward không thuộc Province đã chọn.',
+    'CONTACT_NOT_FOUND' => 'Không tìm thấy Contact.',
     'CONTACT_PERSISTENCE_FAILED' => 'Không thể lưu Contact.',
     'CONTACT_CONNECTION_INVALID' => 'Kết nối cơ sở dữ liệu không hỗ trợ ghi Contact.',
     'CONTACT_OWNER_IMMUTABLE' => 'Không thể thay đổi chủ sở hữu Contact.',

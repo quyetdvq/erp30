@@ -1,0 +1,19 @@
+{
+  "format": "META-CODEX-002",
+  "catalog_kind": "corrective",
+  "tasks": [
+    {
+      "id": "HARDEN-P1-001",
+      "title": "Enforce backend coding architecture guardrails",
+      "dependencies": "P1-INF-001, P1-INF-003, P1-INF-004, P1-ORG-002, P1-CON-001, P1-EMP-001",
+      "risk": "HIGH",
+      "impact": "backend-domain",
+      "validation_profile": "high-risk",
+      "required_rule_ids": ["CTRL.AUTHORITY_ORDER", "CTRL.BOUNDED_SCOPE", "DB.ATOMIC_INVARIANTS", "API.LOCALE_INDEPENDENT_ERRORS", "HARDEN.APP_BOUNDARY", "HARDEN.OPERATION_CONTEXT", "HARDEN.PERSISTENCE_FAILURE", "HARDEN.CONCURRENCY", "HARDEN.ID_NORMALIZATION"],
+      "approved_decision_ids": [],
+      "direct_source_verification": ["Implementation Contract §3.1 Evaluation Time", "Implementation Contract §§9.2–9.4 DomainLock and concurrency", "Implementation Contract §§10.1–10.2 Audit contract", "Implementation Contract §15 Repository/service boundary"],
+      "expected_output": "bounded backend coding contract, corrections, architecture guard, and regression evidence",
+      "forbidden_scope": ["new-business-capability", "P1-EMP-003", "gate-3", "schema", "public-api", "ui", "architecture-baselines"]
+    }
+  ]
+}

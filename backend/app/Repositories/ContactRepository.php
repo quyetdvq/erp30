@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Repositories;
 
 use App\Exceptions\DomainException;
+use App\Exceptions\PersistenceException;
 use CodeIgniter\Database\BaseConnection;
 use CodeIgniter\Database\ConnectionInterface;
 
@@ -39,8 +40,15 @@ final class ContactRepository
     /** @return array<string, mixed>|null */
     public function find(int $id): ?array
     {
-        $result = $this->db->table('contacts')->where('id', $id)->get();
-        $row = $result === false ? null : $result->getRowArray();
+        try {
+            $result = $this->db->table('contacts')->where('id', $id)->get();
+        } catch (\Throwable $exception) {
+            throw new PersistenceException(self::ERROR_PERSISTENCE_FAILED, 'find', $exception);
+        }
+        if ($result === false) {
+            throw new PersistenceException(self::ERROR_PERSISTENCE_FAILED, 'find');
+        }
+        $row = $result->getRowArray();
 
         return $row === null ? null : $row;
     }
@@ -72,7 +80,16 @@ final class ContactRepository
             throw new DomainException(self::ERROR_UPDATE_EMPTY, ['operation' => 'update']);
         }
 
-        return $this->db->table('contacts')->where('id', $id)->update($payload);
+        try {
+            $updated = $this->db->table('contacts')->where('id', $id)->update($payload);
+        } catch (\Throwable $exception) {
+            throw new PersistenceException(self::ERROR_PERSISTENCE_FAILED, 'update', $exception);
+        }
+        if ($updated === false) {
+            throw new PersistenceException(self::ERROR_PERSISTENCE_FAILED, 'update');
+        }
+
+        return true;
     }
 
     /** @return list<array<string, mixed>> */
@@ -85,9 +102,16 @@ final class ContactRepository
         if ($status !== null) {
             $builder->where('status', $status);
         }
-        $result = $builder->get();
+        try {
+            $result = $builder->get();
+        } catch (\Throwable $exception) {
+            throw new PersistenceException(self::ERROR_PERSISTENCE_FAILED, 'findByOwner', $exception);
+        }
+        if ($result === false) {
+            throw new PersistenceException(self::ERROR_PERSISTENCE_FAILED, 'findByOwner');
+        }
 
-        return $result === false ? [] : array_values($result->getResultArray());
+        return array_values($result->getResultArray());
     }
 
     /**
@@ -112,9 +136,48 @@ final class ContactRepository
                 ->orLike('mobile', $query)
                 ->groupEnd();
         }
-        $result = $builder->get();
+        try {
+            $result = $builder->get();
+        } catch (\Throwable $exception) {
+            throw new PersistenceException(self::ERROR_PERSISTENCE_FAILED, 'search', $exception);
+        }
+        if ($result === false) {
+            throw new PersistenceException(self::ERROR_PERSISTENCE_FAILED, 'search');
+        }
 
-        return $result === false ? [] : array_values($result->getResultArray());
+        return array_values($result->getResultArray());
+    }
+
+    public function ownerExists(string $table, int $ownerId): bool
+    {
+        try {
+            $result = $this->db->table($table)->select('id')->where('id', $ownerId)->get();
+        } catch (\Throwable $exception) {
+            throw new PersistenceException(self::ERROR_PERSISTENCE_FAILED, 'ownerExists', $exception);
+        }
+        if ($result === false) {
+            throw new PersistenceException(self::ERROR_PERSISTENCE_FAILED, 'ownerExists');
+        }
+
+        return $result->getRowArray() !== null;
+    }
+
+    public function wardBelongsToProvince(int $wardId, int $provinceId): bool
+    {
+        try {
+            $result = $this->db->table('wards')
+                ->select('id')
+                ->where('id', $wardId)
+                ->where('province_id', $provinceId)
+                ->get();
+        } catch (\Throwable $exception) {
+            throw new PersistenceException(self::ERROR_PERSISTENCE_FAILED, 'wardBelongsToProvince', $exception);
+        }
+        if ($result === false) {
+            throw new PersistenceException(self::ERROR_PERSISTENCE_FAILED, 'wardBelongsToProvince');
+        }
+
+        return $result->getRowArray() !== null;
     }
 
     /**

@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Repositories;
 
 use App\Exceptions\DomainException;
+use App\Exceptions\PersistenceException;
 use CodeIgniter\Database\BaseConnection;
 use CodeIgniter\Database\ConnectionInterface;
 
@@ -35,8 +36,15 @@ final class EmployeeRepository
     /** @return array<string, mixed>|null */
     public function find(int $id): ?array
     {
-        $result = $this->db->table('employees')->where('id', $id)->get();
-        $row = $result === false ? null : $result->getRowArray();
+        try {
+            $result = $this->db->table('employees')->where('id', $id)->get();
+        } catch (\Throwable $exception) {
+            throw new PersistenceException(self::ERROR_PERSISTENCE_FAILED, 'find', $exception);
+        }
+        if ($result === false) {
+            throw new PersistenceException(self::ERROR_PERSISTENCE_FAILED, 'find');
+        }
+        $row = $result->getRowArray();
 
         return $row === null ? null : $row;
     }
@@ -44,8 +52,15 @@ final class EmployeeRepository
     /** @return array<string, mixed>|null */
     public function findByCode(string $code): ?array
     {
-        $result = $this->db->table('employees')->where('employee_code', $code)->get();
-        $row = $result === false ? null : $result->getRowArray();
+        try {
+            $result = $this->db->table('employees')->where('employee_code', $code)->get();
+        } catch (\Throwable $exception) {
+            throw new PersistenceException(self::ERROR_PERSISTENCE_FAILED, 'findByCode', $exception);
+        }
+        if ($result === false) {
+            throw new PersistenceException(self::ERROR_PERSISTENCE_FAILED, 'findByCode');
+        }
+        $row = $result->getRowArray();
 
         return $row === null ? null : $row;
     }
@@ -53,8 +68,15 @@ final class EmployeeRepository
     /** @return array<string, mixed>|null */
     public function findByUserId(int $userId): ?array
     {
-        $result = $this->db->table('employees')->where('user_id', $userId)->get();
-        $row = $result === false ? null : $result->getRowArray();
+        try {
+            $result = $this->db->table('employees')->where('user_id', $userId)->get();
+        } catch (\Throwable $exception) {
+            throw new PersistenceException(self::ERROR_PERSISTENCE_FAILED, 'findByUserId', $exception);
+        }
+        if ($result === false) {
+            throw new PersistenceException(self::ERROR_PERSISTENCE_FAILED, 'findByUserId');
+        }
+        $row = $result->getRowArray();
 
         return $row === null ? null : $row;
     }
@@ -75,9 +97,16 @@ final class EmployeeRepository
             $builder->like('employee_name', (string) $filters['employee_name']);
         }
 
-        $result = $builder->get();
+        try {
+            $result = $builder->get();
+        } catch (\Throwable $exception) {
+            throw new PersistenceException(self::ERROR_PERSISTENCE_FAILED, 'findAll', $exception);
+        }
+        if ($result === false) {
+            throw new PersistenceException(self::ERROR_PERSISTENCE_FAILED, 'findAll');
+        }
 
-        return $result === false ? [] : array_values($result->getResultArray());
+        return array_values($result->getResultArray());
     }
 
     /** @param array<string, mixed> $data */
@@ -102,7 +131,16 @@ final class EmployeeRepository
             throw new DomainException(self::ERROR_UPDATE_EMPTY, ['operation' => 'update']);
         }
 
-        return $this->db->table('employees')->where('id', $id)->update($payload);
+        try {
+            $updated = $this->db->table('employees')->where('id', $id)->update($payload);
+        } catch (\Throwable $exception) {
+            throw new PersistenceException(self::ERROR_PERSISTENCE_FAILED, 'update', $exception);
+        }
+        if ($updated === false) {
+            throw new PersistenceException(self::ERROR_PERSISTENCE_FAILED, 'update');
+        }
+
+        return true;
     }
 
     /**

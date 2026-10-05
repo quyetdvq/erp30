@@ -5,8 +5,12 @@ declare(strict_types=1);
 namespace App\Services;
 
 use App\Exceptions\DomainException;
+use App\Infrastructure\Id\PositiveId;
 use App\Infrastructure\Lock\DomainLockService;
 use App\Infrastructure\Lock\MariaDbDomainLockService;
+use App\Infrastructure\Mutation\MutationContext;
+use App\Infrastructure\Mutation\OperationContext;
+use App\Infrastructure\Time\Clock;
 use App\Repositories\OrganizationRepository;
 use CodeIgniter\Database\BaseConnection;
 use CodeIgniter\Database\ConnectionInterface;
@@ -43,6 +47,8 @@ final class OrganizationService
         private readonly ?OrganizationRepository $repository = null,
         ?ConnectionInterface $db = null,
         private readonly ?DomainLockService $domainLock = null,
+        private readonly ?MutationContext $mutationContext = null,
+        private readonly ?Clock $clock = null,
     ) {
         $this->db = $db ?? db_connect();
     }
@@ -50,7 +56,8 @@ final class OrganizationService
     /** @param array<string, mixed> $data */
     public function create(array $data): int
     {
-        $payload = $this->prepareCreate($data);
+        $operation = $this->operation();
+        $payload = $this->prepareCreate($data, $operation);
 
         return $this->withTreeLock(function () use ($payload): int {
             $this->assertHierarchyCandidate(null, $payload['type'], $payload['parent_id']);
@@ -64,12 +71,13 @@ final class OrganizationService
     /** @param array<string, mixed> $data */
     public function update(int $id, array $data): bool
     {
+        $operation = $this->operation();
         $current = $this->repo()->find($id);
         if ($current === null) {
             throw new DomainException(self::ERROR_REFERENCE_INVALID, ['organization_id' => $id]);
         }
 
-        $payload = $data;
+        $payload = $this->withoutAuditFields($data);
         if (array_key_exists('type', $payload)) {
             $payload['type'] = $this->normalizeType($payload['type']);
         }
@@ -81,6 +89,7 @@ final class OrganizationService
         $currentType = (string) $current['type'];
         $this->assertDates($candidate);
         $this->assertLocation($candidate);
+        $payload = array_merge($payload, $operation->updatedAudit());
 
         if (! array_key_exists('parent_id', $data) && ! array_key_exists('type', $data)) {
             return $this->repo()->update($id, $payload);
@@ -100,7 +109,6 @@ final class OrganizationService
     {
         return $this->update($id, [
             'status' => 'INACTIVE',
-            'updated_at' => date('Y-m-d H:i:s'),
         ]);
     }
 
@@ -149,12 +157,12 @@ final class OrganizationService
     /** @param array<string, mixed> $data
      *  @return array<string, mixed>
      */
-    private function prepareCreate(array $data): array
+    private function prepareCreate(array $data, OperationContext $operation): array
     {
-        $payload = $data;
+        $payload = $this->withoutAuditFields($data);
         $payload['type'] = $this->normalizeType($data['type'] ?? null);
         $payload['parent_id'] = $this->normalizeParentId($data['parent_id'] ?? null);
-        $payload['created_at'] ??= date('Y-m-d H:i:s');
+        $payload = array_merge($payload, $operation->createdAudit());
 
         return $payload;
     }
@@ -182,18 +190,7 @@ final class OrganizationService
         if ($value === null) {
             return null;
         }
-        if (is_int($value)) {
-            $parentId = $value;
-        } elseif (is_string($value) && ctype_digit($value)) {
-            $parentId = (int) $value;
-        } else {
-            throw new DomainException(self::ERROR_INVALID_PARENT, ['field' => 'parent_id']);
-        }
-        if ($parentId < 1) {
-            throw new DomainException(self::ERROR_INVALID_PARENT, ['field' => 'parent_id']);
-        }
-
-        return $parentId;
+        return PositiveId::normalize($value, 'parent_id', self::ERROR_INVALID_PARENT);
     }
 
     private function assertHierarchyCandidate(?int $organizationId, string $type, mixed $parentId): void
@@ -305,18 +302,14 @@ final class OrganizationService
     {
         $provinceId = $this->referenceId($data['province_id'] ?? null, 'province_id');
         $wardId = $this->referenceId($data['ward_id'] ?? null, 'ward_id');
-        if ($provinceId !== null && $this->db->table('provinces')->where('id', $provinceId)->countAllResults() !== 1) {
+        if ($provinceId !== null && ! $this->repo()->provinceExists($provinceId)) {
             throw new DomainException(self::ERROR_REFERENCE_INVALID, ['province_id' => $provinceId]);
         }
-        if ($wardId !== null && $this->db->table('wards')->where('id', $wardId)->countAllResults() !== 1) {
+        if ($wardId !== null && ! $this->repo()->wardExists($wardId)) {
             throw new DomainException(self::ERROR_REFERENCE_INVALID, ['ward_id' => $wardId]);
         }
         if ($provinceId !== null && $wardId !== null) {
-            $matches = $this->db->table('wards')
-                ->where('id', $wardId)
-                ->where('province_id', $provinceId)
-                ->countAllResults();
-            if ($matches !== 1) {
+            if (! $this->repo()->wardBelongsToProvince($wardId, $provinceId)) {
                 throw new DomainException(self::ERROR_WARD_PROVINCE_MISMATCH, [
                     'province_id' => $provinceId,
                     'ward_id' => $wardId,
@@ -330,18 +323,25 @@ final class OrganizationService
         if ($value === null) {
             return null;
         }
-        if (is_int($value)) {
-            $id = $value;
-        } elseif (is_string($value) && ctype_digit($value)) {
-            $id = (int) $value;
-        } else {
-            throw new DomainException(self::ERROR_REFERENCE_INVALID, ['field' => $field]);
-        }
-        if ($id < 1) {
-            throw new DomainException(self::ERROR_REFERENCE_INVALID, ['field' => $field]);
-        }
+        return PositiveId::normalize($value, $field, self::ERROR_REFERENCE_INVALID);
+    }
 
-        return $id;
+    private function operation(): OperationContext
+    {
+        $context = $this->mutationContext ?? MutationContext::system($this->clock ?? service('clock'));
+
+        return $context->begin();
+    }
+
+    /**
+     * @param array<string, mixed> $data
+     * @return array<string, mixed>
+     */
+    private function withoutAuditFields(array $data): array
+    {
+        unset($data['created_by'], $data['updated_by'], $data['created_at'], $data['updated_at']);
+
+        return $data;
     }
 
     /** @param callable(): mixed $callback */

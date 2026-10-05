@@ -11,7 +11,7 @@ use Throwable;
  * Domain failures expose a stable machine code while retaining diagnostics in
  * the exception chain for logs and server-side troubleshooting.
  */
-final class DomainException extends RuntimeException
+class DomainException extends RuntimeException
 {
     /** @param array<string, scalar|null> $context */
     public function __construct(

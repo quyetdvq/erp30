@@ -37,6 +37,7 @@ function failValidation(string $message): void
 try {
     $manifest = readJsonFile($manifestPath);
     $tasksCatalog = readJsonFile($compiled . DIRECTORY_SEPARATOR . 'tasks.json');
+    $correctiveCatalog = readJsonFile($compiled . DIRECTORY_SEPARATOR . 'corrective-tasks.json');
     $rulesCatalog = readJsonFile($compiled . DIRECTORY_SEPARATOR . 'rules.json');
     $decisionsCatalog = readJsonFile($compiled . DIRECTORY_SEPARATOR . 'approved-decisions.json');
 } catch (Throwable $error) {
@@ -122,6 +123,26 @@ foreach ($tasks as $task) {
             } elseif ($dependency !== '') {
                 failValidation("{$id} has unknown dependency token {$dependency}");
             }
+        }
+    }
+}
+
+foreach (($correctiveCatalog['tasks'] ?? []) as $task) {
+    $id = (string) ($task['id'] ?? '');
+    if (!preg_match('/^HARDEN-[A-Z0-9]+-[0-9]+$/', $id) || isset($taskMap[$id])) {
+        failValidation("duplicate or invalid corrective task id {$id}");
+    }
+    foreach (['risk', 'impact', 'validation_profile', 'expected_output', 'forbidden_scope'] as $field) {
+        if (!array_key_exists($field, $task)) {
+            failValidation("corrective task {$id} lacks {$field}");
+        }
+    }
+    if ((string) ($task['risk'] ?? '') === 'HIGH' && count($task['direct_source_verification'] ?? []) === 0) {
+        failValidation("high-risk corrective task {$id} lacks direct source verification pointers");
+    }
+    foreach (($task['required_rule_ids'] ?? []) as $ruleId) {
+        if (!isset($ruleMap[(string) $ruleId])) {
+            failValidation("{$id} references missing rule {$ruleId}");
         }
     }
 }

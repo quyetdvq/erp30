@@ -10,6 +10,7 @@ return [
     'CONTACT_TYPE_UNSUPPORTED' => 'The Contact type is not supported.',
     'CONTACT_OWNER_NOT_FOUND' => 'The Contact owner was not found.',
     'CONTACT_WARD_PROVINCE_MISMATCH' => 'The Ward does not belong to the selected Province.',
+    'CONTACT_NOT_FOUND' => 'The Contact was not found.',
     'CONTACT_PERSISTENCE_FAILED' => 'The Contact could not be saved.',
     'CONTACT_CONNECTION_INVALID' => 'The database connection cannot write Contacts.',
     'CONTACT_OWNER_IMMUTABLE' => 'The Contact owner cannot be changed.',

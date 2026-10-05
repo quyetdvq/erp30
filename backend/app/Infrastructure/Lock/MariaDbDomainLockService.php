@@ -4,60 +4,96 @@ declare(strict_types=1);
 
 namespace App\Infrastructure\Lock;
 
+use App\Exceptions\ConcurrencyException;
 use CodeIgniter\Database\ConnectionInterface;
 use CodeIgniter\Database\ResultInterface;
-use RuntimeException;
+use Throwable;
 
 final class MariaDbDomainLockService implements DomainLockService
 {
+    private const DEFAULT_TIMEOUT_SECONDS = 5;
+
     /** @var ConnectionInterface<mixed, mixed> */
     private ConnectionInterface $db;
+    private int $configuredTimeoutSeconds;
 
     /** @param ConnectionInterface<mixed, mixed>|null $db */
-    public function __construct(?ConnectionInterface $db = null)
+    public function __construct(?ConnectionInterface $db = null, ?int $configuredTimeoutSeconds = null)
     {
         $this->db = $db ?? db_connect();
+        $configured = $configuredTimeoutSeconds ?? (int) (getenv('DINKERP_DOMAIN_LOCK_TIMEOUT') ?: self::DEFAULT_TIMEOUT_SECONDS);
+        if ($configured < 0) {
+            throw new \InvalidArgumentException('Domain lock timeout must be non-negative.');
+        }
+        $this->configuredTimeoutSeconds = $configured;
     }
 
     public function acquire(string $domainKey, int $timeoutSeconds = 5): void
     {
         if ($domainKey === '' || $timeoutSeconds < 0) {
-            throw new RuntimeException('Invalid domain lock request.');
+            throw new ConcurrencyException('lock.acquire.invalid');
         }
+        $timeoutSeconds = $timeoutSeconds === self::DEFAULT_TIMEOUT_SECONDS ? $this->configuredTimeoutSeconds : $timeoutSeconds;
 
-        $result = $this->db->query(
-            'SELECT GET_LOCK(?, ?) AS acquired',
-            [$this->namespaced($domainKey), $timeoutSeconds],
-        );
+        try {
+            $result = $this->db->query(
+                'SELECT GET_LOCK(?, ?) AS acquired',
+                [$this->namespaced($domainKey), $timeoutSeconds],
+            );
+        } catch (Throwable $exception) {
+            throw new ConcurrencyException('lock.acquire', $exception);
+        }
         if ($result === false) {
-            throw new RuntimeException('Unable to acquire domain lock.');
+            throw new ConcurrencyException('lock.acquire');
         }
 
         if (! $result instanceof ResultInterface) {
-            throw new RuntimeException('Unable to read domain lock result.');
+            throw new ConcurrencyException('lock.acquire.result');
         }
         $row = $result->getRowArray();
         if ((int) ($row['acquired'] ?? 0) !== 1) {
-            throw new RuntimeException('Domain lock timeout: ' . $domainKey);
+            throw new ConcurrencyException('lock.acquire.timeout');
         }
     }
 
     public function release(string $domainKey): void
     {
-        $result = $this->db->query('SELECT RELEASE_LOCK(?) AS released', [$this->namespaced($domainKey)]);
-        if ($result === false) {
-            throw new RuntimeException('Unable to release domain lock.');
+        try {
+            $result = $this->db->query('SELECT RELEASE_LOCK(?) AS released', [$this->namespaced($domainKey)]);
+        } catch (Throwable $exception) {
+            throw new ConcurrencyException('lock.release', $exception);
+        }
+        if ($result === false || ! $result instanceof ResultInterface) {
+            throw new ConcurrencyException('lock.release');
+        }
+        $row = $result->getRowArray();
+        if (($row['released'] ?? null) !== 1 && ($row['released'] ?? null) !== '1') {
+            throw new ConcurrencyException('lock.release');
         }
     }
 
     public function synchronized(string $domainKey, callable $callback, int $timeoutSeconds = 5): mixed
     {
         $this->acquire($domainKey, $timeoutSeconds);
+        $result = null;
+        $callbackException = null;
         try {
-            return $callback();
-        } finally {
-            $this->release($domainKey);
+            $result = $callback();
+        } catch (Throwable $exception) {
+            $callbackException = $exception;
         }
+        try {
+            $this->release($domainKey);
+        } catch (Throwable $releaseException) {
+            if ($callbackException === null) {
+                throw $releaseException;
+            }
+        }
+        if ($callbackException !== null) {
+            throw $callbackException;
+        }
+
+        return $result;
     }
 
     private function namespaced(string $domainKey): string

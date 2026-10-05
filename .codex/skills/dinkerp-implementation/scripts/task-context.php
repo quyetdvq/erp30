@@ -91,6 +91,7 @@ try {
         exit(2);
     }
     $taskCatalog = readJson($compiled . DIRECTORY_SEPARATOR . 'tasks.json');
+    $correctiveCatalog = readJson($compiled . DIRECTORY_SEPARATOR . 'corrective-tasks.json');
     $ruleCatalog = readJson($compiled . DIRECTORY_SEPARATOR . 'rules.json');
     $decisionCatalog = readJson($compiled . DIRECTORY_SEPARATOR . 'approved-decisions.json');
 } catch (Throwable $error) {
@@ -100,6 +101,11 @@ try {
 
 $tasks = [];
 foreach (($taskCatalog['tasks'] ?? []) as $task) {
+    if (isset($task['id'])) {
+        $tasks[(string) $task['id']] = $task;
+    }
+}
+foreach (($correctiveCatalog['tasks'] ?? []) as $task) {
     if (isset($task['id'])) {
         $tasks[(string) $task['id']] = $task;
     }

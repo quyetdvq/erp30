@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace App\Authorization;
 
+use App\Infrastructure\Time\Clock;
+use App\Infrastructure\Time\EvaluationTime;
 use CodeIgniter\Database\ConnectionInterface;
 
 final class EmployeeContextResolver
@@ -12,10 +14,13 @@ final class EmployeeContextResolver
     private ConnectionInterface $db;
 
     /** @param ConnectionInterface<mixed, mixed>|null $db */
-    public function __construct(?ConnectionInterface $db = null)
+    public function __construct(?ConnectionInterface $db = null, ?Clock $clock = null)
     {
         $this->db = $db ?? db_connect();
+        $this->clock = $clock ?? service('clock');
     }
+
+    private Clock $clock;
 
     public function resolve(int $userId): ?EmployeeContext
     {
@@ -31,7 +36,7 @@ final class EmployeeContextResolver
             return null;
         }
 
-        $today = date('Y-m-d');
+        $today = EvaluationTime::capture($this->clock)->businessDate(new \DateTimeZone('UTC'));
         $assignmentResult = $this->db->table('employee_assignments')
             ->select('organization_id, department_id, position_id')
             ->where('employee_id', (int) $employee['id'])

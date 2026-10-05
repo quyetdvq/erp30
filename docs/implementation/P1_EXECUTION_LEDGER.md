@@ -130,3 +130,12 @@ downgraded to force that stale count.
 | P1-SYS-007 | NOT_STARTED | — | release | No accepted implementation evidence. |
 | P1-UAT-001 | NOT_STARTED | — | release | No accepted implementation evidence. |
 | P1-RC-001 | NOT_STARTED | — | release | No accepted implementation evidence. |
+
+## Corrective / Operational Work
+
+Corrective tasks in this section are not part of the 100-task P1 registry and
+do not change the `29/100` completion count.
+
+| Corrective ID | Status | Commit | Profile | Note |
+|---|---|---|---|---|
+| HARDEN-P1-001 | DONE | see commit subject | high-risk | Backend operation context, audit stamping, repository failure semantics, Contact merged-state validation, typed concurrency, timezone resolution, coding contract, and architecture guard. |
