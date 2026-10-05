@@ -1,0 +1,39 @@
+openapi: 3.1.0
+info:
+  title: DinkERP P1 API
+  version: 1.0.0
+  license:
+    name: Proprietary
+    identifier: LicenseRef-Proprietary
+  description: >-
+    Gate 0 contract source. Slice-specific operations are added only when their
+    authority documents and implementation tasks reach CONTRACT_READY.
+servers:
+  - url: https://api.monmin.net
+paths:
+  /api/v1/health:
+    get:
+      operationId: getHealth
+      summary: Health check
+      security: []
+      responses:
+        '200':
+          description: Service is available.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HealthResponse'
+        '500':
+          description: Service unavailable.
+        '400':
+          description: Invalid request.
+components:
+  schemas:
+    HealthResponse:
+      type: object
+      required:
+        - status
+      properties:
+        status:
+          type: string
+          const: ok

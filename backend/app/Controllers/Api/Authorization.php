@@ -27,7 +27,8 @@ final class Authorization extends BaseController
         /** @var AuthorizationService $authorization */
         $authorization = service('authorization');
 
-        return $this->response->setJSON($authorization->profile((int) $user->id));
+        $profile = $authorization->profile((int) $user->id);
+        return $this->response->setJSON($profile ?? []);
     }
 
     public function check(): ResponseInterface

@@ -9,7 +9,11 @@ export type AuthUser = {
   groups: string[]
 }
 
-export async function login(payload: { email: string; password: string; remember: boolean }): Promise<AuthUser> {
+export async function login(payload: {
+  email: string
+  password: string
+  remember: boolean
+}): Promise<AuthUser> {
   const response = await apiClient.post<{ user: AuthUser }>('/api/v1/auth/login', payload)
   return response.data.user
 }

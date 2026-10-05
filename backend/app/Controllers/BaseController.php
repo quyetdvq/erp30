@@ -42,4 +42,27 @@ abstract class BaseController extends Controller
         // Preload any models, libraries, etc, here.
         // $this->session = service('session');
     }
+
+    /** @return array<string, mixed> */
+    protected function jsonPayload(): array
+    {
+        $body = trim((string) $this->request->getBody());
+        if ($body === '') {
+            return [];
+        }
+
+        $decoded = json_decode($body, true);
+        if (! is_array($decoded)) {
+            return [];
+        }
+
+        $payload = [];
+        foreach ($decoded as $key => $value) {
+            if (is_string($key)) {
+                $payload[$key] = $value;
+            }
+        }
+
+        return $payload;
+    }
 }

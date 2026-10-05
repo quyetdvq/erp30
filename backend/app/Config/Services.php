@@ -3,6 +3,11 @@
 namespace Config;
 
 use App\Authorization\AuthorizationService;
+use App\Infrastructure\Lock\DomainLockService;
+use App\Infrastructure\Lock\MariaDbDomainLockService;
+use App\Infrastructure\Settings\BusinessTimezoneResolver;
+use App\Infrastructure\Time\Clock;
+use App\Infrastructure\Time\SystemClock;
 use CodeIgniter\Config\BaseService;
 
 /**
@@ -27,6 +32,33 @@ class Services extends BaseService
         }
 
         return new AuthorizationService();
+    }
+
+    public static function clock(bool $getShared = true): Clock
+    {
+        if ($getShared) {
+            return static::getSharedInstance('clock');
+        }
+
+        return new SystemClock();
+    }
+
+    public static function businessTimezone(bool $getShared = true): BusinessTimezoneResolver
+    {
+        if ($getShared) {
+            return static::getSharedInstance('businessTimezone');
+        }
+
+        return new BusinessTimezoneResolver(service('settings'));
+    }
+
+    public static function domainLock(bool $getShared = true): DomainLockService
+    {
+        if ($getShared) {
+            return static::getSharedInstance('domainLock');
+        }
+
+        return new MariaDbDomainLockService();
     }
 
     /*

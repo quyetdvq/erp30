@@ -10,8 +10,10 @@ final class AuthorizationLogger
 {
     private const AUDITED_ACTIONS = ['approve', 'delete', 'state_change'];
 
+    /** @var ConnectionInterface<mixed, mixed> */
     private ConnectionInterface $db;
 
+    /** @param ConnectionInterface<mixed, mixed>|null $db */
     public function __construct(?ConnectionInterface $db = null)
     {
         

@@ -59,13 +59,19 @@ export async function saveGroup(payload: Record<string, unknown>, id?: number): 
   else await apiClient.post('/api/v1/admin/groups', payload)
 }
 
-export async function getGroupPermissions(id: number): Promise<{ data: ResourceAction[]; assigned: number[] }> {
-  const response = await apiClient.get<{ data: ResourceAction[]; assigned: number[] }>(`/api/v1/admin/groups/${id}/permissions`)
+export async function getGroupPermissions(
+  id: number,
+): Promise<{ data: ResourceAction[]; assigned: number[] }> {
+  const response = await apiClient.get<{ data: ResourceAction[]; assigned: number[] }>(
+    `/api/v1/admin/groups/${id}/permissions`,
+  )
   return response.data
 }
 
 export async function saveGroupPermissions(id: number, resourceActionIds: number[]): Promise<void> {
-  await apiClient.put(`/api/v1/admin/groups/${id}/permissions`, { resource_action_ids: resourceActionIds })
+  await apiClient.put(`/api/v1/admin/groups/${id}/permissions`, {
+    resource_action_ids: resourceActionIds,
+  })
 }
 
 export async function getOrganizations(): Promise<Organization[]> {
@@ -73,7 +79,10 @@ export async function getOrganizations(): Promise<Organization[]> {
   return response.data.data
 }
 
-export async function saveOrganization(payload: Record<string, unknown>, id?: number): Promise<void> {
+export async function saveOrganization(
+  payload: Record<string, unknown>,
+  id?: number,
+): Promise<void> {
   if (id) await apiClient.patch(`/api/v1/admin/organizations/${id}`, payload)
   else await apiClient.post('/api/v1/admin/organizations', payload)
 }

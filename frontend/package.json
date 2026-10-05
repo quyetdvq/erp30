@@ -12,9 +12,12 @@
     "build-only": "vite build",
     "type-check": "vue-tsc --build",
     "lint": "run-s \"lint:*\"",
-    "lint:oxlint": "oxlint . --fix",
-    "lint:eslint": "eslint . --fix --cache",
-    "format": "prettier --write --experimental-cli src/"
+    "lint:oxlint": "oxlint .",
+    "lint:eslint": "eslint . --no-cache",
+    "format": "prettier --write --experimental-cli src/",
+    "format:check": "prettier --check src/ e2e/",
+    "openapi:lint": "redocly lint ../contracts/openapi/openapi.yaml",
+    "openapi:generate": "openapi-ts -f openapi-ts.config.ts"
   },
   "dependencies": {
     "@vueuse/core": "14.4.0",

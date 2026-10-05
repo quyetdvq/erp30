@@ -1,7 +1,7 @@
 import { defineConfig } from '@hey-api/openapi-ts';
 
 export default defineConfig({
-  input: '../contracts/openapi/05A_OpenAPI_3.1.yaml',
+  input: '../contracts/openapi/openapi.yaml',
   output: 'src/api/generated',
   parser: {
     patch: {

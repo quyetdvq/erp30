@@ -23,15 +23,19 @@ final class Admin extends BaseController
         }
 
         $authTables = config('Auth')->tables;
-        $rows = $this->db()->table($authTables['users'] . ' u')
+        $rowsResult = $this->db()->table($authTables['users'] . ' u')
             ->select('u.id, u.username, u.status, u.active, u.created_at, i.secret AS email')
             ->join($authTables['identities'] . ' i', "i.user_id = u.id AND i.type = 'email_password'", 'left')
             ->where('u.deleted_at', null)
             ->orderBy('u.id', 'DESC')
-            ->get()
-            ->getResultArray();
+            ->get();
+        $rows = $rowsResult === false ? [] : $rowsResult->getResultArray();
 
-        $groups = $this->groupMap(array_map(static fn (array $row): int => (int) $row['id'], $rows));
+        $userIds = [];
+        foreach ($rows as $row) {
+            $userIds[] = (int) $row['id'];
+        }
+        $groups = $this->groupMap($userIds);
         foreach ($rows as &$row) {
             $row['id'] = (int) $row['id'];
             $row['active'] = (bool) $row['active'];
@@ -48,7 +52,7 @@ final class Admin extends BaseController
             return $guard;
         }
 
-        $payload = $this->request->getJSON(true) ?? [];
+        $payload = $this->jsonPayload();
         $username = trim((string) ($payload['username'] ?? ''));
         $email = trim((string) ($payload['email'] ?? ''));
         $password = (string) ($payload['password'] ?? '');
@@ -104,7 +108,7 @@ final class Admin extends BaseController
             return $this->response->setStatusCode(404)->setJSON(['error' => 'USER_NOT_FOUND']);
         }
 
-        $payload = $this->request->getJSON(true) ?? [];
+        $payload = $this->jsonPayload();
         if (array_key_exists('username', $payload)) {
             $user->username = trim((string) $payload['username']);
         }
@@ -148,13 +152,13 @@ final class Admin extends BaseController
             return $guard;
         }
 
-        $rows = $this->db()->table('groups g')
+        $rowsResult = $this->db()->table('groups g')
             ->select('g.id, g.code, g.name, g.description, g.status, g.created_at, COUNT(gp.resource_action_id) AS permission_count')
             ->join('group_permissions gp', 'gp.group_id = g.id', 'left')
             ->groupBy('g.id')
             ->orderBy('g.name', 'ASC')
-            ->get()
-            ->getResultArray();
+            ->get();
+        $rows = $rowsResult === false ? [] : $rowsResult->getResultArray();
 
         foreach ($rows as &$row) {
             $row['id'] = (int) $row['id'];
@@ -181,19 +185,19 @@ final class Admin extends BaseController
             return $guard;
         }
 
-        $assigned = $this->db()->table('group_permissions')
+        $assignedResult = $this->db()->table('group_permissions')
             ->select('resource_action_id')
             ->where('group_id', $id)
-            ->get()
-            ->getResultArray();
+            ->get();
+        $assigned = $assignedResult === false ? [] : $assignedResult->getResultArray();
 
-        $catalog = $this->db()->table('resource_actions ra')
+        $catalogResult = $this->db()->table('resource_actions ra')
             ->select('ra.id, r.type AS resource, r.name AS resource_name, ra.code AS action, ra.description')
             ->join('resources r', 'r.id = ra.resource_id')
             ->orderBy('r.type', 'ASC')
             ->orderBy('ra.code', 'ASC')
-            ->get()
-            ->getResultArray();
+            ->get();
+        $catalog = $catalogResult === false ? [] : $catalogResult->getResultArray();
 
         return $this->response->setJSON([
             'data' => $catalog,
@@ -207,9 +211,10 @@ final class Admin extends BaseController
             return $guard;
         }
 
-        $payload = $this->request->getJSON(true) ?? [];
+        $payload = $this->jsonPayload();
         $actionIds = array_values(array_unique(array_filter(array_map('intval', (array) ($payload['resource_action_ids'] ?? [])))));
-        $valid = $this->db()->table('resource_actions')->select('id')->whereIn('id', $actionIds)->get()->getResultArray();
+        $validResult = $this->db()->table('resource_actions')->select('id')->whereIn('id', $actionIds)->get();
+        $valid = $validResult === false ? [] : $validResult->getResultArray();
         if (count($valid) !== count($actionIds)) {
             return $this->response->setStatusCode(422)->setJSON(['error' => 'UNKNOWN_RESOURCE_ACTION']);
         }
@@ -233,12 +238,12 @@ final class Admin extends BaseController
             return $guard;
         }
 
-        $rows = $this->db()->table('organizations o')
+        $rowsResult = $this->db()->table('organizations o')
             ->select('o.id, o.parent_id, o.type, o.code, o.name, o.status, o.active_from, o.active_to, p.name AS parent_name')
             ->join('organizations p', 'p.id = o.parent_id', 'left')
             ->orderBy('o.name', 'ASC')
-            ->get()
-            ->getResultArray();
+            ->get();
+        $rows = $rowsResult === false ? [] : $rowsResult->getResultArray();
 
         return $this->response->setJSON(['data' => array_map(static function (array $row): array {
             $row['id'] = (int) $row['id'];
@@ -263,7 +268,7 @@ final class Admin extends BaseController
             return $guard;
         }
 
-        $payload = $this->request->getJSON(true) ?? [];
+        $payload = $this->jsonPayload();
         $code = strtolower(trim((string) ($payload['code'] ?? '')));
         $name = trim((string) ($payload['name'] ?? ''));
         if ($code === '' || $name === '') {
@@ -295,7 +300,7 @@ final class Admin extends BaseController
             return $guard;
         }
 
-        $payload = $this->request->getJSON(true) ?? [];
+        $payload = $this->jsonPayload();
         $type = strtoupper(trim((string) ($payload['type'] ?? 'COMPANY')));
         $code = strtoupper(trim((string) ($payload['code'] ?? '')));
         $name = trim((string) ($payload['name'] ?? ''));
@@ -345,23 +350,26 @@ final class Admin extends BaseController
         return null;
     }
 
-    /** @return \CodeIgniter\Database\BaseConnection */
-    private function db()
+    /** @return \CodeIgniter\Database\BaseConnection<mixed, mixed> */
+    private function db(): \CodeIgniter\Database\BaseConnection
     {
         return db_connect();
     }
 
-    /** @param list<int> $userIds @return array<int, list<string>> */
+    /**
+     * @param list<int> $userIds
+     * @return array<int, list<string>>
+     */
     private function groupMap(array $userIds): array
     {
         if ($userIds === []) {
             return [];
         }
-        $rows = $this->db()->table(config('Auth')->tables['groups_users'])
+        $result = $this->db()->table(config('Auth')->tables['groups_users'])
             ->select('user_id, group')
             ->whereIn('user_id', $userIds)
-            ->get()
-            ->getResultArray();
+            ->get();
+        $rows = $result === false ? [] : $result->getResultArray();
         $map = [];
         foreach ($rows as $row) {
             $map[(int) $row['user_id']][] = (string) $row['group'];
@@ -369,7 +377,10 @@ final class Admin extends BaseController
         return $map;
     }
 
-    /** @param mixed $groups @return list<string> */
+    /**
+     * @param mixed $groups
+     * @return list<string>
+     */
     private function normaliseGroups(mixed $groups): array
     {
         return array_values(array_unique(array_filter(array_map(

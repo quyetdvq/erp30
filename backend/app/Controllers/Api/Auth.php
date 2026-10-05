@@ -6,6 +6,7 @@ namespace App\Controllers\Api;
 
 use App\Controllers\BaseController;
 use CodeIgniter\HTTP\ResponseInterface;
+use CodeIgniter\Shield\Authentication\Authenticators\Session;
 use CodeIgniter\Shield\Entities\User;
 use CodeIgniter\Shield\Models\UserModel;
 
@@ -18,7 +19,7 @@ final class Auth extends BaseController
 
     public function login(): ResponseInterface
     {
-        $payload = $this->request->getJSON(true) ?? [];
+        $payload = $this->jsonPayload();
         $identity = trim((string) ($payload['email'] ?? $payload['username'] ?? ''));
         $password = (string) ($payload['password'] ?? '');
 
@@ -29,9 +30,11 @@ final class Auth extends BaseController
             ]);
         }
 
-        $result = auth('session')->getAuthenticator()
-            ->remember((bool) ($payload['remember'] ?? false))
-            ->attempt(str_contains($identity, '@')
+        $authenticator = auth('session')->getAuthenticator();
+        if ($authenticator instanceof Session) {
+            $authenticator->remember((bool) ($payload['remember'] ?? false));
+        }
+        $result = $authenticator->attempt(str_contains($identity, '@')
                 ? ['email' => $identity, 'password' => $password]
                 : ['username' => $identity, 'password' => $password]);
 
@@ -73,7 +76,7 @@ final class Auth extends BaseController
             return $this->response->setStatusCode(401)->setJSON(['error' => 'UNAUTHENTICATED']);
         }
 
-        $payload = $this->request->getJSON(true) ?? [];
+        $payload = $this->jsonPayload();
         $username = trim((string) ($payload['username'] ?? ''));
         $email = trim((string) ($payload['email'] ?? ''));
         $password = (string) ($payload['password'] ?? '');

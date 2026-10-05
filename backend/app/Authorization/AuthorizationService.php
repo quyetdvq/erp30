@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Authorization;
 
+use App\Infrastructure\RequestContext;
 final class AuthorizationService
 {
     public function __construct(
@@ -25,7 +26,13 @@ final class AuthorizationService
         ?string $requestId = null,
     ): AuthorizationDecision {
         $userId ??= $this->authenticatedUserId();
-        $request = new AuthorizationRequest($resource, $action, $organizationId, $state, $requestId);
+        $request = new AuthorizationRequest(
+            $resource,
+            $action,
+            $organizationId,
+            $state,
+            $requestId ?? RequestContext::requestId(),
+        );
         $context = $userId === null ? null : $this->employeeContextResolver->resolve($userId);
         $profile = $userId === null ? null : $this->profileResolver->resolve($userId);
         $resourceAction = $this->resourceActionResolver->resolve($resource, $action, $state);

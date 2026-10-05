@@ -8,8 +8,10 @@ use CodeIgniter\Database\ConnectionInterface;
 
 final class ResourceActionResolver
 {
+    /** @var ConnectionInterface<mixed, mixed> */
     private ConnectionInterface $db;
 
+    /** @param ConnectionInterface<mixed, mixed>|null $db */
     public function __construct(?ConnectionInterface $db = null)
     {
         $this->db = $db ?? db_connect();
@@ -17,7 +19,7 @@ final class ResourceActionResolver
 
     public function resolve(string $resource, string $action, string $state): ?ResourceAction
     {
-        $row = $this->db->table('resources r')
+        $rowResult = $this->db->table('resources r')
             ->select('r.id resource_id, r.type resource_type, r.lifecycle_id, ra.id resource_action_id, ra.code action, ls.id state_id, ws.code state')
             ->join('resource_actions ra', 'ra.resource_id = r.id')
             ->join('lifecycle_states ls', 'ls.lifecycle_id = r.lifecycle_id')
@@ -25,8 +27,8 @@ final class ResourceActionResolver
             ->where('r.type', strtolower($resource))
             ->where('ra.code', strtolower($action))
             ->where('ws.code', strtoupper($state))
-            ->get()
-            ->getRowArray();
+            ->get();
+        $row = $rowResult === false ? null : $rowResult->getRowArray();
 
         if ($row === null) {
             return null;

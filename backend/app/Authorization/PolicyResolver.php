@@ -10,8 +10,10 @@ final class PolicyResolver
 {
     private const EFFECTS = ['ALLOW', 'DENY', 'ABSOLUTE_DENY'];
 
+    /** @var ConnectionInterface<mixed, mixed> */
     private ConnectionInterface $db;
 
+    /** @param ConnectionInterface<mixed, mixed>|null $db */
     public function __construct(?ConnectionInterface $db = null)
     {
         $this->db = $db ?? db_connect();
@@ -49,7 +51,8 @@ final class PolicyResolver
             $builder->orGroupStart()->where('p.participant_type', 'ORGANIZATION')->whereIn('p.participant_ref_id', $context->organizationIds)->groupEnd();
         }
 
-        $rows = $builder->groupEnd()->get()->getResultArray();
+        $rowsResult = $builder->groupEnd()->get();
+        $rows = $rowsResult === false ? [] : $rowsResult->getResultArray();
         $policyIds = [];
         $effects = [];
         $invalidEffect = false;
@@ -79,11 +82,11 @@ final class PolicyResolver
 
         while ($current > 0 && ! in_array($current, $ids, true)) {
             $ids[] = $current;
-            $row = $this->db->table('organizations')
+            $rowResult = $this->db->table('organizations')
                 ->select('parent_id')
                 ->where('id', $current)
-                ->get()
-                ->getRowArray();
+                ->get();
+            $row = $rowResult === false ? null : $rowResult->getRowArray();
 
             if ($row === null || $row['parent_id'] === null) {
                 break;

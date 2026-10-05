@@ -90,11 +90,11 @@ final class DecisionEngine
             reason: $reason,
             userId: $userId,
             organizationId: $request->organizationId,
-            resourceId: $resourceAction?->resourceId,
-            resourceActionId: $resourceAction?->resourceActionId,
-            stateId: $resourceAction?->stateId,
-            matchedPolicyIds: $policyEvaluation?->matchedPolicyIds ?? [],
-            effects: $policyEvaluation?->effects ?? [],
+            resourceId: $resourceAction === null ? null : $resourceAction->resourceId,
+            resourceActionId: $resourceAction === null ? null : $resourceAction->resourceActionId,
+            stateId: $resourceAction === null ? null : $resourceAction->stateId,
+            matchedPolicyIds: $policyEvaluation === null ? [] : $policyEvaluation->matchedPolicyIds,
+            effects: $policyEvaluation === null ? [] : $policyEvaluation->effects,
         );
     }
 }

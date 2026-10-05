@@ -79,7 +79,12 @@ onMounted(checkConnection)
         </div>
       </div>
 
-      <button type="button" class="check-button" :disabled="checkState === 'loading'" @click="checkConnection">
+      <button
+        type="button"
+        class="check-button"
+        :disabled="checkState === 'loading'"
+        @click="checkConnection"
+      >
         {{ checkState === 'loading' ? 'Đang kiểm tra' : 'Kiểm tra lại' }}
       </button>
     </section>
@@ -96,7 +101,14 @@ onMounted(checkConnection)
   min-width: 320px;
   background: #f4f7fb;
   color: #182230;
-  font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  font-family:
+    Inter,
+    ui-sans-serif,
+    system-ui,
+    -apple-system,
+    BlinkMacSystemFont,
+    'Segoe UI',
+    sans-serif;
 }
 
 .page-shell {
@@ -155,7 +167,7 @@ h1 {
   margin: 0;
   overflow-wrap: anywhere;
   color: #26394f;
-  font-family: "SFMono-Regular", Consolas, "Liberation Mono", monospace;
+  font-family: 'SFMono-Regular', Consolas, 'Liberation Mono', monospace;
   font-size: 0.92rem;
 }
 

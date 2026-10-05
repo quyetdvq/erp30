@@ -8,8 +8,10 @@ use CodeIgniter\Database\ConnectionInterface;
 
 final class EmployeeContextResolver
 {
+    /** @var ConnectionInterface<mixed, mixed> */
     private ConnectionInterface $db;
 
+    /** @param ConnectionInterface<mixed, mixed>|null $db */
     public function __construct(?ConnectionInterface $db = null)
     {
         $this->db = $db ?? db_connect();
@@ -17,19 +19,20 @@ final class EmployeeContextResolver
 
     public function resolve(int $userId): ?EmployeeContext
     {
-        $employee = $this->db->table('employees')
+        $employeeResult = $this->db->table('employees')
             ->select('id')
             ->where('user_id', $userId)
             ->where('status', 'ACTIVE')
-            ->get()
-            ->getRowArray();
+            ->get();
+
+        $employee = $employeeResult === false ? null : $employeeResult->getRowArray();
 
         if ($employee === null) {
             return null;
         }
 
         $today = date('Y-m-d');
-        $assignments = $this->db->table('employee_assignments')
+        $assignmentResult = $this->db->table('employee_assignments')
             ->select('organization_id, department_id, position_id')
             ->where('employee_id', (int) $employee['id'])
             ->where('status', 'ACTIVE')
@@ -38,8 +41,8 @@ final class EmployeeContextResolver
             ->where('effective_to IS NULL', null, false)
             ->orWhere('effective_to >=', $today)
             ->groupEnd()
-            ->get()
-            ->getResultArray();
+            ->get();
+        $assignments = $assignmentResult === false ? [] : $assignmentResult->getResultArray();
 
         $organizationIds = [];
         $departmentIds = [];
@@ -64,12 +67,16 @@ final class EmployeeContextResolver
 
 
 
+    /**
+     * @param list<int> $rootIds
+     * @return list<int>
+     */
     public function getOrganizationTreeIds(array $rootIds): array
     {
-        $rows = $this->db->table('organizations')
+        $rowsResult = $this->db->table('organizations')
             ->select('id, parent_id')
-            ->get()
-            ->getResultArray();
+            ->get();
+        $rows = $rowsResult === false ? [] : $rowsResult->getResultArray();
 
         $children = [];
 
@@ -92,6 +99,11 @@ final class EmployeeContextResolver
         return $result;
     }
 
+    /**
+     * @param array<int|string, list<int>> $children
+     * @param array<int, bool> $visited
+     * @param list<int> $result
+     */
     private function collectTree(
         int $id,
         array $children,

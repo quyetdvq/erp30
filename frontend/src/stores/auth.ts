@@ -2,7 +2,13 @@ import axios from 'axios'
 import { computed, ref } from 'vue'
 import { defineStore } from 'pinia'
 
-import { getCurrentUser, login as loginRequest, logout as logoutRequest, updateProfile, type AuthUser } from '@/services/auth'
+import {
+  getCurrentUser,
+  login as loginRequest,
+  logout as logoutRequest,
+  updateProfile,
+  type AuthUser,
+} from '@/services/auth'
 
 export const useAuthStore = defineStore('auth', () => {
   const user = ref<AuthUser | null>(null)
@@ -11,7 +17,9 @@ export const useAuthStore = defineStore('auth', () => {
   const error = ref('')
 
   const isAuthenticated = computed(() => user.value !== null)
-  const isAdmin = computed(() => user.value?.groups.some((group) => ['orgadmin', 'systemadmin'].includes(group)) ?? false)
+  const isAdmin = computed(
+    () => user.value?.groups.some((group) => ['orgadmin', 'systemadmin'].includes(group)) ?? false,
+  )
 
   async function hydrate(): Promise<void> {
     if (hydrated.value) return
@@ -19,7 +27,8 @@ export const useAuthStore = defineStore('auth', () => {
     try {
       user.value = await getCurrentUser()
     } catch (requestError: unknown) {
-      if (!axios.isAxiosError(requestError) || requestError.response?.status !== 401) error.value = 'Không thể tải phiên đăng nhập.'
+      if (!axios.isAxiosError(requestError) || requestError.response?.status !== 401)
+        error.value = 'Không thể tải phiên đăng nhập.'
       user.value = null
     }
   }
@@ -31,7 +40,9 @@ export const useAuthStore = defineStore('auth', () => {
       user.value = await loginRequest({ email, password, remember })
       hydrated.value = true
     } catch (requestError: unknown) {
-      error.value = axios.isAxiosError(requestError) ? (requestError.response?.data?.message ?? 'Đăng nhập không thành công.') : 'Đăng nhập không thành công.'
+      error.value = axios.isAxiosError(requestError)
+        ? (requestError.response?.data?.message ?? 'Đăng nhập không thành công.')
+        : 'Đăng nhập không thành công.'
       throw requestError
     } finally {
       busy.value = false
@@ -43,7 +54,11 @@ export const useAuthStore = defineStore('auth', () => {
     user.value = null
   }
 
-  async function saveProfile(payload: { username: string; email: string; password?: string }): Promise<void> {
+  async function saveProfile(payload: {
+    username: string
+    email: string
+    password?: string
+  }): Promise<void> {
     user.value = await updateProfile(payload)
   }
 
@@ -51,5 +66,17 @@ export const useAuthStore = defineStore('auth', () => {
     error.value = ''
   }
 
-  return { user, hydrated, busy, error, isAuthenticated, isAdmin, hydrate, login, logout, saveProfile, clearError }
+  return {
+    user,
+    hydrated,
+    busy,
+    error,
+    isAuthenticated,
+    isAdmin,
+    hydrate,
+    login,
+    logout,
+    saveProfile,
+    clearError,
+  }
 })
