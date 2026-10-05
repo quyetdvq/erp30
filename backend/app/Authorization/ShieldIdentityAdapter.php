@@ -12,7 +12,7 @@ use CodeIgniter\Database\ConnectionInterface;
 use CodeIgniter\Shield\Entities\User;
 
 /**
- * Read-only bridge from CodeIgniter Shield to the canonical IAM catalog.
+ * Bridge from CodeIgniter Shield to the canonical IAM catalog.
  * It does not union permissions or make authorization decisions.
  */
 final class ShieldIdentityAdapter
@@ -253,6 +253,98 @@ final class ShieldIdentityAdapter
     public function resolveDirectPermissions(ShieldIdentity $identity): array
     {
         return $this->resolveDirectPermissionAdditions($identity);
+    }
+
+    /**
+     * Add or remove one canonical Authorization Group membership in Shield.
+     */
+    public function setGroupMembership(
+        string $groupCode,
+        int $userId,
+        bool $assign,
+        OperationContext $operation,
+    ): bool {
+        $group = strtolower(trim($groupCode));
+        if ($group === '') {
+            throw new DomainException(self::ERROR_GROUP_MAPPING_INVALID, ['field' => 'group']);
+        }
+        $userId = PositiveId::normalize($userId, 'user_id', self::ERROR_IDENTITY_INVALID);
+        $table = config('Auth')->tables['groups_users'];
+
+        try {
+            if ($assign) {
+                $exists = $this->db->table($table)
+                    ->where('user_id', $userId)
+                    ->where('group', $group)
+                    ->countAllResults() > 0;
+                if (! $exists && ! $this->db->table($table)->insert([
+                    'user_id' => $userId,
+                    'group' => $group,
+                    'created_at' => $operation->evaluationTime->utc()->format('Y-m-d H:i:s'),
+                ])) {
+                    throw new PersistenceException(self::ERROR_PERSISTENCE_FAILED, 'setGroupMembership.insert');
+                }
+            } else {
+                $deleted = $this->db->table($table)
+                    ->where('user_id', $userId)
+                    ->where('group', $group)
+                    ->delete();
+                if ($deleted === false) {
+                    throw new PersistenceException(self::ERROR_PERSISTENCE_FAILED, 'setGroupMembership.delete');
+                }
+            }
+        } catch (PersistenceException $exception) {
+            throw $exception;
+        } catch (\Throwable $exception) {
+            throw new PersistenceException(self::ERROR_PERSISTENCE_FAILED, 'setGroupMembership', $exception);
+        }
+
+        return true;
+    }
+
+    /** Add or remove one canonical direct User permission in Shield. */
+    public function setDirectPermission(
+        int $userId,
+        string $permission,
+        bool $assign,
+        OperationContext $operation,
+    ): bool {
+        $userId = PositiveId::normalize($userId, 'user_id', self::ERROR_IDENTITY_INVALID);
+        $token = strtolower(trim($permission));
+        if ($token === '' || substr_count($token, '.') !== 1) {
+            throw new DomainException(self::ERROR_PERMISSION_MAPPING_INVALID, ['field' => 'permission']);
+        }
+        $table = config('Auth')->tables['permissions_users'];
+
+        try {
+            if ($assign) {
+                $exists = $this->db->table($table)
+                    ->where('user_id', $userId)
+                    ->where('permission', $token)
+                    ->countAllResults() > 0;
+                if (! $exists && ! $this->db->table($table)->insert([
+                    'user_id' => $userId,
+                    'permission' => $token,
+                    'created_at' => $operation->evaluationTime->utc()->format('Y-m-d H:i:s'),
+                ])) {
+                    throw new PersistenceException(self::ERROR_PERSISTENCE_FAILED, 'setDirectPermission.insert');
+                }
+            } else {
+                $deleted = $this->db->table($table)
+                    ->where('user_id', $userId)
+                    ->where('permission', $token)
+                    ->delete();
+                if ($deleted === false) {
+                    throw new PersistenceException(self::ERROR_PERSISTENCE_FAILED, 'setDirectPermission.delete');
+                }
+            }
+        } catch (PersistenceException $exception) {
+            throw $exception;
+        } catch (\Throwable $exception) {
+            throw new PersistenceException(self::ERROR_PERSISTENCE_FAILED, 'setDirectPermission', $exception);
+        }
+
+        return true;
     }
 
     /** @return array<string, BasePermission> */

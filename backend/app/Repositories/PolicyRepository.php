@@ -396,6 +396,30 @@ final class PolicyRepository
         }, 'replaceWithActions');
     }
 
+    /** Delete a Policy and its Actions atomically after locking the Policy row. */
+    public function deleteWithActions(int $policyId, ?OperationContext $operation = null): bool
+    {
+        return $this->transactional(function () use ($policyId): bool {
+            if ($this->findForUpdate($policyId) === null) {
+                return false;
+            }
+            try {
+                if (! $this->db->table('policy_actions')->where('policy_id', $policyId)->delete()) {
+                    throw new PersistenceException(self::ERROR_PERSISTENCE_FAILED, 'deleteWithActions.actions');
+                }
+                if (! $this->db->table('policies')->where('id', $policyId)->delete()) {
+                    throw new PersistenceException(self::ERROR_PERSISTENCE_FAILED, 'deleteWithActions.policy');
+                }
+            } catch (PersistenceException $exception) {
+                throw $exception;
+            } catch (\Throwable $exception) {
+                throw new PersistenceException(self::ERROR_PERSISTENCE_FAILED, 'deleteWithActions', $exception);
+            }
+
+            return true;
+        }, 'deleteWithActions');
+    }
+
     /**
      * @param callable(): mixed $callback
      * @return mixed
