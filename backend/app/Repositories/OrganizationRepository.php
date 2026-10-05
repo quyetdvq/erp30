@@ -71,14 +71,13 @@ final class OrganizationRepository
      */
     public function findAll(array $filters = []): array
     {
-        $builder = $this->db->table('organizations')->orderBy('id', 'ASC');
-        foreach (['parent_id', 'type', 'status'] as $field) {
-            if (array_key_exists($field, $filters)) {
-                $builder->where($field, $filters[$field]);
-            }
-        }
-
         try {
+            $builder = $this->db->table('organizations')->orderBy('id', 'ASC');
+            foreach (['parent_id', 'type', 'status'] as $field) {
+                if (array_key_exists($field, $filters)) {
+                    $builder->where($field, $filters[$field]);
+                }
+            }
             $result = $builder->get();
         } catch (\Throwable $exception) {
             throw new PersistenceException(self::ERROR_PERSISTENCE_FAILED, 'findAll', $exception);

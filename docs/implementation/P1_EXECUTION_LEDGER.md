@@ -4,9 +4,9 @@ This ledger is lightweight operational evidence. It is not architecture
 authority and does not replace UR, FRS, DBD, the Implementation Contract, the
 Implementation Plan, API Design, or UI Design.
 
-As of the P1-EMP-003 task commit, the registry contains exactly 100 P1 tasks.
-Repository evidence verifies 30 completed tasks: Gate 0 is 10/10, Gate 1 is
-14/14, and Gate 2 is 6/8. The previously supplied 28/100 and 4/8 checkpoint is
+As of the P1-CTX-001 task commit, the registry contains exactly 100 P1 tasks.
+Repository evidence verifies 31 completed tasks: Gate 0 is 10/10, Gate 1 is
+14/14, and Gate 2 is 7/8. The previously supplied 28/100 and 4/8 checkpoint is
 stale: the accepted `c4049f0` P1-ORG-002 commit is present in current history.
 No task is downgraded to force that stale count.
 
@@ -14,10 +14,10 @@ No task is downgraded to force that stale count.
 
 | Measure | Progress |
 |---|---:|
-| P1 tasks DONE | 30/100 |
+| P1 tasks DONE | 31/100 |
 | Gate 0 | 10/10 DONE |
 | Gate 1 | 14/14 DONE |
-| Gate 2 | 6/8 DONE |
+| Gate 2 | 7/8 DONE |
 | Gate 3 | 0/10 DONE |
 | Gate 4 | 0/7 DONE |
 | Gate 5 | 0/11 DONE |
@@ -60,7 +60,7 @@ No task is downgraded to force that stale count.
 | P1-EMP-001 | DONE | cafc23e, 2ccfb27, 838fa34 | high-risk | Implementation plus stable-code/localization corrections. |
 | P1-EMP-002 | DONE | 876c158 | service-standard | Employee assignment repository implementation. |
 | P1-EMP-003 | DONE | de71390, 1d95f5e | high-risk | Corrective real concurrent Primary Assignment regression: two independent connections, one commit, overlap failure, and final-state proof. |
-| P1-CTX-001 | NOT_STARTED | — | high-risk | No accepted implementation evidence. |
+| P1-CTX-001 | DONE | 45b0184 | high-risk | Authoritative Evaluation Organization resolver and HIGH-risk assessment evidence. |
 | P1-CTX-002 | NOT_STARTED | — | service-standard | No accepted implementation evidence. |
 | P1-IAM-001 | NOT_STARTED | — | high-risk | No accepted implementation evidence. |
 | P1-IAM-002 | NOT_STARTED | — | high-risk | No accepted implementation evidence. |
