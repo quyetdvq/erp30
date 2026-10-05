@@ -208,6 +208,23 @@ final class PolicyRepository
         return $result->getRowArray() !== null;
     }
 
+    /** @return array<string, mixed>|null */
+    public function findResourceByType(string $type): ?array
+    {
+        try {
+            $result = $this->db->table('resources')->where('type', $type)->get();
+        } catch (\Throwable $exception) {
+            throw new PersistenceException(self::ERROR_PERSISTENCE_FAILED, 'findResourceByType', $exception);
+        }
+        if ($result === false) {
+            throw new PersistenceException(self::ERROR_PERSISTENCE_FAILED, 'findResourceByType');
+        }
+
+        $row = $result->getRowArray();
+
+        return $row === null ? null : $row;
+    }
+
     /** @param array<string, mixed> $data */
     public function insert(array $data, ?OperationContext $operation = null): int
     {
