@@ -1,0 +1,75 @@
+<?php
+
+declare(strict_types=1);
+
+namespace App\Database\Seeds;
+
+use CodeIgniter\Database\Seeder;
+
+final class ResourceActionSeeder extends Seeder
+{
+    /** @var array<string, list<string>> */
+    private const MATRIX = [
+        'province' => ['view', 'create', 'edit', 'setstate', 'export'],
+        'ward' => ['view', 'create', 'edit', 'setstate', 'export'],
+        'contact' => ['view', 'create', 'edit', 'setstate', 'export'],
+        'organization' => ['view', 'create', 'edit', 'setstate', 'export'],
+        'department' => ['view', 'create', 'edit', 'setstate', 'export'],
+        'position' => ['view', 'create', 'edit', 'setstate', 'export'],
+        'employee' => ['view', 'create', 'edit', 'setstate', 'export'],
+        'employee_assignment' => ['view', 'create', 'edit', 'setstate'],
+        'user' => ['view', 'create', 'edit', 'setstate', 'assign_permission'],
+        'authorization_group' => ['view', 'create', 'edit', 'setstate', 'assign_member', 'assign_permission'],
+        'resource' => ['view', 'create', 'edit', 'delete', 'configure_numbering'],
+        'policy' => ['view', 'create', 'edit', 'delete'],
+        'authorization_log' => ['view', 'export'],
+        'workflow_state' => ['view', 'create', 'edit', 'setstate'],
+        'lifecycle' => ['view', 'create', 'edit', 'setstate'],
+        'product_group' => ['view', 'create', 'edit', 'setstate', 'export'],
+        'product_uom' => ['view', 'create', 'edit', 'setstate', 'export'],
+        'product' => ['view', 'create', 'edit', 'setstate', 'import', 'export'],
+        'price_list' => ['view', 'create', 'edit', 'setstate', 'export'],
+        'import_job' => ['view', 'export'],
+    ];
+
+    public function run(): void
+    {
+        $this->db->transStart();
+
+        foreach (self::MATRIX as $type => $actions) {
+            $result = $this->db->table('resources')
+                ->where('type', $type)
+                ->get();
+            $resource = $result === false ? null : $result->getRowArray();
+
+            if ($resource === null) {
+                $this->db->table('resources')->insert([
+                    'type'       => $type,
+                    'name'       => $type,
+                    'domain'     => null,
+                    'created_at' => date('Y-m-d H:i:s'),
+                ]);
+                $resourceId = (int) $this->db->insertID();
+            } else {
+                $resourceId = (int) $resource['id'];
+            }
+
+            foreach ($actions as $code) {
+                $exists = $this->db->table('resource_actions')
+                    ->where('resource_id', $resourceId)
+                    ->where('code', $code)
+                    ->countAllResults() > 0;
+
+                if (! $exists) {
+                    $this->db->table('resource_actions')->insert([
+                        'resource_id' => $resourceId,
+                        'code'        => $code,
+                        'created_at'  => date('Y-m-d H:i:s'),
+                    ]);
+                }
+            }
+        }
+
+        $this->db->transComplete();
+    }
+}
