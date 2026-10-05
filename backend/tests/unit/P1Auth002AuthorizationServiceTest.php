@@ -40,6 +40,9 @@ final class P1Auth002AuthorizationServiceTest extends CIUnitTestCase
 
         $this->assertSame('ALLOW', $decision->decision);
         $this->assertSame(AuthorizationService::REASON_NO_MATCH, $decision->reasonCode);
+        $this->assertSame([$this->permissionKey('price_list', 'view')], $decision->basePermissionSource);
+        $this->assertSame('auth-002-test', $decision->requestId);
+        $this->assertSame('2026-10-05T12:00:00+00:00', $decision->evaluationTime->utc()->format(DATE_ATOM));
     }
 
     public function testAllowWinsOverDenyInOneLane(): void
@@ -48,20 +51,22 @@ final class P1Auth002AuthorizationServiceTest extends CIUnitTestCase
         $resourceId = $this->resourceId('price_list');
         $actionId = $this->resourceActionId('price_list', 'view');
         $repository = new PolicyRepository($this->db);
-        $repository->insertWithActions($this->policy($companyId, 'USER', $userId), [['resource_action_id' => $actionId, 'effect' => 'DENY']]);
-        $repository->insertWithActions($this->policy($companyId, 'GROUP', $groupId), [['resource_action_id' => $actionId, 'effect' => 'ALLOW']]);
+        $denyPolicyId = $repository->insertWithActions($this->policy($companyId, 'USER', $userId), [['resource_action_id' => $actionId, 'effect' => 'DENY']]);
+        $allowPolicyId = $repository->insertWithActions($this->policy($companyId, 'GROUP', $groupId), [['resource_action_id' => $actionId, 'effect' => 'ALLOW']]);
 
         $decision = $this->service()->authorize($this->operation($userId), 'price_list', 'view', $this->request($companyId));
 
         $this->assertSame('ALLOW', $decision->decision);
-        $this->assertCount(2, $decision->matchedPolicyIds);
+        $this->assertSame(AuthorizationService::REASON_POLICY_ALLOWED, $decision->reasonCode);
+        $this->assertSame([$allowPolicyId], $decision->decisivePolicyIds);
+        $this->assertSame([$denyPolicyId, $allowPolicyId], $decision->matchedPolicyIds);
     }
 
     public function testAbsoluteDenyInheritedFromGroupOrganizationSurvivesAllLanes(): void
     {
         [$userId, , $companyId, $rootId] = $this->fixture(true);
         $repository = new PolicyRepository($this->db);
-        $repository->insertWithActions(
+        $absolutePolicyId = $repository->insertWithActions(
             $this->policy($rootId, 'USER', $userId),
             [['resource_action_id' => $this->resourceActionId('price_list', 'view'), 'effect' => 'ABSOLUTE_DENY']],
         );
@@ -70,6 +75,7 @@ final class P1Auth002AuthorizationServiceTest extends CIUnitTestCase
 
         $this->assertSame('DENY', $decision->decision);
         $this->assertSame(AuthorizationService::REASON_ABSOLUTE_DENY, $decision->reasonCode);
+        $this->assertSame([$absolutePolicyId], $decision->decisivePolicyIds);
     }
 
     public function testAssignmentDenyIsOnlyOneLaneAndDoesNotDenyActorNoMatch(): void
@@ -87,6 +93,8 @@ final class P1Auth002AuthorizationServiceTest extends CIUnitTestCase
         $decision = $this->service()->authorize($this->operation($userId), 'price_list', 'view', $this->request($companyId));
 
         $this->assertSame('ALLOW', $decision->decision);
+        $this->assertSame(AuthorizationService::REASON_NO_MATCH, $decision->reasonCode);
+        $this->assertSame([], $decision->decisivePolicyIds);
         $this->assertCount(1, $decision->participatingAssignmentIds);
     }
 
@@ -119,6 +127,7 @@ final class P1Auth002AuthorizationServiceTest extends CIUnitTestCase
     public function testSiblingPolicyDoesNotBleedIntoEvaluationOrganization(): void
     {
         [$userId, , $companyId, $rootId, $siblingId] = $this->fixture(true, true);
+        $this->assertNotNull($siblingId);
         $repository = new PolicyRepository($this->db);
         $repository->insertWithActions(
             $this->policy($siblingId, 'USER', $userId),
@@ -247,11 +256,22 @@ final class P1Auth002AuthorizationServiceTest extends CIUnitTestCase
 
     private function resourceId(string $type): int
     {
-        return (int) $this->db->table('resources')->where('type', $type)->get()->getRowArray()['id'];
+        $result = $this->db->table('resources')->where('type', $type)->get();
+        $row = $result === false ? null : $result->getRowArray();
+
+        return (int) ($row['id'] ?? 0);
     }
 
     private function resourceActionId(string $resource, string $action): int
     {
-        return (int) $this->db->table('resource_actions ra')->select('ra.id')->join('resources r', 'r.id = ra.resource_id')->where('r.type', $resource)->where('ra.code', $action)->get()->getRowArray()['id'];
+        $result = $this->db->table('resource_actions ra')->select('ra.id')->join('resources r', 'r.id = ra.resource_id')->where('r.type', $resource)->where('ra.code', $action)->get();
+        $row = $result === false ? null : $result->getRowArray();
+
+        return (int) ($row['id'] ?? 0);
+    }
+
+    private function permissionKey(string $resource, string $action): string
+    {
+        return strtolower($resource) . '.' . strtolower($action);
     }
 }

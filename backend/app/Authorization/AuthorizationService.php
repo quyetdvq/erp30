@@ -26,6 +26,7 @@ final class AuthorizationService
     public const REASON_POLICY_DENIED = 'AUTH_POLICY_DENIED';
     public const REASON_ABSOLUTE_DENY = 'AUTH_ABSOLUTE_DENY';
     public const REASON_NO_MATCH = 'AUTH_NO_MATCH_ALLOW';
+    public const REASON_POLICY_ALLOWED = 'AUTH_POLICY_ALLOWED';
     public const REASON_CONTEXT_REQUIRED = 'AUTH_CONTEXT_REQUIRED';
     public const ERROR_RESOURCE_INVALID = 'AUTH_RESOURCE_INVALID';
     public const ERROR_ACTION_INVALID = 'AUTH_ACTION_INVALID';
@@ -159,12 +160,22 @@ final class AuthorizationService
         $denied = $absoluteIds !== [] || count(array_filter($allResults, static fn (array $result): bool => $result['denied'])) === count($allResults);
         $decisive = $absoluteIds !== []
             ? $absoluteIds
-            : $this->uniqueSorted(array_merge(...array_map(static fn (array $result): array => $result['decisive'], $allResults)));
+            : ($denied
+                ? $this->uniqueSorted(array_merge(...array_map(static fn (array $result): array => $result['decisive'], $allResults)))
+                : $this->uniqueSorted(array_merge(...array_map(
+                    static fn (array $result): array => $result['denied'] ? [] : $result['decisive'],
+                    $allResults,
+                ))));
         $matched = $this->uniqueSorted(array_merge(...array_map(static fn (array $result): array => $result['matched'], $allResults)));
+        $reason = $absoluteIds !== []
+            ? self::REASON_ABSOLUTE_DENY
+            : ($denied
+                ? self::REASON_POLICY_DENIED
+                : ($decisive === [] ? self::REASON_NO_MATCH : self::REASON_POLICY_ALLOWED));
 
         return $this->decision(
             $denied ? self::DECISION_DENY : self::DECISION_ALLOW,
-            $absoluteIds !== [] ? self::REASON_ABSOLUTE_DENY : ($denied ? self::REASON_POLICY_DENIED : self::REASON_NO_MATCH),
+            $reason,
             $userId,
             $resource,
             $resourceAction,

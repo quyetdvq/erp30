@@ -23,13 +23,29 @@ final readonly class AuthorizationDecision
         public int $evaluationOrganizationId,
         public ?int $stateId,
         public EvaluationTime $evaluationTime,
-        public array $basePermissionSource,
-        public array $matchedPolicyIds,
-        public array $decisivePolicyIds,
-        public array $participatingAssignmentIds,
+        array $basePermissionSource,
+        array $matchedPolicyIds,
+        array $decisivePolicyIds,
+        array $participatingAssignmentIds,
         public ?string $requestId,
     ) {
+        $this->basePermissionSource = $this->normalizeSources($basePermissionSource);
+        $this->matchedPolicyIds = $this->normalizeIds($matchedPolicyIds);
+        $this->decisivePolicyIds = $this->normalizeIds($decisivePolicyIds);
+        $this->participatingAssignmentIds = $this->normalizeIds($participatingAssignmentIds);
     }
+
+    /** @var array<int, string> */
+    public array $basePermissionSource;
+
+    /** @var array<int, int> */
+    public array $matchedPolicyIds;
+
+    /** @var array<int, int> */
+    public array $decisivePolicyIds;
+
+    /** @var array<int, int> */
+    public array $participatingAssignmentIds;
 
     public function isAllowed(): bool
     {
@@ -54,5 +70,41 @@ final readonly class AuthorizationDecision
             'participating_assignment_ids' => $this->participatingAssignmentIds,
             'request_id' => $this->requestId,
         ];
+    }
+
+    /**
+     * @param array<int, mixed> $values
+     * @return array<int, string>
+     */
+    private function normalizeSources(array $values): array
+    {
+        $sources = [];
+        foreach ($values as $value) {
+            if (is_string($value) && trim($value) !== '') {
+                $sources[] = trim($value);
+            }
+        }
+        $sources = array_values(array_unique($sources));
+        sort($sources);
+
+        return $sources;
+    }
+
+    /**
+     * @param array<int, mixed> $values
+     * @return array<int, int>
+     */
+    private function normalizeIds(array $values): array
+    {
+        $ids = [];
+        foreach ($values as $value) {
+            if (is_int($value) && $value > 0) {
+                $ids[] = $value;
+            }
+        }
+        $ids = array_values(array_unique($ids));
+        sort($ids);
+
+        return $ids;
     }
 }

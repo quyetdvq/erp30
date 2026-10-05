@@ -4,9 +4,9 @@ This ledger is lightweight operational evidence. It is not architecture
 authority and does not replace UR, FRS, DBD, the Implementation Contract, the
 Implementation Plan, API Design, or UI Design.
 
-As of the P1-AUTH-002 task commit, the registry contains exactly 100 P1 tasks.
-Repository evidence verifies 36 completed tasks: Gate 0 is 10/10, Gate 1 is
-14/14, Gate 2 is 8/8, and Gate 3 has opened at 4/10. The previously supplied 28/100 and 4/8 checkpoint is
+As of the P1-AUTH-003 task commit, the registry contains exactly 100 P1 tasks.
+Repository evidence verifies 37 completed tasks: Gate 0 is 10/10, Gate 1 is
+14/14, Gate 2 is 8/8, and Gate 3 has opened at 5/10. The previously supplied 28/100 and 4/8 checkpoint is
 stale: the accepted `c4049f0` P1-ORG-002 commit is present in current history.
 No task is downgraded to force that stale count.
 
@@ -14,11 +14,11 @@ No task is downgraded to force that stale count.
 
 | Measure | Progress |
 |---|---:|
-| P1 tasks DONE | 36/100 |
+| P1 tasks DONE | 37/100 |
 | Gate 0 | 10/10 DONE |
 | Gate 1 | 14/14 DONE |
 | Gate 2 | 8/8 DONE |
-| Gate 3 | 4/10 DONE |
+| Gate 3 | 5/10 DONE |
 | Gate 4 | 0/7 DONE |
 | Gate 5 | 0/11 DONE |
 | Gate 6 | 0/9 DONE |
@@ -66,7 +66,7 @@ No task is downgraded to force that stale count.
 | P1-IAM-002 | DONE | 1a6895e | high-risk | EffectiveProfile runtime union of active group permissions and valid direct additions; no PBAC/context/profile persistence. |
 | P1-AUTH-001 | DONE | ba0557a | high-risk | PolicyRepository, Policy Action primitives, canonical participant/resource validation, atomic mutation, and HIGH-risk evidence. |
 | P1-AUTH-002 | DONE | 1e3b70d | high-risk | AuthorizationService core: canonical context/path, PBAC lanes/QT1, absolute-deny propagation, denied-set intersection, and explainable non-persisted decision object. Evidence: `docs/implementation/evidence/P1-AUTH-002/01_authorization_service_assessment.md`. |
-| P1-AUTH-003 | NOT_STARTED | — | high-risk | No accepted implementation evidence. |
+| P1-AUTH-003 | DONE | 6803ad3 | high-risk | Deterministic internal AuthorizationDecision reason semantics, matched/decisive policy evidence, Base Permission source, assignment/request/time evidence. Evidence: `docs/implementation/evidence/P1-AUTH-003/01_decision_evidence_assessment.md`. |
 | P1-AUTH-004 | NOT_STARTED | — | high-risk | No accepted implementation evidence. |
 | P1-AUTH-005 | NOT_STARTED | — | high-risk | No accepted implementation evidence. |
 | P1-WF-001 | NOT_STARTED | — | service-standard | No accepted implementation evidence. |
