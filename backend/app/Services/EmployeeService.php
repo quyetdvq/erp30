@@ -4,16 +4,22 @@ declare(strict_types=1);
 
 namespace App\Services;
 
+use App\Exceptions\DomainException;
 use App\Infrastructure\Lock\DomainLockService;
 use App\Infrastructure\Lock\MariaDbDomainLockService;
 use App\Repositories\EmployeeRepository;
 use CodeIgniter\Database\BaseConnection;
 use CodeIgniter\Database\ConnectionInterface;
-use InvalidArgumentException;
-use RuntimeException;
 
 final class EmployeeService
 {
+    public const ERROR_INVALID_REFERENCE = 'INVALID_REFERENCE';
+    public const ERROR_MANAGER_SELF = 'EMP_MANAGER_SELF_REFERENCE';
+    public const ERROR_MANAGER_CYCLE = 'EMP_MANAGER_CYCLE';
+    public const ERROR_MANAGER_INACTIVE = 'EMP_MANAGER_INACTIVE';
+    public const ERROR_VALIDATION = 'VALIDATION_ERROR';
+    public const ERROR_CONCURRENT_MODIFICATION = 'CONCURRENT_MODIFICATION';
+
     /** @var ConnectionInterface<mixed, mixed> */
     private ConnectionInterface $db;
 
@@ -46,7 +52,7 @@ final class EmployeeService
     {
         $current = $this->repo()->find($id);
         if ($current === null) {
-            throw new InvalidArgumentException('Employee does not exist.');
+            throw new DomainException(self::ERROR_INVALID_REFERENCE, ['employee_id' => $id]);
         }
 
         $managerChange = array_key_exists('manager_employee_id', $data);
@@ -90,7 +96,7 @@ final class EmployeeService
     {
         if (! array_key_exists('manager_employee_id', $data)) {
             if ($fieldRequired) {
-                throw new InvalidArgumentException('Manager employee id is required.');
+                throw new DomainException(self::ERROR_VALIDATION, ['field' => 'manager_employee_id']);
             }
 
             return null;
@@ -105,10 +111,10 @@ final class EmployeeService
         } elseif (is_string($value) && ctype_digit($value)) {
             $managerId = (int) $value;
         } else {
-            throw new InvalidArgumentException('Manager employee id must be an integer or null.');
+            throw new DomainException(self::ERROR_VALIDATION, ['field' => 'manager_employee_id']);
         }
         if ($managerId < 1) {
-            throw new InvalidArgumentException('Manager employee id must be positive.');
+            throw new DomainException(self::ERROR_VALIDATION, ['field' => 'manager_employee_id']);
         }
 
         return $managerId;
@@ -117,15 +123,18 @@ final class EmployeeService
     private function assertManagerCanBeAssigned(?int $employeeId, int $managerId): void
     {
         if ($employeeId !== null && $employeeId === $managerId) {
-            throw new InvalidArgumentException('Employee cannot manage itself.');
+            throw new DomainException(self::ERROR_MANAGER_SELF, [
+                'employee_id' => $employeeId,
+                'manager_employee_id' => $managerId,
+            ]);
         }
 
         $manager = $this->repo()->find($managerId);
         if ($manager === null) {
-            throw new InvalidArgumentException('Manager employee does not exist.');
+            throw new DomainException(self::ERROR_INVALID_REFERENCE, ['manager_employee_id' => $managerId]);
         }
         if (($manager['status'] ?? null) !== 'ACTIVE') {
-            throw new InvalidArgumentException('Inactive employee cannot be selected as manager.');
+            throw new DomainException(self::ERROR_MANAGER_INACTIVE, ['manager_employee_id' => $managerId]);
         }
 
         $visited = [];
@@ -133,11 +142,14 @@ final class EmployeeService
         while (true) {
             $cursorId = (int) ($cursor['id'] ?? 0);
             if ($cursorId < 1 || isset($visited[$cursorId])) {
-                throw new InvalidArgumentException('Management cycle detected.');
+                throw new DomainException(self::ERROR_MANAGER_CYCLE, ['manager_employee_id' => $managerId]);
             }
             $visited[$cursorId] = true;
             if ($employeeId !== null && $cursorId === $employeeId) {
-                throw new InvalidArgumentException('Management cycle detected.');
+                throw new DomainException(self::ERROR_MANAGER_CYCLE, [
+                    'employee_id' => $employeeId,
+                    'manager_employee_id' => $managerId,
+                ]);
             }
 
             $parentId = $cursor['manager_employee_id'] ?? null;
@@ -146,7 +158,7 @@ final class EmployeeService
             }
             $cursor = $this->repo()->find((int) $parentId);
             if ($cursor === null) {
-                throw new InvalidArgumentException('Manager chain contains a missing employee.');
+                throw new DomainException(self::ERROR_INVALID_REFERENCE, ['manager_employee_id' => $parentId]);
             }
         }
     }
@@ -155,25 +167,35 @@ final class EmployeeService
     private function withManagerLock(callable $callback): mixed
     {
         if (! $this->db instanceof BaseConnection) {
-            throw new RuntimeException('Employee manager mutations require a writable database connection.');
+            throw new DomainException(self::ERROR_CONCURRENT_MODIFICATION, ['operation' => 'manager_mutation']);
         }
         $db = $this->db;
         $lock = $this->domainLock ?? new MariaDbDomainLockService($db);
 
-        return $lock->synchronized('employee-manager-tree', function () use ($callback, $db): mixed {
-            $db->transBegin();
-            try {
-                $result = $callback();
-                if (! $db->transStatus()) {
-                    throw new RuntimeException('Employee manager transaction failed.');
-                }
-                $db->transCommit();
+        try {
+            return $lock->synchronized('employee-manager-tree', function () use ($callback, $db): mixed {
+                $db->transBegin();
+                try {
+                    $result = $callback();
+                    if (! $db->transStatus()) {
+                        throw new DomainException(self::ERROR_CONCURRENT_MODIFICATION, ['operation' => 'manager_mutation']);
+                    }
+                    $db->transCommit();
 
-                return $result;
-            } catch (\Throwable $exception) {
-                $db->transRollback();
-                throw $exception;
-            }
-        });
+                    return $result;
+                } catch (\Throwable $exception) {
+                    $db->transRollback();
+                    throw $exception;
+                }
+            });
+        } catch (DomainException $exception) {
+            throw $exception;
+        } catch (\Throwable $exception) {
+            throw new DomainException(
+                self::ERROR_CONCURRENT_MODIFICATION,
+                ['operation' => 'manager_mutation'],
+                $exception,
+            );
+        }
     }
 }
