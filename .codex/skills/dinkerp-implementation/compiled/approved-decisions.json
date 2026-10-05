@@ -1,0 +1,10 @@
+{
+  "format": "META-CODEX-002",
+  "status": "product_owner_approved",
+  "note": "These implementation decisions supplement, and do not replace, upstream architecture authority.",
+  "decisions": [
+    {"id":"DEC-WF-001","title":"Workflow code identity","approved_by":"Product Owner","rules":["workflow_states.code is canonical logic identity","workflow_states.name is display data only","bootstrap name equals code"]},
+    {"id":"DEC-SEC-001","title":"Privileged Authorization Group bootstrap","approved_by":"Product Owner","rules":["group code SYSTEM_ADMIN","name System Admin","status ACTIVE","description NULL","explicit approved 92-action snapshot","no automatic future-action grants","membership provision by Shield user ID CLI/deployment","membership only","no runtime bypass"]},
+    {"id":"DEC-ORG-001","title":"Canonical GROUP root bootstrap","approved_by":"Product Owner","rules":["code GROUP_DINKTECH","name Dinktech Group","description Tập đoàn Dinktech","type GROUP","status ACTIVE","parent NULL","company/address/location/effective fields NULL","conflicting existing GROUP root blocks","no Company bootstrap"]}
+  ]
+}

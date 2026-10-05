@@ -10,42 +10,58 @@ planning outcome. `AGENTS.md` remains the governing repository instruction.
 
 ## Execution flow
 
-1. **Task ID and gate**: identify the concrete Task ID/outcome and load only
-   its registry at `references/tasks-gate<N>.md`.
-2. **Bounded authority**: follow the registry's authority IDs/headings into the
-   baseline documents. Read the smallest relevant ranges; expand only for a
-   dependency, conflict, or debugging question.
-3. **Repository inspection**: run `git status --short`, record pre-existing
+1. **Task context first**: identify Task IDs and run
+   `php .codex/skills/dinkerp-implementation/scripts/task-context.php` (use
+   `--batch` for a declared batch). Do not read compiled catalogs directly.
+2. **Cache guard**: require `AUTHORITY_CACHE: VALID`. A stale hash, missing
+   provenance/rule, or cache/repository conflict is a stop condition.
+3. **Bounded authority**: LOW/MEDIUM tasks use valid compiled context without
+   direct architecture reads unless context is insufficient or debugging needs
+   it. HIGH tasks load context first, then verify only its exact critical source
+   pointers; never reread full documents.
+4. **Repository inspection**: run `git status --short`, record pre-existing
    changes, and inspect current paths, commands, contracts, and tests before
    proposing edits.
-4. **Task contract**: state scope/out-of-scope, dependencies and READY status,
+5. **Task contract**: state scope/out-of-scope, dependencies and READY status,
    DB, authorization/context, transaction/concurrency, API/OpenAPI, UI/i18n,
    and test impact.
-5. **Risk and validation**: classify LOW/MEDIUM/HIGH and select a profile from
-   `references/validation-profiles.md`. HIGH-risk work is never batched by
-   default.
-6. **Implement**: make the smallest coherent change within the task boundary;
+6. **Risk and validation**: use the registry risk/profile and task impact. Use
+   impact-aware gates from `references/validation-profiles.md`; HIGH-risk work
+   is never batched by default.
+7. **Implement**: make the smallest coherent change within the task boundary;
    preserve the authority order and project invariants.
-7. **Scoped validation**: run the selected profile, plus the relevant review
+8. **Scoped validation**: run the selected profile, plus the relevant review
    checklist. Do not run the full repository regression suite after every
    LOW/MEDIUM task.
-8. **Independent checkpoint**: if DONE, run `git diff --check`, inspect the
+9. **Independent checkpoint**: if DONE, run `git diff --check`, inspect the
    diff/status, stage only task files explicitly, and create exactly one commit
    containing the Task ID. Never stage unrelated work.
-9. **Batch progression**: after successful task commits, run the `batch-full`
-   profile. If it finds a regression, make a corrective commit; do not amend,
-   rebase, or rewrite prior task commits.
-10. **Compact report**: record outcome, files/behavior, critical contract
+10. **Batch progression**: after successful task commits, run the impact-aware
+   batch gate. If it finds a regression, make a corrective commit; do not
+   amend, rebase, or rewrite prior task commits.
+11. **Compact report**: record outcome, files/behavior, critical contract
     checks, validation as `command/check | PASS | count/version`, commit,
     blocker, and next dependency. Keep normal assessments about 30–60 lines.
 
 ## Progressive loading
 
-Never read all architecture documents by default. Given a Task ID, identify its
-gate registry, locate exact authority sections, read bounded ranges, and expand
-only when dependency closure, a source conflict, or debugging requires it. Do
-not reread accepted assessment documents unless the current task depends on
-their implementation or evidence state.
+Never read all architecture documents by default. Resolve context through
+`task-context.php`, which reports `rule_count` and `context_char_count`. Given a
+Task ID, use the registry and exact pointers emitted by the script; expand only
+for dependency closure, source conflict, or debugging. Do not reread accepted
+assessment documents unless the current task depends on their implementation or
+evidence state. Do not paste verbose successful logs or reread unchanged files
+in one batch.
+
+## Source-read policy
+
+- LOW: with a valid cache, architecture documents are not read directly.
+- MEDIUM: with a valid cache, architecture documents are not read directly
+  unless context is insufficient, conflicting, or debugging requires it.
+- HIGH: load compiled context first and directly verify only exact critical
+  sections declared for that task.
+- Hash mismatch, missing rule/provenance, or a cache/repository conflict stops
+  execution instead of guessing.
 
 ## Authority and safety
 

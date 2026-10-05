@@ -6,12 +6,16 @@ Plan, API Design, or UI Design.
 
 ## Bounded reading
 
-1. Read `AGENTS.md` and the applicable `tasks-gate<N>.md` registry.
-2. Resolve each registry authority pointer to an exact document ID and
-   heading. Read only the bounded section needed for the task contract.
-3. Expand to adjacent sections only for dependency closure, source conflict,
-   or debugging. Do not load all architecture documents by default.
-4. Treat accepted implementation assessments as evidence, not authority, and
+1. Identify Task IDs and run `scripts/task-context.php` (use `--batch` for a
+   declared batch); do not read compiled catalog files into model context.
+2. Require `AUTHORITY_CACHE: VALID`; stale hashes, missing provenance/rules, or
+   cache/repository conflicts stop execution.
+3. Read `AGENTS.md` and the applicable `tasks-gate<N>.md` registry. LOW/MEDIUM
+   tasks do not directly read architecture documents with a valid cache.
+4. For HIGH tasks, verify only exact critical authority pointers emitted by the
+   context script. Expand only for dependency closure, source conflict, or
+   debugging; never load all architecture documents by default.
+5. Treat accepted implementation assessments as evidence, not authority, and
    reread them only when the current task depends on their state.
 
 ## Task contract and readiness
@@ -56,9 +60,11 @@ unless an explicitly recorded pre-existing change remains outside the task.
 ## Batch closeout
 
 After all task-scoped gates pass and each task has its independent commit, run
-the `batch-full` profile. If the batch gate exposes a regression, create a new
-corrective commit tied to the affected Task ID or a clearly named correction
-task. Do not amend, squash, rebase, reset, or rewrite earlier task commits.
+the impact-aware batch gate. Add unrelated layer gates only for cross-layer or
+release impact, an unexpected changed path, or an explicit registry requirement.
+If the batch gate exposes a regression, create a new corrective commit tied to
+the affected Task ID or a clearly named correction task. Do not amend, squash,
+rebase, reset, or rewrite earlier task commits.
 
 ## High-risk minimums
 

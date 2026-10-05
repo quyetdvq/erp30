@@ -32,6 +32,11 @@ If sources conflict, do not silently reconcile them. Stop the affected part, ide
 - Confirm dependencies and whether the task is READY per the Implementation Plan.
 - Identify DB, authorization, transaction/concurrency, API/OpenAPI, UI/i18n, and test impact.
 
+For P1 implementation work, resolve Task IDs through
+`.codex/skills/dinkerp-implementation/scripts/task-context.php` first and
+require a valid authority hash cache before normal source reading; use the
+task impact to select scoped validation gates.
+
 ## Change-control boundaries
 
 Do not silently:

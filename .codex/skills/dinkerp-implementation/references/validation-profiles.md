@@ -4,6 +4,26 @@ Profiles select the smallest required gate for a task. Replace placeholders
 with the repository command established by `P1-ENV-001..004`; do not claim a
 check that was not run.
 
+## Impact-aware gate selection
+
+The task context `impact` selects the gate family in addition to the registry
+profile. Unexpected changed paths escalate validation; they are never silently
+skipped.
+
+| Impact | Minimum gates | Explicit exclusions unless escalated/required |
+|---|---|---|
+| `db` | targeted DB/migration and backend gates | frontend lint/type/unit/build, Playwright, accessibility, OpenAPI |
+| `backend-domain` | focused backend PHPUnit/PHPStan and relevant integration/concurrency checks | frontend gates, Playwright/accessibility, OpenAPI generation/lint |
+| `backend-security` | backend plus PBAC/security negative paths and concurrency where applicable | frontend gates unless changed paths or task registry require them |
+| `api-contract` | backend API/integration, serialization/locale, OpenAPI lint and typed generation when source changes | unrelated frontend UI gates and Playwright unless changed paths require them |
+| `frontend` | affected frontend type/lint/format/unit/build and critical UI checks when required | unrelated DB/migration gates |
+| `cross-layer` | relevant backend, API, frontend, and critical UI gates | none beyond task scope |
+| `release` | full release evidence set | none |
+
+Backend-only repository/service work must not trigger frontend lint/build/unit,
+Playwright, accessibility, or OpenAPI gates by default. DB-only work must not
+trigger frontend gates. API work includes backend and OpenAPI-relevant gates.
+
 ## `docs`
 
 Validate authority links, headings, scope, spelling/format, and
@@ -54,11 +74,11 @@ evidence separate from mocked/unit-only proof.
 
 ## `batch-full`
 
-Run the full gates required by the completed batch: backend PHPUnit and PHPStan
-level 8, relevant fresh/forward/inventory checks, OpenAPI lint/drift and typed
-generation, frontend type/lint/format/unit/build, and critical Playwright/
-accessibility checks. Include migration isolation and security/concurrency
-regressions when those domains are in the batch.
+Run the union of impact-aware gates for the completed batch. Add all gates only
+when the batch contains `cross-layer` or `release`, an unexpected changed path
+is found, or a task registry explicitly requires them. Include migration
+isolation and security/concurrency checks only when those domains are in the
+batch.
 
 ## `release`
 

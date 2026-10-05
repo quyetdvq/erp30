@@ -1,0 +1,14 @@
+{
+  "format": "META-CODEX-002",
+  "cache_kind": "derived_execution_cache",
+  "source_of_truth": "architecture_documents",
+  "authorities": [
+    {"path":"docs/architecture/00_User_Requirements_v1.0.12.md","identity":"UR v1.0.12","sha256":"7AF3E296BF6EBFA918280990CE1C90EDB3F7C4858ADDDFB824CC1C0A57862F1B"},
+    {"path":"docs/architecture/01_P1_Functional_Requirements_Specification_v1.7.md","identity":"FRS v1.7","sha256":"F9028C267CA16E540BC25BDEBCD37DFFB4F9E33F8C1DE716C4022770CD160B5D"},
+    {"path":"docs/architecture/02_P1_Database_Design_v1.10.md","identity":"DBD v1.10","sha256":"5F4C07A105F901C285F3472A2D8979B54D543874488CE3BBFD44E8DB9AB9CE3D"},
+    {"path":"docs/architecture/03_P1_Implementation_Contract_v1.5.md","identity":"Implementation Contract v1.5","sha256":"036AB479480FB25A167856F77E8B8950556A59484F22C73E22A5056CAFEE828B"},
+    {"path":"docs/architecture/04_P1_Implementation_Plan_v1.3.md","identity":"Implementation Plan v1.3","sha256":"27372AF817B870E5DA29268B18921CECF3AEFC354E6189E635A0C189DC69AA55"},
+    {"path":"docs/architecture/05_P1_API_Design_v1.1.md","identity":"API Design v1.1","sha256":"30BF976A164CE9475FCDC37D45384997B32892E656B2803D4276DBA93B39CB00"},
+    {"path":"docs/architecture/06_P1_UI_Design_v1.2.md","identity":"UI Design v1.2","sha256":"593BF8D8E243B88AE6C70D5EBD46302BABD004A7D5D72A371AA6FD1F2D414771"}
+  ]
+}
