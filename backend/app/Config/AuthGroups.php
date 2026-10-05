@@ -41,6 +41,10 @@ class AuthGroups extends ShieldAuthGroups
      * @see https://codeigniter4.github.io/shield/quick_start_guide/using_authorization/#change-available-groups for more info
      */
     public array $groups = [
+        'system_admin' => [
+            'title'       => 'System Admin',
+            'description' => 'Privileged ERP authorization group.',
+        ],
         'systemadmin' => [
             'title'       => 'Super Admin',
             'description' => 'Complete control of the site.',
