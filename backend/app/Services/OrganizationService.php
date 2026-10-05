@@ -154,6 +154,24 @@ final class OrganizationService
         return null;
     }
 
+    /** @return array<string, mixed> */
+    public function resolveCompanyOwner(mixed $organizationId): array
+    {
+        $normalizedId = PositiveId::normalize(
+            $organizationId,
+            'organization_id',
+            self::ERROR_COMPANY_RESOLUTION_FAILED,
+        );
+        $company = $this->resolveCompanyAncestor($normalizedId);
+        if ($company === null) {
+            throw new DomainException(self::ERROR_COMPANY_RESOLUTION_FAILED, [
+                'organization_id' => $normalizedId,
+            ]);
+        }
+
+        return $company;
+    }
+
     /** @param array<string, mixed> $data
      *  @return array<string, mixed>
      */
