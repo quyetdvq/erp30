@@ -68,7 +68,7 @@ No task is downgraded to force that stale count.
 | P1-AUTH-002 | DONE | 1e3b70d | high-risk | AuthorizationService core: canonical context/path, PBAC lanes/QT1, absolute-deny propagation, denied-set intersection, and explainable non-persisted decision object. Evidence: `docs/implementation/evidence/P1-AUTH-002/01_authorization_service_assessment.md`. |
 | P1-AUTH-003 | DONE | 6803ad3 | high-risk | Deterministic internal AuthorizationDecision reason semantics, matched/decisive policy evidence, Base Permission source, assignment/request/time evidence. Evidence: `docs/implementation/evidence/P1-AUTH-003/01_decision_evidence_assessment.md`. |
 | P1-AUTH-004 | DONE | 44aef17 | high-risk | Insert-only Authorization audit persistence for approve/delete/setstate, trusted decision mapping, deterministic decisive-policy representative, and typed failure propagation. Evidence: `docs/implementation/evidence/P1-AUTH-004/01_authorization_audit_assessment.md`. |
-| P1-AUTH-005 | DONE | 8579fb2 | high-risk | Security administration services, Shield membership/direct-permission mutations, atomic group permission and Policy administration, and HIGH-risk evidence. |
+| P1-AUTH-005 | DONE | 8579fb2, b8f094b | high-risk | Security administration services plus corrective concurrency, denial, sensitive-action, EffectiveProfile, and SYSTEM_ADMIN regression evidence. |
 | P1-WF-001 | NOT_STARTED | — | service-standard | No accepted implementation evidence. |
 | P1-WF-002 | NOT_STARTED | — | high-risk | No accepted implementation evidence. |
 | P1-AUTH-090 | NOT_STARTED | — | high-risk | No accepted implementation evidence. |
