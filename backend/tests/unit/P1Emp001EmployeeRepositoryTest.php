@@ -63,6 +63,11 @@ final class P1Emp001EmployeeRepositoryTest extends CIUnitTestCase
 
         $this->assertSame(EmployeeService::ERROR_MANAGER_SELF, $viCode);
         $this->assertSame($viCode, $enCode);
+        $this->assertNotSame(
+            lang('Employee.' . $viCode, [], 'vi'),
+            lang('Employee.' . $viCode, [], 'en'),
+        );
+        $this->assertStringNotContainsString('lang(', (string) file_get_contents(APPPATH . 'Services/EmployeeService.php'));
     }
 
     public function testInactiveManagerAndConcurrencyFailureExposeStableCodes(): void
@@ -101,7 +106,7 @@ final class P1Emp001EmployeeRepositoryTest extends CIUnitTestCase
             (new EmployeeService(null, $this->db, $lock))->setManager($employeeId, null);
             $this->fail('Expected manager concurrency rejection.');
         } catch (DomainException $exception) {
-            $this->assertSame(EmployeeService::ERROR_CONCURRENT_MODIFICATION, $exception->getErrorCode());
+            $this->assertSame(EmployeeService::ERROR_MANAGER_MUTATION_FAILED, $exception->getErrorCode());
             $this->assertSame('lock unavailable', $exception->getDiagnosticMessage());
             $this->assertStringNotContainsString('lock unavailable', $exception->getMessage());
         }
@@ -116,7 +121,7 @@ final class P1Emp001EmployeeRepositoryTest extends CIUnitTestCase
             $service->setManager($employeeId, 999999999);
             $this->fail('Expected missing manager rejection.');
         } catch (DomainException $exception) {
-            $this->assertSame(EmployeeService::ERROR_INVALID_REFERENCE, $exception->getErrorCode());
+            $this->assertSame(EmployeeService::ERROR_MANAGER_REFERENCE_INVALID, $exception->getErrorCode());
             $this->assertSame(999999999, $exception->getContext()['manager_employee_id']);
         }
     }
