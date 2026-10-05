@@ -4,26 +4,32 @@ declare(strict_types=1);
 
 namespace App\Database\Seeds;
 
+use App\Infrastructure\Lock\MariaDbDomainLockService;
 use CodeIgniter\Database\Seeder;
 use RuntimeException;
 
 final class GroupRootSeeder extends Seeder
 {
     public const ROOT_CODE = 'GROUP_DINKTECH';
+    private const LOCK_KEY = 'organization-tree';
 
     public function run(): void
     {
-        $this->db->transBegin();
-        try {
-            $this->ensureRoot();
-            if (! $this->db->transStatus()) {
-                throw new RuntimeException('GROUP root bootstrap failed.');
+        // Keep the advisory lock and transaction on this Seeder's connection;
+        // the root uniqueness check must serialize with organization creates.
+        (new MariaDbDomainLockService($this->db))->synchronized(self::LOCK_KEY, function (): void {
+            $this->db->transBegin();
+            try {
+                $this->ensureRoot();
+                if (! $this->db->transStatus()) {
+                    throw new RuntimeException('GROUP root bootstrap failed.');
+                }
+                $this->db->transCommit();
+            } catch (\Throwable $exception) {
+                $this->db->transRollback();
+                throw $exception;
             }
-            $this->db->transCommit();
-        } catch (\Throwable $exception) {
-            $this->db->transRollback();
-            throw $exception;
-        }
+        });
     }
 
     private function ensureRoot(): void
