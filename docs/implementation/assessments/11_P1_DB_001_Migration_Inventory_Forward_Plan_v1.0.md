@@ -290,3 +290,13 @@ Validation:
 - command: MariaDB version/database read-only query - PASS
 
 Next task: **P1-DB-010**.
+
+## 12. Repository consolidation checkpoint
+
+After the P1-DB-001 task checkpoint, the repository's remaining pre-existing working-tree changes were consolidated under explicit user authorization. This repository-wide consolidation is separate from the P1-DB-001 implementation scope and does not reclassify those files as P1-DB-001 work.
+
+- P1-DB-001 task artifact commit: `1aee09a docs(P1-DB-001): define migration inventory and forward plan`.
+- Consolidation commit: `d8cd9c3 chore(repo): consolidate current working tree`.
+- Consolidation included the previously dirty Gate 0/runtime/backend/frontend/documentation changes, legacy migration deletions, and reference-document moves/deletions already present in the worktree.
+- No new P1 business migration or seeder was created by the P1-DB-001 task; no database state was changed.
+- The report update itself is recorded in the following documentation-only checkpoint commit.
