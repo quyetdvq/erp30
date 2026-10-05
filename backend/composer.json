@@ -12,7 +12,9 @@
     "require": {
         "php": "^8.2",
         "codeigniter4/framework": "^4.7",
-        "codeigniter4/shield": "^1.4"
+        "codeigniter4/shield": "^1.4",
+        "phpoffice/phpspreadsheet": "^5.10",
+        "smalot/pdfparser": "^2.12"
     },
     "require-dev": {
         "codeigniter/phpstan-codeigniter": "^2.1",

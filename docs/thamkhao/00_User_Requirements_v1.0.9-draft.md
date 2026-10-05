@@ -1,7 +1,7 @@
 ---
 document_id: "REQ-MINI-ERP-001"
 title: "User Requirements - Dinktech Mini ERP"
-version: "1.0.6-draft"
+version: "1.0.9-draft"
 status: "draft"
 owner: "Chủ sở hữu sản phẩm"
 date: "2026-10-04"
@@ -22,11 +22,9 @@ Tài liệu này tập trung vào câu hỏi **"người dùng cần hệ thốn
 
 Baseline này thay thế định hướng ERP phức tạp trước đây bằng một mô hình Mini ERP, nhưng **giữ PBAC/Policy Engine cho Authorization** vì đây là capability được xác nhận cần thiết.
 
-Tài liệu này tiếp tục kế thừa các nguyên tắc nền tảng của bộ `00_*`/`01_*`, đồng thời được harmonize theo `02_P1_Database_Design_v1.3.md`. Đối với P1, Database Design v1.3 là technical boundary trung tâm cho persistence/relationship/constraint; User Requirements mô tả business scope và user need trên boundary đó để làm đầu vào cho Functional Requirements Specification.
 
-### 1.1 Trọng tâm revision v1.0.6-draft
+### 1.1 Trọng tâm revision v1.0.9-draft
 
-Revision này hài hòa User Requirements với `02_P1_Database_Design_v1.3.md`, là technical boundary baseline cho persistence P1 trước khi hoàn thiện Functional Requirements Specification. Các quyết định P1 được khóa gồm:
 - Organization Context sử dụng các type canonical `GROUP`, `COMPANY`, `BRANCH`, `PLANT`, `WAREHOUSE`; business scope vẫn là một Group với nhiều Company.
 - Product là Group Master dùng chung cho toàn bộ Company; P1 không có Product Company Usage Scope.
 - Product Model V2 sử dụng một entity Product duy nhất; không có Variant business entity/table riêng. Quan hệ cha/con dùng Product self-reference và chỉ cho phép depth tối đa 1.
@@ -40,21 +38,24 @@ Revision này hài hòa User Requirements với `02_P1_Database_Design_v1.3.md`,
 - SIMPLE/CHILD có thể có Alternate UOM; COMBO chỉ có Base UOM. Giá Alternate UOM của SIMPLE/CHILD không bắt buộc bằng Base price nhân conversion factor.
 - Core Pricing P1 resolve theo `Product + UOM + Company + Effective Time`, ưu tiên Company Price List, sau đó Group Price List, cuối cùng default price đúng UOM; COMBO chỉ price theo Base UOM.
 - Price List effective period dùng `[effective_from, effective_to)` và candidate resolution deterministic.
-- Employee-based context được resolve từ Primary Assignment duy nhất tại thời điểm đánh giá; Company được resolve từ Organization Context hoặc ancestor `COMPANY` phù hợp.
+- Primary Assignment chỉ là nguồn resolve **Organization Context mặc định** khi operation không chỉ định context rõ ràng. Authorization multi-assignment dùng Organization hierarchy đầy đủ từ `GROUP -> COMPANY -> BRANCH -> PLANT -> WAREHOUSE`: Assignment effective tại Evaluation Organization hoặc ancestor của nó có thể tạo Department/Position lane; Assignment ở `GROUP` được kế thừa xuống mọi descendant, còn Assignment của một Company/nhánh không được chảy ngang sang Company/nhánh khác.
 - Department và Position là master độc lập; quan hệ Employee với Organization/Department/Position đi qua Employee Assignment.
 - Contact là shared/core capability dùng polymorphic owner; P1 áp dụng tối thiểu cho Employee và Organization.
 - Effective Profile runtime là union của Authorization Group Permission và direct user permission addition từ identity mechanism hiện hành; không có persisted Profile riêng và không tạo Mini ERP User Override store mới.
-- Policy participant canonical dùng `GROUP`; Policy chỉ giới hạn Permission đã tồn tại và không có Resource Instance Authorization/arbitrary condition rule.
-- Policy precedence canonical: `ABSOLUTE_DENY > ALLOW > DENY > NO_MATCH`; Base Permission là prerequisite, không phải Policy ALLOW.
+- Policy participant canonical dùng `GROUP`; Policy chỉ giới hạn Permission đã tồn tại và không có Resource Instance Authorization/arbitrary condition rule. Policy inheritance runtime đi từ `GROUP` root xuống Evaluation Organization theo đúng ancestor path.
+- System Admin không có Authorization bypass: là Shield User có Employee mapping, có Employee Assignment tại Organization `GROUP` (Department IT; Position khi áp dụng), có Base Permission và chịu PBAC/`ABSOLUTE_DENY`/Workflow như mọi User khác. Initial System Admin membership được provision bằng bootstrap/deployment mechanism thay vì runtime bypass.
+- Existing Resource lấy Evaluation Organization authoritative từ chính persisted target; Create operation lấy context từ owner/parent/scope canonical. Client-provided context không được thay thế authoritative context và mismatch phải bị reject. `organization.create` evaluate tại Parent Organization; `employee_assignment` evaluate tại Organization của Assignment.
+- Mọi loại dữ liệu/capability cần bảo vệ đều được đăng ký thành Resource Type, gồm cả `organization`, `user`, `authorization_group`, `resource`, `policy` và các master/business resource khác; Resource Type biểu diễn loại dữ liệu/capability, không phải từng record instance.
+- Quyền security administration tách biệt: `authorization_group.assign_member`, `authorization_group.assign_permission`, và `user.assign_permission`; direct user permission vẫn dùng identity mechanism hiện hành, không tạo Mini ERP User Override persistence.
+- Business timezone được cấu hình theo từng `COMPANY` qua CodeIgniter Shield/Settings integration mechanism được phê duyệt; Evaluation Time là instant, còn business `DATE` được suy ra theo timezone của Company khi operation thuộc Company scope.
+- Policy precedence canonical trong từng authorization lane: `ABSOLUTE_DENY > ALLOW > DENY > NO_MATCH`; `NO_MATCH => ALLOW`. Base Permission là prerequisite. Khi một User có nhiều Department/Position/Assignment trong cùng Company, các **tập quyền bị cấm** sau khi resolve inheritance được merge bằng phép giao để User hưởng quyền cao nhất giữa các vai trò; mọi applicable `ABSOLUTE_DENY` phải được propagate vào mọi lane con chịu scope trước phép giao.
 - Workflow/Lifecycle transition được xác định tách biệt với Authorization; cùng Lifecycle + From State + Action chỉ resolve một destination state.
 - Approval baseline là single-step; không triển khai enterprise workflow designer/multi-level approval trong P1.
-- Import P1 có persisted job/row result; Product import resolve dependency graph/multi-pass, không phụ thuộc thứ tự Parent/Child/Combo trong file nguồn và phải detect Combo cycle.
+- Import Framework P1 có persisted job/row result nhưng **không tự áp dụng cho mọi master**. Resource chỉ có import khi được explicit enable; baseline P1 hiện enable `PRODUCT`. Product import resolve dependency graph/multi-pass, không phụ thuộc thứ tự Parent/Child/Combo trong file nguồn và phải detect Combo cycle.
 - Mutable master/config P1 phải giữ actor/timestamp audit theo technical boundary được phê duyệt.
 - Mọi functional `UR-*` phải có Acceptance Criteria.
 
 ### 1.2 Boundary với implementation authority
-
-Đối với P1, `02_P1_Database_Design_v1.3.md` là technical boundary trung tâm cho persistence, relationship, constraint và migration. User Requirements tiếp tục mô tả business scope/user need nhưng không được yêu cầu FRS hoặc implementation tạo persistence trái với Database Design P1 đã khóa.
 
 Các capability sau vẫn **không được tự suy diễn thêm** nếu chưa có requirement/change request và additive design được phê duyệt:
 - Resource Instance Authorization.
@@ -77,16 +78,22 @@ Business requirement P2/P3 có thể cần persistence mới, nhưng persistence
 Các quyết định sau đã được xác nhận và được sử dụng làm đầu vào cho Functional Requirements:
 - **Một Group trong business scope:** một `GROUP` root với nhiều `COMPANY`; underlying platform capability không tự mở rộng thành Multi-Group business operation.
 - **Plant/Site:** dùng canonical Organization Context `PLANT`; không tạo Location/Site taxonomy riêng trong baseline.
-- **Policy semantics:** không có Base Permission thì DENY. Khi có Base Permission, resolve `ABSOLUTE_DENY > ALLOW > DENY > NO_MATCH`; `NO_MATCH` giữ quyền ALLOW hiện có.
+- **Policy semantics:** không có Base Permission thì DENY. Khi có Base Permission, từng authorization lane resolve `ABSOLUTE_DENY > ALLOW > DENY > NO_MATCH`; `NO_MATCH` giữ quyền ALLOW hiện có. Multi-role/multi-assignment dùng giao các tập quyền bị cấm **sau khi** áp dụng inheritance; applicable `ABSOLUTE_DENY` được kế thừa/propagate vào mọi lane con trong scope trước phép giao.
 - **Effective Profile:** union của Group Permission và direct user permission addition được identity mechanism hiện hành cung cấp; không có persisted Profile riêng.
 - **Policy participant:** dữ liệu mới dùng `GROUP`, không dùng `ROLE` như canonical value.
+- **System Admin:** không có bypass. System Admin là User/Employee bình thường trong Authorization model, có Assignment ở `GROUP` với Department IT và Position khi áp dụng, cần Base Permission và chịu PBAC, `ABSOLUTE_DENY`, Lifecycle và business validation như mọi User khác. Initial privileged membership được provision bằng bootstrap/deployment mechanism; sau bootstrap vẫn dùng cùng Authorization pipeline.
+- **Authoritative Evaluation Organization:** existing target derive context từ persisted Resource; create derive từ owner/parent/scope canonical. `organization.create` evaluate tại parent; `employee_assignment` evaluate tại Assignment Organization. Client context không phải authority.
+- **Resource boundary:** mọi securable data/capability phải map vào Resource Type; `user`, `authorization_group`, `resource`, `policy`, `organization` cũng là Resource. Resource Type không đồng nghĩa Resource Instance Authorization.
+- **Security assignment actions:** membership và permission matrix của Authorization Group dùng action tách biệt `assign_member`/`assign_permission`; direct User permission dùng `user.assign_permission` qua identity mechanism hiện hành.
+- **GROUP inheritance:** Evaluation Organization có thể là `GROUP`, `COMPANY`, `BRANCH`, `PLANT`, `WAREHOUSE`; Policy/Assignment inheritance đi theo exact ancestor path từ `GROUP` tới context hiện tại trước denied-set intersection.
+- **Business timezone:** timezone cấu hình theo từng Company qua CodeIgniter Shield/Settings integration mechanism; business DATE dùng local date của Company từ cùng Evaluation Time.
 - **Workflow:** legal transition được quản lý riêng với Authorization; một action tại một from-state trong cùng lifecycle chỉ có một destination.
 - **Product:** Product Model V2 không có Variant entity; Parent/Child depth tối đa 1 và role được suy ra động. SIMPLE/CHILD là leaf transactionable; COMBO là selectable composition/template; PARENT không selectable/transactionable.
 - **COMBO:** có Base UOM, default selling price và Price List Base-UOM; không có Serial/UOM Conversion; được phép nested COMBO nhưng composition graph phải acyclic và phải flatten về SIMPLE/CHILD trước operational processing.
 - **COMBO selling allocation:** root COMBO được chọn trực tiếp resolve giá một lần; selling amount phân bổ theo `leaf quantity × leaf default price`, bảo toàn tổng amount sau rounding; cùng leaf từ nhiều COMBO được aggregate bằng tổng quantity/tổng amount.
 - **Product usage:** Product dùng chung cho tất cả Company trong Group; không có `product_company_usages` ở P1.
 - **Core Pricing:** giá được resolve theo Product + UOM; Company Price List ưu tiên Group Price List, sau đó fallback default price đúng UOM; COMBO chỉ có Base-UOM pricing.
-- **Import:** import có lịch sử job/row và Product import không phụ thuộc thứ tự dòng nguồn; nested COMBO dependency phải detect cycle.
+- **Import:** Import Framework có lịch sử job/row nhưng target phải explicit enable theo Resource. P1 baseline chỉ enable `PRODUCT`; không mặc định Employee/Province/Ward hay mọi master đều có import. Import Job giữ mode `CREATE_ONLY`/`UPDATE_ONLY`/`UPSERT`; Product import không phụ thuộc thứ tự dòng nguồn và nested COMBO dependency phải detect cycle.
 
 Các thay đổi về sau đối với các quyết định trên phải qua change control thay vì được tự thay đổi trong FRS.
 
@@ -129,7 +136,7 @@ P1 triển khai các capability nền tảng cần thiết để vận hành ERP
 - Workflow/Lifecycle transition cơ bản
 - Product Model V2, Product Group, UOM, Alternate UOM và Combo composition/flattening foundation
 - Core Pricing và Price Resolution theo `Product + UOM + Company + Effective Time`
-- Import capability/framework có lịch sử job/row và import cho các master P1
+- Import capability/framework có lịch sử job/row; P1 chỉ triển khai import cho Resource được explicit enable, baseline hiện tại là Product
 - Các yêu cầu dùng chung cần thiết cho trạng thái, approval, audit, search/filter/export
 
 Mục tiêu P1 là hình thành nền tảng tổ chức, nhân sự, phân quyền, sản phẩm và pricing cơ bản mà **không phụ thuộc Customer, Customer Group hoặc Sales Channel**.
@@ -237,7 +244,7 @@ Customer/Supplier được triển khai ở P2 và vẫn có thể có Company U
 - **Policy scope:** chỉ dùng Organization Context + Resource Type + Workflow State + Participant + Action; không có Resource Instance Authorization hoặc arbitrary Condition Rule.
 - **Workflow separation:** Lifecycle/transition xác định legal state change; Authorization xác định actor có quyền thực hiện action. Một lifecycle + from-state + action chỉ resolve một destination.
 - **Audit:** mutable master/config P1 phải truy được actor và timestamp theo technical boundary; Authorization Audit là decision audit, không phải general view/list history.
-- **Import:** P1 import có job/row result persistence; Product import resolve dependency nhiều pass và không phụ thuộc thứ tự dòng file.
+- **Import:** P1 có Import Framework/job-row persistence nhưng import target không mặc định cho mọi master; baseline hiện tại enable Product. Import Job persistence giữ execution mode; Product import resolve dependency nhiều pass và không phụ thuộc thứ tự dòng file.
 - **Physical site model:** `PLANT` là canonical Organization Context cho plant/factory/site-level context; không tự tạo Manufacturing execution capability.
 - **Functional UR quality gate:** mọi functional `UR-*` phải có Acceptance Criteria trước khi scope được khóa.
 
@@ -272,7 +279,7 @@ Danh mục tối thiểu gồm:
 - Các địa chỉ nghiệp vụ sử dụng Province/City Code và Ward/Commune Code khi áp dụng.
 - Phần địa chỉ chi tiết như số nhà, tên đường, tòa nhà được lưu riêng với mã địa giới hành chính.
 - Đơn vị hành chính ngừng sử dụng không được chọn cho dữ liệu mới nhưng các tham chiếu lịch sử vẫn phải giữ được.
-- Có thể import/cập nhật danh mục Province/City và Ward/Commune từ dữ liệu quản trị được phê duyệt.
+- Province/City và Ward/Commune chỉ có import khi Resource tương ứng được explicit enable theo Import capability; P1 baseline không bắt buộc import hai danh mục này.
 
 ### UR-CORE-005 - Shared Contact Management
 **Priority:** MUST
@@ -469,11 +476,12 @@ Assignment tối thiểu gồm:
 - Lịch sử Assignment được giữ lại bằng effective period và status.
 - Với mỗi Employee và mỗi thời điểm, không được có hai Primary Assignment cùng hiệu lực.
 - Hệ thống không cho tạo/chỉnh effective period làm các Primary Assignment bị overlap.
-- Primary Assignment đang hiệu lực là nguồn chính để resolve Organization Context mặc định của Employee.
-- Khi nghiệp vụ hoặc Policy cần Company, hệ thống resolve từ Organization Context của Primary Assignment tới chính node `COMPANY` hoặc `COMPANY` ancestor gần nhất.
-- Nếu Primary Assignment không resolve được Company nhưng transaction yêu cầu Company owner thì context được xem là không đủ để thực hiện transaction đó.
-- Secondary Assignment, nếu được sử dụng, không thay đổi Organization Context mặc định của actor.
-- Một Employee có thể có nhiều Assignment active khi business cần, miễn chỉ có một Primary Assignment tại cùng thời điểm.
+- Primary Assignment đang hiệu lực là nguồn chính để resolve **Organization Context mặc định** của Employee khi operation không cung cấp Evaluation Organization Context rõ ràng.
+- Khi transaction/operation đã có Evaluation Organization Context, Company scope được resolve từ chính Evaluation Organization Context tới self/ancestor `COMPANY` gần nhất.
+- Nếu context dùng cho transaction không resolve được đúng một Company owner thì context được xem là không đủ để thực hiện transaction đó.
+- Secondary Assignment không thay đổi Organization Context mặc định của actor, nhưng Assignment effective phù hợp với Company/Organization đang evaluate được phép tham gia resolve Department/Position authorization lane.
+- Một Employee có thể có nhiều Assignment active, kể cả ở nhiều Company, khi business cần, miễn chỉ có một Primary Assignment tại cùng thời điểm.
+- Authorization của Company A và Company B được tính độc lập; Assignment/Department/Position thuộc Company khác không được trộn vào cùng phép tính.
 
 
 ---
@@ -510,10 +518,11 @@ Thông tin chính:
 **Acceptance criteria**
 - User Locked/Inactive không thực hiện giao dịch mới.
 - Employee không bắt buộc phải có User.
-- User nghiệp vụ thông thường muốn truy cập ERP Resource phải resolve được Employee mapping và Organization Context phù hợp.
+- User nghiệp vụ muốn truy cập ERP Resource phải resolve được Employee mapping và Organization Context phù hợp theo rule của operation.
 - Một User tối đa liên kết với một Employee.
-- System Admin/root identity có thể được miễn yêu cầu Employee mapping nếu application/security rule được phê duyệt cho phép.
-- Exact System Admin/root bypass mechanism và phạm vi bypass là security/application decision cần phê duyệt riêng; User Requirements này không tự mặc định bypass Policy hoặc legal Workflow Transition, và không yêu cầu special database row/column để mô phỏng bypass.
+- System Admin không phải bypass identity. System Admin phải có Shield User, Employee mapping và Employee Assignment effective tại Organization `GROUP`; baseline business assignment của System Admin thuộc Department IT; Position được cấu hình khi áp dụng.
+- System Admin có Base Permission như User khác và phải đi qua cùng PBAC Policy, `ABSOLUTE_DENY`, Workflow/Lifecycle và business/data validation; không có special root bypass trong P1.
+- Không tạo special database flag, special Policy row hoặc hard-coded Authorization branch để cho phép System Admin đi vòng qua PBAC.
 - Service Account access vào ERP business resource không được tự suy diễn từ requirement này; nếu cần phải có additive design decision được phê duyệt.
 
 ### UR-IAM-002 - Permission theo Resource/Action
@@ -538,8 +547,17 @@ Permission code canonical có dạng `resource.action`. Baseline action catalog 
 - `export`
 - `print`
 - `setstate`
+- `import` khi Resource được explicit enable import
+- `assign_member` khi Resource hỗ trợ membership assignment
+- `assign_permission` khi Resource hỗ trợ permission assignment
 
 Module có thể cần additional Resource Action đã được requirement phê duyệt, nhưng vẫn phải đi qua cùng Resource Action catalog; không tạo Permission store riêng.
+
+**Resource semantics**
+- Mọi loại dữ liệu/capability cần Authorization phải được đăng ký thành một Resource Type canonical.
+- Resource Type bao gồm cả dữ liệu quản trị nền tảng như `organization`, `user`, `authorization_group`, `resource`, `policy`, bên cạnh `employee`, `product`, `price_list`, `import_job` và các business resource ở phase sau.
+- `authorization_group` là Resource Type của nhóm phân quyền; không dùng tên `group` mơ hồ vì `GROUP` đồng thời là Organization Context type.
+- Một row nghiệp vụ cụ thể không tự trở thành Resource record riêng. P1 vẫn không có Resource Instance Authorization; row/data scope được xác định qua Evaluation Organization Context + Policy.
 
 **Acceptance criteria**
 - Quyền `view` không tự tạo quyền `edit`/`approve`/`export`.
@@ -547,6 +565,8 @@ Module có thể cần additional Resource Action đã được requirement phê
 - Mỗi Action code là duy nhất trong phạm vi một Resource.
 - Permission hiệu lực được tham chiếu bằng Resource Action tương ứng.
 - Không tạo bảng Permission độc lập nếu implementation baseline không được thay đổi.
+- User/Authorization Group/Resource/Policy/Organization management đều phải đi qua Resource + Action authorization tương ứng; không có implicit admin access chỉ vì dữ liệu thuộc security/configuration domain.
+- Không tạo một Resource catalog row cho từng User/Employee/Product/Organization record chỉ để biểu diễn quyền trên record cụ thể.
 
 ### UR-IAM-003 - Effective Profile
 **Priority:** MUST
@@ -561,6 +581,7 @@ Effective Profile là tập Permission runtime của User sau khi resolve Author
 - Effective Profile không bypass Policy Rule hoặc `ABSOLUTE_DENY`.
 - `Profile` là khái niệm logic/runtime; không tạo persisted Profile table.
 - Không tạo Mini ERP User Override persistence riêng. Việc sử dụng direct permission của identity mechanism hiện hành không được diễn giải thành một User Override table mới.
+- Quản trị direct user permission qua Mini ERP, khi được expose, phải dùng Resource Action `user.assign_permission` và ghi vào identity permission mechanism hiện hành; operation này vẫn chịu PBAC như Resource khác.
 
 ### UR-IAM-004 - Authorization Group
 **Priority:** MUST
@@ -573,6 +594,7 @@ Authorization Group hỗ trợ gom Permission và gán membership cho User.
 - Authorization Group không phải Company.
 - Authorization Group không phải Department hoặc Position.
 - Group Permission map Group tới Resource Action.
+- Gán/bỏ User membership dùng permission `authorization_group.assign_member`; thay đổi Group Permission matrix dùng `authorization_group.assign_permission`. Hai capability không dùng chung một generic `assign`.
 - User-to-Group membership sử dụng identity/group mechanism hiện hành; Mini ERP không tạo local identity store cạnh tranh.
 
 ### UR-IAM-005 - Policy Rule
@@ -601,30 +623,55 @@ Participant type baseline gồm:
 **Acceptance criteria**
 - Policy chỉ được evaluate sau khi User có Permission cơ sở tương ứng.
 - Policy có thể scope theo Organization Context, Resource Type và Workflow State; Policy không chỉ định state được hiểu là áp dụng cho mọi Workflow State phù hợp.
-- Department/Position chỉ tham gia Policy thông qua Participant type phù hợp, không phải arbitrary condition column.
+- Department/Position chỉ tham gia Policy thông qua Participant type phù hợp và Employee Assignment effective trong Company/Organization đang evaluate, không phải arbitrary condition column.
+- `USER`/`GROUP` hình thành actor-level lane; `DEPARTMENT`/`POSITION` hình thành assignment/department lane; `ORGANIZATION` là contextual rule theo Organization scope.
 - Policy không cấp thêm Permission chưa tồn tại trong Effective Profile.
 - Baseline không hỗ trợ Resource Instance Authorization.
 - Baseline không hỗ trợ arbitrary Business Condition theo amount/value hoặc actor-resource relation.
 
-### UR-IAM-006 - Resolve Organization và Company Context từ Employee Assignment
+### UR-IAM-006 - Resolve Organization Context và Assignment scope
 **Priority:** MUST
 **Target phase:** P1
 
-Khi Authorization cần context của Actor, hệ thống resolve theo chuỗi:
+Authorization phân biệt **Default Actor Organization Context** và **Evaluation Organization Context**.
 
-**User -> Employee -> Primary Assignment tại Evaluation Time -> Organization Context**
+Khi operation không cung cấp Organization Context rõ ràng, hệ thống resolve default context:
 
-Khi nghiệp vụ cần Company, tiếp tục resolve:
+**User -> Employee -> Primary Assignment tại Evaluation Time -> Default Organization Context**
 
-**Organization Context -> self/ancestor `COMPANY`**
+Khi operation/resource có Organization Context rõ ràng, context đó là **Evaluation Organization Context** và có thể là `GROUP`, `COMPANY`, `BRANCH`, `PLANT` hoặc `WAREHOUSE`.
+
+Scope path canonical:
+
+**GROUP root -> ... -> Evaluation Organization Context**
+
+Một Employee Assignment effective được phép tạo Department/Position authorization lane khi `assignment.organization_id` bằng Evaluation Organization hoặc là ancestor của Evaluation Organization trên cùng path. Vì vậy Assignment tại `GROUP` có thể áp dụng xuống mọi descendant Company/Organization; Assignment thuộc Company/nhánh khác không được chảy ngang sang context đang evaluate.
+
+**Authoritative context rule:**
+- Existing Resource/record có Organization scope phải derive Evaluation Organization từ persisted target/owner canonical; context do client gửi chỉ là selector/hint và mismatch phải bị reject.
+- Create operation derive Evaluation Organization từ owner/parent/scope canonical trong payload.
+- Group-level shared/admin Resource dùng `GROUP` khi canonical scope là Group.
+- `organization.create` evaluate tại Parent Organization của node mới.
+- `employee_assignment.create/edit` evaluate tại `assignment.organization_id`.
+
+Khi transaction yêu cầu Company owner, hệ thống tiếp tục resolve:
+
+**Evaluation Organization Context -> self/ancestor `COMPANY`**
+
+`GROUP` không phải transaction owner và không resolve thành một Company duy nhất.
 
 **Acceptance criteria**
-- User nhân viên mặc định được xác định Organization Context từ Primary Assignment đang hiệu lực.
-- Secondary Assignment không được dùng để thay Primary Organization Context mặc định của Actor.
-- Nếu không resolve được Primary Assignment trong trường hợp Resource access cần employee-derived context thì không được tạo ALLOW từ context bị thiếu.
-- Khi transaction yêu cầu Company owner, Organization Context phải resolve được đúng một Company.
-- Quyền/context ở Company A không tự suy ra quyền/context ở Company B.
-- Additional cross-organization access chỉ được cho phép bằng Group Permission + Policy/context đã được cấu hình trong các dimension baseline hỗ trợ.
+- Primary Assignment đang hiệu lực chỉ xác định default Organization Context khi operation không có context rõ ràng.
+- Primary flag không phải điều kiện duy nhất để Assignment tham gia PBAC.
+- Assignment effective tại `GROUP` được phép cung cấp Department/Position lane khi evaluate bất kỳ descendant Organization trong Group.
+- Assignment tại Company A hoặc descendant của Company A không tạo Department/Position lane cho Company B hoặc descendant của Company B.
+- Assignment ở sibling Branch/Plant/Warehouse ngoài ancestor path của Evaluation Organization không được tham gia.
+- Group-level administrative/shared Resource có canonical scope `GROUP` được authorize với `Evaluation Organization Context = GROUP` mà không cần tạo Company giả.
+- Existing target không được phép đổi Authorization context chỉ bằng cách client gửi một `evaluation_organization_id` khác.
+- Tạo Company dưới GROUP authorize `organization.create` tại GROUP; tạo Branch/Plant/Warehouse authorize tại Parent Organization tương ứng.
+- Tạo/sửa Employee Assignment authorize tại Organization của Assignment.
+- Khi transaction yêu cầu Company owner, Evaluation Organization Context phải resolve được đúng một Company; `GROUP` không hợp lệ làm transaction owner.
+- Nếu không resolve được context cần thiết cho operation thì không được tự tạo ALLOW từ context bị thiếu.
 
 ### UR-IAM-007 - Authorization theo loại nghiệp vụ
 **Priority:** MUST
@@ -633,6 +680,13 @@ Khi nghiệp vụ cần Company, tiếp tục resolve:
 Policy có thể giới hạn Permission theo Resource Type.
 
 Ví dụ:
+- Organization
+- User
+- Authorization Group
+- Resource/Action Catalog
+- Policy
+- Employee/Employee Assignment
+- Product/Price List
 - Purchase Order
 - Goods Receipt
 - Inventory Adjustment
@@ -680,16 +734,26 @@ Policy Rule hỗ trợ:
 - `ALLOW`
 - `DENY`
 
-Aggregation precedence canonical:
+Precedence canonical trong **từng authorization lane sau khi đã load Policy tại scope hiện tại + ancestor**:
 
 **ABSOLUTE_DENY > ALLOW > DENY > NO_MATCH**
 
+Trong đó lane result cho một `Resource + Action` được biểu diễn thành **tập quyền bị cấm**:
+- `ABSOLUTE_DENY` hoặc `DENY` sau QT1 => permission nằm trong KQ denied của lane.
+- `ALLOW` hoặc `NO_MATCH` (`NO_MATCH => ALLOW`) => permission không nằm trong KQ denied của lane.
+
+Khi một User có nhiều lane hợp lệ trong cùng Organization, effective denied set dùng phép **giao** các KQ lane sau inheritance. Vì vậy một `DENY` thông thường có thể được quyền cao hơn từ lane khác mở lại; một quyền chỉ còn bị cấm bởi ordinary `DENY` khi bị cấm đồng thời ở mọi lane liên quan.
+
+Applicable `ABSOLUTE_DENY` tại `GROUP`/ancestor/current Evaluation Organization phải được propagate vào mọi KQ lane con chịu scope **trước phép giao**, vì vậy không thể bị một role khác mở lại.
+
 **Acceptance criteria**
 - Không có Base Permission thì kết quả luôn DENY; Policy không thể tạo Permission mới.
-- `ABSOLUTE_DENY` luôn thắng `ALLOW`/`DENY` thông thường.
-- `ALLOW` thắng `DENY` thông thường khi cả hai cùng match và không có `ABSOLUTE_DENY`.
-- `DENY` có hiệu lực khi là effect match cao nhất còn lại.
-- Không sử dụng Policy Priority để thay thế effect precedence baseline.
+- Trong một lane, `ABSOLUTE_DENY` luôn thắng `ALLOW`/`DENY` thông thường.
+- Trong một lane, `ALLOW` thắng `DENY` thông thường khi cả hai cùng match và không có `ABSOLUTE_DENY`.
+- Trong một lane, `DENY` có hiệu lực khi là effect match cao nhất còn lại.
+- Giữa nhiều Department/Position/Assignment lane cùng hợp lệ, User hưởng quyền cao nhất: permission chỉ nằm trong effective denied set nếu còn nằm trong giao của mọi KQ lane sau inheritance.
+- Applicable `ABSOLUTE_DENY` từ bất kỳ node nào trên scope path `GROUP -> ... -> Evaluation Organization` không được mất qua phép giao vì phải được propagate vào mọi KQ lane con trước merge.
+- Không sử dụng Policy Priority hoặc hierarchy depth để thay thế effect precedence baseline.
 
 ### UR-IAM-010 - Default rule khi NO_MATCH
 **Priority:** MUST
@@ -699,21 +763,32 @@ Baseline không sử dụng Permission metadata `policy_required`.
 
 **Acceptance criteria**
 - Không có Base Permission => DENY.
-- Có Base Permission + không có Policy match => ALLOW.
-- Có Base Permission + Policy match => resolve theo precedence `ABSOLUTE_DENY > ALLOW > DENY`.
+- Có Base Permission + không có Policy match trong một lane => lane đó ALLOW và permission không thuộc KQ denied của lane.
+- Có Base Permission + Policy match trong một lane => resolve theo precedence `ABSOLUTE_DENY > ALLOW > DENY`.
+- Multi-lane merge chỉ thực hiện sau khi inheritance và QT1 của từng lane đã hoàn tất.
 - Không tạo column/metadata `policy_required` chỉ từ User Requirements này.
 
 ### UR-IAM-011 - Policy inheritance trong Organization Context
 **Priority:** MUST
 **Target phase:** P1
 
-Policy có thể được evaluate theo Organization Context hiện tại cùng các Policy kế thừa từ ancestor context theo hierarchy.
+Policy được evaluate theo Evaluation Organization Context hiện tại cùng các Policy kế thừa từ ancestor context theo hierarchy. **Inheritance phải được resolve trước khi thực hiện phép giao các tập quyền bị cấm.**
+
+Với bất kỳ Evaluation Organization `O` thuộc `GROUP`/`COMPANY`/`BRANCH`/`PLANT`/`WAREHOUSE`, Policy source canonical là toàn bộ exact path:
+
+**GROUP root -> ... -> O**
+
+Ví dụ khi `O = WAREHOUSE`: `GROUP + COMPANY + BRANCH/PLANT ancestor khi có + WAREHOUSE`. Khi `O = GROUP`, scope path chỉ gồm `GROUP`.
 
 **Acceptance criteria**
-- Policy của Parent Organization Context có thể được áp dụng khi evaluate Child Organization Context.
-- Không copy vật lý Policy từ Parent xuống Child chỉ để biểu diễn inheritance.
+- Policy của Parent Organization Context có thể được áp dụng khi evaluate Child Organization Context nếu các dimension/participant còn lại match.
+- Policy tại `GROUP` có thể kế thừa xuống mọi descendant Organization trong Group.
+- Quyền Department/Position tại Child phải xét các Policy applicable được kế thừa từ toàn bộ ancestor path, kể cả `GROUP`.
+- Policy của sibling Organization không được kế thừa ngang.
+- KQ của mỗi Organization phải resolve toàn bộ inheritance trước khi merge các lane.
+- Applicable `ABSOLUTE_DENY` từ `GROUP` hoặc bất kỳ ancestor nào phải hiện diện trong mọi KQ lane con chịu scope trước intersection, nên không bị role khác mở lại.
+- Không copy vật lý Policy từ Parent xuống Child chỉ để biểu diễn inheritance; inheritance được resolve runtime.
 - Khi Parent và Child cùng có Policy match, không dùng độ sâu hierarchy như một Policy Priority mặc định.
-- Kết quả cuối vẫn resolve bằng effect precedence canonical.
 - Policy version/effective-dating persistence không thuộc baseline hiện hành; nếu cần phải có additive design decision.
 
 ### UR-IAM-012 - Explainable Authorization
@@ -770,11 +845,69 @@ Baseline bảo vệ dữ liệu nhạy cảm ở mức **Resource/Action authori
 | Có | ALLOW + DENY | ALLOW | ALLOW thắng DENY thông thường. |
 | Có | ABSOLUTE_DENY + ALLOW/DENY | DENY | ABSOLUTE_DENY luôn thắng. |
 
-Precedence canonical: **ABSOLUTE_DENY > ALLOW > DENY > NO_MATCH**.
+Precedence canonical trong từng lane: **ABSOLUTE_DENY > ALLOW > DENY > NO_MATCH**.
 
+### 6.3 Canonical PBAC multi-assignment algorithm
 
----
+Với mỗi `Resource + Action` đã có Base Permission, Authorization evaluate theo một **Evaluation Organization Context** cụ thể. Context có thể là `GROUP`, `COMPANY`, `BRANCH`, `PLANT` hoặc `WAREHOUSE`. Với Company-scoped operation, các Company được evaluate độc lập.
 
+```text
+AUTHORIZE(User, Resource, Action, EvaluationOrganization O, State, Time):
+
+    1. Resolve Base Permission(Resource, Action).
+       Nếu không có -> DENY.
+
+    2. Resolve ScopePath(O):
+       GROUP root -> ... -> O
+
+    3. Resolve CommonContextPolicies[O]:
+       - match ORGANIZATION participant applicable trên ScopePath(O)
+       - contextual rules dùng chung cho mọi lane tại O
+
+    4. Tính KQ[user, O]:
+       - match actor-level participant USER/GROUP
+       - cộng CommonContextPolicies[O]
+       - load Policy trên toàn ScopePath(O)
+       - áp dụng QT1
+       -> tập Resource + Action bị cấm của actor lane
+
+    5. Resolve eligible effective Employee Assignments A:
+       - A.organization = O; hoặc
+       - A.organization là ancestor của O trên ScopePath(O)
+       - Assignment ở GROUP được kế thừa xuống mọi descendant
+       - Assignment ở sibling/Company khác không tham gia
+
+    6. Với từng eligible Assignment A:
+       - resolve DEPARTMENT/POSITION participant
+       - cộng CommonContextPolicies[O]
+       - load inheritance trên ScopePath(O)
+       - áp dụng QT1
+       -> KQ[A, O]
+
+    7. Trước phép giao, mọi applicable ABSOLUTE_DENY
+       matched trên ScopePath(O) phải được đưa vào tất cả
+       KQ lane con chịu scope.
+
+    8. KQ[O] =
+       INTERSECTION(
+           KQ[user, O],
+           all KQ[A, O]
+       )
+
+    9. Permission thuộc KQ[O] -> DENY; ngược lại -> ALLOW.
+
+FOR EACH COMPANY C khi cần Company summary:
+    evaluate C và các descendant Organization thuộc C độc lập;
+    KQ[C-summary] = INTERSECTION(all KQ[O] trong Company C).
+```
+
+Business meaning:
+- `KQ[x]` là tập `Resource + Action` bị cấm sau khi lane `x` đã resolve inheritance và QT1.
+- Phép giao thể hiện **highest privilege wins** giữa nhiều vai trò hợp lệ: ordinary `DENY` chỉ còn hiệu lực nếu permission bị cấm đồng thời ở mọi lane đang tham gia.
+- `ABSOLUTE_DENY` vẫn tuyệt đối vì được áp dụng/propagate từ `GROUP`/ancestor/current Organization trước intersection.
+- Assignment tại `GROUP` có thể cung cấp Department/Position role cho mọi descendant; Assignment ở Company/nhánh cụ thể chỉ có hiệu lực trong subtree tương ứng.
+- Group-level administrative Resource có thể evaluate trực tiếp tại `GROUP`; không bắt buộc partition qua Company nếu operation không có Company owner.
+- Company A và Company B được evaluate độc lập; dữ liệu/quyền của một Company không được trộn vào Company khác.
 
 ## 7. Quản lý tài liệu
 
@@ -2077,32 +2210,28 @@ Các màn hình danh sách chính hỗ trợ:
 - EXPORT được kiểm tra như Permission độc lập, không suy ra từ VIEW.
 - Export chỉ chứa dữ liệu trong Organization/Company scope được Authorization cho phép.
 
-### UR-COM-005 - Import Capability & Master Import
+### UR-COM-005 - Import Capability & Explicit Resource Enablement
 **Priority:** SHOULD
 **Target phase:** P1
 
-P1 cung cấp import capability/framework dùng chung cho CSV/XLSX và giữ được lịch sử import ở mức Job + Row Result.
+P1 cung cấp Import Framework dùng chung cho CSV/XLSX và giữ lịch sử ở mức Job + Row Result. **Import không tự áp dụng cho mọi master.** Mỗi Resource muốn import phải được explicit enable bằng requirement/Resource Action tương ứng.
 
-**P1 master import**
-- Product
-- Employee
-- Province/City
-- Ward/Commune
+**P1 enabled import target baseline**
+- `PRODUCT`
 
-**P2 master import**
-- Customer
-- Supplier
+Employee, Province/City, Ward/Commune và các master khác **không mặc định có import trong P1**. Target mới chỉ được bổ sung qua change control và phải có template/validation/authorization contract riêng.
 
 **Acceptance criteria**
-- Import framework có từ P1 và có thể tái sử dụng cho master ở phase sau.
-- Mỗi Import Job xác định được entity type, source file metadata/status, tổng số dòng, số success/error và actor/timestamp phù hợp.
+- Import Framework có từ P1 và có thể tái sử dụng cho Resource được enable ở phase sau.
+- Mỗi Import Job xác định được entity type, execution mode (`CREATE_ONLY`/`UPDATE_ONLY`/`UPSERT`), source file metadata/status, tổng số dòng, số success/error và actor/timestamp phù hợp.
 - Import report chỉ rõ success/error theo từng row gốc và giữ được row number nguồn.
+- Start import cần `<resource>.import`; từng logical row vẫn phải pass canonical mutation permission tương ứng như `create`/`edit`/`setstate` tại đúng Evaluation Organization. Import không được bypass PBAC/business validation.
 - Row lỗi không được ghi nhận như business data thành công; mutation nhiều bảng của một row phải rollback khi row thất bại.
 - Import phải tuân cùng uniqueness/business validation như API/UI mutation.
 - Product import không yêu cầu Parent xuất hiện trước Child hoặc Component xuất hiện trước Combo trong file. Importer phải resolve dependency theo multi-pass/dependency graph/topological order.
 - Nested COMBO import phải detect direct/indirect cycle và reject các row liên quan thay vì tạo composition graph không hợp lệ.
 - Product import phải tuân Product Model V2, UOM, pricing default, selectable-vs-leaf semantics và Combo invariant; không tạo Variant entity hoặc Product Company Usage Scope.
-- P1 không bắt buộc Customer/Supplier import hoạt động trước khi các master P2 này được triển khai.
+- Resource không có canonical action `import` không được expose import UI/API chỉ vì Import Framework tồn tại.
 
 ---
 
@@ -2248,12 +2377,11 @@ PBAC/Policy Engine **nằm trong phạm vi baseline** và là cơ chế Authoriz
 - P1 tập trung Foundation, Organization, Shared Contact Management, Employee, PBAC/Policy Engine, basic Workflow/Lifecycle, Product Model V2/UOM/Combo composition + flattening/allocation, Core Pricing và shared Import Framework.
 - P2 triển khai các module vận hành còn lại ngoại trừ HCM/Payroll và BOM; đồng thời có thể mở rộng Pricing theo Customer/Customer Group/Sales Channel mà không phá P1 Product+UOM và Company->Group->Default semantics.
 - P3 triển khai HCM/Payroll và BOM/Estimated Product Costing.
-- `02_P1_Database_Design_v1.3.md` là technical boundary trung tâm cho persistence P1; FRS P1 không được tự tạo schema/capability trái tài liệu này.
 - Phase Planning chi tiết có thể bổ sung dependency, milestone và delivery sequencing nhưng không được tự thay đổi scope/invariant đã khóa.
 - Functional Requirements được phân rã từ từng `UR-*` và phải giữ nguyên các invariant Product/Pricing/Authorization/Workflow đã được harmonize.
 - Scope Exclusion, Assumption, Glossary và Business Invariant không được tự chuyển thành capability mới nếu không có functional UR hoặc change request được phê duyệt.
 - Không thêm Variant entity, Product Company Usage Scope, persisted Profile, Permission table riêng, Resource Instance Authorization hoặc arbitrary PBAC condition trong FRS P1.
-- Revision `1.0.6-draft` là harmonization revision theo Database Design P1 v1.3 baseline; chỉ đổi status khi review cuối xác nhận không còn conflict business requirement chưa xử lý.
+- Revision `1.0.9-draft` là harmonization revision theo Database Design P1 v1.6 và Implementation Contract v1.1 baseline; chỉ đổi status khi review cuối xác nhận không còn conflict business requirement chưa xử lý.
 
 ---
 
@@ -2275,6 +2403,8 @@ PBAC/Policy Engine **nằm trong phạm vi baseline** và là cơ chế Authoriz
 - **Effective Profile:** tập Base Permission runtime sau khi resolve Authorization Group Permission và approved direct user permission additions; không hàm ý persisted Profile table.
 - **Permission:** quyền cơ sở dạng `resource.action`, hình thành từ Resource + Resource Action.
 - **Policy:** PBAC restriction trên Permission đã tồn tại theo Organization Context + Resource Type + Workflow State + Participant + Action; không tạo Permission mới.
+- **Authorization Lane:** nhánh đánh giá quyền theo actor (`USER`/`GROUP`) hoặc theo một Employee Assignment (`DEPARTMENT`/`POSITION`) tại một Evaluation Organization Context.
+- **KQ Denied Set:** tập `Resource + Action` bị cấm của một lane/Organization/Company sau khi áp dụng inheritance và các rule merge tương ứng.
 - **Workflow State:** trạng thái lifecycle của Resource; legal transition tách khỏi Authorization decision.
 - **Posting State:** trạng thái làm phát sinh stock/finance impact; module xác định state tương đương posting.
 - **Product Model V2:** mô hình một Product entity duy nhất; mọi SKU selectable/operational là Product, không có Variant entity/table.

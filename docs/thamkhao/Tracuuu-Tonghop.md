@@ -333,3 +333,340 @@ git diff --stat main..HEAD
 | `git blame file.php` | Xem ai sửa từng dòng trong file |
 | `git shortlog -sn` | Thống kê số commit theo tác giả |
 | `git describe --tags` | Xác định commit theo tag gần nhất |
+
+
+
+
+
+
+
+# Vue 3 + Vite + pnpm Command Cheat Sheet
+
+## 1. Khởi tạo Project
+
+| Lệnh | Mô tả |
+|------|------|
+| `pnpm create vue` | Tạo project Vue mới |
+| `npm create vue@latest` | Tạo project Vue bằng npm |
+| `pnpm create vue@latest` | Tạo project với phiên bản Vue CLI mới nhất |
+
+---
+
+## 2. Quản lý Package
+
+| Lệnh | Mô tả |
+|------|------|
+| `pnpm install` | Cài đặt toàn bộ package |
+| `pnpm add <package>` | Cài package mới |
+| `pnpm add -D <package>` | Cài package cho môi trường phát triển |
+| `pnpm remove <package>` | Gỡ package |
+| `pnpm update` | Cập nhật package |
+| `pnpm outdated` | Kiểm tra package có phiên bản mới |
+| `pnpm why <package>` | Xem package được cài bởi dependency nào |
+| `pnpm ls --depth=0` | Liệt kê package cấp cao nhất |
+
+---
+
+## 3. Development
+
+| Lệnh | Mô tả |
+|------|------|
+| `pnpm dev` | Chạy Development Server |
+| `pnpm dev --host` | Cho phép truy cập từ mạng LAN |
+| `pnpm preview` | Xem bản build Production |
+
+---
+
+## 4. Build
+
+| Lệnh | Mô tả |
+|------|------|
+| `pnpm build` | Build project Production |
+| `pnpm exec vite build` | Build trực tiếp bằng Vite |
+| `pnpm exec vite preview` | Preview bản build |
+
+---
+
+## 5. TypeScript
+
+| Lệnh | Mô tả |
+|------|------|
+| `pnpm exec vue-tsc --noEmit` | Kiểm tra lỗi TypeScript |
+| `pnpm exec vue-tsc --noEmit -p tsconfig.app.json` | Kiểm tra theo tsconfig cụ thể |
+| `pnpm exec vue-tsc --version` | Xem phiên bản vue-tsc |
+
+---
+
+## 6. Vite
+
+| Lệnh | Mô tả |
+|------|------|
+| `pnpm exec vite` | Chạy Vite trực tiếp |
+| `pnpm exec vite --version` | Xem phiên bản Vite |
+| `pnpm exec vite build` | Build bằng Vite |
+| `pnpm exec vite preview` | Preview Production |
+
+---
+
+## 7. Vitest
+
+| Lệnh | Mô tả |
+|------|------|
+| `pnpm test:unit` | Chạy Unit Test |
+| `pnpm vitest` | Chạy Vitest ở chế độ Watch |
+| `pnpm vitest run` | Chạy Unit Test một lần |
+| `pnpm vitest --coverage` | Sinh báo cáo Coverage |
+
+---
+
+## 8. Playwright
+
+| Lệnh | Mô tả |
+|------|------|
+| `pnpm exec playwright install` | Cài browser |
+| `pnpm test:e2e` | Chạy E2E Test |
+| `pnpm exec playwright test` | Chạy Playwright |
+| `pnpm exec playwright test --ui` | Chạy giao diện UI |
+| `pnpm exec playwright test --debug` | Debug Test |
+| `pnpm exec playwright codegen` | Sinh mã test tự động |
+
+---
+
+## 9. ESLint
+
+| Lệnh | Mô tả |
+|------|------|
+| `pnpm lint` | Kiểm tra lỗi ESLint |
+| `pnpm lint --fix` | Tự động sửa lỗi |
+
+---
+
+## 10. Prettier
+
+| Lệnh | Mô tả |
+|------|------|
+| `pnpm format` | Format toàn bộ project |
+| `pnpm exec prettier --write .` | Format tất cả file |
+| `pnpm exec prettier --check .` | Kiểm tra định dạng |
+
+---
+
+## 11. OpenAPI
+
+| Lệnh | Mô tả |
+|------|------|
+| `pnpm exec openapi-ts` | Sinh TypeScript Client từ OpenAPI |
+
+---
+
+## 12. Redocly
+
+| Lệnh | Mô tả |
+|------|------|
+| `pnpm exec redocly lint openapi.yaml` | Kiểm tra OpenAPI Spec |
+
+---
+
+## 13. Kiểm tra môi trường
+
+| Lệnh | Mô tả |
+|------|------|
+| `node -v` | Xem phiên bản Node.js |
+| `npm -v` | Xem phiên bản npm |
+| `pnpm -v` | Xem phiên bản pnpm |
+
+---
+
+## 14. Dọn dẹp và cài lại
+
+### Windows CMD
+
+| Lệnh | Mô tả |
+|------|------|
+| `rmdir /s /q node_modules` | Xóa node_modules |
+| `del pnpm-lock.yaml` | Xóa file lock |
+| `pnpm install` | Cài lại package |
+
+### PowerShell
+
+| Lệnh | Mô tả |
+|------|------|
+| `Remove-Item node_modules -Recurse -Force` | Xóa node_modules |
+| `Remove-Item pnpm-lock.yaml` | Xóa file lock |
+| `pnpm install` | Cài lại package |
+
+---
+
+## 15. Quy trình kiểm tra dự án
+
+| Bước | Lệnh |
+|------|------|
+| 1 | `pnpm install` |
+| 2 | `pnpm ls --depth=0` |
+| 3 | `pnpm exec vue-tsc --noEmit -p tsconfig.app.json` |
+| 4 | `pnpm lint` |
+| 5 | `pnpm test:unit` |
+| 6 | `pnpm exec playwright install` |
+| 7 | `pnpm test:e2e` |
+| 8 | `pnpm build` |
+| 9 | `pnpm preview` |
+
+---
+
+## 16. Một số lệnh hữu ích
+
+| Lệnh | Mô tả |
+|------|------|
+| `pnpm dlx` | Chạy package mà không cần cài |
+| `pnpm store prune` | Dọn dẹp cache pnpm |
+| `pnpm cache delete` | Xóa cache pnpm |
+| `pnpm doctor` | Kiểm tra môi trường pnpm (nếu hỗ trợ) |
+| `pnpm dedupe` | Gộp dependency trùng lặp |
+
+
+
+# Nền tảng
+
+## environment_binding:
+  project_root_windows: 'D:\XAMPP\htdocs\erp'
+  docs_root_relative: 'docs/'
+  backend_root_relative: 'backend/'
+  frontend_root_relative: 'frontend/'
+  backend_url: 'http://api.monmin.net'
+  frontend_url: 'http://erp.monmin.net'
+  backend_runtime: 'XAMPP/Apache + CodeIgniter already running'
+  php_runtime: '8.3.x'
+  database_engine: 'MariaDB 10.x'
+  phpstan_level: 8
+
+
+## Backend
+
+```text
+PHP runtime/source target: 8.3.x
+CodeIgniter 4.7.x
+CodeIgniter Shield
+CodeIgniter Settings
+MariaDB 10.4.32
+PHPUnit
+PHPStan
+CodeIgniter PHPStan extension
+PhpSpreadsheet
+Smalot PdfParser
+
+
+```
+## Frontend
+
+dependencies:
+├── @vueuse/core@14.4.0
+├── axios@1.20.0
+├── bootstrap@5.3.8
+├── chart.js@4.5.1
+├── dayjs@1.11.23
+├── naive-ui@2.45.3
+├── pinia@4.0.3
+├── vue@3.5.42
+├── vue-chartjs@5.3.4
+├── vue-i18n@11.4.12
+├── vue-router@5.3.1
+├── zod@4.6.5
+
+devDependencies:
+├── @axe-core/playwright@4.13.0
+├── @hey-api/openapi-ts@0.99.0
+├── @playwright/test@1.63.0
+├── @redocly/cli@2.53.0
+├── @tsconfig/node24@24.0.5
+├── @types/jsdom@30.0.0
+├── @types/node@24.13.4
+├── @vitejs/plugin-vue@6.0.9
+├── @vitest/eslint-plugin@1.6.27
+├── @vue/eslint-config-typescript@14.9.0
+├── @vue/test-utils@2.5.0
+├── @vue/tsconfig@0.9.1
+├── eslint@10.10.0
+├── eslint-config-prettier@10.1.8
+├── eslint-plugin-oxlint@1.82.0
+├── eslint-plugin-playwright@2.12.0
+├── eslint-plugin-vue@10.11.1
+├── jiti@2.7.0
+├── jsdom@30.1.1
+├── npm-run-all2@9.0.3
+├── oxlint@1.82.0
+├── prettier@3.9.6
+├── typescript@6.0.3
+├── vite@8.3.0
+├── vite-plugin-vue-devtools@8.2.1
+├── vitest@4.1.11
+├── vue-eslint-parser@10.4.1
+└── vue-tsc@3.3.11
+```
+
+
+
+
+Bạn hãy đọc lại: 00_User_Requirements_v1.0.6-draft.md; 01_P1_Functional_Requirements_Specification_v1.0-draft.md và 02_P1_Database_Design_v1.3.md xem đã đủ để bắt đầu code chưa?
+
+===========
+Tôi viết lại quy tắc như này (đã kể đến sự kế thừa)
+Nếu 1 user thộc nhiều Department Và nhiều Position trong nhiều Organization khác nhau.
+
+Ta sẽ phân chia phạm vi cho từng công ty.
+
+Trong mỗi công ty ta xét như sau:
+
+QT1: ABSOLUTE_DENY > ALLOW > DENY > NO_MATCH; NO_MATCH => ALLOW
+
+1. Xét các phân quyền được gán riêng cho user (trong phạm vi COMPANY) theo QT1 ==> KQ[user] = những quyền bị cấm
+2. Xét quyền được gán theo Position và Department (trong phạm vi từng Department) theo QT1 ==> KQ[Departments] = những quyền bị cấm
+3. KQ[Organization] = Giao của (KQ[user] và các KQ[Departments]) Ghi chú Organization = [BRANCH, PLANT, WAREHOUSE]
+4. KQ[COMPANY] = Giao (KQ[Organization1], KQ[Organization2] ...)
+
+Luật: Khi xét quyền Position và Department phải xét đến sự kế thừa từ các Organization phía trên.
+Tương tự quyền trong mỗi Organization cũng phải xét đến sự kế thừa từ COMPANY
+
+```
+FOR EACH COMPANY:
+
+    FOR EACH Organization O:
+
+        1. Load Policy:
+           COMPANY
+           + ancestors of O
+           + O
+
+        2. Tính KQ[user, O]
+           theo QT1 + inheritance
+
+        3. Với từng Department/Position assignment phù hợp O:
+           tính KQ[assignment, O]
+           theo QT1 + inheritance
+
+        4. KQ[O]
+           =
+           INTERSECTION(
+               KQ[user, O],
+               all KQ[assignment, O]
+           )
+
+    5. KQ[COMPANY]
+       =
+       INTERSECTION(
+           all KQ[Organization]
+       )
+```
+===========	   
+
+
+Tôi đề nghị đi theo thứ tự sau:
+1. Tạo 04_P1_Implementation_Plan_v1.0.md và Dev Backlog. Đây nên là artifact tiếp theo. Mỗi task phải trace được về UR -> FRS -> DBD -> Implementation Contract -> Test. Không đưa thêm business rule mới vào task. Nên chia work package thành Foundation/Schema, Authorization, Workflow, Auto Numbering, Product/UOM/Pricing/Combo, Import, API, UI.
+2. Bắt đầu từ migration/schema + bootstrap seed. Implementation Contract đã khóa thứ tự đầu tiên là Migration / schema rồi Resource + Action + Workflow bootstrap seed.  DBD cũng đã khóa migration dependency order bắt đầu từ Shield prerequisites → Foundation → Organization/Contact → Employee structure → các domain tiếp theo.  Tôi khuyên milestone đầu tiên phải là fresh DB migrate được + existing DB forward migrate được + seed chạy idempotent.
+3. Triển khai service theo dependency đã khóa, không làm UI trước:
+   OrganizationService → EmployeeAssignmentService → AuthorizationService → LifecycleService → AutoNumberService → ProductRoleService → ProductUomService → PricingService → ComboExpansionService → ComboAllocationService → ImportService → API → UI. Đây chính là order đã được baseline.
+4. Viết test song song với từng service, đặc biệt Authorization trước. Không nên đợi cuối P1 mới viết test. Các test quan trọng nhất ở giai đoạn đầu là: GROUP hierarchy, Primary/Secondary Assignment, System Admin no-bypass, denied-set intersection, inherited ABSOLUTE_DENY, authoritative Evaluation Organization, concurrent Auto Numbering, rollback counter, Product Import + generated code. Definition of Done yêu cầu automated tests bao phủ cả FRS Acceptance Test Catalog và contract tests.
+5. Chia implementation thành các gate có thể nghiệm thu độc lập. Tôi đề nghị:
+   Gate 1 Foundation DB, Gate 2 Authorization, Gate 3 Workflow + Auto Numbering, Gate 4 Product/UOM/Pricing/Combo, Gate 5 Product Import, Gate 6 API, Gate 7 UI/UAT. Không cho Gate sau “bypass tạm” invariant của Gate trước.
+6. Dùng Definition of Done hiện tại làm release checklist P1. Đặc biệt phải chứng minh không có System Admin bypass, context không bị client override, seed idempotent, Auto Number atomic/concurrency-safe, Product product_code -> products.code đúng mapping, Import không bypass authorization và không tạo persistence ngoài DBD v1.9.
+Nếu chọn đúng một việc để làm ngay, tôi chọn tạo 04_P1_Implementation_Plan_v1.0.md + backlog kỹ thuật chi tiết. Sau đó ticket đầu tiên mới là migration/schema.
+Cấu trúc mỗi Dev Task tôi khuyên dùng:

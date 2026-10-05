@@ -1,10 +1,10 @@
 ---
 document_id: "FRS-MINI-ERP-P1-001"
 title: "P1 Functional Requirements Specification - Dinktech Mini ERP"
-version: "1.0-draft"
+version: "1.5-draft"
 status: "draft"
 owner: "Product / Architecture"
-date: "2026-10-04"
+date: "2026-10-05"
 scope: "P1 - Foundation, Master Data & Authorization"
 ---
 
@@ -29,26 +29,30 @@ FRS không thay thế Database Design, không định nghĩa migration và khôn
 
 FRS này sử dụng các nguồn sau:
 
-1. `02_P1_Database_Design_v1.3.md` - technical boundary và implementation authority trực tiếp cho P1.
-2. `Dinktech_Mini_ERP_User_Requirements_v1.0.5-draft.md` - business intent và user need.
-3. Bộ `00_*` và `01_*` hiện hành - nguyên tắc kiến trúc, authorization, workflow, security và vận hành khi không xung đột với hai nguồn trên.
+1. `00_User_Requirements_v1.0.10-draft.md` - business intent, user need, priority và acceptance criteria P1.
 
-Khi có xung đột giữa User Requirements v1.0.5-draft và Database Design v1.3, FRS phải theo Database Design v1.3 và ghi nhận delta để User Requirements được harmonize ở revision sau.
 
-### 1.1.1 Delta nguồn đã biết: COMBO
+User Requirements v1.0.10-draft đã được harmonize với Database Design v1.8 cho Product Model V2, COMBO, UOM, Core Pricing, Authorization, Workflow và Import. FRS phải giữ nguyên business intent của User Requirements và không tạo persistence/capability trái Database Design. Nếu phát sinh xung đột mới giữa business requirement và technical boundary, xung đột phải được ghi nhận và xử lý qua change control; FRS không tự âm thầm chọn một mô hình thứ ba.
 
-User Requirements v1.0.5-draft còn mô tả COMBO theo mô hình cũ: COMBO là transactionable Product, component chỉ SIMPLE/CHILD và không nested COMBO.
+### 1.1.1 Trạng thái harmonization hiện tại
 
-Database Design v1.3 baseline đã thay thế mô hình đó bằng các rule mới:
+Tại thời điểm hoàn thiện revision này, không còn delta đã biết giữa User Requirements v1.0.10-draft và Database Design v1.8.
 
-- SIMPLE/CHILD là leaf transactionable Product.
-- COMBO là selectable composition/template có Base UOM, default price và Price List riêng.
-- COMBO không có Serial và không có UOM Conversion.
-- COMBO có thể chứa SIMPLE, CHILD hoặc COMBO khác.
-- Nested COMBO phải acyclic.
-- Khi COMBO được chọn, hệ thống resolve giá COMBO root một lần, flatten về SIMPLE/CHILD, phân bổ selling amount xuống leaf và aggregate bằng weighted average theo quantity khi cùng leaf nhận nhiều mức giá trong cùng giao dịch.
-
-FRS này sử dụng mô hình COMBO của Database Design v1.3 baseline.
+- SIMPLE/CHILD là selectable leaf transactionable Product.
+- COMBO là selectable composition/template có Base UOM, default price và Price List riêng nhưng không phải inventory/serial/costing/posting leaf.
+- COMBO không có Serial và không có UOM Conversion; nested COMBO được phép nhưng graph phải acyclic.
+- COMBO root được resolve giá một lần, flatten về SIMPLE/CHILD, phân bổ selling amount theo default-price weight và aggregate cùng leaf bằng tổng quantity/tổng amount.
+- Core Pricing dùng Product + UOM + Company + Effective Time với fallback Company -> Group -> default đúng UOM.
+- Policy, Workflow và Import sử dụng đúng semantics đã harmonize trong hai nguồn trên.
+- System Admin không có bypass: là User/Employee có Assignment tại `GROUP`, cần Base Permission và chịu PBAC/`ABSOLUTE_DENY`/Workflow như mọi User khác; initial privileged membership được provision qua bootstrap/deployment mechanism.
+- Evaluation Organization authoritative của existing Resource derive từ persisted target; create derive từ owner/parent/scope canonical. `organization.create` evaluate tại parent và `employee_assignment` tại Assignment Organization.
+- Policy/Assignment inheritance dùng full Organization path `GROUP -> ... -> Evaluation Organization`; Group-level administrative Resource có thể evaluate trực tiếp tại `GROUP`.
+- Mọi securable data/capability, kể cả `user`, `authorization_group`, `resource`, `policy`, `organization`, phải map vào Resource Type; P1 vẫn không có Resource Instance Authorization.
+- Security assignment actions tách `authorization_group.assign_member`, `authorization_group.assign_permission`, `user.assign_permission`. Direct User Permission vẫn dùng identity mechanism hiện hành.
+- Import Framework tồn tại ở P1 nhưng target phải explicit enable; baseline hiện tại chỉ `PRODUCT`, với Import Job mode được persistence.
+- Business timezone được cấu hình theo từng Company qua CodeIgniter Shield/Settings integration mechanism; business DATE derive từ Evaluation Time theo timezone Company.
+- Auto Numbering là foundation capability theo Resource catalog: nhiều series/resource, tối đa một active default, scope `GROUP`/`COMPANY`/`ORGANIZATION`, generation mode `AUTO_REQUIRED`/`AUTO_IF_EMPTY`, reset `NEVER`/`YEARLY`/`MONTHLY`/`DAILY`; Product Import hỗ trợ source-local key khi Product Code được sinh tự động.
+- Auto Numbering activation phải tương thích với business identifier uniqueness namespace do Resource adapter/domain khai báo (`GLOBAL`/`COMPANY`/`ORGANIZATION`). Manual identifier của `AUTO_IF_EMPTY` không consume counter; generated candidate đã bị chiếm phải được bỏ qua an toàn. Series đã phát hành number có các field identity/scope/reset bị khóa và không được hard-delete.
 
 ## 1.2 Phạm vi P1
 
@@ -67,9 +71,10 @@ P1 bao gồm các capability chức năng sau:
 11. Alternate UOM cho SIMPLE/CHILD.
 12. COMBO Composition, flatten và allocation service.
 13. Core Pricing theo Product + UOM + Company + Effective Time.
-14. Import Framework cho master P1.
-15. Search/Filter/Sort/Pagination/Export dùng chung.
-16. Audit actor/timestamp cho mutable master/config P1.
+14. Auto Numbering theo Resource catalog.
+15. Import Framework với explicit Resource enablement; P1 baseline enable Product import.
+16. Search/Filter/Sort/Pagination/Export dùng chung.
+17. Audit actor/timestamp cho mutable master/config P1.
 
 ## 1.3 Ngoài phạm vi P1
 
@@ -105,7 +110,7 @@ Các module P2/P3 phải tái sử dụng invariant P1 đã khóa thay vì tạo
 
 Các actor chức năng chính:
 
-- **System Admin**: root identity theo authority baseline; exact bypass mechanism thuộc application/security layer và chưa được FRS này tự phát minh.
+- **System Admin**: Shield User có Employee mapping và Employee Assignment tại Organization `GROUP` với Department IT và Position khi áp dụng; có Base Permission và chịu cùng PBAC/`ABSOLUTE_DENY`/Workflow như mọi User khác, không có bypass.
 - **ERP User**: User có Employee mapping và context phù hợp.
 - **Business Administrator**: User có quyền quản trị Organization/Employee/Product/Pricing theo PBAC.
 - **Authorization Administrator**: User có quyền quản trị Resource/Action/Group/Policy.
@@ -206,6 +211,32 @@ Danh sách master/config P1 phải hỗ trợ search/filter/sort/pagination phù
 - Query chỉ trả dữ liệu trong scope User được phép xem.
 - Pagination áp dụng sau authorization/data-scope filtering logic phù hợp.
 - Search không làm lộ record ngoài scope thông qua count/autocomplete ngoài quyền.
+
+## FRS-P1-GEN-007 - Currency và monetary precision P1
+
+**Priority:** MUST
+
+P1 sử dụng VND là currency duy nhất. Multi-currency và FX conversion nằm ngoài phạm vi baseline. Monetary output/persistence phải tuân precision tiền đã khóa trong Database Design; các phép tính trung gian cần độ chính xác cao hơn, đặc biệt COMBO allocation, không được round sớm làm sai tổng amount.
+
+**Acceptance criteria**
+
+- Product default price, Alternate-UOM selling price, Price List price và COMBO allocated amount trong P1 được hiểu là VND.
+- P1 không yêu cầu chọn currency hoặc FX rate khi tạo Product/Price List.
+- Monetary result cuối tuân precision 2 chữ số thập phân của baseline.
+- COMBO allocation phải giữ precision trung gian đủ cao và chỉ round ở bước monetary result cuối theo rule allocation.
+
+## FRS-P1-GEN-008 - Business timezone theo Company
+
+**Priority:** MUST
+
+Evaluation Time là instant thống nhất của operation. Khi business rule dùng giá trị `DATE` trong Company scope, application phải derive `EvaluationDate` theo timezone cấu hình của Company bằng CodeIgniter Shield/Settings integration mechanism được phê duyệt.
+
+**Acceptance criteria**
+
+- Không dùng browser timezone làm authority cho effective-date business rule.
+- Không hard-code một timezone chung nếu Company đã có timezone setting riêng.
+- Group-level operation không có Company owner chỉ dùng Company timezone khi functional context chỉ định rõ Company; nếu không, không tự chọn một Company tùy ý.
+- Cùng một operation phải dùng cùng Evaluation Time để derive date cho các kiểm tra Assignment/Pricing/effective period liên quan.
 
 ---
 
@@ -308,11 +339,12 @@ Một owner có thể có nhiều Contact.
 - Employee có thể có nhiều Contact.
 - Organization có thể có nhiều Contact.
 - Contact của Employee inactive vẫn tra cứu được.
+- Search Contact hỗ trợ tối thiểu theo Name, Email, Phone hoặc Mobile trong authorization scope.
 - Không cần bảng Contact riêng cho Employee hoặc Organization.
 
 ## FRS-P1-CON-002 - Contact selector/history
 
-**Priority:** SHOULD
+**Priority:** MUST
 
 **Functional behavior**
 
@@ -421,6 +453,25 @@ UI nên hiển thị cây Organization đúng parent relation và status.
 - Có thể expand/collapse từ GROUP tới Warehouse.
 - Không đưa Department/Position vào như Organization node.
 
+## FRS-P1-ORG-005 - Company-scope view và multi-company aggregation
+
+**Priority:** MUST
+
+Khi một list/report/chức năng hỗ trợ Company scope, User phải có thể chọn một hoặc nhiều Company trong tập Company mà Authorization cho phép. Group-level view chỉ là phép tổng hợp dữ liệu từ các Company được phép, không biến GROUP thành transaction owner.
+
+**Functional behavior**
+
+- Single-company view/filter chỉ dùng Company User được phép xem.
+- Multi-company view/filter nhận một tập Company được authorize và aggregate kết quả theo chức năng tương ứng.
+- Nếu request chứa Company ngoài authorization scope, hệ thống phải reject hoặc loại khỏi result theo contract chức năng đã định nghĩa; không được làm lộ dữ liệu ngoài quyền.
+- Transaction ownership của từng record nguồn vẫn giữ nguyên Company; aggregation không merge/chuyển ownership.
+
+**Acceptance criteria**
+
+- User có quyền Company A và B có thể xem/tổng hợp A+B khi chức năng hỗ trợ multi-company.
+- User không có quyền Company C không thấy dữ liệu C trong result/count/export của cùng chức năng.
+- Group-level summary bằng tổng hợp các Company được phép, không đọc GROUP như một transaction owner.
+
 ---
 
 # 6. Employee, Department và Position
@@ -523,9 +574,10 @@ Assignment liên kết Employee với:
 
 **Functional behavior**
 
-- Employee có thể có nhiều Assignment active.
+- Employee có thể có nhiều Assignment active, kể cả trong nhiều Company.
 - Tại một thời điểm chỉ một Primary Assignment effective.
-- Primary Assignment là nguồn mặc định để resolve actor Organization Context.
+- Primary Assignment chỉ là nguồn mặc định để resolve actor Organization Context khi operation không có Evaluation Organization Context rõ ràng.
+- Secondary Assignment effective có thể tham gia Department/Position authorization lane khi Assignment đó thuộc Company/Organization scope đang evaluate.
 
 **Validation**
 
@@ -536,31 +588,64 @@ Assignment liên kết Employee với:
 **Acceptance criteria**
 
 - Có thể chuyển Employee sang Organization/Department/Position khác bằng Assignment mới mà không tạo Employee mới.
-- Secondary Assignment không thay Primary context mặc định.
+- Secondary Assignment không thay Primary default context.
+- Employee có nhiều Assignment ở nhiều Company phải được partition đúng Company khi Authorization.
 - Lịch sử Assignment vẫn tra cứu được sau khi kết thúc.
 
-## FRS-P1-EMP-005 - Resolve actor context
+## FRS-P1-EMP-005 - Resolve actor và Evaluation Organization context
 
 **Priority:** MUST
 
-Chuỗi resolve actor context:
+FRS phân biệt:
 
 ```text
-User -> Employee -> Primary Assignment tại Evaluation Time -> Organization Context
+Default Actor Organization Context
+    = User -> Employee -> Primary Assignment tại Evaluation Time
 ```
 
-Khi cần Company:
+và:
 
 ```text
-Organization Context -> self/ancestor COMPANY
+Evaluation Organization Context
+    = Organization Context của operation/resource đang authorize
 ```
+
+Evaluation Organization Context có thể là `GROUP`, `COMPANY`, `BRANCH`, `PLANT`, `WAREHOUSE`. Nếu operation cho phép default actor context và không có authoritative target scope rõ ràng thì dùng Default Actor Organization Context.
+
+**Authoritative context resolution:**
+- Existing Resource/record: derive Evaluation Organization từ persisted target/owner canonical; client-supplied context không được override và mismatch phải reject.
+- Create: derive từ owner/parent/scope canonical trong request.
+- Group-level shared/admin Resource: canonical context `GROUP`.
+- `organization.create`: Evaluation Organization = Parent Organization.
+- `employee_assignment.create/edit`: Evaluation Organization = Assignment Organization.
+
+Scope path authorization:
+
+```text
+GROUP root -> ... -> Evaluation Organization Context
+```
+
+Một Assignment effective eligible khi Assignment organization bằng Evaluation Organization hoặc là ancestor của nó trên scope path. Assignment tại `GROUP` vì vậy có thể tham gia mọi descendant context; Assignment thuộc sibling hoặc Company khác không tham gia.
+
+Khi nghiệp vụ cần Company owner:
+
+```text
+Evaluation Organization Context -> self/ancestor COMPANY
+```
+
+`GROUP` không resolve thành Company owner.
 
 **Acceptance criteria**
 
-- Không có Primary Assignment trong operation cần employee-derived context thì không tự tạo ALLOW.
-- Secondary Assignment không được dùng thay Primary nếu chưa có requirement riêng.
-
----
+- Primary Assignment chỉ dùng để resolve default context khi operation không cung cấp context rõ ràng.
+- Primary flag không phải điều kiện duy nhất để Assignment tham gia Authorization.
+- Secondary/Group Assignment effective được phép tham gia Department/Position participant matching khi Assignment nằm trên exact ancestor path của Evaluation Organization.
+- Assignment ở Company/nhánh khác không được tham gia participant matching.
+- Group-level administrative/shared operation có canonical scope Group dùng `Evaluation Organization Context = GROUP`.
+- Existing target không đổi Authorization context chỉ vì client gửi Organization id khác.
+- Create Company dưới GROUP evaluate `organization.create` tại GROUP; create Branch/Plant/Warehouse evaluate tại parent tương ứng.
+- Employee Assignment mutation evaluate tại Organization của Assignment.
+- Không có context cần thiết cho operation thì không tự tạo ALLOW.
 
 # 7. Identity, Permission và Authorization Group
 
@@ -606,12 +691,19 @@ Baseline action có thể gồm:
 - export
 - print
 - setstate
+- import (chỉ Resource được explicit enable)
+- assign_member
+- assign_permission
+- configure_numbering
 
 **Functional behavior**
 
 - Quản trị Resource Type.
 - Quản trị Action thuộc Resource.
 - Mỗi Resource + Action là một permission unit.
+- Mọi loại dữ liệu/capability cần bảo vệ đều phải có Resource Type canonical, gồm cả configuration/security data như `organization`, `user`, `authorization_group`, `resource`, `policy`.
+- `authorization_group` là Resource Type của nhóm phân quyền; không dùng `group` làm canonical resource type để tránh nhầm với Organization type `GROUP`.
+- Resource Type biểu diễn loại dữ liệu/capability, không phải từng business record instance.
 
 **Validation**
 
@@ -621,7 +713,10 @@ Baseline action có thể gồm:
 **Acceptance criteria**
 
 - `product.view` không đồng nghĩa `product.edit`.
+- Quản trị User/Authorization Group/Resource/Policy/Organization cũng phải qua Resource/Action authorization, không có implicit admin access.
 - Không tạo Permission table riêng.
+- Không tạo một Resource row cho từng User/Product/Organization record; P1 vẫn không có Resource Instance Authorization.
+- `resource.configure_numbering` là action độc lập để quản trị Auto Numbering configuration; `resource.edit` không tự cấp quyền này.
 
 ## FRS-P1-IAM-003 - Authorization Group
 
@@ -633,7 +728,8 @@ Authorization Group là nhóm quyền, không phải Organization GROUP.
 
 - Create/Edit/Inactivate Authorization Group.
 - `groups.code` là canonical alias map tới Shield membership group string.
-- Gán/bỏ Resource Action cho Group.
+- Gán/bỏ User membership cho Group qua action `authorization_group.assign_member`.
+- Gán/bỏ Resource Action cho Group qua action `authorization_group.assign_permission`.
 
 **Validation**
 
@@ -660,11 +756,94 @@ Base Permission của User là union của:
 - Không có direct DENY trong Effective Profile.
 - Effective Profile không persistence thành Profile table.
 - Direct permission không bypass Policy/ABSOLUTE_DENY.
+- Khi Mini ERP expose quản trị direct permission, mutation phải dùng action `user.assign_permission` và ghi vào identity permission mechanism hiện hành; không tạo local override persistence.
 
 **Acceptance criteria**
 
 - User có permission từ bất kỳ Group active hợp lệ nào thì permission đó vào Base Permission.
 - Direct permission không map được vào catalog thì không tạo permission ERP hợp lệ.
+
+---
+
+
+## FRS-P1-NUM-001 - Auto Numbering configuration theo Resource
+
+**Priority:** MUST
+
+Auto Numbering được cấu hình theo Resource Type trong Resource catalog; configuration không tạo Resource Instance Authorization.
+
+**Functional behavior**
+- Một Resource có thể có zero hoặc nhiều numbering series.
+- Một Resource có tối đa một active default series; non-default series chỉ được dùng khi use-case chọn series hợp lệ.
+- Series định nghĩa `scope_type`, `pattern`, `reset_policy`, `generation_mode`, `start_number`, `increment_by`, default flag và status.
+- `scope_type`: `GROUP`, `COMPANY`, `ORGANIZATION`.
+- `generation_mode`: `AUTO_REQUIRED`, `AUTO_IF_EMPTY`.
+- `reset_policy`: `NEVER`, `YEARLY`, `MONTHLY`, `DAILY`.
+- Resource adapter/domain phải khai báo canonical business identifier field và uniqueness namespace `GLOBAL`/`COMPANY`/`ORGANIZATION`; đây là runtime/domain contract, không yêu cầu thêm column vào Resource catalog.
+- Khi activate/update series, hệ thống phải validate `scope_type + reset_policy + pattern` tương thích với uniqueness namespace để các counter partition khác nhau không phát hành cùng business identifier trong cùng uniqueness namespace.
+- Sau khi series đã có ít nhất một committed counter/issuance, `resource`, `series_code`, `scope_type` và `reset_policy` không được đổi; series đã phát hành number không được hard-delete mà chỉ có thể chuyển `INACTIVE`.
+- Quản trị configuration yêu cầu `resource.configure_numbering`.
+
+**Acceptance criteria**
+- Resource không có active/default series không bị tự động áp numbering.
+- Không được có hai active default series cho cùng Resource.
+- Series có configuration không đủ phân biệt Company/Organization/period theo uniqueness rule bị reject trước khi active.
+- `AUTO_REQUIRED` reject manual business identifier trên create path.
+- `AUTO_IF_EMPTY` chỉ generate khi business identifier trống.
+- Series đã phát hành number không thể đổi scope/reset identity hoặc bị hard-delete.
+- Chỉnh configuration hợp lệ không renumber record lịch sử.
+
+## FRS-P1-NUM-002 - Generate number, scope và transaction semantics
+
+**Priority:** MUST
+
+Auto Number được generate server-side qua một service dùng chung cho UI/API/Import/background create path.
+
+**Scope resolution**
+- `GROUP`: counter thuộc GROUP root.
+- `COMPANY`: counter thuộc Company owner/self Company được resolve từ authoritative Organization Context.
+- `ORGANIZATION`: counter thuộc exact authoritative Evaluation Organization Context.
+
+**Rules**
+- Pattern hỗ trợ canonical sequence/date/context token theo Implementation Contract; không execute script/expression tùy ý.
+- Reset `YEARLY`/`MONTHLY`/`DAILY` tính period theo Company business timezone khi scope nằm trong Company. Group-scope series dùng date/reset chỉ hợp lệ khi Group/default business timezone đã được cấu hình qua Settings.
+- Với reset khác `NEVER`, final identifier phải chứa đủ period discriminator tương ứng để không lặp lại identifier giữa các period trong cùng business uniqueness namespace.
+- Nếu counter được partition hẹp hơn business identifier uniqueness namespace, final identifier phải chứa context discriminator tương ứng hoặc uniqueness key của domain phải tự bao gồm dimension đó.
+- Generate number và create business record phải nằm trong cùng transaction boundary. Nếu transaction rollback, counter rollback cùng transaction và number chưa commit có thể được cấp lại.
+- `AUTO_IF_EMPTY` manual identifier hợp lệ không consume counter. Nếu generated candidate trùng một business identifier đã tồn tại, AutoNumberService phải advance sequence và thử candidate kế tiếp trong cùng serialized transaction cho tới khi tìm được identifier hợp lệ; counter commit ở sequence thực tế đã phát hành.
+- Number đã commit không được tái sử dụng do cancel/inactivate/delete logic sau đó.
+- Concurrent create trong cùng series/scope/period phải serialize để không phát hành duplicate number.
+
+**Acceptance criteria**
+- Company A và Company B có counter độc lập đối với Company-scoped series.
+- Series/reset configuration có nguy cơ lặp identifier trong cùng uniqueness namespace bị reject.
+- Manual `AUTO_IF_EMPTY` value trùng sequence candidate tương lai không làm Auto Number bị kẹt; generator bỏ qua identifier đã tồn tại.
+- Hai concurrent create cùng counter không commit cùng number.
+- Rollback không tạo gap do counter commit riêng khỏi business mutation.
+- Committed number không bị reuse.
+
+## FRS-P1-NUM-003 - Product Import với Auto Numbering
+
+**Priority:** MUST
+
+Product Import phải hỗ trợ source-local identity để dependency graph không phụ thuộc vào generated `product_code`.
+
+**Identifier semantics**
+- **Persistent Target Key:** `product_code`, dùng để lookup Product đã tồn tại cho `UPDATE_ONLY`/UPSERT-existing.
+- **Source-local Key:** `source_key`, chỉ có hiệu lực trong file/job hiện tại để nhận diện Product row và resolve Parent/UOM/COMBO dependency.
+- **Generated Business Identifier:** `product_code` do AutoNumberService phát hành cho create path khi numbering yêu cầu/áp dụng.
+
+**Rules**
+- Mỗi Product row có `source_key` duy nhất trong file.
+- Create row khi Product dùng `AUTO_REQUIRED` có thể để `product_code` trống; code được AutoNumberService sinh trong mutation transaction.
+- Parent/Child, UOM Conversion và COMBO Item có thể reference Product cùng file bằng source-local key; Product đã tồn tại có thể reference bằng persistent `product_code`.
+- `UPDATE_ONLY` cần `product_code` tồn tại để resolve target.
+- Với `UPSERT`, row thiếu `product_code` đi theo create path; row có `product_code` đi theo lookup/update-or-create semantics nhưng vẫn phải tuân generation mode. `AUTO_REQUIRED` không được dùng một manual code chưa tồn tại để bypass generation.
+
+**Acceptance criteria**
+- Child có thể tham chiếu Parent create mới qua `parent_source_key` dù Parent chưa có generated code tại parse time.
+- COMBO Item có thể tham chiếu owner/component create mới bằng source key.
+- Generated Product Code vẫn unique và được ghi vào row result/entity key khi row thành công.
 
 ---
 
@@ -709,70 +888,158 @@ Participant type P1:
 
 **Priority:** MUST
 
-Khi evaluate Policy, system phải có khả năng match participant phù hợp với actor/context hiện hành.
+Khi evaluate Policy, system build các authorization lane phù hợp với Evaluation Organization Context và exact ancestor path từ `GROUP` root. Với Company-scoped operation, từng Company được evaluate độc lập.
 
-**Source-supported participant inputs**
+**Participant inputs**
 
-- USER: current Shield User.
-- GROUP: Authorization Groups current User là member.
-- POSITION: Position từ Employee Assignment phù hợp.
-- DEPARTMENT: Department từ Employee Assignment phù hợp.
-- ORGANIZATION: Organization Context phù hợp.
+- `USER`: current Shield User.
+- `GROUP`: active Authorization Groups current User là member; tham gia actor-level lane.
+- `POSITION`: Position từ Employee Assignment effective eligible.
+- `DEPARTMENT`: Department từ Employee Assignment effective eligible.
+- `ORGANIZATION`: contextual participant tại node trên scope path đang applicable.
 
-Exact rule khi một Employee có nhiều secondary Assignment đối với POSITION/DEPARTMENT participant ngoài Primary context không được nguồn hiện tại định nghĩa đầy đủ. P1 mặc định phải dùng actor context/assignment được operation xác định; không được tự mở rộng secondary-assignment matching ngoài rule đã được phê duyệt.
+**Assignment eligibility**
+
+Với Evaluation Organization Context `O`:
+- `O` có thể là `GROUP`, `COMPANY`, `BRANCH`, `PLANT`, `WAREHOUSE`;
+- build `ScopePath(O) = GROUP root -> ... -> O`;
+- chỉ xét Assignment effective của Employee có `organization_id = O` hoặc Organization là ancestor của `O` trên `ScopePath(O)`;
+- Assignment tại `GROUP` được phép cung cấp DEPARTMENT/POSITION participant cho mọi descendant;
+- Assignment thuộc sibling Organization hoặc subtree Company khác không được trộn vào lane hiện tại;
+- Primary flag không phải điều kiện duy nhất để Assignment tham gia PBAC; Primary chỉ quyết định default actor context.
 
 **Acceptance criteria**
 
-- Policy participant không match thì Policy đó không tham gia effect aggregation.
+- Employee có GROUP Assignment được kế thừa role xuống descendant Organization.
+- Employee có nhiều Assignment trong nhiều Company được partition đúng Company khi operation ở Company scope.
+- Một User có nhiều Department/Position trong cùng scope có nhiều assignment lane độc lập trước bước merge.
+- Policy participant không match thì Policy đó không tham gia QT1 của lane tương ứng.
 - Không dùng participant như arbitrary business condition.
 
 ## FRS-P1-PBAC-003 - Policy inheritance theo Organization
 
 **Priority:** MUST
 
-Khi evaluate tại Organization Context hiện tại, system load Policy trực tiếp của node và Policy của ancestor theo hierarchy.
+Inheritance được resolve **trước** multi-lane intersection.
+
+Với bất kỳ Evaluation Organization `O` thuộc `GROUP`/`COMPANY`/`BRANCH`/`PLANT`/`WAREHOUSE`, Policy source canonical là:
+
+```text
+GROUP root
+-> ...
+-> O
+```
+
+Tức là toàn bộ node trên exact ancestor path từ `GROUP` tới `O`. Khi `O = GROUP`, path chỉ có `GROUP`.
 
 **Rules**
 
-- Không copy Policy vật lý xuống child.
+- Department/Position lane tại `O` phải xét Policy applicable kế thừa từ toàn bộ Organization phía trên, kể cả `GROUP`.
+- Actor-level lane tại `O` cũng phải xét Policy applicable theo cùng scope path.
+- `ORGANIZATION` participant rule applicable trên scope path là contextual restriction chung cho scope tương ứng.
+- Không copy Policy vật lý xuống child; inheritance được resolve runtime.
 - Hierarchy depth không phải Policy Priority.
-- Tất cả matched effect được aggregate bằng precedence canonical.
+- Applicable `ABSOLUTE_DENY` tại bất kỳ node nào trên scope path phải được propagate vào mọi KQ lane con chịu scope trước intersection.
 
 **Acceptance criteria**
 
-- Policy GROUP có thể match khi evaluate descendant Company/Branch/Plant/Warehouse nếu các dimension còn lại match.
+- GROUP Policy có thể tác động tới mọi descendant nếu các dimension/participant còn lại match.
+- Company Policy có thể tác động tới Branch/Plant/Warehouse descendant trong Company đó.
+- Branch Policy có thể tác động tới Plant/Warehouse descendant nằm dưới Branch đó.
+- Policy của sibling Organization không được kế thừa ngang.
 - Child Policy không tự vô hiệu Parent Policy chỉ vì nằm sâu hơn.
+- `ABSOLUTE_DENY` inherited không bị mất sau multi-role intersection.
 
-## FRS-P1-PBAC-004 - Authorization evaluation precedence
+## FRS-P1-PBAC-004 - Canonical authorization evaluation và multi-role merge
 
 **Priority:** MUST
+
+QT1 trong từng lane:
+
+```text
+ABSOLUTE_DENY > ALLOW > DENY > NO_MATCH
+NO_MATCH => ALLOW
+```
+
+`KQ[x]` là tập `Resource + Action` bị cấm sau khi lane `x` đã resolve inheritance và QT1.
 
 Canonical algorithm:
 
 ```text
-if no base permission:
-    DENY
-else:
-    load matching policies at current Organization Context + ancestors
-    filter by Resource, State (specific or NULL), Participant, Action
+AUTHORIZE(User, Resource, Action, EvaluationOrganization O, State, Time):
 
-    if any ABSOLUTE_DENY:
+    if no base permission(Resource, Action):
         DENY
-    else if any ALLOW:
-        ALLOW
-    else if any DENY:
+
+    scope_path = GROUP root -> ... -> O
+
+    common_context_policies[O] =
+        resolve ORGANIZATION participant policies over scope_path
+
+    KQ[user, O] =
+        resolve actor-level policies (USER/GROUP)
+        + common_context_policies[O]
+        over scope_path
+        by QT1
+
+    eligible_assignments =
+        effective assignments where
+        assignment.organization = O
+        OR assignment.organization is ancestor of O on scope_path
+
+    FOR EACH eligible Assignment A:
+        KQ[A, O] =
+            resolve DEPARTMENT/POSITION policies
+            + common_context_policies[O]
+            over scope_path
+            by QT1
+
+    mandatory_absolute_denied[O] =
+        all applicable ABSOLUTE_DENY matched on scope_path
+
+    inject mandatory_absolute_denied[O]
+        into every participating KQ lane
+
+    KQ[O] =
+        INTERSECTION(
+            KQ[user, O],
+            all KQ[A, O]
+        )
+
+    if Resource+Action in KQ[O]:
         DENY
     else:
         ALLOW
+
+FOR EACH COMPANY C when company summary is required:
+    evaluate C and descendant Organizations in C independently
+    KQ[C-summary] = INTERSECTION(all KQ[O] in C)
 ```
+
+**Semantic rules**
+
+- Ordinary `DENY` là restriction của lane; giữa nhiều lane, User hưởng quyền cao nhất. Permission chỉ còn bị ordinary-denied nếu nằm trong giao của mọi KQ lane liên quan.
+- `ALLOW` hoặc `NO_MATCH` trong một lane làm permission không thuộc KQ denied của lane.
+- `ORGANIZATION` participant policies applicable trên `GROUP -> ... -> O` được xem là contextual rules dùng chung và được đưa vào mọi lane trước QT1.
+- Applicable `ABSOLUTE_DENY` là mandatory inherited restriction; phải xuất hiện trong mọi KQ lane chịu scope trước intersection.
+- Assignment tại `GROUP` có thể tạo DEPARTMENT/POSITION lane cho descendant; Assignment ở subtree Company khác không tham gia.
+- Group-level administrative Resource có thể được evaluate trực tiếp tại `GROUP`; không bắt buộc phải có Company owner.
+- Company A và Company B được evaluate độc lập đối với Company-scoped operation.
+- Base Permission vẫn là prerequisite toàn cục; intersection không được tạo permission chưa có trong Effective Profile.
 
 **Acceptance criteria**
 
-- No Base Permission => DENY dù có Policy ALLOW.
-- Base + NO_MATCH => ALLOW.
-- Base + DENY => DENY.
-- Base + ALLOW + DENY => ALLOW.
-- Base + ABSOLUTE_DENY + bất kỳ effect khác => DENY.
+- No Base Permission => DENY dù mọi lane đều không cấm.
+- Trong một lane: Base + NO_MATCH => ALLOW.
+- Trong một lane: Base + DENY => permission vào KQ lane.
+- Trong một lane: Base + ALLOW + DENY => permission không vào KQ lane.
+- Trong một lane: Base + ABSOLUTE_DENY + effect khác => permission vào mandatory denied set.
+- Hai role cùng scope: role A `ALLOW`, role B `DENY` => permission không thuộc KQ Organization nếu không có `ABSOLUTE_DENY`.
+- Hai role cùng scope đều `DENY` => permission thuộc KQ Organization.
+- GROUP/ancestor inherited `ABSOLUTE_DENY` => permission thuộc KQ Organization và không bị role khác mở lại.
+- GROUP Assignment Department/Position được dùng khi evaluate descendant context.
+- Assignment thuộc Company A không tham gia khi evaluate Company B.
+- Group-level `user`/`authorization_group`/`resource`/`policy` operation có thể authorize với Evaluation Organization `GROUP`.
 
 ## FRS-P1-PBAC-005 - Explainable decision
 
@@ -819,15 +1086,24 @@ View/List không bắt buộc persisted log.
 
 **Priority:** MUST
 
-Business requirement hiện hành xác định System Admin là root identity có quyền quản trị toàn hệ thống. Database Design không persistence special bypass row/column và exact bypass mechanism vẫn là application/security concern.
+System Admin không có bypass trong P1. System Admin là User bình thường trong cùng Authorization model.
 
-**FRS boundary**
+**Canonical rule**
 
-- FRS không tự định nghĩa claim/group/code cụ thể để nhận diện System Admin.
-- Implementation phải dùng cơ chế được security authority phê duyệt.
-- Không mô phỏng root bypass bằng Policy ALLOW hoặc database flag tự phát minh.
+- Có Shield User và Employee mapping.
+- Employee có Employee Assignment effective tại Organization `GROUP`; baseline tổ chức của System Admin thuộc Department IT; Position được cấu hình khi áp dụng.
+- Có Base Permission từ Authorization Group và/hoặc approved direct permission addition như User khác.
+- Chịu cùng PBAC Policy, QT1, denied-set intersection và `ABSOLUTE_DENY` như mọi User khác.
+- Chịu Workflow/Lifecycle và business/data validation như mọi User khác.
+- Không có hard-coded `isSystemAdmin => ALLOW`, special root flag, special bypass Policy row hoặc special permission semantics.
+- Initial System Admin/privileged membership được provision bằng bootstrap/deployment mechanism ngoài runtime PBAC; sau bootstrap, quản trị membership/permission phải đi qua Resource/Action/PBAC bình thường.
 
----
+**Acceptance criteria**
+
+- System Admin thiếu Base Permission cho `Resource + Action` => DENY.
+- System Admin match `ABSOLUTE_DENY` => DENY.
+- GROUP Assignment của System Admin có thể cung cấp Department IT và Position participant khi Position được khai báo, cho descendant Organization theo inheritance.
+- System Admin quản trị `user`, `authorization_group`, `resource`, `policy`, `organization` chỉ khi có Resource/Action permission và PBAC cho phép.
 
 # 9. Workflow, Lifecycle và Approval
 
@@ -1271,21 +1547,6 @@ product_id + base_uom_id
 - Nested COMBO không xuất hiện trong final leaf set.
 - Quantity chính xác theo tích path.
 
-## FRS-P1-CMB-004 - Preview COMBO expansion
-
-**Priority:** SHOULD
-
-UI/service nên cho phép preview kết quả flatten trước khi dùng COMBO trong transaction phase sau.
-
-**Output đề xuất ở functional level**
-
-- Leaf Product.
-- Base UOM.
-- Final flattened quantity cho quantity root được nhập.
-- Path/source summary khi cần debug.
-
-P1 không yêu cầu persistence preview result.
-
 ---
 
 # 14. Core Pricing
@@ -1539,20 +1800,20 @@ P1 không tạo transaction persistence cho source trace. P2 transaction design 
 
 # 16. Import Framework
 
+Import Framework là capability dùng chung của P1 nhưng **không mặc định áp dụng cho mọi master**. Target phải được explicit enable theo User Requirements + Resource/Action catalog. Baseline P1 hiện enable import cho `PRODUCT`; Employee/Province/Ward không phải P1 import target nếu chưa có change control bổ sung.
+
 ## FRS-P1-IMP-001 - Import Job
 
-**Priority:** SHOULD
+**Priority:** MUST
 
-P1 cung cấp import CSV/XLSX cho tối thiểu:
+P1 cung cấp CSV/XLSX import cho target đã enable:
 
 - PRODUCT
-- EMPLOYEE
-- PROVINCE
-- WARD
 
 Mỗi Import Job giữ:
 
 - Entity Type.
+- Mode (`CREATE_ONLY`/`UPDATE_ONLY`/`UPSERT`).
 - Source Format.
 - Original File Name khi có.
 - File Hash khi áp dụng.
@@ -1575,7 +1836,7 @@ Job status baseline:
 
 ## FRS-P1-IMP-002 - Row-level result
 
-**Priority:** MUST nếu Import Framework được bật
+**Priority:** MUST
 
 Mỗi source row phải có result:
 
@@ -1598,7 +1859,7 @@ Import phải dùng cùng business validation với UI/API mutation.
 
 **Acceptance criteria**
 
-- Unique rule, parent matrix, Product invariant, UOM rule, Policy rule không được bypass qua import.
+- Unique rule, Product invariant, UOM rule và COMBO rule không được bypass qua Product import. Resource import khác nếu được enable sau phải dùng cùng validation với API/UI của Resource đó.
 - Một row mutation nhiều bảng fail phải rollback row đó.
 
 ## FRS-P1-IMP-004 - Product dependency resolution
@@ -1613,6 +1874,7 @@ Importer phải resolve dependency bằng multi-pass/dependency graph cho:
 - Product Group/UOM references.
 - COMBO owner/component.
 - Nested COMBO dependency.
+- Source-local Product references (`source_key`) khi Product Code được Auto Number sinh sau.
 
 **Rules**
 
@@ -1620,22 +1882,28 @@ Importer phải resolve dependency bằng multi-pass/dependency graph cho:
 - COMBO có thể xuất hiện trước component.
 - Nested COMBO phải cycle-detect.
 - Source row order vẫn giữ nguyên trong row result.
+- Product row dùng `source_key` unique trong file; dependency tới Product create mới có thể dùng source key thay vì generated Product Code.
 
 **Acceptance criteria**
 
 - File có dependency hợp lệ nhưng thứ tự ngược vẫn import được.
 - Graph cycle làm các row liên quan fail với error có thể giải thích; không commit composition cycle.
 
-## FRS-P1-IMP-005 - Import authorization
+## FRS-P1-IMP-005 - Import authorization hai tầng
 
 **Priority:** MUST
 
-Import là action protected. User phải có permission phù hợp với entity/import operation theo catalog được triển khai.
+Import là action protected theo hai gate bắt buộc:
+
+1. **Start gate:** User phải có `<target_resource>.import` tại Evaluation Organization canonical của import operation.
+2. **Row mutation gate:** từng logical row vẫn phải pass canonical mutation permission tương ứng (`create`, `edit`, `setstate` khi áp dụng) tại authoritative Evaluation Organization của target row/resource.
 
 **Acceptance criteria**
 
-- User không có quyền không thể chạy import.
-- Import không mở đường bypass authorization cho mutation master.
+- User thiếu `product.import` không thể start Product import.
+- Có `product.import` nhưng thiếu `product.create`/`product.edit` tương ứng thì row mutation bị DENY; import không trở thành đường bypass CRUD/PBAC.
+- Product là Group Master nên Product import baseline evaluate tại `GROUP` cho Resource scope; row vẫn dùng canonical Product mutation action.
+- Resource không được explicit enable action `import` không được expose import UI/API.
 
 ---
 
@@ -1655,6 +1923,7 @@ Các màn hình danh sách chính P1 hỗ trợ:
 Domain-specific examples:
 
 - Organization: code/name/type/status.
+- Contact: name/email/phone/mobile/status.
 - Employee: code/name/status/manager.
 - Product: code/SKU/barcode/name/type/derived role/status/group.
 - Price List: code/name/scope/status/effective time.
@@ -1700,18 +1969,25 @@ Phải hỗ trợ:
 - Create/update/end Assignment.
 - Validate date range.
 - Validate Primary overlap.
-- Resolve Primary Assignment tại Evaluation Time.
-- Resolve actor Organization/Company context.
+- Resolve Primary Assignment tại Evaluation Time cho default actor context.
+- Resolve effective Assignments theo exact `GROUP -> ... -> Evaluation Organization` scope path phục vụ PBAC.
+- Resolve actor default Organization/Company context và Assignment scope path.
 
 ## FRS-P1-SVC-003 - AuthorizationService
 
 Phải hỗ trợ:
 
 - Resolve Base Permission.
-- Load matching Policy theo context/ancestor.
-- Match participant.
-- Aggregate effect precedence.
-- Trả Decision + Reason.
+- Resolve Evaluation Organization ở `GROUP`/`COMPANY`/`BRANCH`/`PLANT`/`WAREHOUSE`.
+- Partition Company-scoped evaluation theo Company; hỗ trợ Group-level evaluation trực tiếp tại `GROUP`.
+- Resolve ancestor chain từ `GROUP` root và Policy inheritance trước merge.
+- Build actor-level lane (`USER`/`GROUP`).
+- Build assignment lanes (`DEPARTMENT`/`POSITION`) từ effective eligible Assignments tại current Organization hoặc ancestor, bao gồm GROUP Assignment khi applicable.
+- Apply QT1 trong từng lane.
+- Propagate applicable `ABSOLUTE_DENY` vào mọi lane con chịu scope.
+- Merge KQ Organization bằng intersection.
+- Merge KQ Company bằng intersection các KQ Organization.
+- Trả Decision + Reason kèm lane/inheritance evidence đủ debug.
 - Ghi Authorization Audit khi action thuộc persisted-audit scope.
 
 ## FRS-P1-SVC-004 - LifecycleService
@@ -1734,6 +2010,7 @@ Phải hỗ trợ tối thiểu:
 - isCombo().
 - isSelectable().
 - isLeafTransactionable().
+- requiresComboExpansion().
 - getFullName().
 
 Tất cả module phải dùng cùng rule role canonical.
@@ -1753,7 +2030,8 @@ Phải hỗ trợ:
 
 - Resolve Product + UOM + Company + Effective Time.
 - Company -> Group -> Default fallback.
-- Deterministic ordering.
+- Enforce effective interval `[effective_from, effective_to)` và deterministic ordering.
+- Validate COMBO chỉ pricing tại Base UOM.
 - Trả price source và Price List reference.
 
 ## FRS-P1-SVC-008 - ComboExpansionService
@@ -1762,7 +2040,7 @@ Phải hỗ trợ:
 
 - Validate acyclic composition.
 - Flatten nested COMBO.
-- Aggregate leaf quantity.
+- Aggregate leaf quantity theo canonical key tối thiểu `product_id + base_uom_id`.
 - Không resolve nested COMBO price khi xử lý root.
 
 ## FRS-P1-SVC-009 - ComboAllocationService
@@ -1776,18 +2054,36 @@ Phải hỗ trợ:
 - Aggregate leaf occurrence từ nhiều COMBO bằng SUM(quantity)/SUM(amount).
 - Derive weighted-average final unit price.
 
-## FRS-P1-SVC-010 - ImportService
+## FRS-P1-SVC-010 - AutoNumberService
+
+Phải hỗ trợ:
+
+- Resolve active/default numbering series theo Resource.
+- Resolve counter scope `GROUP`/`COMPANY`/`ORGANIZATION` từ authoritative Organization Context.
+- Resolve period key theo reset policy và business timezone.
+- Render pattern từ canonical token set và next sequence value.
+- Serialize concurrent counter allocation.
+- Generate number trong cùng transaction với business create để rollback counter cùng mutation.
+- Enforce `AUTO_REQUIRED`/`AUTO_IF_EMPTY`.
+- Validate series scope/reset/pattern theo business identifier uniqueness namespace của Resource adapter/domain.
+- Khi generated candidate đã tồn tại (ví dụ do manual `AUTO_IF_EMPTY`), advance sequence và thử candidate kế tiếp trong cùng serialized transaction.
+- Enforce immutability/no-hard-delete rule của series sau committed issuance.
+- Không renumber record cũ khi configuration thay đổi.
+
+## FRS-P1-SVC-011 - ImportService
 
 Phải hỗ trợ:
 
 - Create Job.
 - Parse file.
 - Validate row.
-- Build dependency graph khi Product import.
+- Build dependency graph khi Product import, bao gồm source-local Product references khi Auto Numbering áp dụng.
 - Multi-pass processing.
 - Row-level atomic mutation.
 - Row result/report.
 - Final Job reconciliation.
+
+ImportService là capability P1 theo Database Design; nếu phase planning thay đổi delivery priority, các validation/persistence contract đã khóa không được bị bypass bởi đường import thay thế.
 
 ---
 
@@ -1865,14 +2161,40 @@ Create Employee
 ## 20.3 Evaluate authorization
 
 ```text
-User + Resource + Action + Organization + State
+User + Resource + Action + Evaluation Organization + State
   -> identity active check
   -> resolve Group memberships/direct permission
   -> build Base Permission
   -> if none: DENY
-  -> load Policy current org + ancestors
-  -> participant/state/action match
-  -> precedence ABSOLUTE_DENY > ALLOW > DENY > NO_MATCH
+
+  -> resolve Company boundary
+  -> resolve COMPANY + ancestor path + current Organization
+  -> resolve applicable Policy inheritance
+
+  -> resolve common ORGANIZATION participant policies
+       over COMPANY + ancestor path + current Organization
+
+  -> build KQ[user, Organization]
+       using USER/GROUP + common ORGANIZATION rules + QT1
+
+  -> resolve eligible effective Employee Assignments
+       in same Company / Organization scope
+
+  -> build KQ[assignment, Organization]
+       using DEPARTMENT/POSITION + common ORGANIZATION rules + QT1
+
+  -> propagate applicable ABSOLUTE_DENY
+       into every child lane before merge
+
+  -> KQ[Organization]
+       = intersection(user lane, all assignment lanes)
+
+  -> KQ[Company]
+       = intersection(all Organization KQ)
+
+  -> Resource+Action in effective KQ => DENY
+     otherwise => ALLOW
+
   -> decision/reason
   -> persist audit when required
 ```
@@ -1956,15 +2278,31 @@ Input Product + UOM + Company + Time
 
 ```text
 Parse all rows
-  -> normalize entity keys
+  -> validate unique source_key for Product rows
+  -> normalize persistent product_code when supplied
   -> resolve Product Group/UOM refs
-  -> build Parent/Child dependencies
-  -> build COMBO dependencies
+  -> build Parent/Child dependencies by source_key/product_code
+  -> build COMBO dependencies by source_key/product_code
   -> detect cycles
   -> process valid dependency order/multi-pass
+  -> generate Product Code through AutoNumberService for create rows when required
   -> preserve original row_number result
-  -> rollback failed row atomically
+  -> rollback failed row and allocated number atomically
   -> reconcile job counts
+```
+
+## 20.11 Auto Number generation
+
+```text
+Resolve Resource + active/default Series
+  -> resolve authoritative Organization Context
+  -> resolve counter scope Organization
+  -> derive period key from reset policy + business timezone
+  -> lock/serialize counter
+  -> next sequence
+  -> render canonical pattern
+  -> assign business identifier
+  -> persist business record + counter in same transaction
 ```
 
 ---
@@ -2047,21 +2385,22 @@ FRS yêu cầu:
 
 # 23. Traceability Matrix - User Requirement sang Functional Requirement
 
-Bảng dưới đây tập trung vào P1.
+Bảng dưới đây bao phủ toàn bộ User Requirement có Target Phase P1 trong `00_User_Requirements_v1.0.10-draft.md`.
 
 | User Requirement | FRS Coverage |
 |---|---|
-| UR-CORE-001 Một Group, nhiều Company | FRS-P1-ORG-001..004 |
-| UR-CORE-002 Transaction thuộc Company | FRS-P1-GEN-001, FRS-P1-ORG-003 |
-| UR-CORE-003 Shared Group Master | FRS-P1-PRD-001..006 |
+| UR-CORE-001 Một Group, nhiều Company | FRS-P1-ORG-001..005 |
+| UR-CORE-002 Transaction thuộc Company | FRS-P1-GEN-001, FRS-P1-ORG-003, FRS-P1-ORG-005 |
+| UR-CORE-003 Master data dùng chung trong Group | FRS-P1-PRD-001..006, FRS-P1-UOM-001..005 |
 | UR-CORE-004 Administrative Location | FRS-P1-LOC-001..002 |
 | UR-CORE-005 Shared Contact | FRS-P1-CON-001..002 |
-| UR-ORG-001 Company | FRS-P1-ORG-001..003 |
+| UR-ORG-001 Company | FRS-P1-ORG-001..003, FRS-P1-CON-001 |
 | UR-ORG-002 Branch/Plant/Warehouse | FRS-P1-ORG-001..004 |
-| UR-EMP-001 Employee | FRS-P1-EMP-003 |
+| UR-ORG-003 Xem/tổng hợp theo Company | FRS-P1-ORG-005, FRS-P1-QRY-001..002 |
+| UR-EMP-001 Employee | FRS-P1-EMP-003, FRS-P1-CON-001..002 |
 | UR-EMP-002 Department/Position | FRS-P1-EMP-001..002 |
 | UR-EMP-003 Assignment | FRS-P1-EMP-004..005 |
-| UR-IAM-001 Identity | FRS-P1-IAM-001 |
+| UR-IAM-001 Identity | FRS-P1-IAM-001, FRS-P1-PBAC-007 |
 | UR-IAM-002 Resource/Action | FRS-P1-IAM-002 |
 | UR-IAM-003 Effective Profile | FRS-P1-IAM-004 |
 | UR-IAM-004 Authorization Group | FRS-P1-IAM-003 |
@@ -2073,18 +2412,20 @@ Bảng dưới đây tập trung vào P1.
 | UR-IAM-010 NO_MATCH | FRS-P1-PBAC-004 |
 | UR-IAM-011 Policy Inheritance | FRS-P1-PBAC-003 |
 | UR-IAM-012 Explainable Authorization | FRS-P1-PBAC-005..006 |
-| UR-IAM-013 Sensitive Data | FRS-P1-SEC-001 |
-| UR-PRD-001 Product Master | FRS-P1-PRD-001..006 |
+| UR-IAM-013 Sensitive Data | FRS-P1-SEC-001..002 |
+| UR-PRD-001 Product Master V2 | FRS-P1-PRD-001..006 |
 | UR-PRD-002 Product Naming | FRS-P1-PRD-003 |
 | UR-PRD-003 UOM & Packaging | FRS-P1-UOM-002..005 |
 | UR-PRD-004 Serial Policy | FRS-P1-SER-001..002 |
-| UR-PRD-005 Combo Composition | Superseded/expanded by DBD v1.3 -> FRS-P1-CMB-001..004, FRS-P1-CMBPRC-001..005 |
-| UR-PRC-001 Core Pricing | FRS-P1-PRC-001..004, FRS-P1-CMBPRC-001..005 |
+| UR-PRD-005 Combo Composition | FRS-P1-CMB-001..003 |
+| UR-PRD-006 Combo Expansion & Selling Price Allocation | FRS-P1-CMB-003, FRS-P1-CMBPRC-001..005 |
+| UR-PRC-001 Core Pricing | FRS-P1-PRC-001..004, FRS-P1-CMBPRC-001..005, FRS-P1-GEN-007 |
 | UR-COM-001 Lifecycle | FRS-P1-WF-001..004 |
 | UR-COM-002 Approval | FRS-P1-WF-005 |
 | UR-COM-003 Audit | FRS-P1-GEN-003, FRS-P1-AUD-001..003 |
-| UR-COM-004 Search/Filter/Export | FRS-P1-QRY-001..002 |
+| UR-COM-004 Search/Filter/Export | FRS-P1-GEN-006, FRS-P1-QRY-001..002 |
 | UR-COM-005 Import | FRS-P1-IMP-001..005 |
+| UR-COM-006 Auto Numbering | FRS-P1-NUM-001..003, FRS-P1-SVC-010 |
 
 ---
 
@@ -2100,6 +2441,7 @@ FRS không định nghĩa schema mới nhưng các capability P1 phải dùng c�
 | Employee Structure | departments, positions, employees, employee_assignments |
 | Identity membership/direct permission | Shield users/auth_groups_users/auth_permissions_users |
 | Authorization catalog | resources, resource_actions, groups, group_permissions |
+| Auto Numbering | auto_numbering_series, auto_numbering_counters |
 | Workflow | lifecycles, workflow_states, lifecycle_states, lifecycle_transitions |
 | PBAC | policies, policy_actions |
 | Authorization Audit | authorization_logs |
@@ -2129,10 +2471,8 @@ Các điểm này không được FRS tự suy diễn thành persistence mới:
 3. **CHILD display separator:** data canonical là Parent Name + Child Name; exact UI separator chưa khóa và không persistence.
 4. **Authorization/Import retention:** retention period và quyền xem log/job cần Security/Operations decision.
 5. **Wire-level API error contract:** HTTP status, error envelope và exact code catalog chưa khóa.
-6. **System Admin exact bypass mechanism:** phải do application/security layer phê duyệt; không persistence special row/column.
-7. **Participant matching với secondary Assignment:** source chưa định nghĩa đầy đủ việc POSITION/DEPARTMENT participant có match tất cả secondary assignments hay không. P1 không tự mở rộng ngoài context/assignment được operation xác định.
-8. **P2 transaction trace của COMBO:** P2 phải quyết định persistence để trace leaf line về root/nested COMBO; P1 chỉ khóa algorithm và product schema.
-9. **Direct leaf line + COMBO-generated leaf aggregation:** Database baseline chỉ khóa weighted aggregation khi cùng leaf nhận allocation từ nhiều COMBO. Nếu P2 muốn gộp thêm direct standalone leaf line với COMBO-generated leaf line, P2 FRS phải định nghĩa rõ pricing/trace semantics trước khi persistence.
+6. **P2 transaction trace của COMBO:** P2 phải quyết định persistence để trace leaf line về root/nested COMBO; P1 chỉ khóa algorithm và product schema.
+7. **Direct leaf line + COMBO-generated leaf aggregation:** Database baseline chỉ khóa weighted aggregation khi cùng leaf nhận allocation từ nhiều COMBO. Nếu P2 muốn gộp thêm direct standalone leaf line với COMBO-generated leaf line, P2 FRS phải định nghĩa rõ pricing/trace semantics trước khi persistence.
 
 ---
 
@@ -2147,9 +2487,11 @@ Các điểm này không được FRS tự suy diễn thành persistence mới:
 - Reject same-type nesting.
 - Reject hierarchy cycle.
 - Resolve Company từ Warehouse.
+- User có quyền Company A+B có thể filter/tổng hợp A+B; Company C ngoài scope không xuất hiện trong result/count/export.
 
-## 26.2 Employee
+## 26.2 Contact và Employee
 
+- Search Contact theo Name/Email/Phone/Mobile không trả owner ngoài authorization scope.
 - User map tối đa một Employee.
 - Employee không User vẫn tạo được.
 - Reject self-manager.
@@ -2162,15 +2504,28 @@ Các điểm này không được FRS tự suy diễn thành persistence mới:
 
 - Base Permission từ Group.
 - Base Permission từ direct identity permission.
-- Direct permission không bypass ABSOLUTE_DENY.
-- No Base => DENY.
-- Base + NO_MATCH => ALLOW.
-- Base + DENY => DENY.
-- Base + ALLOW + DENY => ALLOW.
-- Base + ABSOLUTE_DENY => DENY.
+- No Base => DENY trước PBAC.
+- Trong một lane: Base + NO_MATCH => ALLOW.
+- Trong một lane: Base + DENY => denied.
+- Trong một lane: Base + ALLOW + DENY => ALLOW.
+- Trong một lane: Base + ABSOLUTE_DENY => denied.
 - Policy state NULL match mọi state phù hợp.
-- Ancestor Policy inheritance.
+- GROUP/Company/ancestor Policy inheritance được resolve trước intersection.
+- GROUP Policy kế thừa xuống descendant đúng scope.
+- Branch Policy chỉ kế thừa xuống descendant, không sang sibling.
+- Employee có Assignment tại GROUP cung cấp Department/Position lane cho descendant context.
+- Employee có Assignment ở Company A và Company B được partition độc lập.
+- Secondary Assignment cùng Company/scope tham gia DEPARTMENT/POSITION lane dù không phải Primary.
+- Hai role cùng Organization: `ALLOW` + `DENY` => effective Organization ALLOW nếu không có `ABSOLUTE_DENY`.
+- Hai role cùng Organization: `DENY` + `DENY` => effective Organization DENY.
+- Company/ancestor `ABSOLUTE_DENY` applicable được propagate vào mọi lane con và không mất sau intersection.
+- KQ Organization = intersection KQ user + các KQ assignment.
+- KQ Company summary = intersection các KQ Organization khi chức năng yêu cầu Company summary.
+- Permission denied ở Organization 1 nhưng allowed ở Organization 2 không thuộc KQ Company summary.
 - GROUP participant mapping.
+- System Admin không có bypass: thiếu Base Permission hoặc match ABSOLUTE_DENY đều DENY.
+- Group-level Resource (`user`, `authorization_group`, `resource`, `policy`) authorize được tại Evaluation Organization `GROUP`.
+- Quản trị security/configuration resource không có implicit allow.
 
 ## 26.4 Workflow
 
@@ -2214,6 +2569,7 @@ Các điểm này không được FRS tự suy diễn thành persistence mới:
 
 ## 26.8 Pricing
 
+- P1 price/amount dùng VND và không yêu cầu FX/currency selection.
 - Company Price List thắng Group.
 - Company Price List thiếu item fallback Group.
 - Group thiếu item fallback default.
@@ -2233,14 +2589,34 @@ Các điểm này không được FRS tự suy diễn thành persistence mới:
 - Cùng leaf qua nhiều path aggregate quantity.
 - Cùng leaf từ nhiều COMBO aggregate amount/quantity và weighted-average unit price.
 
-## 26.10 Import
+## 26.10 Auto Numbering
+
+- Resource không cấu hình series không bị ép Auto Number.
+- Reject hai active default series cho cùng Resource.
+- `AUTO_REQUIRED` reject manual identifier trên create.
+- `AUTO_IF_EMPTY` giữ manual identifier hợp lệ mà không consume counter; blank thì generate.
+- Generated candidate đã bị manual/existing identifier chiếm được skip bằng cách advance sequence trong cùng lock/transaction.
+- Scope `GROUP`/`COMPANY`/`ORGANIZATION` resolve đúng counter và không bleed giữa scope.
+- Uniqueness namespace `GLOBAL`/`COMPANY`/`ORGANIZATION` reject series pattern/scope/reset không đủ phân biệt các counter partition/period.
+- Reset `NEVER`/`YEARLY`/`MONTHLY`/`DAILY` resolve period key đúng business timezone.
+- GROUP date/reset series thiếu Group/default timezone bị reject.
+- Concurrent generate không commit duplicate number; first-counter race vẫn chỉ tạo một counter identity.
+- Business rollback rollback counter và cho phép reuse number chưa commit.
+- Number đã commit không được reuse sau inactive/cancelled.
+- Pattern/config change không renumber historical record.
+- Series đã có committed issuance không đổi `resource/series_code/scope_type/reset_policy` và không hard-delete; `start_number` chỉ ảnh hưởng counter identity mới.
+- `resource.configure_numbering` được authorize độc lập với `resource.edit`.
+- Product Import source-key dependency vẫn resolve được trước khi generated Product Code tồn tại.
+
+## 26.11 Import
 
 - Row success/error counts reconcile.
-- Failed row rollback.
-- Child trước Parent vẫn import được khi dependency hợp lệ.
-- COMBO trước component vẫn resolve được.
+- Failed row rollback, bao gồm generated Product Code/counter nếu row create thất bại.
+- Child trước Parent vẫn import được khi dependency hợp lệ, kể cả reference bằng source key.
+- COMBO trước component vẫn resolve được, kể cả source-key owner/component.
 - Nested COMBO dependency resolve được.
 - Combo cycle bị reject.
+- Successful create row ghi được generated `product_code` vào result/entity key khi Auto Numbering áp dụng.
 - Original row number giữ nguyên trong report.
 
 ---
@@ -2250,14 +2626,15 @@ Các điểm này không được FRS tự suy diễn thành persistence mới:
 FRS P1 được xem là đủ điều kiện chuyển sang design/implementation planning khi:
 
 - Mọi capability P1 có requirement functional và acceptance criteria.
-- Không có persistence mới trái Database Design v1.3.
-- Authorization semantics nhất quán với Base Permission + PBAC precedence.
+- Không có persistence mới trái Database Design v1.8.
+- Authorization semantics nhất quán với Base Permission + QT1 per-lane + inheritance-before-intersection + multi-role denied-set intersection.
 - Workflow transition và Authorization được tách rõ.
 - Organization/Employee context resolution được mô tả đủ để implement/test.
 - Product Model V2 không có Variant và role derivation nhất quán.
-- COMBO semantics theo baseline v1.3 được mô tả đầy đủ: nested, acyclic, no serial, no UOM conversion, root-price-only, flatten, allocation, rounding và weighted aggregation.
+- COMBO semantics theo Database Design v1.8 baseline được mô tả đầy đủ: nested, acyclic, no serial, no UOM conversion, root-price-only, flatten, allocation, rounding và weighted aggregation.
 - Core Pricing Company -> Group -> Default deterministic.
-- Import dependency graph và row-level history đủ để test.
+- Auto Numbering theo Resource có series/counter scope, uniqueness-namespace validation, occupied-candidate skipping, post-issuance series immutability/no-hard-delete, concurrency/rollback semantics, generation mode, reset policy, independent `resource.configure_numbering` authorization và Product Import source-local/persistent/generated identifier semantics đủ để test.
+- Import Framework + Product enabled target, persisted mode, dependency graph/source-key resolution, row-level history và two-gate authorization đủ để test.
 - Open assumptions không bị biến thành schema hoặc behavior ngầm.
-- Traceability từ P1 User Requirements sang FRS được ghi nhận.
-- Các delta giữa User Requirements v1.0.5-draft và Database Design v1.3 được nêu rõ để harmonize User Requirements ở revision tiếp theo.
+- Traceability bao phủ toàn bộ P1 User Requirements trong `00_User_Requirements_v1.0.10-draft.md`.
+- Không còn delta đã biết giữa User Requirements v1.0.10-draft và Database Design v1.8 đối với invariant P1; mọi xung đột mới phải đi qua change control thay vì được FRS tự suy diễn.
