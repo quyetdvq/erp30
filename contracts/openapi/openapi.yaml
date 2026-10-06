@@ -18,6 +18,7 @@ paths:
       security: []
       parameters:
         - $ref: '#/components/parameters/AcceptLanguage'
+        - $ref: '#/components/parameters/RequestId'
       responses:
         '200':
           description: Service is available.
@@ -30,18 +31,20 @@ paths:
               $ref: '#/components/headers/RequestId'
             Content-Language:
               $ref: '#/components/headers/ContentLanguage'
-        '500':
-          description: Unexpected server error.
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorResponse'
         '400':
-          description: Invalid request.
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorResponse'
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '422':
+          $ref: '#/components/responses/UnprocessableEntity'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
 components:
   parameters:
     AcceptLanguage:
@@ -52,24 +55,162 @@ components:
         type: string
         enum: [vi, en]
         default: vi
+        description: Supported request language. Unsupported values fall back to vi.
+    RequestId:
+      name: X-Request-ID
+      in: header
+      required: false
+      description: Client request correlation identifier; invalid or missing values are replaced by a generated UUID.
+      schema:
+        $ref: '#/components/schemas/RequestId'
   headers:
     RequestId:
       description: Accepted or generated request correlation identifier.
       schema:
-        type: string
+        $ref: '#/components/schemas/RequestId'
     ContentLanguage:
       description: Resolved language for human-readable response text.
       schema:
         type: string
         enum: [vi, en]
+  responses:
+    BadRequest:
+      description: Malformed request or query.
+      headers:
+        X-Request-ID:
+          $ref: '#/components/headers/RequestId'
+        Content-Language:
+          $ref: '#/components/headers/ContentLanguage'
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+    Unauthorized:
+      description: Unauthenticated or invalid authentication.
+      headers:
+        X-Request-ID:
+          $ref: '#/components/headers/RequestId'
+        Content-Language:
+          $ref: '#/components/headers/ContentLanguage'
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+    Forbidden:
+      description: Visible target but action denied.
+      headers:
+        X-Request-ID:
+          $ref: '#/components/headers/RequestId'
+        Content-Language:
+          $ref: '#/components/headers/ContentLanguage'
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+    NotFound:
+      description: Target not found or not visible.
+      headers:
+        X-Request-ID:
+          $ref: '#/components/headers/RequestId'
+        Content-Language:
+          $ref: '#/components/headers/ContentLanguage'
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+    Conflict:
+      description: Conflict, concurrency, uniqueness, or current-state failure.
+      headers:
+        X-Request-ID:
+          $ref: '#/components/headers/RequestId'
+        Content-Language:
+          $ref: '#/components/headers/ContentLanguage'
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+    UnprocessableEntity:
+      description: Semantically invalid request.
+      headers:
+        X-Request-ID:
+          $ref: '#/components/headers/RequestId'
+        Content-Language:
+          $ref: '#/components/headers/ContentLanguage'
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+    InternalServerError:
+      description: Unexpected server error without internal diagnostics.
+      headers:
+        X-Request-ID:
+          $ref: '#/components/headers/RequestId'
+        Content-Language:
+          $ref: '#/components/headers/ContentLanguage'
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
   schemas:
+    RequestId:
+      type: string
+      minLength: 1
+      maxLength: 128
+      pattern: '^[0-9A-Za-z][0-9A-Za-z._:-]{0,127}$'
+      description: Request correlation identifier echoed in the response header and meta.request_id.
+    BigInt:
+      type: string
+      pattern: '^-?[0-9]+$'
+      description: Database BIGINT values are serialized as JSON strings.
+    Decimal:
+      type: string
+      pattern: '^-?(0|[1-9][0-9]*)(\.[0-9]+)?$'
+      description: Exact decimal, money, and quantity values are serialized as JSON strings.
+    SuccessResponse:
+      type: object
+      required:
+        - data
+        - meta
+      properties:
+        data: {}
+        meta:
+          $ref: '#/components/schemas/Meta'
+    CollectionMeta:
+      type: object
+      required:
+        - page
+        - page_size
+        - total
+        - request_id
+      properties:
+        page:
+          type: integer
+          minimum: 1
+        page_size:
+          type: integer
+          minimum: 1
+        total:
+          $ref: '#/components/schemas/BigInt'
+        request_id:
+          $ref: '#/components/schemas/RequestId'
+    CollectionResponse:
+      type: object
+      required:
+        - data
+        - meta
+      properties:
+        data:
+          type: array
+          items: {}
+        meta:
+          $ref: '#/components/schemas/CollectionMeta'
     Meta:
       type: object
       required:
         - request_id
       properties:
         request_id:
-          type: string
+          $ref: '#/components/schemas/RequestId'
     ErrorDetail:
       type: object
       required:

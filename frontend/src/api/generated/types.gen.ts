@@ -4,12 +4,92 @@ export type ClientOptions = {
     baseURL: `${string}://${string}` | (string & {});
 };
 
-export type HealthResponse = {
-    status: 'ok';
+/**
+ * Request correlation identifier echoed in the response header and meta.request_id.
+ */
+export type RequestId = string;
+
+/**
+ * Database BIGINT values are serialized as JSON strings.
+ */
+export type BigInt = string;
+
+/**
+ * Exact decimal, money, and quantity values are serialized as JSON strings.
+ */
+export type Decimal = string;
+
+export type SuccessResponse = {
+    data: unknown;
+    meta: Meta;
 };
+
+export type CollectionMeta = {
+    page: number;
+    page_size: number;
+    total: BigInt;
+    request_id: RequestId;
+};
+
+export type CollectionResponse = {
+    data: Array<unknown>;
+    meta: CollectionMeta;
+};
+
+export type Meta = {
+    request_id: RequestId;
+};
+
+export type ErrorDetail = {
+    field: string;
+    code: string;
+    message: string;
+};
+
+export type Error = {
+    code: string;
+    message: string;
+    details: Array<ErrorDetail>;
+};
+
+export type ErrorResponse = {
+    error: Error;
+    meta: Meta;
+};
+
+export type HealthData = {
+    service: string;
+    status: 'ok';
+    timestamp: string;
+};
+
+export type HealthResponse = {
+    data: HealthData;
+    meta: Meta;
+};
+
+/**
+ * Supported request language. Unsupported values fall back to vi.
+ */
+export type AcceptLanguage = 'vi' | 'en';
+
+/**
+ * Client request correlation identifier; invalid or missing values are replaced by a generated UUID.
+ */
+export type RequestId2 = RequestId;
 
 export type GetHealthData = {
     body?: never;
+    headers?: {
+        /**
+         * Supported request language. Unsupported values fall back to vi.
+         */
+        'Accept-Language'?: 'vi' | 'en';
+        /**
+         * Client request correlation identifier; invalid or missing values are replaced by a generated UUID.
+         */
+        'X-Request-ID'?: RequestId;
+    };
     path?: never;
     query?: never;
     url: '/api/v1/health';
@@ -17,14 +97,36 @@ export type GetHealthData = {
 
 export type GetHealthErrors = {
     /**
-     * Invalid request.
+     * Malformed request or query.
      */
-    400: unknown;
+    400: ErrorResponse;
     /**
-     * Service unavailable.
+     * Unauthenticated or invalid authentication.
      */
-    500: unknown;
+    401: ErrorResponse;
+    /**
+     * Visible target but action denied.
+     */
+    403: ErrorResponse;
+    /**
+     * Target not found or not visible.
+     */
+    404: ErrorResponse;
+    /**
+     * Conflict, concurrency, uniqueness, or current-state failure.
+     */
+    409: ErrorResponse;
+    /**
+     * Semantically invalid request.
+     */
+    422: ErrorResponse;
+    /**
+     * Unexpected server error without internal diagnostics.
+     */
+    500: ErrorResponse;
 };
+
+export type GetHealthError = GetHealthErrors[keyof GetHealthErrors];
 
 export type GetHealthResponses = {
     /**

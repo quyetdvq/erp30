@@ -1,1 +1,2 @@
 * text=auto eol=lf
+src/api/generated/** linguist-generated=true

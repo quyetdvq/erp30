@@ -1,1 +1,2 @@
 src/api/generated/**
+scripts/check-openapi-generated.mjs

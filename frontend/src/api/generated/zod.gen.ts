@@ -2,8 +2,83 @@
 
 import * as z from 'zod';
 
+/**
+ * Request correlation identifier echoed in the response header and meta.request_id.
+ */
+export const zRequestId = z.string().min(1).max(128).regex(/^[0-9A-Za-z][0-9A-Za-z._:-]{0,127}$/);
+
+/**
+ * Database BIGINT values are serialized as JSON strings.
+ */
+export const zBigInt = z.string().regex(/^-?[0-9]+$/);
+
+/**
+ * Exact decimal, money, and quantity values are serialized as JSON strings.
+ */
+export const zDecimal = z.string().regex(/^-?(0|[1-9][0-9]*)(\.[0-9]+)?$/);
+
+export const zCollectionMeta = z.object({
+    page: z.int().gte(1),
+    page_size: z.int().gte(1),
+    total: zBigInt,
+    request_id: zRequestId
+});
+
+export const zCollectionResponse = z.object({
+    data: z.array(z.unknown()),
+    meta: zCollectionMeta
+});
+
+export const zMeta = z.object({
+    request_id: zRequestId
+});
+
+export const zSuccessResponse = z.object({
+    data: z.unknown(),
+    meta: zMeta
+});
+
+export const zErrorDetail = z.object({
+    field: z.string(),
+    code: z.string(),
+    message: z.string()
+});
+
+export const zError = z.object({
+    code: z.string(),
+    message: z.string(),
+    details: z.array(zErrorDetail)
+});
+
+export const zErrorResponse = z.object({
+    error: zError,
+    meta: zMeta
+});
+
+export const zHealthData = z.object({
+    service: z.string(),
+    status: z.literal('ok'),
+    timestamp: z.iso.datetime()
+});
+
 export const zHealthResponse = z.object({
-    status: z.literal('ok')
+    data: zHealthData,
+    meta: zMeta
+});
+
+/**
+ * Supported request language. Unsupported values fall back to vi.
+ */
+export const zAcceptLanguage = z.enum(['vi', 'en']).default('vi');
+
+/**
+ * Client request correlation identifier; invalid or missing values are replaced by a generated UUID.
+ */
+export const zRequestId2 = zRequestId;
+
+export const zGetHealthHeaders = z.object({
+    'Accept-Language': z.enum(['vi', 'en']).optional().default('vi'),
+    'X-Request-ID': zRequestId.optional()
 });
 
 /**
