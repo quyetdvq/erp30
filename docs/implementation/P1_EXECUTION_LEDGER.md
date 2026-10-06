@@ -4,8 +4,8 @@ This ledger is lightweight operational evidence. It is not architecture
 authority and does not replace UR, FRS, DBD, the Implementation Contract, the
 Implementation Plan, API Design, or UI Design.
 
-As of the P1-API-002 task validation, the registry contains exactly 100 P1 tasks.
-Repository evidence verifies 71 completed tasks: Gate 0 is 10/10, Gate 1 is
+As of the P1-API-003 task validation, the registry contains exactly 100 P1 tasks.
+Repository evidence verifies 72 completed tasks: Gate 0 is 10/10, Gate 1 is
 14/14, Gate 2 is 8/8, Gate 3 is 10/10, Gate 4 is 7/7, Gate 5 is 11/11, and
 Gate 6 is 9/9.
 The previously supplied 28/100 and 4/8 checkpoint is stale: the accepted
@@ -16,7 +16,7 @@ No task is downgraded to force that stale count.
 
 | Measure | Progress |
 |---|---:|
-| P1 tasks DONE | 71/100 |
+| P1 tasks DONE | 72/100 |
 | Gate 0 | 10/10 DONE |
 | Gate 1 | 14/14 DONE |
 | Gate 2 | 8/8 DONE |
@@ -24,7 +24,7 @@ No task is downgraded to force that stale count.
 | Gate 4 | 7/7 DONE |
 | Gate 5 | 11/11 DONE |
 | Gate 6 | 9/9 DONE |
-| Gate 7 | 2/10 DONE |
+| Gate 7 | 3/10 DONE |
 | Gate 8 | 0/12 DONE |
 | Gate 9 | 0/9 DONE |
 
@@ -101,9 +101,9 @@ No task is downgraded to force that stale count.
 | P1-IMP-007 | DONE | 0000000 | high-risk | Product-owned two-gate import authorization: GROUP-scoped product.import start gate, trusted OperationContext delegation, canonical Product/UOM/COMBO row authorization, and no System Admin bypass. Evidence: `docs/implementation/evidence/P1-IMP-007/01_product_import_authorization_assessment.md`. |
 | P1-IMP-008 | DONE | 0000000 | service-standard | Generic import-job-row persistence, Product reader/validation/plan/mutation orchestration, PROCESSING/terminal lifecycle, persisted row-derived reconciliation, and fatal-job handling. Evidence: `docs/implementation/evidence/P1-IMP-008/01_product_import_result_reconciliation_assessment.md`. |
 | P1-IMP-090 | DONE | 0000000 | high-risk | Cross-task Product Import regression suite: CSV/XLSX equivalence, formula-fatal handling, dependency/source-key ordering, generated identifiers, rerun hash behavior, mode/null semantics, dependency preservation, and two-gate denial. Evidence: `docs/implementation/evidence/P1-IMP-090/01_product_import_regression_assessment.md`. |
-| P1-API-001 | DONE | f779988 | api | Common `/api/v1` transport, envelope, request ID, locale, serialization, status mapping, and leakage protection. Evidence: `docs/implementation/evidence/P1-API-001/01_common_transport_assessment.md`. |
-| P1-API-002 | DONE | 0000000 | api | Canonical OpenAPI source, Redocly lint configuration, deterministic `@hey-api/openapi-ts` generation, and generated-client ownership check. Evidence: `docs/implementation/evidence/P1-API-002/01_openapi_codegen_pipeline_assessment.md`. |
-| P1-API-003 | NOT_STARTED | — | service-standard | No accepted implementation evidence. |
+| P1-API-001 | DONE | f4360af | api | Common `/api/v1` transport, envelope, request ID, locale, serialization, status mapping, and leakage protection. Evidence: `docs/implementation/evidence/P1-API-001/01_common_transport_assessment.md`. |
+| P1-API-002 | DONE | cc6ee25 | api | Canonical OpenAPI source, Redocly lint configuration, deterministic `@hey-api/openapi-ts` generation, and generated-client ownership check. Evidence: `docs/implementation/evidence/P1-API-002/01_openapi_codegen_pipeline_assessment.md`. |
+| P1-API-003 | DONE | 0000000 | api | Common allowlisted list/search/filter/sort/pagination adapter, authorization-scoped total boundary, collection metadata, and focused evidence. |
 | P1-API-010 | NOT_STARTED | — | service-standard | No accepted implementation evidence. |
 | P1-API-020 | NOT_STARTED | — | high-risk | No accepted implementation evidence. |
 | P1-API-030 | NOT_STARTED | — | high-risk | No accepted implementation evidence. |

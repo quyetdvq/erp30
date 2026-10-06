@@ -34,6 +34,36 @@ final class ApiTransport
         ])->setStatusCode($status);
     }
 
+    /**
+     * Emit the canonical collection envelope used by authorized list APIs.
+     *
+     * Totals are deliberately serialized as strings because they are BIGINT
+     * domain values and may exceed the JavaScript safe integer range.
+     *
+     * @param iterable<mixed> $data
+     */
+    public static function collection(
+        ResponseInterface $response,
+        iterable $data,
+        int $page,
+        int $pageSize,
+        int|string $total,
+        int $status = 200,
+    ): ResponseInterface {
+        if ($page < 1 || $pageSize < 1 || (is_int($total) && $total < 0)) {
+            throw new \InvalidArgumentException('Collection metadata is invalid.');
+        }
+        if (is_string($total) && preg_match('/\A[0-9]+\z/', $total) !== 1) {
+            throw new \InvalidArgumentException('Collection total must be a non-negative integer string.');
+        }
+
+        return self::success($response, $data, $status, [
+            'page' => $page,
+            'page_size' => $pageSize,
+            'total' => (string) $total,
+        ]);
+    }
+
     /** @param list<array<string, mixed>> $details */
     public static function error(
         ResponseInterface $response,
