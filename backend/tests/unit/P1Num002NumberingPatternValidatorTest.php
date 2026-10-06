@@ -201,6 +201,7 @@ final class P1Num002NumberingPatternValidatorTest extends CIUnitTestCase
         $this->db->table('resources')->insert([
             'type' => $type . '-' . uniqid(),
             'name' => $type,
+            'domain' => 'SYSTEM',
             'created_at' => '2026-10-06 04:05:06',
         ]);
 

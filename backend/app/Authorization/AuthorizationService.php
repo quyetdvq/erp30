@@ -10,6 +10,7 @@ use App\Infrastructure\Mutation\OperationContext;
 use App\Repositories\EmployeeRepository;
 use App\Repositories\OrganizationRepository;
 use App\Repositories\PolicyRepository;
+use App\Repositories\ResourceCatalogRepository;
 use App\Services\EmployeeAssignmentService;
 use App\Services\LifecycleAuthorizationPort;
 use App\Services\NumberingAuthorizationPort;
@@ -37,6 +38,7 @@ final class AuthorizationService implements LifecycleAuthorizationPort, Numberin
     private EffectiveProfileResolver $profiles;
     private EvaluationOrganizationResolver $contexts;
     private PolicyRepository $policies;
+    private ResourceCatalogRepository $catalog;
     private EmployeeRepository $employees;
     private EmployeeAssignmentService $assignments;
     private OrganizationService $organizations;
@@ -52,10 +54,12 @@ final class AuthorizationService implements LifecycleAuthorizationPort, Numberin
         ?OrganizationService $organizations = null,
         ?ShieldIdentityAdapter $identities = null,
         ?ConnectionInterface $db = null,
+        ?ResourceCatalogRepository $catalog = null,
     ) {
         $connection = $db ?? db_connect();
         $this->profiles = $profiles ?? new EffectiveProfileResolver($connection);
         $this->policies = $policies ?? new PolicyRepository($connection);
+        $this->catalog = $catalog ?? new ResourceCatalogRepository($connection);
         $this->employees = $employees ?? new EmployeeRepository($connection);
         $this->assignments = $assignments ?? new EmployeeAssignmentService(null, $connection);
         $this->organizations = $organizations ?? new OrganizationService(null, $connection);
@@ -63,7 +67,7 @@ final class AuthorizationService implements LifecycleAuthorizationPort, Numberin
         $this->contexts = $contexts ?? new EvaluationOrganizationResolver(
             new OrganizationRepository($connection),
             $this->employees,
-            $this->assignments,
+            null,
             $connection,
         );
     }
@@ -85,6 +89,12 @@ final class AuthorizationService implements LifecycleAuthorizationPort, Numberin
             ? null
             : PositiveId::normalize($stateId, 'state_id', self::ERROR_ACTION_INVALID);
 
+        $resourceRow = $this->catalog->findResourceByType($resource);
+        if ($resourceRow === null) {
+            throw new DomainException(self::ERROR_RESOURCE_INVALID, ['resource' => $resource]);
+        }
+        $context = $this->contexts->resolveResource($resource, $resourceAction, $resourceRow, $contextRequest);
+
         $profile = $this->profiles->resolve($operation);
         $permission = null;
         foreach ($profile->permissions as $candidate) {
@@ -94,7 +104,6 @@ final class AuthorizationService implements LifecycleAuthorizationPort, Numberin
             }
         }
 
-        $context = $this->contexts->resolve($contextRequest, $operation);
         $baseSource = $permission === null ? [] : [$permission->key()];
         if ($permission === null) {
             return $this->decision(
@@ -110,12 +119,8 @@ final class AuthorizationService implements LifecycleAuthorizationPort, Numberin
             );
         }
 
-        $resourceRow = $this->policies->findResourceByType($resource);
-        if ($resourceRow === null) {
-            throw new DomainException(self::ERROR_RESOURCE_INVALID, ['resource' => $resource]);
-        }
         $resourceId = PositiveId::normalize($resourceRow['id'] ?? null, 'resource_id', self::ERROR_RESOURCE_INVALID);
-        if (! $this->policies->resourceActionBelongsToResource($permission->resourceActionId, $resourceId)) {
+        if (! $this->catalog->resourceActionBelongsToResource($permission->resourceActionId, $resourceId)) {
             throw new DomainException(self::ERROR_ACTION_INVALID, ['action' => $resourceAction]);
         }
 

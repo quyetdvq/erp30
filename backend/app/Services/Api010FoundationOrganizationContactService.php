@@ -15,7 +15,6 @@ use App\Infrastructure\Mutation\MutationContext;
 use App\Infrastructure\Mutation\OperationContext;
 use App\Infrastructure\RequestContext;
 use App\Repositories\ContactRepository;
-use App\Repositories\EmployeeRepository;
 use App\Repositories\FoundationLocationRepository;
 use App\Repositories\OrganizationRepository;
 use CodeIgniter\Exceptions\PageNotFoundException;
@@ -29,9 +28,7 @@ final class Api010FoundationOrganizationContactService
         private readonly ?FoundationLocationRepository $locations = null,
         private readonly ?OrganizationRepository $organizations = null,
         private readonly ?ContactRepository $contacts = null,
-        private readonly ?EmployeeRepository $employees = null,
-        private readonly ?EmployeeAssignmentService $assignments = null,
-        private readonly ?AuthorizationService $authorization = null,
+        private ?AuthorizationService $authorization = null,
     ) {
     }
 
@@ -152,7 +149,7 @@ final class Api010FoundationOrganizationContactService
         $visible = [];
         foreach ($rows as $row) {
             try {
-                $this->authorize($operation, $resource, 'view', $this->authorizationTarget($resource, $row), []);
+                $this->authorize($operation, $resource, 'view', $row, []);
                 $visible[] = $row;
             } catch (DomainException $exception) {
                 if (! in_array($exception->getErrorCode(), [
@@ -188,7 +185,7 @@ final class Api010FoundationOrganizationContactService
     private function authorizeVisible(string $resource, array $row, OperationContext $operation): void
     {
         try {
-            $this->authorize($operation, $resource, 'view', $this->authorizationTarget($resource, $row), []);
+            $this->authorize($operation, $resource, 'view', $row, []);
         } catch (DomainException $exception) {
             if ($exception->getErrorCode() === AuthorizationService::REASON_POLICY_DENIED
                 || $exception->getErrorCode() === AuthorizationService::REASON_NO_BASE_PERMISSION
@@ -218,26 +215,14 @@ final class Api010FoundationOrganizationContactService
             $operation,
             $resource,
             $action,
-            new EvaluationOrganizationRequest($resource, $action, $target === [] ? null : $target, $input),
+            new EvaluationOrganizationRequest(
+                persistedTarget: $target === [] ? null : $target,
+                input: $input,
+            ),
         );
         if (! $decision->isAllowed()) {
             throw new DomainException(AuthorizationService::REASON_POLICY_DENIED);
         }
-    }
-
-    /**
-     * @param array<string, mixed> $row
-     * @return array<string, mixed>
-     */
-    private function authorizationTarget(string $resource, array $row): array
-    {
-        if ($resource !== 'contact') {
-            return $row;
-        }
-        $ownerId = $this->contactOwnerOrganizationId($row);
-        $row['owner_organization_id'] = $ownerId;
-
-        return $row;
     }
 
     /** @param array<string, mixed> $payload */
@@ -267,10 +252,7 @@ final class Api010FoundationOrganizationContactService
     /** @param array<string, mixed> $payload */
     private function createContact(array $payload, OperationContext $operation): int
     {
-        $ownerOrganizationId = $this->contactOwnerOrganizationId($payload);
-        $input = $payload;
-        $input['owner_organization_id'] = $ownerOrganizationId;
-        $this->authorize($operation, 'contact', 'create', [], $input);
+        $this->authorize($operation, 'contact', 'create', [], $payload);
 
         return $this->contactService($operation)->create($payload);
     }
@@ -285,38 +267,6 @@ final class Api010FoundationOrganizationContactService
         }
 
         return $this->contactService($operation)->inactivate($id, $status);
-    }
-
-    /** @param array<string, mixed> $row */
-    private function contactOwnerOrganizationId(array $row): int
-    {
-        $type = strtoupper((string) ($row['contact_type'] ?? ''));
-        $ownerId = (int) ($row['contact_ref_id'] ?? 0);
-        if ($ownerId < 1) {
-            throw new DomainException(ContactService::ERROR_OWNER_NOT_FOUND);
-        }
-        if ($type === 'ORGANIZATION') {
-            $owner = $this->organizationRepo()->find($ownerId);
-            if ($owner === null) {
-                throw new DomainException(ContactService::ERROR_OWNER_NOT_FOUND);
-            }
-
-            return $ownerId;
-        }
-        if ($type === 'EMPLOYEE') {
-            $employee = $this->employeeRepo()->find($ownerId);
-            if ($employee === null) {
-                throw new DomainException(ContactService::ERROR_OWNER_NOT_FOUND);
-            }
-            $assignment = $this->assignmentService()->resolvePrimary($ownerId, $this->operation()->evaluationTime);
-            if ($assignment === null || ! isset($assignment['organization_id'])) {
-                throw new DomainException(ContactService::ERROR_OWNER_NOT_FOUND);
-            }
-
-            return (int) $assignment['organization_id'];
-        }
-
-        throw new DomainException(ContactService::ERROR_TYPE_UNSUPPORTED);
     }
 
     private function operation(): OperationContext
@@ -347,7 +297,7 @@ final class Api010FoundationOrganizationContactService
 
     private function auth(): AuthorizationService
     {
-        return $this->authorization ?? new AuthorizationService();
+        return $this->authorization ??= new AuthorizationService();
     }
 
     private function locationRepo(): FoundationLocationRepository
@@ -363,16 +313,6 @@ final class Api010FoundationOrganizationContactService
     private function contactRepo(): ContactRepository
     {
         return $this->contacts ?? new ContactRepository();
-    }
-
-    private function employeeRepo(): EmployeeRepository
-    {
-        return $this->employees ?? new EmployeeRepository();
-    }
-
-    private function assignmentService(): EmployeeAssignmentService
-    {
-        return $this->assignments ?? new EmployeeAssignmentService();
     }
 
     private function allowlist(string $resource): CommonListQueryAllowlist

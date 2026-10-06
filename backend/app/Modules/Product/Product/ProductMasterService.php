@@ -738,7 +738,11 @@ final class ProductMasterService
      */
     private function authorize(OperationContext $operation, string $action, ?array $target, array $input, mixed $clientHint = null): AuthorizationDecision
     {
-        $decision = $this->auth()->authorize($operation, 'product', $action, new EvaluationOrganizationRequest('product', $action, $target, $input, $clientHint));
+        $decision = $this->auth()->authorize($operation, 'product', $action, new EvaluationOrganizationRequest(
+            persistedTarget: $target,
+            input: $input,
+            clientEvaluationOrganizationId: $clientHint,
+        ));
         if (! $decision->isAllowed()) {
             if ($action === 'setstate') {
                 $this->audit()->recordIfRequired($decision);

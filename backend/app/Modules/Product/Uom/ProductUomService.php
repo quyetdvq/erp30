@@ -570,7 +570,9 @@ final class ProductUomService
     private function authorize(OperationContext $operation, array $product, array $input, mixed $clientHint): AuthorizationDecision
     {
         $decision = $this->auth()->authorize($operation, 'product', 'edit', new EvaluationOrganizationRequest(
-            'product', 'edit', $product, $input, $clientHint,
+            persistedTarget: $product,
+            input: $input,
+            clientEvaluationOrganizationId: $clientHint,
         ));
         if (! $decision->isAllowed()) {
             throw new DomainException(self::ERROR_AUTHORIZATION_DENIED, ['action' => 'edit']);

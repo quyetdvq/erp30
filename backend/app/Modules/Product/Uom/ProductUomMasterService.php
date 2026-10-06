@@ -272,7 +272,11 @@ final class ProductUomMasterService
         array $input,
         mixed $clientHint = null,
     ): \App\Authorization\AuthorizationDecision {
-        $request = new EvaluationOrganizationRequest('product_uom', $action, $target, $input, $clientHint);
+        $request = new EvaluationOrganizationRequest(
+            persistedTarget: $target,
+            input: $input,
+            clientEvaluationOrganizationId: $clientHint,
+        );
         $decision = $this->auth()->authorize($operation, 'product_uom', $action, $request);
         if (! $decision->isAllowed()) {
             if ($action === 'setstate') {

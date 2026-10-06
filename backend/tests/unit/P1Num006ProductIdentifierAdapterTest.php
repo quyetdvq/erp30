@@ -224,7 +224,7 @@ final class P1Num006ProductIdentifierAdapterTest extends CIUnitTestCase
         if ($row !== null) {
             return (int) $row['id'];
         }
-        $this->db->table('resources')->insert(['type' => 'product', 'name' => 'Product', 'created_at' => '2026-10-06 04:05:06']);
+        $this->db->table('resources')->insert(['type' => 'product', 'name' => 'Product', 'domain' => 'MASTER', 'created_at' => '2026-10-06 04:05:06']);
         return (int) $this->db->insertID();
     }
 

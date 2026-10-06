@@ -7,6 +7,7 @@ namespace App\Authorization;
 use App\Exceptions\DomainException;
 use App\Infrastructure\Id\PositiveId;
 use App\Repositories\PolicyRepository;
+use App\Repositories\ResourceCatalogRepository;
 
 /** Business validation for policy inputs; it does not evaluate authorization. */
 final class PolicyValidator
@@ -20,6 +21,7 @@ final class PolicyValidator
     public function __construct(
         private readonly PolicyRepository $repository,
         private readonly ?PolicyParticipantValidator $participants = null,
+        private readonly ?ResourceCatalogRepository $catalog = null,
     ) {
     }
 
@@ -58,7 +60,8 @@ final class PolicyValidator
             'resource_action_id',
             self::ERROR_RESOURCE_ACTION_MISMATCH,
         );
-        if (! $this->repository->resourceActionBelongsToResource($resourceActionId, $normalizedResourceId)) {
+        $catalog = $this->catalog ?? new ResourceCatalogRepository();
+        if (! $catalog->resourceActionBelongsToResource($resourceActionId, $normalizedResourceId)) {
             throw new DomainException(self::ERROR_RESOURCE_ACTION_MISMATCH, [
                 'resource_id' => $normalizedResourceId,
                 'resource_action_id' => $resourceActionId,

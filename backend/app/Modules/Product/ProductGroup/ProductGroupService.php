@@ -368,7 +368,11 @@ final class ProductGroupService
         array $input,
         mixed $clientHint = null,
     ): \App\Authorization\AuthorizationDecision {
-        $request = new EvaluationOrganizationRequest('product_group', $action, $target, $input, $clientHint);
+        $request = new EvaluationOrganizationRequest(
+            persistedTarget: $target,
+            input: $input,
+            clientEvaluationOrganizationId: $clientHint,
+        );
         try {
             $decision = $this->auth()->authorize($operation, 'product_group', $action, $request);
         } catch (DomainException $exception) {

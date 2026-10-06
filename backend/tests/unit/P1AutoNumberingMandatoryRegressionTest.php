@@ -221,7 +221,7 @@ final class P1AutoNumberingMandatoryRegressionTest extends CIUnitTestCase
 
     private function resource(string $suffix): int
     {
-        $this->db->table('resources')->insert(['type' => 'mandatory_' . $suffix . '_' . uniqid(), 'name' => 'Mandatory', 'created_at' => '2026-10-06 04:05:06']);
+        $this->db->table('resources')->insert(['type' => 'mandatory_' . $suffix . '_' . uniqid(), 'name' => 'Mandatory', 'domain' => 'SYSTEM', 'created_at' => '2026-10-06 04:05:06']);
         return (int) $this->db->insertID();
     }
 
@@ -231,7 +231,7 @@ final class P1AutoNumberingMandatoryRegressionTest extends CIUnitTestCase
         if ($row !== null) {
             return (int) $row['id'];
         }
-        $this->db->table('resources')->insert(['type' => 'product', 'name' => 'Product', 'created_at' => '2026-10-06 04:05:06']);
+        $this->db->table('resources')->insert(['type' => 'product', 'name' => 'Product', 'domain' => 'MASTER', 'created_at' => '2026-10-06 04:05:06']);
         return (int) $this->db->insertID();
     }
 

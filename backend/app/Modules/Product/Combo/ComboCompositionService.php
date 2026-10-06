@@ -475,7 +475,9 @@ final class ComboCompositionService
     private function authorize(OperationContext $operation, string $action, ?array $target, array $input, mixed $clientHint): AuthorizationDecision
     {
         $decision = $this->auth()->authorize($operation, 'product', $action, new EvaluationOrganizationRequest(
-            'product', $action, $target, $input, $clientHint,
+            persistedTarget: $target,
+            input: $input,
+            clientEvaluationOrganizationId: $clientHint,
         ));
         if (! $decision->isAllowed()) {
             throw new DomainException(self::ERROR_AUTHORIZATION_DENIED, ['action' => $action]);

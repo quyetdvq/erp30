@@ -80,7 +80,7 @@ final class P1Num005ResourceIdentifierAdapterTest extends CIUnitTestCase
     public function testFacadeUsesCanonicalSeriesAndManualAutoIfEmptyWithoutCounter(): void
     {
         $resourceType = 'num005_' . strtolower(bin2hex(random_bytes(4)));
-        $this->db->table('resources')->insert(['type' => $resourceType, 'name' => 'NUM005', 'created_at' => '2026-10-06 04:05:06']);
+        $this->db->table('resources')->insert(['type' => $resourceType, 'name' => 'NUM005', 'domain' => 'SYSTEM', 'created_at' => '2026-10-06 04:05:06']);
         $resourceId = (int) $this->db->insertID();
         $group = $this->groupRoot();
         $seriesId = (new AutoNumberingSeriesRepository($this->db))->insert([
@@ -108,7 +108,7 @@ final class P1Num005ResourceIdentifierAdapterTest extends CIUnitTestCase
     public function testFacadeRejectsOversizedGeneratedCandidateBeforeMutation(): void
     {
         $resourceType = 'num005_length_' . strtolower(bin2hex(random_bytes(4)));
-        $this->db->table('resources')->insert(['type' => $resourceType, 'name' => 'NUM005', 'created_at' => '2026-10-06 04:05:06']);
+        $this->db->table('resources')->insert(['type' => $resourceType, 'name' => 'NUM005', 'domain' => 'SYSTEM', 'created_at' => '2026-10-06 04:05:06']);
         $resourceId = (int) $this->db->insertID();
         $group = $this->groupRoot();
         $seriesId = (new AutoNumberingSeriesRepository($this->db))->insert([
@@ -134,7 +134,7 @@ final class P1Num005ResourceIdentifierAdapterTest extends CIUnitTestCase
     public function testFacadeDelegatesGeneratedCandidateAndAuthoritativeScopeToAdapter(): void
     {
         $resourceType = 'num005_generated_' . strtolower(bin2hex(random_bytes(4)));
-        $this->db->table('resources')->insert(['type' => $resourceType, 'name' => 'NUM005', 'created_at' => '2026-10-06 04:05:06']);
+        $this->db->table('resources')->insert(['type' => $resourceType, 'name' => 'NUM005', 'domain' => 'SYSTEM', 'created_at' => '2026-10-06 04:05:06']);
         $resourceId = (int) $this->db->insertID();
         $group = $this->groupRoot();
         (new AutoNumberingSeriesRepository($this->db))->insert([

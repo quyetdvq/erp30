@@ -16,14 +16,14 @@ $backendPath = dirname(__DIR__);
 $action      = strtolower($argv[1] ?? 'help');
 $arguments   = array_slice($argv, 2);
 
-putenv('CI_ENVIRONMENT=development');
-$_ENV['CI_ENVIRONMENT']    = 'development';
-$_SERVER['CI_ENVIRONMENT'] = 'development';
+putenv('CI_ENVIRONMENT=testing');
+$_ENV['CI_ENVIRONMENT']    = 'testing';
+$_SERVER['CI_ENVIRONMENT'] = 'testing';
 putenv('database.defaultGroup=tests');
 $_ENV['database.defaultGroup']    = 'tests';
 $_SERVER['database.defaultGroup'] = 'tests';
 if (! defined('ENVIRONMENT')) {
-    define('ENVIRONMENT', 'development');
+    define('ENVIRONMENT', 'testing');
 }
 
 require $backendPath . DIRECTORY_SEPARATOR . 'app' . DIRECTORY_SEPARATOR . 'Config' . DIRECTORY_SEPARATOR . 'Paths.php';
@@ -31,6 +31,12 @@ require $backendPath . DIRECTORY_SEPARATOR . 'app' . DIRECTORY_SEPARATOR . 'Conf
 $paths = new Config\Paths();
 if (! defined('FCPATH')) {
     define('FCPATH', $backendPath . DIRECTORY_SEPARATOR . 'public' . DIRECTORY_SEPARATOR);
+}
+if (! defined('TESTPATH')) {
+    define('TESTPATH', realpath($paths->testsDirectory) . DIRECTORY_SEPARATOR);
+}
+if (! defined('SUPPORTPATH')) {
+    define('SUPPORTPATH', realpath(TESTPATH . '_support') . DIRECTORY_SEPARATOR);
 }
 require $paths->systemDirectory . DIRECTORY_SEPARATOR . 'Boot.php';
 CodeIgniter\Boot::bootConsole($paths);
@@ -40,6 +46,7 @@ $testConfig     = $databaseConfig->tests;
 $configuredDb   = (string) ($testConfig['database'] ?? '');
 
 if (! in_array($action, ['help', 'inventory'], true)) {
+    assertTestingEnvironment();
     assertApprovedDatabase($configuredDb);
 }
 
@@ -50,6 +57,8 @@ try {
         'prepare'   => prepareDatabase($testConfig),
         'reset'     => resetDatabase($testConfig, $arguments),
         'fresh'     => freshMigration($testConfig, $arguments),
+        'forward-domain' => forwardDomainMigration($testConfig, $arguments),
+        'seed'      => seedResourceCatalog($testConfig, $arguments),
         'rebuild'   => rebuildTwice($testConfig, $arguments),
         'db-tests'  => runPhpUnit('tests/database', 'database PHPUnit tests'),
         'full-tests' => runPhpUnit('', 'full PHPUnit suite'),
@@ -71,6 +80,13 @@ function assertApprovedDatabase(string $database): void
         throw new RuntimeException(
             "Refusing test DB operation: Config\\Database::tests points to '{$database}', expected '" . APPROVED_TEST_DATABASE . "'.",
         );
+    }
+}
+
+function assertTestingEnvironment(): void
+{
+    if (ENVIRONMENT !== 'testing') {
+        throw new RuntimeException("Refusing test DB operation: runtime environment is '" . ENVIRONMENT . "', expected 'testing'.");
     }
 }
 
@@ -181,12 +197,79 @@ function rebuildTwice(array $config, array $arguments): int
     return ($first === 0 && $second === 0) ? 0 : 1;
 }
 
+/**
+ * Rehearse the real forward migrator from the immediately preceding legacy
+ * resources.domain state. This is deliberately limited to the approved test
+ * database and leaves it at the current migration level.
+ *
+ * @param array<string, mixed> $config
+ * @param list<string>         $arguments
+ */
+function forwardDomainMigration(array $config, array $arguments): int
+{
+    requireConfirmation($arguments);
+    if (freshMigration($config, $arguments) !== 0) {
+        return 1;
+    }
+    if (seedResourceCatalog($config, $arguments) !== 0) {
+        return 1;
+    }
+
+    require_once dirname(__DIR__) . DIRECTORY_SEPARATOR . 'app' . DIRECTORY_SEPARATOR . 'Database'
+        . DIRECTORY_SEPARATOR . 'Migrations' . DIRECTORY_SEPARATOR . '2026-10-05-000010_NormalizeResourceDomains.php';
+    $migration = new App\Database\Migrations\NormalizeResourceDomains(
+        Config\Database::forge(db_connect('tests')),
+    );
+    $migration->down();
+
+    $connection = connect($config);
+    $prefix = str_replace('`', '``', (string) $config['DBPrefix']);
+    $updates = [
+        "UPDATE `{$prefix}resources` SET domain = NULL WHERE type = 'province'",
+        "UPDATE `{$prefix}resources` SET domain = 'COMPANY' WHERE type = 'contact'",
+        "UPDATE `{$prefix}resources` SET domain = 'MASTER' WHERE type = 'employee_assignment'",
+        "UPDATE `{$prefix}resources` SET domain = 'SYSTEM' WHERE type = 'organization'",
+    ];
+    foreach ($updates as $sql) {
+        if (! $connection->query($sql)) {
+            throw new RuntimeException('Unable to create legacy Resource Domain rehearsal state: ' . $connection->error);
+        }
+    }
+    if (! $connection->query("DELETE FROM `{$prefix}migrations` WHERE version = '2026-10-05-000010'")) {
+        throw new RuntimeException('Unable to return test migration ledger to pre-000010 state: ' . $connection->error);
+    }
+    $connection->close();
+
+    return runSpark('migrate --all -g tests', 'forward migration from pre-000010 Resource Domain state');
+}
+
+/**
+ * @param array<string, mixed> $config
+ * @param list<string>         $arguments
+ */
+function seedResourceCatalog(array $config, array $arguments): int
+{
+    requireConfirmation($arguments);
+    (new App\Database\Seeds\ResourceActionSeeder(new Config\Database()))->run();
+    fwrite(STDOUT, 'Resource catalog seed completed for approved test database: ' . APPROVED_TEST_DATABASE . PHP_EOL);
+
+    return 0;
+}
+
 function runSpark(string $arguments, string $label): int
 {
     $command = quoteCommand(PHP_BINARY) . ' spark ' . $arguments;
     fwrite(STDOUT, "--- {$label}: {$command} ---" . PHP_EOL);
 
-    return runProcess($command);
+    // Spark's testing bootstrap expects PHPUnit's SUPPORTPATH constant.
+    // The harness has already verified testing + erp_test before invoking it,
+    // and -g tests selects the isolated connection explicitly.
+    $previousEnvironment = getenv('CI_ENVIRONMENT');
+    putenv('CI_ENVIRONMENT=development');
+    $result = runProcess($command);
+    putenv('CI_ENVIRONMENT=' . ($previousEnvironment === false ? '' : $previousEnvironment));
+
+    return $result;
 }
 
 function runPhpUnit(string $path, string $label): int
@@ -260,6 +343,8 @@ Usage:
   php tools/test-db-harness.php prepare
   php tools/test-db-harness.php reset --yes
   php tools/test-db-harness.php fresh --yes
+  php tools/test-db-harness.php forward-domain --yes
+  php tools/test-db-harness.php seed --yes
   php tools/test-db-harness.php rebuild --yes
   php tools/test-db-harness.php db-tests
   php tools/test-db-harness.php full-tests
@@ -283,6 +368,13 @@ function inventory(array $config): int
     fwrite(STDOUT, 'Configured test host: ' . (string) $config['hostname'] . ':' . (string) $config['port'] . PHP_EOL);
     fwrite(STDOUT, 'Configured test prefix: ' . (string) $config['DBPrefix'] . PHP_EOL);
 
+    if (ENVIRONMENT !== 'testing') {
+        fwrite(STDOUT, "Runtime environment: " . ENVIRONMENT . PHP_EOL);
+        fwrite(STDOUT, 'Isolation guard: FAIL (runtime environment must be testing)' . PHP_EOL);
+
+        return 1;
+    }
+    fwrite(STDOUT, 'Runtime environment: ' . ENVIRONMENT . PHP_EOL);
     if ($database !== APPROVED_TEST_DATABASE) {
         fwrite(STDOUT, 'Isolation guard: FAIL (approved database is ' . APPROVED_TEST_DATABASE . ')' . PHP_EOL);
 

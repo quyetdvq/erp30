@@ -513,7 +513,9 @@ final class PriceListService
     private function authorize(OperationContext $operation, string $action, ?array $target, array $input, mixed $clientHint = null): AuthorizationDecision
     {
         $decision = $this->auth()->authorize($operation, 'price_list', $action, new EvaluationOrganizationRequest(
-            'price_list', $action, $target, $input, $clientHint,
+            persistedTarget: $target,
+            input: $input,
+            clientEvaluationOrganizationId: $clientHint,
         ));
         if (! $decision->isAllowed()) {
             if ($action === 'setstate') {

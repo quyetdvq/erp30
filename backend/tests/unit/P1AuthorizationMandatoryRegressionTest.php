@@ -220,7 +220,7 @@ final class P1AuthorizationMandatoryRegressionTest extends CIUnitTestCase
             $this->operation($userId),
             'price_list',
             'view',
-            new EvaluationOrganizationRequest('price_list', 'view', ['organization_id' => $companyA], [], $companyA),
+            new EvaluationOrganizationRequest(persistedTarget: ['organization_id' => $companyA], clientEvaluationOrganizationId: $companyA),
         );
         $this->assertSame($companyA, $existing->evaluationOrganizationId);
 
@@ -230,7 +230,7 @@ final class P1AuthorizationMandatoryRegressionTest extends CIUnitTestCase
             $this->operation($userId),
             'price_list',
             'view',
-            new EvaluationOrganizationRequest('price_list', 'view', ['organization_id' => $companyA], [], $companyB),
+            new EvaluationOrganizationRequest(persistedTarget: ['organization_id' => $companyA], clientEvaluationOrganizationId: $companyB),
         );
     }
 
@@ -243,9 +243,9 @@ final class P1AuthorizationMandatoryRegressionTest extends CIUnitTestCase
         $company = $this->organization('COMPANY', $rootId);
         $service = new AuthorizationService(db: $this->db);
 
-        $organization = $service->authorize($this->operation($userId), 'organization', 'create', new EvaluationOrganizationRequest('organization', 'create', null, ['parent_id' => $company]));
+        $organization = $service->authorize($this->operation($userId), 'organization', 'create', new EvaluationOrganizationRequest(input: ['parent_id' => $company]));
         $this->assertSame($company, $organization->evaluationOrganizationId);
-        $assignment = $service->authorize($this->operation($userId), 'employee_assignment', 'create', new EvaluationOrganizationRequest('employee_assignment', 'create', null, ['organization_id' => $rootId]));
+        $assignment = $service->authorize($this->operation($userId), 'employee_assignment', 'create', new EvaluationOrganizationRequest(input: ['organization_id' => $rootId]));
         $this->assertSame($rootId, $assignment->evaluationOrganizationId);
 
         foreach ([
@@ -254,13 +254,13 @@ final class P1AuthorizationMandatoryRegressionTest extends CIUnitTestCase
             ['resource', 'view', []],
             ['policy', 'create', ['organization_id' => $rootId]],
         ] as [$resource, $action, $input]) {
-            $decision = $service->authorize($this->operation($userId), $resource, $action, new EvaluationOrganizationRequest($resource, $action, null, $input));
+            $decision = $service->authorize($this->operation($userId), $resource, $action, new EvaluationOrganizationRequest(input: $input));
             $this->assertSame($rootId, $decision->evaluationOrganizationId, $resource);
         }
 
         $this->expectException(DomainException::class);
         $this->expectExceptionMessage('EVALUATION_ORGANIZATION_CONTEXT_REQUIRED');
-        $service->authorize($this->operation($userId), 'price_list', 'view', new EvaluationOrganizationRequest('price_list', 'view'));
+        $service->authorize($this->operation($userId), 'price_list', 'view', new EvaluationOrganizationRequest());
     }
 
     public function testMandatorySystemAdminUsesNormalBasePolicyAndSecurityPaths(): void
@@ -394,12 +394,12 @@ final class P1AuthorizationMandatoryRegressionTest extends CIUnitTestCase
 
     private function existingRequest(int $organizationId, string $resource = 'price_list', string $action = 'view'): EvaluationOrganizationRequest
     {
-        return new EvaluationOrganizationRequest($resource, $action, ['organization_id' => $organizationId]);
+        return new EvaluationOrganizationRequest(persistedTarget: ['organization_id' => $organizationId]);
     }
 
     private function groupRequest(string $resource, string $action): EvaluationOrganizationRequest
     {
-        return new EvaluationOrganizationRequest($resource, $action);
+        return new EvaluationOrganizationRequest();
     }
 
     private function operation(int $userId): OperationContext

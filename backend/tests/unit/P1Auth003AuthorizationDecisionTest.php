@@ -83,7 +83,7 @@ final class P1Auth003AuthorizationDecisionTest extends CIUnitTestCase
             $operation,
             'price_list',
             'view',
-            new EvaluationOrganizationRequest('price_list', 'view', ['organization_id' => 20]),
+            new EvaluationOrganizationRequest(persistedTarget: ['organization_id' => 20]),
         );
     }
 }

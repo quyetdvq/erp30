@@ -260,7 +260,7 @@ final class P1Num004CounterAllocatorTest extends CIUnitTestCase
     /** @return array{int, int} */
     private function fixture(string $code, int $start, int $increment): array
     {
-        $this->db->table('resources')->insert(['type' => 'num004-' . $code . '-' . uniqid(), 'name' => 'NUM004', 'created_at' => '2026-10-06 04:05:06']);
+        $this->db->table('resources')->insert(['type' => 'num004-' . $code . '-' . uniqid(), 'name' => 'NUM004', 'domain' => 'SYSTEM', 'created_at' => '2026-10-06 04:05:06']);
         $resourceId = (int) $this->db->insertID();
         $this->db->table('organizations')->insert(['type' => 'GROUP', 'code' => 'NUM004-' . $code . '-' . uniqid(), 'name' => 'NUM004', 'status' => 'ACTIVE', 'created_at' => '2026-10-06 04:05:06']);
         $scopeId = (int) $this->db->insertID();

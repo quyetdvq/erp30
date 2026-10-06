@@ -463,7 +463,7 @@ final class AutoNumberingConfigurationService
     /** @param array<string, mixed>|null $target */
     private function authorize(OperationContext $operation, ?array $target = null): void
     {
-        $request = new EvaluationOrganizationRequest('resource', 'configure_numbering', $target);
+        $request = new EvaluationOrganizationRequest(persistedTarget: $target);
         $decision = $this->auth()->authorize($operation, 'resource', 'configure_numbering', $request);
         if (! $decision->isAllowed()) {
             throw new DomainException(self::ERROR_AUTHORIZATION_DENIED, [

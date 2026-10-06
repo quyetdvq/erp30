@@ -7,7 +7,7 @@ namespace App\Authorization;
 use App\Exceptions\DomainException;
 use App\Infrastructure\Id\PositiveId;
 use App\Repositories\AuthorizationLogRepository;
-use App\Repositories\PolicyRepository;
+use App\Repositories\ResourceCatalogRepository;
 use App\Services\LifecycleAuditPort;
 use CodeIgniter\Database\ConnectionInterface;
 
@@ -17,18 +17,18 @@ final class AuthorizationAuditService implements LifecycleAuditPort
     public const ERROR_DECISION_INVALID = 'AUTHORIZATION_AUDIT_DECISION_INVALID';
     public const ERROR_RESOURCE_INVALID = 'AUTHORIZATION_AUDIT_RESOURCE_INVALID';
 
-    private PolicyRepository $catalog;
+    private ResourceCatalogRepository $catalog;
     private AuthorizationLogRepository $logs;
 
     /** @param ConnectionInterface<mixed, mixed>|null $db */
     public function __construct(
         ?AuthorizationLogRepository $logs = null,
-        ?PolicyRepository $catalog = null,
+        ?ResourceCatalogRepository $catalog = null,
         ?ConnectionInterface $db = null,
     ) {
         $connection = $db ?? db_connect();
         $this->logs = $logs ?? new AuthorizationLogRepository($connection);
-        $this->catalog = $catalog ?? new PolicyRepository($connection);
+        $this->catalog = $catalog ?? new ResourceCatalogRepository($connection);
     }
 
     public function recordIfRequired(AuthorizationDecision $decision): ?int

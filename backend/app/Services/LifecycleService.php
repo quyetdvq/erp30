@@ -206,9 +206,7 @@ final class LifecycleService
         $transition = $this->resolveTransition($snapshot->lifecycleId, $snapshot->currentStateId, $actionCode);
         $actionCode = $this->actionCode($actionCode);
         $request = new EvaluationOrganizationRequest(
-            $resourceType,
-            $actionCode,
-            array_merge($snapshot->authorizationTarget, ['organization_id' => $snapshot->evaluationOrganizationId]),
+            persistedTarget: $snapshot->authorizationTarget,
         );
         $decision = $this->auth()->authorize(
             $operation,

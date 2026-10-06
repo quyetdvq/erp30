@@ -32,7 +32,7 @@ final class P1Db050ResourceAuthorizationNumberingTest extends CIUnitTestCase
         $this->assertColumns('resources', [
             ['id', 'bigint', false], ['lifecycle_id', 'bigint', true],
             ['type', 'varchar', false], ['name', 'varchar', false],
-            ['domain', 'varchar', true], ['created_by', 'bigint', true],
+            ['domain', 'varchar', false], ['created_by', 'bigint', true],
             ['updated_by', 'bigint', true], ['created_at', 'datetime', false],
             ['updated_at', 'datetime', true],
         ]);
@@ -254,7 +254,7 @@ final class P1Db050ResourceAuthorizationNumberingTest extends CIUnitTestCase
     private function insertResource(string $type): int
     {
         $this->db->table('resources')->insert([
-            'type' => $type, 'name' => 'Resource test', 'created_at' => '2026-10-05 00:00:00',
+            'type' => $type, 'name' => 'Resource test', 'domain' => 'SYSTEM', 'created_at' => '2026-10-05 00:00:00',
         ]);
 
         return (int) $this->db->insertID();

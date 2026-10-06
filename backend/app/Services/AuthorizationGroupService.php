@@ -197,7 +197,7 @@ final class AuthorizationGroupService
     /** @param array<string, mixed>|null $target */
     private function authorize(OperationContext $operation, string $action, ?array $target = null, string $resource = 'authorization_group'): void
     {
-        $request = new EvaluationOrganizationRequest($resource, $action, $target);
+        $request = new EvaluationOrganizationRequest(persistedTarget: $target);
         $decision = $this->auth()->authorize($operation, $resource, $action, $request);
         if (! $decision->isAllowed()) {
             throw new DomainException(self::ERROR_DENIED, ['action' => $action]);

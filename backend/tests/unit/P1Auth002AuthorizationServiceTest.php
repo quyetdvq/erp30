@@ -151,8 +151,6 @@ final class P1Auth002AuthorizationServiceTest extends CIUnitTestCase
                 'price_list',
                 'view',
                 new EvaluationOrganizationRequest(
-                    resource: 'price_list',
-                    operation: 'view',
                     persistedTarget: ['organization_id' => $companyId],
                     clientEvaluationOrganizationId: $siblingId,
                 ),
@@ -205,7 +203,7 @@ final class P1Auth002AuthorizationServiceTest extends CIUnitTestCase
 
     private function request(int $organizationId): EvaluationOrganizationRequest
     {
-        return new EvaluationOrganizationRequest('price_list', 'view', ['organization_id' => $organizationId]);
+        return new EvaluationOrganizationRequest(persistedTarget: ['organization_id' => $organizationId]);
     }
 
     /** @return array<string, mixed> */

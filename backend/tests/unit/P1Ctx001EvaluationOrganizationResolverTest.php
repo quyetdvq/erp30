@@ -6,8 +6,6 @@ use App\Authorization\EvaluationOrganizationRequest;
 use App\Authorization\EvaluationOrganizationResolver;
 use App\Exceptions\DomainException;
 use App\Exceptions\PersistenceException;
-use App\Infrastructure\Mutation\OperationContext;
-use App\Infrastructure\Time\EvaluationTime;
 use App\Repositories\OrganizationRepository;
 use CodeIgniter\Database\ConnectionInterface;
 use CodeIgniter\Test\CIUnitTestCase;
@@ -25,138 +23,83 @@ final class P1Ctx001EvaluationOrganizationResolverTest extends CIUnitTestCase
         [$groupId, $companyId, $branchId] = $this->organizationTree();
         $resolver = new EvaluationOrganizationResolver(null, null, null, $this->db);
 
-        $context = $resolver->resolve(
-            new EvaluationOrganizationRequest(
-                resource: 'price_list',
-                operation: 'edit',
-                persistedTarget: ['organization_id' => (string) $companyId],
-                clientEvaluationOrganizationId: (string) $companyId,
-            ),
-            $this->operation(),
-        );
+        $context = $resolver->resolveResource('price_list', 'edit', $this->resource('price_list', 'ORGANIZATION'), new EvaluationOrganizationRequest(
+            persistedTarget: ['organization_id' => $companyId],
+            clientEvaluationOrganizationId: $companyId,
+        ));
         $this->assertSame($companyId, $context->organizationId);
 
-        try {
-            $resolver->resolve(
-                new EvaluationOrganizationRequest(
-                    resource: 'price_list',
-                    operation: 'edit',
-                    persistedTarget: ['organization_id' => $companyId],
-                    clientEvaluationOrganizationId: $branchId,
-                ),
-                $this->operation(),
-            );
-            $this->fail('Expected client hint mismatch rejection.');
-        } catch (DomainException $exception) {
-            $this->assertSame(EvaluationOrganizationResolver::ERROR_HINT_MISMATCH, $exception->getErrorCode());
-        }
-
+        $this->expectException(DomainException::class);
+        $this->expectExceptionMessage(EvaluationOrganizationResolver::ERROR_HINT_MISMATCH);
+        $resolver->resolveResource('price_list', 'edit', $this->resource('price_list', 'ORGANIZATION'), new EvaluationOrganizationRequest(
+            persistedTarget: ['organization_id' => $companyId],
+            clientEvaluationOrganizationId: $branchId,
+        ));
         $this->assertNotSame($groupId, $context->organizationId);
     }
 
-    public function testOrganizationCreateUsesParentAndAssignmentMutationUsesAssignmentOrganization(): void
+    public function testOrganizationCreateAndAssignmentUseExplicitCanonicalFields(): void
     {
         [$groupId, $companyId, $branchId] = $this->organizationTree();
         $resolver = new EvaluationOrganizationResolver(null, null, null, $this->db);
 
-        $organizationContext = $resolver->resolve(
-            new EvaluationOrganizationRequest(
-                resource: 'organization',
-                operation: 'create',
-                input: ['parent_id' => (string) $companyId],
-            ),
-            $this->operation(),
-        );
-        $this->assertSame($companyId, $organizationContext->organizationId);
-        $this->assertSame('CANONICAL_PARENT', $organizationContext->source);
+        $organization = $resolver->resolveResource('organization', 'create', $this->resource('organization', 'ORGANIZATION'), new EvaluationOrganizationRequest(
+            input: ['parent_id' => $companyId],
+        ));
+        $this->assertSame($companyId, $organization->organizationId);
+        $this->assertSame('CANONICAL_PARENT', $organization->source);
 
-        $assignmentContext = $resolver->resolve(
-            new EvaluationOrganizationRequest(
-                resource: 'employee_assignment',
-                operation: 'edit',
-                persistedTarget: ['organization_id' => $branchId],
-            ),
-            $this->operation(),
-        );
-        $this->assertSame($branchId, $assignmentContext->organizationId);
-        $this->assertSame('ASSIGNMENT_ORGANIZATION', $assignmentContext->source);
-        $this->assertSame('GROUP', $resolver->resolve(
-            new EvaluationOrganizationRequest(
-                resource: 'organization',
-                operation: 'create',
-                input: ['parent_id' => $groupId],
-            ),
-            $this->operation(),
-        )->organizationType);
+        $assignment = $resolver->resolveResource('employee_assignment', 'edit', $this->resource('employee_assignment', 'ORGANIZATION'), new EvaluationOrganizationRequest(
+            persistedTarget: ['organization_id' => $branchId],
+        ));
+        $this->assertSame($branchId, $assignment->organizationId);
+        $this->assertSame('PERSISTED_TARGET', $assignment->source);
+        $this->assertSame('GROUP', $resolver->resolveResource('organization', 'create', $this->resource('organization', 'ORGANIZATION'), new EvaluationOrganizationRequest(
+            input: ['parent_id' => $groupId],
+        ))->organizationType);
     }
 
-    public function testPrimaryAssignmentFallbackIsExplicitAndUsesOnlyThePrimaryCompany(): void
-    {
-        [$groupId, $companyId, $otherCompanyId] = $this->organizationTreeWithSecondCompany();
-        $employeeId = $this->insertEmployee(77);
-        $this->insertAssignment($employeeId, $companyId, true);
-        $this->insertAssignment($employeeId, $otherCompanyId, false);
-        $resolver = new EvaluationOrganizationResolver(null, null, null, $this->db);
-
-        $context = $resolver->resolve(
-            new EvaluationOrganizationRequest(
-                resource: 'contact',
-                operation: 'create',
-                allowPrimaryAssignmentFallback: true,
-            ),
-            $this->operation(77),
-        );
-        $this->assertSame($companyId, $context->organizationId);
-        $this->assertSame('PRIMARY_ASSIGNMENT', $context->source);
-        $this->assertNotSame($groupId, $context->organizationId);
-    }
-
-    public function testRequiredAuthoritativeContextCannotFallBackToPrimaryAssignment(): void
+    public function testEmployeeContactScopeIsGroupRegardlessOfPrimaryAssignment(): void
     {
         [$groupId, $companyId] = $this->organizationTree();
         $employeeId = $this->insertEmployee(77);
-        $this->insertAssignment($employeeId, $companyId, true);
+        $this->insertAssignment($employeeId, $companyId);
         $resolver = new EvaluationOrganizationResolver(null, null, null, $this->db);
 
-        try {
-            $resolver->resolve(
-                new EvaluationOrganizationRequest(
-                    resource: 'organization',
-                    operation: 'create',
-                    allowPrimaryAssignmentFallback: true,
-                ),
-                $this->operation(77),
-            );
-            $this->fail('Expected missing parent rejection.');
-        } catch (DomainException $exception) {
-            $this->assertSame(EvaluationOrganizationResolver::ERROR_CONTEXT_REQUIRED, $exception->getErrorCode());
-        }
+        $context = $resolver->resolveResource('contact', 'create', $this->resource('contact', 'ORGANIZATION'), new EvaluationOrganizationRequest(
+            input: ['contact_type' => 'EMPLOYEE', 'contact_ref_id' => $employeeId],
+        ));
+        $this->assertSame($groupId, $context->organizationId);
+        $this->assertSame('EMPLOYEE_OWNER_GROUP', $context->source);
+    }
 
+    public function testMissingOrganizationContextCannotFallBackToPrimaryAssignment(): void
+    {
+        [$groupId, $companyId] = $this->organizationTree();
+        $employeeId = $this->insertEmployee(77);
+        $this->insertAssignment($employeeId, $companyId);
+        $resolver = new EvaluationOrganizationResolver(null, null, null, $this->db);
+
+        $this->expectException(DomainException::class);
+        $this->expectExceptionMessage(EvaluationOrganizationResolver::ERROR_CONTEXT_REQUIRED);
+        $resolver->resolveResource('price_list', 'create', $this->resource('price_list', 'ORGANIZATION'), new EvaluationOrganizationRequest());
         $this->assertNotSame($groupId, $companyId);
     }
 
-    public function testGroupResourceUsesGroupAndSiblingTargetCannotBleedAcrossContext(): void
+    public function testGroupDomainUsesGroupAndOrganizationDomainUsesPersistedTarget(): void
     {
         [$groupId, $companyId, $otherCompanyId] = $this->organizationTreeWithSecondCompany();
         $resolver = new EvaluationOrganizationResolver(null, null, null, $this->db);
 
-        $groupContext = $resolver->resolve(
-            new EvaluationOrganizationRequest(resource: 'resource', operation: 'view'),
-            $this->operation(),
-        );
-        $this->assertSame($groupId, $groupContext->organizationId);
-        $this->assertSame('GROUP_RESOURCE', $groupContext->source);
+        $group = $resolver->resolveResource('resource', 'view', $this->resource('resource', 'SYSTEM'), new EvaluationOrganizationRequest());
+        $this->assertSame($groupId, $group->organizationId);
+        $this->assertSame('GROUP_RESOURCE_DOMAIN', $group->source);
 
-        $targetContext = $resolver->resolve(
-            new EvaluationOrganizationRequest(
-                resource: 'price_list',
-                operation: 'view',
-                persistedTarget: ['organization_id' => $otherCompanyId],
-            ),
-            $this->operation(),
-        );
-        $this->assertSame($otherCompanyId, $targetContext->organizationId);
-        $this->assertNotSame($companyId, $targetContext->organizationId);
+        $target = $resolver->resolveResource('price_list', 'view', $this->resource('price_list', 'ORGANIZATION'), new EvaluationOrganizationRequest(
+            persistedTarget: ['organization_id' => $otherCompanyId],
+        ));
+        $this->assertSame($otherCompanyId, $target->organizationId);
+        $this->assertNotSame($companyId, $target->organizationId);
     }
 
     public function testRepositoryFailureIsNotConvertedToNotFound(): void
@@ -165,25 +108,14 @@ final class P1Ctx001EvaluationOrganizationResolverTest extends CIUnitTestCase
         $db->method('table')->willThrowException(new RuntimeException('database unavailable'));
         $resolver = new EvaluationOrganizationResolver(new OrganizationRepository($db));
 
-        try {
-            $resolver->resolve(
-                new EvaluationOrganizationRequest(resource: 'resource', operation: 'view'),
-                $this->operation(),
-            );
-            $this->fail('Expected persistence failure.');
-        } catch (PersistenceException $exception) {
-            $this->assertSame(OrganizationRepository::ERROR_PERSISTENCE_FAILED, $exception->getErrorCode());
-        }
+        $this->expectException(PersistenceException::class);
+        $resolver->resolveResource('resource', 'view', $this->resource('resource', 'SYSTEM'), new EvaluationOrganizationRequest());
     }
 
-    private function operation(?int $userId = null): OperationContext
+    /** @return array<string, mixed> */
+    private function resource(string $type, string $domain): array
     {
-        return new OperationContext(
-            $userId,
-            new EvaluationTime(new DateTimeImmutable('2026-10-05T16:30:00+00:00')),
-            'ctx-test',
-            $userId === null,
-        );
+        return ['id' => 1, 'type' => $type, 'domain' => $domain];
     }
 
     /** @return array{int, int, int} */
@@ -209,12 +141,8 @@ final class P1Ctx001EvaluationOrganizationResolverTest extends CIUnitTestCase
     private function insertOrganization(string $type, ?int $parentId = null): int
     {
         $this->db->table('organizations')->insert([
-            'parent_id' => $parentId,
-            'type' => $type,
-            'code' => uniqid('CTX-O-', true),
-            'name' => $type . ' Context Organization',
-            'status' => 'ACTIVE',
-            'created_at' => '2026-10-05 00:00:00',
+            'parent_id' => $parentId, 'type' => $type, 'code' => uniqid('CTX-O-', true),
+            'name' => $type . ' Context Organization', 'status' => 'ACTIVE', 'created_at' => '2026-10-05 00:00:00',
         ]);
 
         return (int) $this->db->insertID();
@@ -223,26 +151,18 @@ final class P1Ctx001EvaluationOrganizationResolverTest extends CIUnitTestCase
     private function insertEmployee(int $userId): int
     {
         $this->db->table('employees')->insert([
-            'user_id' => $userId,
-            'employee_code' => uniqid('CTX-E-', true),
-            'employee_name' => 'Context Employee',
-            'status' => 'ACTIVE',
-            'created_at' => '2026-10-05 00:00:00',
+            'user_id' => $userId, 'employee_code' => uniqid('CTX-E-', true),
+            'employee_name' => 'Context Employee', 'status' => 'ACTIVE', 'created_at' => '2026-10-05 00:00:00',
         ]);
 
         return (int) $this->db->insertID();
     }
 
-    private function insertAssignment(int $employeeId, int $organizationId, bool $primary): void
+    private function insertAssignment(int $employeeId, int $organizationId): void
     {
         $this->db->table('employee_assignments')->insert([
-            'employee_id' => $employeeId,
-            'organization_id' => $organizationId,
-            'is_primary' => $primary ? 1 : 0,
-            'effective_from' => '2026-01-01',
-            'effective_to' => null,
-            'status' => 'ACTIVE',
-            'created_at' => '2026-10-05 00:00:00',
+            'employee_id' => $employeeId, 'organization_id' => $organizationId, 'is_primary' => 1,
+            'effective_from' => '2026-01-01', 'effective_to' => null, 'status' => 'ACTIVE', 'created_at' => '2026-10-05 00:00:00',
         ]);
     }
 }

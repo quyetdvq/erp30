@@ -8,6 +8,19 @@ use CodeIgniter\Database\Seeder;
 
 final class ResourceActionSeeder extends Seeder
 {
+    /** @var array<string, string> */
+    private const DOMAINS = [
+        'province' => 'MASTER', 'ward' => 'MASTER', 'department' => 'MASTER',
+        'position' => 'MASTER', 'employee' => 'MASTER', 'product_group' => 'MASTER',
+        'product_uom' => 'MASTER', 'product' => 'MASTER',
+        'user' => 'SYSTEM', 'authorization_group' => 'SYSTEM', 'resource' => 'SYSTEM',
+        'workflow_state' => 'SYSTEM', 'lifecycle' => 'SYSTEM',
+        'organization' => 'ORGANIZATION', 'contact' => 'ORGANIZATION',
+        'employee_assignment' => 'ORGANIZATION', 'policy' => 'ORGANIZATION',
+        'authorization_log' => 'ORGANIZATION', 'price_list' => 'ORGANIZATION',
+        'import_job' => 'ORGANIZATION',
+    ];
+
     /** @var array<string, list<string>> */
     private const MATRIX = [
         'province' => ['view', 'create', 'edit', 'setstate', 'export'],
@@ -46,12 +59,13 @@ final class ResourceActionSeeder extends Seeder
                 $this->db->table('resources')->insert([
                     'type'       => $type,
                     'name'       => $type,
-                    'domain'     => null,
+                    'domain'     => self::DOMAINS[$type],
                     'created_at' => date('Y-m-d H:i:s'),
                 ]);
                 $resourceId = (int) $this->db->insertID();
             } else {
                 $resourceId = (int) $resource['id'];
+                $this->db->table('resources')->where('id', $resourceId)->update(['domain' => self::DOMAINS[$type]]);
             }
 
             foreach ($actions as $code) {

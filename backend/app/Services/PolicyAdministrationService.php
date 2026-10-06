@@ -93,7 +93,10 @@ final class PolicyAdministrationService
      */
     private function authorize(OperationContext $operation, string $action, ?array $target, array $policy): void
     {
-        $request = new EvaluationOrganizationRequest('policy', $action, $target, $policy);
+        $request = new EvaluationOrganizationRequest(
+            persistedTarget: $target,
+            input: $policy,
+        );
         $decision = $this->auth()->authorize($operation, 'policy', $action, $request, $policy['state_id'] ?? null);
         if (! $decision->isAllowed()) {
             throw new DomainException(self::ERROR_DENIED, ['action' => $action]);

@@ -51,8 +51,6 @@ final class ProductImportAuthorizationService
             'product',
             'import',
             new EvaluationOrganizationRequest(
-                resource: 'product',
-                operation: 'import',
                 clientEvaluationOrganizationId: $clientEvaluationOrganizationId,
             ),
         );

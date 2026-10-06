@@ -296,7 +296,7 @@ final class P1Num001AutoNumberingTest extends CIUnitTestCase
     private function resource(string $type): int
     {
         $this->db->table('resources')->insert([
-            'type' => $type . '-' . uniqid(), 'name' => 'Resource ' . $type,
+            'type' => $type . '-' . uniqid(), 'name' => 'Resource ' . $type, 'domain' => 'SYSTEM',
             'created_at' => '2026-10-06 04:05:06',
         ]);
 

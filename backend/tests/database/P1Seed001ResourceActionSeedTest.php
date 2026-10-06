@@ -37,6 +37,17 @@ final class P1Seed001ResourceActionSeedTest extends CIUnitTestCase
         'import_job' => ['view', 'export'],
     ];
 
+    /** @var array<string, string> */
+    private const DOMAINS = [
+        'province' => 'MASTER', 'ward' => 'MASTER', 'department' => 'MASTER',
+        'position' => 'MASTER', 'employee' => 'MASTER', 'product_group' => 'MASTER',
+        'product_uom' => 'MASTER', 'product' => 'MASTER', 'user' => 'SYSTEM',
+        'authorization_group' => 'SYSTEM', 'resource' => 'SYSTEM', 'workflow_state' => 'SYSTEM',
+        'lifecycle' => 'SYSTEM', 'organization' => 'ORGANIZATION', 'contact' => 'ORGANIZATION',
+        'employee_assignment' => 'ORGANIZATION', 'policy' => 'ORGANIZATION',
+        'authorization_log' => 'ORGANIZATION', 'price_list' => 'ORGANIZATION', 'import_job' => 'ORGANIZATION',
+    ];
+
     public function testSeedTwiceProducesExactlyTheApprovedCatalog(): void
     {
         $beforeSideEffects = $this->sideEffectCounts();
@@ -51,6 +62,9 @@ final class P1Seed001ResourceActionSeedTest extends CIUnitTestCase
         $this->assertSame($beforeSideEffects, $this->sideEffectCounts());
         $this->assertSame(20, count($second));
         $this->assertSame(92, array_sum(array_map('count', $second)));
+        $expectedDomains = self::DOMAINS;
+        ksort($expectedDomains);
+        $this->assertSame($expectedDomains, $this->domainSnapshot());
     }
 
     public function testImportAndNumberingActionsAreScopedExactly(): void
@@ -101,6 +115,21 @@ final class P1Seed001ResourceActionSeedTest extends CIUnitTestCase
         }
 
         return $catalog;
+    }
+
+    /** @return array<string, string> */
+    private function domainSnapshot(): array
+    {
+        $rows = $this->db->table('resources')->select('type, domain')->orderBy('type', 'ASC')->get()->getResultArray();
+        $domains = [];
+        foreach ($rows as $row) {
+            $domains[(string) $row['type']] = (string) $row['domain'];
+        }
+        ksort($domains);
+        $expected = self::DOMAINS;
+        ksort($expected);
+
+        return $domains;
     }
 
     /** @return array<string, int> */
