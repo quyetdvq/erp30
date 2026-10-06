@@ -20,6 +20,7 @@ use App\Infrastructure\Mutation\OperationContext;
 use App\Infrastructure\Time\Clock;
 use App\Modules\Product\ProductGroup\ProductGroupService;
 use App\Modules\Product\Uom\ProductUomMasterService;
+use App\Modules\Product\Uom\ProductUomService;
 use App\Repositories\AutoNumberingSeriesRepository;
 use App\Services\AutoNumberService;
 use App\Services\AutoNumberingBusinessMutation;
@@ -90,6 +91,7 @@ final class ProductMasterService
         private readonly ?MutationContext $mutationContext = null,
         private readonly ?Clock $clock = null,
         private readonly ?ProductRoleService $roles = null,
+        private readonly ?ProductUomService $productUomService = null,
     ) {
         $this->db = $db ?? db_connect();
     }
@@ -283,7 +285,7 @@ final class ProductMasterService
             $this->groups()->requireSelectableProductGroup((int) $payload['product_group_id']);
         }
         if (($payload['base_uom_id'] ?? null) !== null) {
-            $this->uoms()->requireActiveProductUom((int) $payload['base_uom_id']);
+            $this->baseUoms()->requireActiveBaseUom((int) $payload['base_uom_id']);
         }
     }
 
@@ -301,7 +303,7 @@ final class ProductMasterService
         if (array_key_exists('base_uom_id', $payload)
             && $this->nullableId($current['base_uom_id'] ?? null) !== $this->nullableId($merged['base_uom_id'] ?? null)
             && ($merged['base_uom_id'] ?? null) !== null) {
-            $this->uoms()->requireActiveProductUom((int) $merged['base_uom_id']);
+            $this->baseUoms()->requireActiveBaseUom((int) $merged['base_uom_id']);
         }
     }
 
@@ -766,6 +768,11 @@ final class ProductMasterService
     private function uoms(): ProductUomMasterService
     {
         return $this->productUoms ?? new ProductUomMasterService(db: $this->db);
+    }
+
+    private function baseUoms(): ProductUomService
+    {
+        return $this->productUomService ?? new ProductUomService(productUoms: $this->uoms(), db: $this->db);
     }
 
     private function history(): ProductHistoryProvider

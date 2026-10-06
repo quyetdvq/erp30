@@ -4,9 +4,9 @@ This ledger is lightweight operational evidence. It is not architecture
 authority and does not replace UR, FRS, DBD, the Implementation Contract, the
 Implementation Plan, API Design, or UI Design.
 
-As of the P1-PRD-004 task validation, the registry contains exactly 100 P1 tasks.
-Repository evidence verifies 53 completed tasks: Gate 0 is 10/10, Gate 1 is
-14/14, Gate 2 is 8/8, Gate 3 is 10/10, Gate 4 is 7/7, and Gate 5 is 4/11.
+As of the P1-UOM-001 task validation, the registry contains exactly 100 P1 tasks.
+Repository evidence verifies 54 completed tasks: Gate 0 is 10/10, Gate 1 is
+14/14, Gate 2 is 8/8, Gate 3 is 10/10, Gate 4 is 7/7, and Gate 5 is 5/11.
 The previously supplied 28/100 and 4/8 checkpoint is stale: the accepted
 `c4049f0` P1-ORG-002 commit is present in current history.
 No task is downgraded to force that stale count.
@@ -15,13 +15,13 @@ No task is downgraded to force that stale count.
 
 | Measure | Progress |
 |---|---:|
-| P1 tasks DONE | 53/100 |
+| P1 tasks DONE | 54/100 |
 | Gate 0 | 10/10 DONE |
 | Gate 1 | 14/14 DONE |
 | Gate 2 | 8/8 DONE |
 | Gate 3 | 10/10 DONE |
 | Gate 4 | 7/7 DONE |
-| Gate 5 | 4/11 DONE |
+| Gate 5 | 5/11 DONE |
 | Gate 6 | 0/9 DONE |
 | Gate 7 | 0/10 DONE |
 | Gate 8 | 0/12 DONE |
@@ -84,7 +84,7 @@ No task is downgraded to force that stale count.
 | P1-PRD-002 | DONE | aa630fd | service-standard | Product UOM shared master repository/service under `App\\Modules\\Product\\Uom`; GROUP authorization, trusted audit, setstate, active-reference boundary, and focused regression evidence. |
 | P1-PRD-003 | DONE | 561ee15 | high-risk | ProductRepository/master mutation service, atomic SIMPLE-to-PARENT conversion, numbering integration, dependency probes, and real same-root concurrency evidence. |
 | P1-PRD-004 | DONE | ae7dcbf | high-risk | Canonical ProductRoleService, fail-closed role derivation, capability predicates, dynamic full-name resolution, and P1-PRD-003 integration. |
-| P1-UOM-001 | NOT_STARTED | — | high-risk | No accepted implementation evidence. |
+| P1-UOM-001 | DONE | 0e45f6c | high-risk | Product-specific alternate UOM CRUD/status/conversion service, role eligibility, GROUP product.edit authorization, trusted audit, shared structure lock, decimal-safe conversion, and real MariaDB race evidence. Evidence: `docs/implementation/evidence/P1-UOM-001/01_product_uom_service_assessment.md`. |
 | P1-PRC-001 | NOT_STARTED | — | service-standard | No accepted implementation evidence. |
 | P1-PRC-002 | NOT_STARTED | — | high-risk | No accepted implementation evidence. |
 | P1-CMB-001 | NOT_STARTED | — | high-risk | No accepted implementation evidence. |
