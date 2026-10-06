@@ -699,4 +699,4 @@ Sales Order
 └── External Channel reference
       └── external_status / status history
 ```
-     
+Các file nằm trong mục “Nguồn” của project DinkERP.

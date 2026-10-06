@@ -15,6 +15,9 @@ final class WorkflowStateSeeder extends Seeder
         'APPROVED',
         'REJECTED',
         'CANCELLED',
+        'CONFIRMED',
+        'PROCESSING',
+        'COMPLETED'
     ];
 
     public function run(): void
