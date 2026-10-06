@@ -4,9 +4,9 @@ This ledger is lightweight operational evidence. It is not architecture
 authority and does not replace UR, FRS, DBD, the Implementation Contract, the
 Implementation Plan, API Design, or UI Design.
 
-As of the P1-CMB-003 task validation, the registry contains exactly 100 P1 tasks.
-Repository evidence verifies 59 completed tasks: Gate 0 is 10/10, Gate 1 is
-14/14, Gate 2 is 8/8, Gate 3 is 10/10, Gate 4 is 7/7, and Gate 5 is 10/11.
+As of the P1-PRD-090 task validation, the registry contains exactly 100 P1 tasks.
+Repository evidence verifies 60 completed tasks: Gate 0 is 10/10, Gate 1 is
+14/14, Gate 2 is 8/8, Gate 3 is 10/10, Gate 4 is 7/7, and Gate 5 is 11/11.
 The previously supplied 28/100 and 4/8 checkpoint is stale: the accepted
 `c4049f0` P1-ORG-002 commit is present in current history.
 No task is downgraded to force that stale count.
@@ -15,13 +15,13 @@ No task is downgraded to force that stale count.
 
 | Measure | Progress |
 |---|---:|
-| P1 tasks DONE | 59/100 |
+| P1 tasks DONE | 60/100 |
 | Gate 0 | 10/10 DONE |
 | Gate 1 | 14/14 DONE |
 | Gate 2 | 8/8 DONE |
 | Gate 3 | 10/10 DONE |
 | Gate 4 | 7/7 DONE |
-| Gate 5 | 10/11 DONE |
+| Gate 5 | 11/11 DONE |
 | Gate 6 | 0/9 DONE |
 | Gate 7 | 0/10 DONE |
 | Gate 8 | 0/12 DONE |
@@ -90,7 +90,7 @@ No task is downgraded to force that stale count.
 | P1-CMB-001 | DONE | 65c08c9 | high-risk | Canonical atomic COMBO composition mutation service, acyclic nested graph validation, deterministic replacement, GROUP Product authorization, lock ordering, owner-conversion guard, and real independent-process concurrency evidence. Evidence: `docs/implementation/evidence/P1-CMB-001/01_combo_composition_mutation_assessment.md`. |
 | P1-CMB-002 | DONE | 5c1bd9d | high-risk | Read-only recursive COMBO expansion with exact decimal path multiplication, shared-subgraph aggregation, active-path cycle detection, canonical leaf/UOM output, and fail-closed corruption handling. Evidence: `docs/implementation/evidence/P1-CMB-002/01_combo_expansion_service_assessment.md`. |
 | P1-CMB-003 | DONE | 1b15f69 | high-risk | Canonical read-only ComboAllocationService: root pricing once with shared EvaluationTime, default Base-UOM leaf weights, deterministic decimal allocation/residual, and multi-root amount-first aggregation. Evidence: `docs/implementation/evidence/P1-CMB-003/01_combo_allocation_service_assessment.md`. |
-| P1-PRD-090 | NOT_STARTED | — | high-risk | No accepted implementation evidence. |
+| P1-PRD-090 | DONE | aaac85d | high-risk | Cross-domain Product/UOM/Pricing/COMBO regression suite: alternate-UOM pricing chain, atomic SIMPLE-to-PARENT reference guards, nested allocation conservation, pricing fallback, and multi-root weighted aggregation. Evidence: `docs/implementation/evidence/P1-PRD-090/01_product_uom_pricing_combo_regression_assessment.md`. |
 | P1-IMP-001 | NOT_STARTED | — | service-standard | No accepted implementation evidence. |
 | P1-IMP-002 | NOT_STARTED | — | service-standard | No accepted implementation evidence. |
 | P1-IMP-003 | NOT_STARTED | — | service-standard | No accepted implementation evidence. |
