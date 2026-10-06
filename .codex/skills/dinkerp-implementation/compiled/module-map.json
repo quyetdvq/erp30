@@ -10,7 +10,7 @@
         "P1-PRD-002": {
             "module": "Product",
             "path": "App\\Modules\\Product\\Uom",
-            "status": "PLANNED"
+            "status": "DONE"
         },
         "P1-PRD-003": {
             "module": "Product",
