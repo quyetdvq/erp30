@@ -96,6 +96,51 @@ final class PriceListRepository
         return array_values($result->getResultArray());
     }
 
+    /**
+     * Find the best active Price List in one organization for an exact
+     * Product/UOM pair at one trusted evaluation instant.
+     *
+     * @return array<string, mixed>|null
+     */
+    public function findBestMatchingPrice(
+        mixed $organizationId,
+        mixed $productId,
+        mixed $uomId,
+        string $evaluationTime,
+    ): ?array {
+        $organizationId = PositiveId::normalize($organizationId, 'organization_id', self::ERROR_INVALID_REFERENCE);
+        $productId = PositiveId::normalize($productId, 'product_id', self::ERROR_INVALID_REFERENCE);
+        $uomId = PositiveId::normalize($uomId, 'uom_id', self::ERROR_INVALID_REFERENCE);
+
+        try {
+            $builder = $this->db->table('price_lists pl')
+                ->select('pl.id AS price_list_id, pl.priority, pl.effective_from, ppli.price')
+                ->join('product_price_list_items ppli', 'ppli.price_list_id = pl.id', 'inner')
+                ->where('pl.organization_id', $organizationId)
+                ->where('pl.status', 'ACTIVE')
+                ->where('ppli.product_id', $productId)
+                ->where('ppli.uom_id', $uomId)
+                ->where('pl.effective_from <=', $evaluationTime)
+                ->groupStart()
+                ->where('pl.effective_to', null)
+                ->orWhere('pl.effective_to >', $evaluationTime)
+                ->groupEnd()
+                ->orderBy('pl.priority', 'DESC')
+                ->orderBy('pl.effective_from', 'DESC')
+                ->orderBy('pl.id', 'ASC')
+                ->get();
+        } catch (\Throwable $exception) {
+            throw new PersistenceException(self::ERROR_PERSISTENCE_FAILED, 'findBestMatchingPrice', $exception);
+        }
+        if ($builder === false) {
+            throw new PersistenceException(self::ERROR_PERSISTENCE_FAILED, 'findBestMatchingPrice');
+        }
+
+        $row = $builder->getRowArray();
+
+        return $row === null ? null : $row;
+    }
+
     /** @param array<string, mixed> $data */
     public function create(array $data, ?OperationContext $operation = null): int
     {
