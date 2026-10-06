@@ -100,7 +100,7 @@
         "P1-IMP-007": {
             "module": "Product",
             "path": "App\\Modules\\Product\\Import",
-            "status": "PLANNED"
+            "status": "DONE"
         },
         "P1-IMP-008": {
             "module": "Product",

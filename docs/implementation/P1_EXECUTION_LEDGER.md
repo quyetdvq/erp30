@@ -4,10 +4,10 @@ This ledger is lightweight operational evidence. It is not architecture
 authority and does not replace UR, FRS, DBD, the Implementation Contract, the
 Implementation Plan, API Design, or UI Design.
 
-As of the P1-IMP-006 task validation, the registry contains exactly 100 P1 tasks.
-Repository evidence verifies 66 completed tasks: Gate 0 is 10/10, Gate 1 is
+As of the P1-IMP-007 task validation, the registry contains exactly 100 P1 tasks.
+Repository evidence verifies 67 completed tasks: Gate 0 is 10/10, Gate 1 is
 14/14, Gate 2 is 8/8, Gate 3 is 10/10, Gate 4 is 7/7, Gate 5 is 11/11, and
-Gate 6 is 6/9.
+Gate 6 is 7/9.
 The previously supplied 28/100 and 4/8 checkpoint is stale: the accepted
 `c4049f0` P1-ORG-002 commit is present in current history.
 No task is downgraded to force that stale count.
@@ -16,14 +16,14 @@ No task is downgraded to force that stale count.
 
 | Measure | Progress |
 |---|---:|
-| P1 tasks DONE | 66/100 |
+| P1 tasks DONE | 67/100 |
 | Gate 0 | 10/10 DONE |
 | Gate 1 | 14/14 DONE |
 | Gate 2 | 8/8 DONE |
 | Gate 3 | 10/10 DONE |
 | Gate 4 | 7/7 DONE |
 | Gate 5 | 11/11 DONE |
-| Gate 6 | 6/9 DONE |
+| Gate 6 | 7/9 DONE |
 | Gate 7 | 0/10 DONE |
 | Gate 8 | 0/12 DONE |
 | Gate 9 | 0/9 DONE |
@@ -98,7 +98,7 @@ No task is downgraded to force that stale count.
 | P1-IMP-004 | DONE | 4edbce7 | high-risk | Neutral ImportDocument/ImportRow results, generic trim/lowercase headers, Product template union validation, strict record type/mode checks, and explicit VALUE/BLANK/EXPLICIT_NULL states. Evidence: `docs/implementation/evidence/P1-IMP-004/01_product_import_template_validation_assessment.md`. |
 | P1-IMP-005 | DONE | a77e203 | high-risk | Product-owned read-only import model, source-key/persistent-code reference resolution, deterministic dependency plan, duplicate identity checks, and nested COMBO cycle detection. Evidence: `docs/implementation/evidence/P1-IMP-005/01_product_import_dependency_graph_assessment.md`. |
 | P1-IMP-006 | DONE | 0000000 | high-risk | Product-owned row mutation executor, runtime source-key resolution, canonical Product/UOM/COMBO mutation, single-item COMBO merge, and Auto Number transaction preservation. Evidence: `docs/implementation/evidence/P1-IMP-006/01_product_import_row_mutation_assessment.md`. |
-| P1-IMP-007 | NOT_STARTED | — | high-risk | No accepted implementation evidence. |
+| P1-IMP-007 | DONE | 0000000 | high-risk | Product-owned two-gate import authorization: GROUP-scoped product.import start gate, trusted OperationContext delegation, canonical Product/UOM/COMBO row authorization, and no System Admin bypass. Evidence: `docs/implementation/evidence/P1-IMP-007/01_product_import_authorization_assessment.md`. |
 | P1-IMP-008 | NOT_STARTED | — | service-standard | No accepted implementation evidence. |
 | P1-IMP-090 | NOT_STARTED | — | high-risk | No accepted implementation evidence. |
 | P1-API-001 | NOT_STARTED | — | high-risk | No accepted implementation evidence. |
