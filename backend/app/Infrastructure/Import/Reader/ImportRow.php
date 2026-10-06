@@ -4,8 +4,8 @@ declare(strict_types=1);
 
 namespace App\Infrastructure\Import\Reader;
 
-/** One generic CSV data record with its logical source row number. */
-final readonly class CsvImportRow
+/** One generic import record with its original source row number. */
+final readonly class ImportRow
 {
     /** @param list<mixed> $cells */
     public function __construct(

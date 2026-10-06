@@ -4,10 +4,10 @@ This ledger is lightweight operational evidence. It is not architecture
 authority and does not replace UR, FRS, DBD, the Implementation Contract, the
 Implementation Plan, API Design, or UI Design.
 
-As of the P1-IMP-003 task validation, the registry contains exactly 100 P1 tasks.
-Repository evidence verifies 63 completed tasks: Gate 0 is 10/10, Gate 1 is
+As of the P1-IMP-004 task validation, the registry contains exactly 100 P1 tasks.
+Repository evidence verifies 64 completed tasks: Gate 0 is 10/10, Gate 1 is
 14/14, Gate 2 is 8/8, Gate 3 is 10/10, Gate 4 is 7/7, Gate 5 is 11/11, and
-Gate 6 is 3/9.
+Gate 6 is 4/9.
 The previously supplied 28/100 and 4/8 checkpoint is stale: the accepted
 `c4049f0` P1-ORG-002 commit is present in current history.
 No task is downgraded to force that stale count.
@@ -16,14 +16,14 @@ No task is downgraded to force that stale count.
 
 | Measure | Progress |
 |---|---:|
-| P1 tasks DONE | 63/100 |
+| P1 tasks DONE | 64/100 |
 | Gate 0 | 10/10 DONE |
 | Gate 1 | 14/14 DONE |
 | Gate 2 | 8/8 DONE |
 | Gate 3 | 10/10 DONE |
 | Gate 4 | 7/7 DONE |
 | Gate 5 | 11/11 DONE |
-| Gate 6 | 3/9 DONE |
+| Gate 6 | 4/9 DONE |
 | Gate 7 | 0/10 DONE |
 | Gate 8 | 0/12 DONE |
 | Gate 9 | 0/9 DONE |
@@ -95,7 +95,7 @@ No task is downgraded to force that stale count.
 | P1-IMP-001 | DONE | 464fbf7 | service-standard | ImportJob repository/service skeleton; Product-only job envelope, trusted audit, initial PENDING/zero counters, and Infrastructure/Product import boundary. Evidence: `docs/implementation/evidence/P1-IMP-001/01_product_import_job_skeleton_assessment.md`. |
 | P1-IMP-002 | DONE | d580e9d | service-standard | Generic UTF-8 CSV reader with BOM, comma/double-quote grammar, multiline quoted fields, raw cells, logical row numbers, and deterministic structural errors. Evidence: `docs/implementation/evidence/P1-IMP-002/01_csv_import_reader_assessment.md`. |
 | P1-IMP-003 | DONE | ad430d8 | service-standard | Generic PhpSpreadsheet XLSX reader; first nonempty worksheet, raw scalar values, preserved worksheet rows, deterministic formula rejection, and typed unreadable-input errors. Evidence: `docs/implementation/evidence/P1-IMP-003/01_xlsx_import_reader_assessment.md`. |
-| P1-IMP-004 | NOT_STARTED | — | high-risk | No accepted implementation evidence. |
+| P1-IMP-004 | DONE | 4edbce7 | high-risk | Neutral ImportDocument/ImportRow results, generic trim/lowercase headers, Product template union validation, strict record type/mode checks, and explicit VALUE/BLANK/EXPLICIT_NULL states. Evidence: `docs/implementation/evidence/P1-IMP-004/01_product_import_template_validation_assessment.md`. |
 | P1-IMP-005 | NOT_STARTED | — | high-risk | No accepted implementation evidence. |
 | P1-IMP-006 | NOT_STARTED | — | high-risk | No accepted implementation evidence. |
 | P1-IMP-007 | NOT_STARTED | — | high-risk | No accepted implementation evidence. |

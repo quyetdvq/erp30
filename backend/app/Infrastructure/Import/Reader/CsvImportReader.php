@@ -10,7 +10,7 @@ final class CsvImportReader
     public const DELIMITER = ',';
     public const QUOTE = '"';
 
-    public function read(string $input): CsvImportDocument
+    public function read(string $input): ImportDocument
     {
         if (preg_match('//u', $input) !== 1) {
             throw new CsvParseException(CsvParseException::ERROR_INVALID_UTF8, 0, 1, 'input must be valid UTF-8');
@@ -31,13 +31,13 @@ final class CsvImportReader
         $header = $records[0];
         $rows = [];
         foreach (array_slice($records, 1) as $index => $cells) {
-            $rows[] = new CsvImportRow($index + 2, $cells);
+            $rows[] = new ImportRow($index + 2, $cells);
         }
 
-        return new CsvImportDocument($header, $rows);
+        return new ImportDocument($header, $rows);
     }
 
-    public function parse(string $input): CsvImportDocument
+    public function parse(string $input): ImportDocument
     {
         return $this->read($input);
     }

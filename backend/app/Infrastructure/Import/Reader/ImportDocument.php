@@ -4,12 +4,12 @@ declare(strict_types=1);
 
 namespace App\Infrastructure\Import\Reader;
 
-/** Generic parsed CSV structure; no domain or template semantics are applied. */
-final readonly class CsvImportDocument
+/** Generic parsed import document shared by CSV and XLSX readers. */
+final readonly class ImportDocument
 {
     /**
      * @param list<mixed> $header
-     * @param list<CsvImportRow> $rows
+     * @param list<ImportRow> $rows
      */
     public function __construct(
         public array $header,
@@ -23,7 +23,7 @@ final readonly class CsvImportDocument
         return $this->header;
     }
 
-    /** @return list<CsvImportRow> */
+    /** @return list<ImportRow> */
     public function getRows(): array
     {
         return $this->rows;

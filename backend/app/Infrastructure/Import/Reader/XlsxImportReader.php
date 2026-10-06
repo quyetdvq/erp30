@@ -16,7 +16,7 @@ final class XlsxImportReader
      *
      * @param string $input Existing path or XLSX binary content.
      */
-    public function read(string $input): CsvImportDocument
+    public function read(string $input): ImportDocument
     {
         $temporaryPath = null;
         $path = $input;
@@ -40,12 +40,12 @@ final class XlsxImportReader
         }
     }
 
-    public function parse(string $input): CsvImportDocument
+    public function parse(string $input): ImportDocument
     {
         return $this->read($input);
     }
 
-    private function readPath(string $path): CsvImportDocument
+    private function readPath(string $path): ImportDocument
     {
         try {
             $reader = IOFactory::createReader('Xlsx');
@@ -88,7 +88,7 @@ final class XlsxImportReader
         return false;
     }
 
-    private function readWorksheet(Worksheet $worksheet): CsvImportDocument
+    private function readWorksheet(Worksheet $worksheet): ImportDocument
     {
         $highestRow = $worksheet->getHighestDataRow();
         $highestColumn = $worksheet->getHighestDataColumn();
@@ -117,9 +117,9 @@ final class XlsxImportReader
         $header = array_shift($records) ?? [];
         $rows = [];
         foreach ($records as $index => $cells) {
-            $rows[] = new CsvImportRow($index + 2, $cells);
+            $rows[] = new ImportRow($index + 2, $cells);
         }
 
-        return new CsvImportDocument($header, $rows);
+        return new ImportDocument($header, $rows);
     }
 }
