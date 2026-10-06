@@ -62,6 +62,20 @@ final class ComboCompositionService
         return $this->repo()->listByComboProductId($comboProductId);
     }
 
+    /** @return array<string, mixed>|null */
+    public function findItem(mixed $comboProductId, mixed $componentProductId): ?array
+    {
+        $comboProductId = PositiveId::normalize($comboProductId, 'combo_product_id', ProductRoleService::ERROR_NOT_FOUND);
+        $componentProductId = PositiveId::normalize($componentProductId, 'component_product_id', ProductRoleService::ERROR_NOT_FOUND);
+        foreach ($this->repo()->listByComboProductId($comboProductId) as $row) {
+            if ((int) ($row['component_product_id'] ?? 0) === $componentProductId) {
+                return $row;
+            }
+        }
+
+        return null;
+    }
+
     /**
      * Replace the complete direct component set atomically.
      *
@@ -94,6 +108,76 @@ final class ComboCompositionService
                 }, 'combo_items_replace');
             });
         });
+    }
+
+    /**
+     * Merge one direct component into a COMBO without replacing other items.
+     *
+     * This is the canonical single-item mutation boundary used by Product
+     * Import. It intentionally reuses the same graph/structure locks,
+     * validation, authorization, and transaction as complete replacement.
+     *
+     * @return list<array<string, mixed>>
+     */
+    public function mergeItem(
+        mixed $comboProductId,
+        mixed $componentProductId,
+        mixed $quantity,
+        ?OperationContext $operation = null,
+        mixed $clientHint = null,
+    ): array {
+        $operation ??= $this->operation();
+        $comboProductId = PositiveId::normalize($comboProductId, 'combo_product_id', ProductRoleService::ERROR_NOT_FOUND);
+        $owner = $this->owner($comboProductId, true);
+        $items = $this->normalizeItems([[
+            'component_product_id' => $componentProductId,
+            'quantity' => $quantity,
+        ]]);
+        $decision = $this->authorize($operation, 'edit', $owner, ['combo_product_id' => $comboProductId], $clientHint);
+
+        return $this->withComboGraphLock(function () use ($comboProductId, $items, $operation, $decision): array {
+            return $this->withStructureLocks($comboProductId, $items, function () use ($comboProductId, $items, $operation, $decision): array {
+                return $this->transaction(function () use ($comboProductId, $items, $operation, $decision): array {
+                    $lockedOwner = $this->owner($comboProductId, true);
+                    $existingRows = $this->repo()->listByComboProductId($comboProductId);
+                    $this->validateSubmittedItems($lockedOwner, $items, $existingRows);
+
+                    $resultingItems = [];
+                    $merged = false;
+                    foreach ($existingRows as $row) {
+                        if ((int) $row['component_product_id'] === $items[0]['component_product_id']) {
+                            $resultingItems[] = $items[0];
+                            $merged = true;
+                            continue;
+                        }
+                        $resultingItems[] = [
+                            'component_product_id' => (int) $row['component_product_id'],
+                            'quantity' => (string) $row['quantity'],
+                        ];
+                    }
+                    if (! $merged) {
+                        $resultingItems[] = $items[0];
+                    }
+
+                    $this->validateResultingGraph($comboProductId, $resultingItems);
+                    $this->persistMergedItem($comboProductId, $items[0], $existingRows, $operation);
+                    $this->audit()->recordIfRequired($decision);
+
+                    return $this->repo()->listByComboProductId($comboProductId);
+                }, 'combo_item_merge');
+            });
+        });
+    }
+
+    /** @return list<array<string, mixed>> */
+    public function upsertItem(
+        mixed $comboProductId,
+        mixed $componentProductId,
+        mixed $quantity,
+        ?OperationContext $operation = null,
+        mixed $clientHint = null,
+    ): array {
+        return $this->mergeItem($comboProductId, $componentProductId, $quantity, $operation, $clientHint);
     }
 
     /** @param array<string,mixed> $owner
@@ -258,6 +342,30 @@ final class ComboCompositionService
                 $this->repo()->update((int) $row['id'], ['quantity' => $item['quantity']], $operation);
             }
         }
+    }
+
+    /**
+     * @param array{component_product_id:int,quantity:string} $item
+     * @param list<array<string,mixed>> $existingRows
+     */
+    private function persistMergedItem(int $ownerId, array $item, array $existingRows, OperationContext $operation): void
+    {
+        foreach ($existingRows as $row) {
+            if ((int) $row['component_product_id'] !== $item['component_product_id']) {
+                continue;
+            }
+            if (! $this->sameQuantity((string) $row['quantity'], $item['quantity'])) {
+                $this->repo()->update((int) $row['id'], ['quantity' => $item['quantity']], $operation);
+            }
+
+            return;
+        }
+
+        $this->repo()->insert([
+            'combo_product_id' => $ownerId,
+            'component_product_id' => $item['component_product_id'],
+            'quantity' => $item['quantity'],
+        ], $operation);
     }
 
     /** @param list<array{component_product_id:int,quantity:string}> $items
