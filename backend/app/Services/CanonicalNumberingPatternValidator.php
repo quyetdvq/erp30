@@ -257,6 +257,9 @@ final class CanonicalNumberingPatternValidator implements NumberingPatternCompat
         if ($literal === '') {
             return;
         }
+        if (preg_match('/<\?(?:php|=)?|\?>|<%|%>|\{\{|\}\}|\beval\s*\(|\bselect\s+/i', $literal) === 1) {
+            $this->invalid('executable_expression');
+        }
         $last = array_key_last($segments);
         if ($last !== null && $segments[$last]['type'] === 'literal') {
             $segments[$last]['value'] .= $literal;
