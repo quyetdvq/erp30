@@ -554,10 +554,11 @@ CodeIgniter PHPStan extension
 PhpSpreadsheet
 Smalot PdfParser
 
-
 ```
+
 ## Frontend
 
+```
 dependencies:
 ├── @vueuse/core@14.4.0
 ├── axios@1.20.0
@@ -670,3 +671,32 @@ Tôi đề nghị đi theo thứ tự sau:
 6. Dùng Definition of Done hiện tại làm release checklist P1. Đặc biệt phải chứng minh không có System Admin bypass, context không bị client override, seed idempotent, Auto Number atomic/concurrency-safe, Product product_code -> products.code đúng mapping, Import không bypass authorization và không tạo persistence ngoài DBD v1.9.
 Nếu chọn đúng một việc để làm ngay, tôi chọn tạo 04_P1_Implementation_Plan_v1.0.md + backlog kỹ thuật chi tiết. Sau đó ticket đầu tiên mới là migration/schema.
 Cấu trúc mỗi Dev Task tôi khuyên dùng:
+
+
+** Sales Order lifecycle
+
+```
+Sales Order
+│
+├── lifecycle_state
+│     DRAFT / CONFIRMED / PROCESSING / COMPLETED / CANCELLED
+│
+├── fulfillment summary
+│     UNFULFILLED / PARTIALLY_FULFILLED / FULFILLED
+│
+├── payment summary
+│     UNPAID / PARTIALLY_PAID / PAID / ...
+│
+├── Shipments [0..N]
+│     └── delivery_status
+│
+├── COD Reconciliations [0..N]
+│     └── reconciliation_status
+│
+├── Sales Returns [0..N]
+│     └── return lifecycle
+│
+└── External Channel reference
+      └── external_status / status history
+```
+     

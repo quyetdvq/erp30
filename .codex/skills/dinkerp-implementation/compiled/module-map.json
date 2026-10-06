@@ -1,116 +1,120 @@
 {
-    "format": "META-CODEX-003",
-    "source": "CHANGE-ARCH-001 Product/Pricing module convention",
-    "shared_infrastructure": {
-        "P1-IMP-001": "App\\Infrastructure\\Import",
-        "P1-IMP-002": "App\\Infrastructure\\Import",
-        "P1-IMP-003": "App\\Infrastructure\\Import",
-        "P1-IMP-004": "App\\Infrastructure\\Import",
-        "P1-IMP-005": "App\\Infrastructure\\Import",
-        "P1-IMP-006": "App\\Infrastructure\\Import",
-        "P1-IMP-007": "App\\Infrastructure\\Import",
-        "P1-IMP-008": "App\\Infrastructure\\Import"
+  "format": "META-CODEX-003",
+  "source": "CHANGE-ARCH-001 Product/Pricing + DEC-IMP-ARCH-001 Product Import boundary",
+  "shared_infrastructure": {
+    "P1-IMP-001": "App\\Infrastructure\\Import",
+    "P1-IMP-002": "App\\Infrastructure\\Import",
+    "P1-IMP-003": "App\\Infrastructure\\Import",
+    "P1-IMP-004": "App\\Infrastructure\\Import",
+    "P1-IMP-005": "App\\Infrastructure\\Import",
+    "P1-IMP-006": "App\\Infrastructure\\Import",
+    "P1-IMP-007": "App\\Infrastructure\\Import",
+    "P1-IMP-008": "App\\Infrastructure\\Import"
+  },
+  "mappings": {
+    "P1-PRD-001": {
+      "module": "Product",
+      "path": "App\\Modules\\Product\\ProductGroup",
+      "status": "DONE"
     },
-    "mappings": {
-        "P1-PRD-001": {
-            "module": "Product",
-            "path": "App\\Modules\\Product\\ProductGroup",
-            "status": "DONE"
-        },
-        "P1-PRD-002": {
-            "module": "Product",
-            "path": "App\\Modules\\Product\\Uom",
-            "status": "DONE"
-        },
-        "P1-PRD-003": {
-            "module": "Product",
-            "path": "App\\Modules\\Product\\Product",
-            "status": "PLANNED"
-        },
-        "P1-PRD-004": {
-            "module": "Product",
-            "path": "App\\Modules\\Product\\Product",
-            "status": "PLANNED"
-        },
-        "P1-UOM-001": {
-            "module": "Product",
-            "path": "App\\Modules\\Product\\Uom",
-            "status": "PLANNED"
-        },
-        "P1-CMB-001": {
-            "module": "Product",
-            "path": "App\\Modules\\Product\\Combo",
-            "status": "PLANNED"
-        },
-        "P1-CMB-002": {
-            "module": "Product",
-            "path": "App\\Modules\\Product\\Combo",
-            "status": "PLANNED"
-        },
-        "P1-PRC-001": {
-            "module": "Pricing",
-            "path": "App\\Modules\\Pricing\\PriceList",
-            "status": "PLANNED"
-        },
-        "P1-PRC-002": {
-            "module": "Pricing",
-            "path": "App\\Modules\\Pricing\\Resolution",
-            "status": "PLANNED"
-        },
-        "P1-CMB-003": {
-            "module": "Pricing",
-            "path": "App\\Modules\\Pricing\\ComboAllocation",
-            "status": "PLANNED"
-        },
-        "P1-PRD-090": {
-            "module": "CrossModule",
-            "path": "Product/Pricing regression",
-            "status": "PLANNED"
-        },
-        "P1-IMP-001": {
-            "module": "Product",
-            "path": "App\\Modules\\Product\\Import",
-            "status": "DONE"
-        },
-        "P1-IMP-002": {
-            "module": "Product",
-            "path": "App\\Modules\\Product\\Import",
-            "status": "DONE"
-        },
-        "P1-IMP-003": {
-            "module": "Product",
-            "path": "App\\Modules\\Product\\Import",
-            "status": "DONE"
-        },
-        "P1-IMP-004": {
-            "module": "Product",
-            "path": "App\\Modules\\Product\\Import",
-            "status": "DONE"
-        },
-        "P1-IMP-005": {
-            "module": "Product",
-            "path": "App\\Modules\\Product\\Import",
-            "status": "DONE"
-        },
-        "P1-IMP-006": {
-            "module": "Product",
-            "path": "App\\Modules\\Product\\Import",
-            "status": "DONE"
-        },
-        "P1-IMP-007": {
-            "module": "Product",
-            "path": "App\\Modules\\Product\\Import",
-            "status": "DONE"
-        },
-        "P1-IMP-008": {
-            "module": "Product",
-            "path": "App\\Modules\\Product\\Import",
-            "status": "DONE"
-        },
-        "P1-IMP-090": {
-            "module": "Product",
-            "path": "App\\Modules\\Product\\Import",
-            "status": "PLANNED"
-        }
+    "P1-PRD-002": {
+      "module": "Product",
+      "path": "App\\Modules\\Product\\Uom",
+      "status": "DONE"
+    },
+    "P1-PRD-003": {
+      "module": "Product",
+      "path": "App\\Modules\\Product\\Product",
+      "status": "DONE"
+    },
+    "P1-PRD-004": {
+      "module": "Product",
+      "path": "App\\Modules\\Product\\Product",
+      "status": "DONE"
+    },
+    "P1-UOM-001": {
+      "module": "Product",
+      "path": "App\\Modules\\Product\\Uom",
+      "status": "DONE"
+    },
+    "P1-CMB-001": {
+      "module": "Product",
+      "path": "App\\Modules\\Product\\Combo",
+      "status": "DONE"
+    },
+    "P1-CMB-002": {
+      "module": "Product",
+      "path": "App\\Modules\\Product\\Combo",
+      "status": "DONE"
+    },
+    "P1-PRC-001": {
+      "module": "Pricing",
+      "path": "App\\Modules\\Pricing\\PriceList",
+      "status": "DONE"
+    },
+    "P1-PRC-002": {
+      "module": "Pricing",
+      "path": "App\\Modules\\Pricing\\Resolution",
+      "status": "DONE"
+    },
+    "P1-CMB-003": {
+      "module": "Pricing",
+      "path": "App\\Modules\\Pricing\\ComboAllocation",
+      "status": "DONE"
+    },
+    "P1-PRD-090": {
+      "module": "CrossModule",
+      "path": "Product/Pricing regression",
+      "status": "DONE"
+    },
+    "P1-IMP-001": {
+      "module": "Product",
+      "path": "App\\Modules\\Product\\Import",
+      "status": "DONE"
+    },
+    "P1-IMP-002": {
+      "module": "Product",
+      "path": "App\\Modules\\Product\\Import",
+      "status": "DONE"
+    },
+    "P1-IMP-003": {
+      "module": "Product",
+      "path": "App\\Modules\\Product\\Import",
+      "status": "DONE"
+    },
+    "P1-IMP-004": {
+      "module": "Product",
+      "path": "App\\Modules\\Product\\Import",
+      "status": "DONE"
+    },
+    "P1-IMP-005": {
+      "module": "Product",
+      "path": "App\\Modules\\Product\\Import",
+      "status": "DONE"
+    },
+    "P1-IMP-006": {
+      "module": "Product",
+      "path": "App\\Modules\\Product\\Import",
+      "status": "DONE"
+    },
+    "P1-IMP-007": {
+      "module": "Product",
+      "path": "App\\Modules\\Product\\Import",
+      "status": "DONE"
+    },
+    "P1-IMP-008": {
+      "module": "Product",
+      "path": "App\\Modules\\Product\\Import",
+      "status": "DONE"
+    },
+    "P1-IMP-090": {
+      "module": "Product",
+      "path": "App\\Modules\\Product\\Import",
+      "status": "PLANNED"
     }
+  },
+  "decision_ids": [
+    "CHANGE-ARCH-001",
+    "DEC-IMP-ARCH-001"
+  ]
 }

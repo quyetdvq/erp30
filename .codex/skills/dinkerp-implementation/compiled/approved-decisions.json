@@ -3,9 +3,89 @@
   "status": "product_owner_approved",
   "note": "These implementation decisions supplement, and do not replace, upstream architecture authority.",
   "decisions": [
-    {"id":"DEC-WF-001","title":"Workflow code identity","approved_by":"Product Owner","rules":["workflow_states.code is canonical logic identity","workflow_states.name is display data only","bootstrap name equals code"]},
-    {"id":"DEC-SEC-001","title":"Privileged Authorization Group bootstrap","approved_by":"Product Owner","rules":["group code SYSTEM_ADMIN","name System Admin","status ACTIVE","description NULL","explicit approved 92-action snapshot","no automatic future-action grants","membership provision by Shield user ID CLI/deployment","membership only","no runtime bypass"]},
-    {"id":"DEC-ORG-001","title":"Canonical GROUP root bootstrap","approved_by":"Product Owner","rules":["code GROUP_DINKTECH","name Dinktech Group","description Tập đoàn Dinktech","type GROUP","status ACTIVE","parent NULL","company/address/location/effective fields NULL","conflicting existing GROUP root blocks","no Company bootstrap"]},
-    {"id":"DEC-PRD-001","title":"Multi-level Product Group hierarchy","approved_by":"Product Owner before Gate 5","rules":["adjacency-list persistence","nullable parent_id self FK","arbitrary depth","global Product Group code uniqueness","no self-parent or direct/indirect cycle","valid reparenting","no status cascade","effective ACTIVE ancestor path for new Product selection","existing Product references preserved","shared GROUP-level master","hierarchy mutation serialized by product-group-tree","no closure/nested-set/materialized-path/helper table","no Product Company Usage Scope"]}
+    {
+      "id": "DEC-WF-001",
+      "title": "Workflow code identity",
+      "approved_by": "Product Owner",
+      "rules": [
+        "workflow_states.code is canonical logic identity",
+        "workflow_states.name is display data only",
+        "bootstrap name equals code"
+      ]
+    },
+    {
+      "id": "DEC-SEC-001",
+      "title": "Privileged Authorization Group bootstrap",
+      "approved_by": "Product Owner",
+      "rules": [
+        "group code SYSTEM_ADMIN",
+        "name System Admin",
+        "status ACTIVE",
+        "description NULL",
+        "explicit approved 92-action snapshot",
+        "no automatic future-action grants",
+        "membership provision by Shield user ID CLI/deployment",
+        "membership only",
+        "no runtime bypass"
+      ]
+    },
+    {
+      "id": "DEC-ORG-001",
+      "title": "Canonical GROUP root bootstrap",
+      "approved_by": "Product Owner",
+      "rules": [
+        "code GROUP_DINKTECH",
+        "name Dinktech Group",
+        "description Tập đoàn Dinktech",
+        "type GROUP",
+        "status ACTIVE",
+        "parent NULL",
+        "company/address/location/effective fields NULL",
+        "conflicting existing GROUP root blocks",
+        "no Company bootstrap"
+      ]
+    },
+    {
+      "id": "DEC-PRD-001",
+      "title": "Multi-level Product Group hierarchy",
+      "approved_by": "Product Owner before Gate 5",
+      "rules": [
+        "adjacency-list persistence",
+        "nullable parent_id self FK",
+        "arbitrary depth",
+        "global Product Group code uniqueness",
+        "no self-parent or direct/indirect cycle",
+        "valid reparenting",
+        "no status cascade",
+        "effective ACTIVE ancestor path for new Product selection",
+        "existing Product references preserved",
+        "shared GROUP-level master",
+        "hierarchy mutation serialized by product-group-tree",
+        "no closure/nested-set/materialized-path/helper table",
+        "no Product Company Usage Scope"
+      ]
+    },
+    {
+      "id": "CHANGE-ARCH-001",
+      "title": "Product/Pricing modular-monolith ownership",
+      "approved_by": "Product Owner before Gate 5",
+      "rules": [
+        "Product root is App\\Modules\\Product and owns ProductGroup, Uom, Product, Combo structure/flattening, and Product integration boundaries",
+        "Pricing root is App\\Modules\\Pricing and owns PriceList, Resolution, and monetary ComboAllocation",
+        "Pricing may depend on Product; Product must not depend on Pricing",
+        "Do not introduce deeper Application/Domain/Infrastructure layering inside Product/Pricing unless architecture is explicitly reopened"
+      ]
+    },
+    {
+      "id": "DEC-IMP-ARCH-001",
+      "title": "Product Import shared infrastructure boundary",
+      "approved_by": "Product Owner before Gate 6",
+      "rules": [
+        "Generic import mechanics and persistence live in App\\Infrastructure\\Import",
+        "Product-specific import business logic lives in App\\Modules\\Product\\Import",
+        "Product Import may depend on shared Import infrastructure; shared Import infrastructure must not depend on Product or any business module",
+        "Do not create App\\Modules\\Import before a second approved import target establishes real shared business ownership"
+      ]
+    }
   ]
 }

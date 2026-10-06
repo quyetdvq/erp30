@@ -1,34 +1,415 @@
 {
   "format": "META-CODEX-002",
   "rules": [
-    {"id":"CTRL.AUTHORITY_ORDER","text":"Resolve conflicts in UR, FRS, DBD, Contract, Plan, API, UI order; stop on unresolved conflict.","provenance":[{"document":"AGENTS.md","section":"Source of truth"}],"criticality":"CRITICAL"},
-    {"id":"CTRL.FORWARD_ONLY","text":"Migrations are forward-only; never rewrite an applied migration or reset the development schema.","provenance":[{"document":"docs/architecture/02_P1_Database_Design_v1.11.md","section":"§22 Migration order/forward-only"}],"criticality":"CRITICAL"},
-    {"id":"CTRL.BOUNDED_SCOPE","text":"Keep implementation within the declared Task scope and do not change unrelated application layers.","provenance":[{"document":"docs/architecture/04_P1_Implementation_Plan_v1.4.md","section":"§8 backlog and task contract"}],"criticality":"NORMAL"},
-    {"id":"CTRL.IMPACT_GATES","text":"Select validation gates from changed impact layer; unexpected paths escalate instead of being skipped.","provenance":[{"document":"docs/architecture/04_P1_Implementation_Plan_v1.4.md","section":"§20 Quality gates"}],"criticality":"CRITICAL"},
-    {"id":"DB.BIGINT_DECIMAL","text":"Keep BIGINT technical keys and use decimal-safe arithmetic for authoritative money, quantity, conversion, and allocation.","provenance":[{"document":"docs/architecture/02_P1_Database_Design_v1.11.md","section":"Database conventions and numeric types"}],"criticality":"CRITICAL"},
-    {"id":"DB.ATOMIC_INVARIANTS","text":"Repository persistence is primitive; services own invariants and multi-table mutations are atomic.","provenance":[{"document":"docs/architecture/03_P1_Implementation_Contract_v1.6.md","section":"§10 transaction/concurrency"}],"criticality":"CRITICAL"},
-    {"id":"ORG.PARENT_MATRIX","text":"Organization create evaluates at the persisted parent; hierarchy changes preserve canonical parent/context invariants.","provenance":[{"document":"docs/architecture/03_P1_Implementation_Contract_v1.6.md","section":"§5 Evaluation Organization and context matrix"}],"criticality":"CRITICAL"},
-    {"id":"ORG.GROUP_ROOT","text":"The approved GROUP root is GROUP_DINKTECH; conflicting existing GROUP roots block bootstrap.","provenance":[{"document":"AGENTS.md","section":"Organization bootstrap decision"}],"criticality":"CRITICAL"},
-    {"id":"AUTH.PBAC_PRECEDENCE","text":"Per-lane PBAC precedence is ABSOLUTE_DENY, ALLOW, DENY, NO_MATCH; after base permission NO_MATCH allows.","provenance":[{"document":"docs/architecture/03_P1_Implementation_Contract_v1.6.md","section":"§6 PBAC decision precedence"}],"criticality":"CRITICAL"},
-    {"id":"AUTH.EVALUATION_ORG","text":"Evaluation Organization comes from the persisted target/owner or canonical create parent; client context cannot override it.","provenance":[{"document":"docs/architecture/03_P1_Implementation_Contract_v1.6.md","section":"§5 Evaluation Organization"}],"criticality":"CRITICAL"},
-    {"id":"AUTH.NO_BYPASS","text":"Base Permission is required and SYSTEM_ADMIN membership never creates a runtime authorization bypass.","provenance":[{"document":"docs/architecture/03_P1_Implementation_Contract_v1.6.md","section":"§6 authorization and §9 bootstrap"}],"criticality":"CRITICAL"},
-    {"id":"NUM.SERIES_COUNTER","text":"Auto Numbering state belongs in auto_numbering_series and auto_numbering_counters, not resources.","provenance":[{"document":"docs/architecture/02_P1_Database_Design_v1.11.md","section":"§11 Auto Numbering"}],"criticality":"CRITICAL"},
-    {"id":"NUM.TRANSACTION","text":"Number allocation and business create share one transaction and serialization boundary; rolled-back numbers may be reused.","provenance":[{"document":"docs/architecture/03_P1_Implementation_Contract_v1.6.md","section":"§8 numbering and §10 locking"}],"criticality":"CRITICAL"},
-    {"id":"PRD.ROLES","text":"P1 has one Product entity with derived SIMPLE, PARENT, CHILD, and COMBO roles; PARENT is not transactionable.","provenance":[{"document":"docs/architecture/01_P1_Functional_Requirements_Specification_v1.8.md","section":"FRS-P1-PRD-001..006"}],"criticality":"NORMAL"},
-    {"id":"PRD.COMBO_ACYCLIC","text":"Nested COMBO composition is allowed only when acyclic and flattened to SIMPLE/CHILD leaves.","provenance":[{"document":"docs/architecture/03_P1_Implementation_Contract_v1.6.md","section":"§13 COMBO expansion"}],"criticality":"CRITICAL"},
-    {"id":"PRC.FALLBACK","text":"Pricing resolves Product + UOM + Company + effective time, falling back Company list, Group list, then correct-UOM default.","provenance":[{"document":"docs/architecture/03_P1_Implementation_Contract_v1.6.md","section":"§14 Pricing"}],"criticality":"CRITICAL"},
-    {"id":"IMP.PRODUCT_ONLY","text":"The P1 import target is Product only, with CREATE_ONLY, UPDATE_ONLY, and UPSERT modes.","provenance":[{"document":"docs/architecture/01_P1_Functional_Requirements_Specification_v1.8.md","section":"FRS-P1-IMP-001..005"}],"criticality":"CRITICAL"},
-    {"id":"IMP.TWO_GATE","text":"Import requires product.import and each row still requires normal product mutation authorization.","provenance":[{"document":"docs/architecture/03_P1_Implementation_Contract_v1.6.md","section":"§13 Product import authorization"}],"criticality":"CRITICAL"},
-    {"id":"IMP.ROW_ATOMIC","text":"A failed import row leaves no partial business mutation or Auto Number allocation.","provenance":[{"document":"docs/architecture/03_P1_Implementation_Contract_v1.6.md","section":"§13 row transaction"}],"criticality":"CRITICAL"},
-    {"id":"WF.CODE_IDENTITY","text":"workflow_states.code is the canonical workflow identity; name is display data and bootstrap name equals code.","provenance":[{"document":"AGENTS.md","section":"Approved decision DEC-WF-001"}],"criticality":"NORMAL"},
-    {"id":"API.TRANSPORT","text":"Public APIs use /api/v1, snake_case JSON, string BIGINT/DECIMAL values, stable machine errors, and locale headers.","provenance":[{"document":"docs/architecture/05_P1_API_Design_v1.2.md","section":"§§2–5 transport/error/locale"}],"criticality":"CRITICAL"},
-    {"id":"API.LOCALE_INDEPENDENT_ERRORS","text":"Backend human-readable localization uses CodeIgniter Language. Domain/service errors use stable machine codes and are locale-independent. API presentation resolves vi/en messages and Content-Language. Frontend application-controlled text uses vue-i18n.","provenance":[{"document":"docs/architecture/01_P1_Functional_Requirements_Specification_v1.8.md","section":"FRS-P1-GEN-009 Giao diện đa ngôn ngữ và Locale Resolution"},{"document":"docs/architecture/03_P1_Implementation_Contract_v1.6.md","section":"§4.8 Canonical error code convention; §4.9 Language negotiation / localized messages"},{"document":"docs/architecture/06_P1_UI_Design_v1.3.md","section":"Localization and shell conventions"}],"criticality":"CRITICAL"},
-    {"id":"UI.CANONICAL_LOCALE","text":"Vue UI stores canonical keys, uses vi/en vue-i18n with vi fallback, and does not translate business identifiers or enum codes.","provenance":[{"document":"docs/architecture/06_P1_UI_Design_v1.3.md","section":"Localization and shell conventions"}],"criticality":"NORMAL"},
-    {"id":"HARDEN.APP_BOUNDARY","text":"Protected entrypoints flow through an application use case, trusted context, authorization, domain service, and repository; adapters do not bypass the boundary.","provenance":[{"document":"docs/architecture/03_P1_Implementation_Contract_v1.6.md","section":"§15 Repository/service boundary"}],"criticality":"CRITICAL"},
-    {"id":"HARDEN.OPERATION_CONTEXT","text":"One operation captures EvaluationTime once, uses a trusted actor or explicit system actor, and stamps UTC audit fields outside caller payload ownership.","provenance":[{"document":"docs/architecture/03_P1_Implementation_Contract_v1.6.md","section":"§3.1 Evaluation Time; §10 Audit contract"}],"criticality":"CRITICAL"},
-    {"id":"HARDEN.PERSISTENCE_FAILURE","text":"Repository query failure is distinct from a successful query with no row or empty collection and must retain a typed persistence identity.","provenance":[{"document":"docs/architecture/03_P1_Implementation_Contract_v1.6.md","section":"§15.1 Repository"}],"criticality":"CRITICAL"},
-    {"id":"HARDEN.CONCURRENCY","text":"Domain lock timeout/deadlock preserves CONCURRENT_MODIFICATION, uses one session, finite configuration, and never masks an earlier domain exception during release.","provenance":[{"document":"docs/architecture/03_P1_Implementation_Contract_v1.6.md","section":"§§9.2–9.4 DomainLock and deadlock/timeout"}],"criticality":"CRITICAL"},
-    {"id":"HARDEN.ID_NORMALIZATION","text":"Positive technical IDs use one canonical parser/normalizer; is_numeric() is not an accepted ID validator.","provenance":[{"document":"docs/architecture/03_P1_Implementation_Contract_v1.6.md","section":"§4.8 Canonical error code convention"}],"criticality":"NORMAL"},
-    {"id":"PRD.GROUP_HIERARCHY","text":"Product Group uses nullable parent_id adjacency-list at arbitrary depth; hierarchy mutations reject self-parent/cycles, preserve global code uniqueness, and require product-group-tree serialization.","provenance":[{"document":"docs/architecture/02_P1_Database_Design_v1.11.md","section":"§15.2 product_groups"},{"document":"docs/architecture/03_P1_Implementation_Contract_v1.6.md","section":"§9.3 lock matrix"}],"criticality":"CRITICAL"}
+    {
+      "id": "CTRL.AUTHORITY_ORDER",
+      "text": "Resolve conflicts in UR, FRS, DBD, Contract, Plan, API, UI order; stop on unresolved conflict.",
+      "provenance": [
+        {
+          "document": "AGENTS.md",
+          "section": "Source of truth"
+        }
+      ],
+      "criticality": "CRITICAL"
+    },
+    {
+      "id": "CTRL.FORWARD_ONLY",
+      "text": "Migrations are forward-only; never rewrite an applied migration or reset the development schema.",
+      "provenance": [
+        {
+          "document": "docs/architecture/02_P1_Database_Design_v1.11.md",
+          "section": "§22 Migration order/forward-only"
+        }
+      ],
+      "criticality": "CRITICAL"
+    },
+    {
+      "id": "CTRL.BOUNDED_SCOPE",
+      "text": "Keep implementation within the declared Task scope and do not change unrelated application layers.",
+      "provenance": [
+        {
+          "document": "docs/architecture/04_P1_Implementation_Plan_v1.4.md",
+          "section": "§8 backlog and task contract"
+        }
+      ],
+      "criticality": "NORMAL"
+    },
+    {
+      "id": "CTRL.IMPACT_GATES",
+      "text": "Select validation gates from changed impact layer; unexpected paths escalate instead of being skipped.",
+      "provenance": [
+        {
+          "document": "docs/architecture/04_P1_Implementation_Plan_v1.4.md",
+          "section": "§5 Quality gates"
+        }
+      ],
+      "criticality": "CRITICAL"
+    },
+    {
+      "id": "DB.BIGINT_DECIMAL",
+      "text": "Keep BIGINT technical keys and use decimal-safe arithmetic for authoritative money, quantity, conversion, and allocation.",
+      "provenance": [
+        {
+          "document": "docs/architecture/02_P1_Database_Design_v1.11.md",
+          "section": "Database conventions and numeric types"
+        }
+      ],
+      "criticality": "CRITICAL"
+    },
+    {
+      "id": "DB.ATOMIC_INVARIANTS",
+      "text": "Repository persistence is primitive; services own invariants and multi-table mutations are atomic.",
+      "provenance": [
+        {
+          "document": "docs/architecture/03_P1_Implementation_Contract_v1.6.md",
+          "section": "§9 transaction/concurrency and §15 repository/service boundary"
+        }
+      ],
+      "criticality": "CRITICAL"
+    },
+    {
+      "id": "ORG.PARENT_MATRIX",
+      "text": "Organization create evaluates at the persisted parent; hierarchy changes preserve canonical parent/context invariants.",
+      "provenance": [
+        {
+          "document": "docs/architecture/03_P1_Implementation_Contract_v1.6.md",
+          "section": "§3.2 Evaluation Organization Context"
+        }
+      ],
+      "criticality": "CRITICAL"
+    },
+    {
+      "id": "ORG.GROUP_ROOT",
+      "text": "The approved GROUP root is GROUP_DINKTECH; conflicting existing GROUP roots block bootstrap.",
+      "provenance": [
+        {
+          "document": "AGENTS.md",
+          "section": "Organization bootstrap decision"
+        }
+      ],
+      "criticality": "CRITICAL"
+    },
+    {
+      "id": "AUTH.PBAC_PRECEDENCE",
+      "text": "Per-lane PBAC precedence is ABSOLUTE_DENY, ALLOW, DENY, NO_MATCH; after base permission NO_MATCH allows.",
+      "provenance": [
+        {
+          "document": "docs/architecture/03_P1_Implementation_Contract_v1.6.md",
+          "section": "§6 PBAC decision precedence"
+        }
+      ],
+      "criticality": "CRITICAL"
+    },
+    {
+      "id": "AUTH.EVALUATION_ORG",
+      "text": "Evaluation Organization comes from the persisted target/owner or canonical create parent; client context cannot override it.",
+      "provenance": [
+        {
+          "document": "docs/architecture/03_P1_Implementation_Contract_v1.6.md",
+          "section": "§3.2 Evaluation Organization Context"
+        }
+      ],
+      "criticality": "CRITICAL"
+    },
+    {
+      "id": "AUTH.NO_BYPASS",
+      "text": "Base Permission is required and SYSTEM_ADMIN membership never creates a runtime authorization bypass.",
+      "provenance": [
+        {
+          "document": "docs/architecture/03_P1_Implementation_Contract_v1.6.md",
+          "section": "§6 authorization and §19 bootstrap"
+        }
+      ],
+      "criticality": "CRITICAL"
+    },
+    {
+      "id": "NUM.SERIES_COUNTER",
+      "text": "Auto Numbering state belongs in auto_numbering_series and auto_numbering_counters, not resources.",
+      "provenance": [
+        {
+          "document": "docs/architecture/02_P1_Database_Design_v1.11.md",
+          "section": "§11.5 Auto Numbering"
+        }
+      ],
+      "criticality": "CRITICAL"
+    },
+    {
+      "id": "NUM.TRANSACTION",
+      "text": "Number allocation and business create share one transaction and serialization boundary; rolled-back numbers may be reused.",
+      "provenance": [
+        {
+          "document": "docs/architecture/03_P1_Implementation_Contract_v1.6.md",
+          "section": "§8 numbering and §9 transaction/locking"
+        }
+      ],
+      "criticality": "CRITICAL"
+    },
+    {
+      "id": "PRD.ROLES",
+      "text": "P1 has one Product entity with derived SIMPLE, PARENT, CHILD, and COMBO roles; PARENT is not transactionable.",
+      "provenance": [
+        {
+          "document": "docs/architecture/01_P1_Functional_Requirements_Specification_v1.8.md",
+          "section": "FRS-P1-PRD-001..006"
+        }
+      ],
+      "criticality": "NORMAL"
+    },
+    {
+      "id": "PRD.COMBO_ACYCLIC",
+      "text": "Nested COMBO composition is allowed only when acyclic and flattened to SIMPLE/CHILD leaves.",
+      "provenance": [
+        {
+          "document": "docs/architecture/02_P1_Database_Design_v1.11.md",
+          "section": "§15.6 product_combo_items"
+        }
+      ],
+      "criticality": "CRITICAL"
+    },
+    {
+      "id": "PRC.FALLBACK",
+      "text": "Pricing resolves Product + UOM + Company + effective time, falling back Company list, Group list, then correct-UOM default.",
+      "provenance": [
+        {
+          "document": "docs/architecture/03_P1_Implementation_Contract_v1.6.md",
+          "section": "§14 Pricing"
+        }
+      ],
+      "criticality": "CRITICAL"
+    },
+    {
+      "id": "IMP.PRODUCT_ONLY",
+      "text": "The P1 import target is Product only, with CREATE_ONLY, UPDATE_ONLY, and UPSERT modes.",
+      "provenance": [
+        {
+          "document": "docs/architecture/01_P1_Functional_Requirements_Specification_v1.8.md",
+          "section": "FRS-P1-IMP-001..005"
+        }
+      ],
+      "criticality": "CRITICAL"
+    },
+    {
+      "id": "IMP.TWO_GATE",
+      "text": "Import requires product.import and each row still requires normal product mutation authorization.",
+      "provenance": [
+        {
+          "document": "docs/architecture/03_P1_Implementation_Contract_v1.6.md",
+          "section": "§12 Import authorization"
+        }
+      ],
+      "criticality": "CRITICAL"
+    },
+    {
+      "id": "IMP.ROW_ATOMIC",
+      "text": "A failed import row leaves no partial business mutation or Auto Number allocation.",
+      "provenance": [
+        {
+          "document": "docs/architecture/03_P1_Implementation_Contract_v1.6.md",
+          "section": "§11.8 Row transaction"
+        }
+      ],
+      "criticality": "CRITICAL"
+    },
+    {
+      "id": "WF.CODE_IDENTITY",
+      "text": "workflow_states.code is the canonical workflow identity; name is display data and bootstrap name equals code.",
+      "provenance": [
+        {
+          "document": "AGENTS.md",
+          "section": "Approved decision DEC-WF-001"
+        }
+      ],
+      "criticality": "NORMAL"
+    },
+    {
+      "id": "API.TRANSPORT",
+      "text": "Public APIs use /api/v1, snake_case JSON, string BIGINT/DECIMAL values, stable machine errors, and locale headers.",
+      "provenance": [
+        {
+          "document": "docs/architecture/05_P1_API_Design_v1.2.md",
+          "section": "§§3–6 common transport/query/mutation/auth"
+        },
+        {
+          "document": "docs/architecture/03_P1_Implementation_Contract_v1.6.md",
+          "section": "§4 API transport contract"
+        }
+      ],
+      "criticality": "CRITICAL"
+    },
+    {
+      "id": "API.LOCALE_INDEPENDENT_ERRORS",
+      "text": "Backend human-readable localization uses CodeIgniter Language. Domain/service errors use stable machine codes and are locale-independent. API presentation resolves vi/en messages and Content-Language. Frontend application-controlled text uses vue-i18n.",
+      "provenance": [
+        {
+          "document": "docs/architecture/01_P1_Functional_Requirements_Specification_v1.8.md",
+          "section": "FRS-P1-GEN-009 Giao diện đa ngôn ngữ và Locale Resolution"
+        },
+        {
+          "document": "docs/architecture/03_P1_Implementation_Contract_v1.6.md",
+          "section": "§4.8 Canonical error code convention; §4.9 Language negotiation / localized messages"
+        },
+        {
+          "document": "docs/architecture/06_P1_UI_Design_v1.3.md",
+          "section": "Localization and shell conventions"
+        }
+      ],
+      "criticality": "CRITICAL"
+    },
+    {
+      "id": "UI.CANONICAL_LOCALE",
+      "text": "Vue UI stores canonical keys, uses vi/en vue-i18n with vi fallback, and does not translate business identifiers or enum codes.",
+      "provenance": [
+        {
+          "document": "docs/architecture/06_P1_UI_Design_v1.3.md",
+          "section": "Localization and shell conventions"
+        }
+      ],
+      "criticality": "NORMAL"
+    },
+    {
+      "id": "HARDEN.APP_BOUNDARY",
+      "text": "Protected entrypoints flow through an application use case, trusted context, authorization, domain service, and repository; adapters do not bypass the boundary.",
+      "provenance": [
+        {
+          "document": "docs/architecture/03_P1_Implementation_Contract_v1.6.md",
+          "section": "§15 Repository/service boundary"
+        }
+      ],
+      "criticality": "CRITICAL"
+    },
+    {
+      "id": "HARDEN.OPERATION_CONTEXT",
+      "text": "One operation captures EvaluationTime once, uses a trusted actor or explicit system actor, and stamps UTC audit fields outside caller payload ownership.",
+      "provenance": [
+        {
+          "document": "docs/architecture/03_P1_Implementation_Contract_v1.6.md",
+          "section": "§3.1 Evaluation Time; §10 Audit contract"
+        }
+      ],
+      "criticality": "CRITICAL"
+    },
+    {
+      "id": "HARDEN.PERSISTENCE_FAILURE",
+      "text": "Repository query failure is distinct from a successful query with no row or empty collection and must retain a typed persistence identity.",
+      "provenance": [
+        {
+          "document": "docs/architecture/03_P1_Implementation_Contract_v1.6.md",
+          "section": "§15.1 Repository"
+        }
+      ],
+      "criticality": "CRITICAL"
+    },
+    {
+      "id": "HARDEN.CONCURRENCY",
+      "text": "Domain lock timeout/deadlock preserves CONCURRENT_MODIFICATION, uses one session, finite configuration, and never masks an earlier domain exception during release.",
+      "provenance": [
+        {
+          "document": "docs/architecture/03_P1_Implementation_Contract_v1.6.md",
+          "section": "§§9.2–9.4 DomainLock and deadlock/timeout"
+        }
+      ],
+      "criticality": "CRITICAL"
+    },
+    {
+      "id": "HARDEN.ID_NORMALIZATION",
+      "text": "Positive technical IDs use one canonical parser/normalizer; is_numeric() is not an accepted ID validator.",
+      "provenance": [
+        {
+          "document": "docs/architecture/03_P1_Implementation_Contract_v1.6.md",
+          "section": "§4.8 Canonical error code convention"
+        }
+      ],
+      "criticality": "NORMAL"
+    },
+    {
+      "id": "PRD.GROUP_HIERARCHY",
+      "text": "Product Group uses nullable parent_id adjacency-list at arbitrary depth; hierarchy mutations reject self-parent/cycles, preserve global code uniqueness, and require product-group-tree serialization.",
+      "provenance": [
+        {
+          "document": "docs/architecture/02_P1_Database_Design_v1.11.md",
+          "section": "§15.2 product_groups"
+        },
+        {
+          "document": "docs/architecture/03_P1_Implementation_Contract_v1.6.md",
+          "section": "§9.3 lock matrix"
+        }
+      ],
+      "criticality": "CRITICAL"
+    },
+    {
+      "id": "IMP.RESULT_RECONCILE",
+      "text": "Import row results preserve original row_number; job counts are derived from persisted SUCCESS/ERROR/SKIPPED rows under import_jobs FOR UPDATE, and generated Product code is the successful row entity_key.",
+      "provenance": [
+        {
+          "document": "docs/architecture/01_P1_Functional_Requirements_Specification_v1.8.md",
+          "section": "FRS-P1-IMP-001..002 and §26.11"
+        },
+        {
+          "document": "docs/architecture/02_P1_Database_Design_v1.11.md",
+          "section": "§§17.1–17.2 Import"
+        },
+        {
+          "document": "docs/architecture/03_P1_Implementation_Contract_v1.6.md",
+          "section": "§9.3 lock matrix and §18.6 mandatory import tests"
+        }
+      ],
+      "criticality": "CRITICAL"
+    },
+    {
+      "id": "API.CONTRACT_STATUS",
+      "text": "Implement only CONTRACT_READY public surfaces; CONTRACT_PENDING or source-open fields/actions remain blocked/out-of-scope and must not be guessed.",
+      "provenance": [
+        {
+          "document": "docs/architecture/05_P1_API_Design_v1.2.md",
+          "section": "§§2.1–2.3 governance, §17 promotion, §18 pending items"
+        }
+      ],
+      "criticality": "CRITICAL"
+    },
+    {
+      "id": "API.OPENAPI_SYNC",
+      "text": "Every public API contract change updates repository OpenAPI in the same task, passes Redocly lint, regenerates typed frontend artifacts, and never hand-edits generated output.",
+      "provenance": [
+        {
+          "document": "docs/architecture/05_P1_API_Design_v1.2.md",
+          "section": "§2.2 change rule and §15 OpenAPI structure"
+        },
+        {
+          "document": "docs/architecture/04_P1_Implementation_Plan_v1.4.md",
+          "section": "§4.3 API-first convention and P1-API-002"
+        }
+      ],
+      "criticality": "CRITICAL"
+    },
+    {
+      "id": "API.LIST_SCOPE",
+      "text": "List/query fields are allowlisted, authorization/data scope is applied before total/count, and deterministic ordering uses the canonical tie-breaker.",
+      "provenance": [
+        {
+          "document": "docs/architecture/05_P1_API_Design_v1.2.md",
+          "section": "§4 Common list/query contract"
+        },
+        {
+          "document": "docs/architecture/03_P1_Implementation_Contract_v1.6.md",
+          "section": "§5 List/search/filter/sort/pagination"
+        }
+      ],
+      "criticality": "CRITICAL"
+    },
+    {
+      "id": "PRC.COMBO_ALLOCATION",
+      "text": "COMBO allocation resolves each root price once, ignores nested COMBO price, weights leaves by quantity times Base-UOM products.price, rejects nonpositive total weight, and conserves rounded root amount with deterministic residual/aggregation.",
+      "provenance": [
+        {
+          "document": "docs/architecture/01_P1_Functional_Requirements_Specification_v1.8.md",
+          "section": "§26.9 COMBO Allocation"
+        },
+        {
+          "document": "docs/architecture/04_P1_Implementation_Plan_v1.4.md",
+          "section": "P1-CMB-003"
+        }
+      ],
+      "criticality": "CRITICAL"
+    }
   ]
 }

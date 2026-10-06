@@ -61,9 +61,12 @@ applicable. Static checks alone are insufficient.
 
 ## `api`
 
-Run focused API/integration/contract tests, error/status/serialization and
-locale checks, `npm run openapi:lint`, and regenerate typed frontend artifacts
-when the OpenAPI source changes.
+Run focused API/integration/contract tests, error/status/serialization,
+authorization-context, visibility, collection-total, and locale checks. Run the
+architecture/context guards. For public contract changes, update OpenAPI in the
+same task, run `npm run openapi:lint`, regenerate typed frontend artifacts, and
+run the generated-client drift/smoke check. Never implement a `CONTRACT_PENDING`
+surface merely to make a gate pass.
 
 ## `frontend`
 

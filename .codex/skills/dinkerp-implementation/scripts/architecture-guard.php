@@ -11,6 +11,21 @@ if ($root === false) {
 
 $violations = [];
 $checked = [];
+
+/** @return iterable<SplFileInfo> */
+function phpFiles(string $rootPath): iterable
+{
+    if (!is_dir($rootPath)) {
+        return [];
+    }
+    return new RecursiveIteratorIterator(new RecursiveDirectoryIterator($rootPath));
+}
+
+function hasRepositoryImport(string $contents): bool
+{
+    return preg_match('~^use\s+App\\\\[^;\r\n]*Repository\s*;~m', $contents) === 1;
+}
+
 $scanRoots = [
     $root . DIRECTORY_SEPARATOR . 'backend' . DIRECTORY_SEPARATOR . 'app' . DIRECTORY_SEPARATOR . 'Services',
     $root . DIRECTORY_SEPARATOR . 'backend' . DIRECTORY_SEPARATOR . 'app' . DIRECTORY_SEPARATOR . 'Authorization',
@@ -19,12 +34,8 @@ $scanRoots = [
 ];
 
 foreach ($scanRoots as $scanRoot) {
-    if (!is_dir($scanRoot)) {
-        continue;
-    }
-    $iterator = new RecursiveIteratorIterator(new RecursiveDirectoryIterator($scanRoot));
-    foreach ($iterator as $file) {
-        if (!$file->isFile() || $file->getExtension() !== 'php') {
+    foreach (phpFiles($scanRoot) as $file) {
+        if (!$file instanceof SplFileInfo || !$file->isFile() || $file->getExtension() !== 'php') {
             continue;
         }
         $path = $file->getPathname();
@@ -45,12 +56,10 @@ foreach ($scanRoots as $scanRoot) {
                 $violations[] = "{$relative}:{$line}: {$label}";
             }
         }
-        if (str_contains($relative, 'backend' . DIRECTORY_SEPARATOR . 'app' . DIRECTORY_SEPARATOR . 'Services')) {
-            foreach (['/->table\s*\(/', '/->query\s*\(/'] as $pattern) {
-                if (preg_match($pattern, $contents, $match, PREG_OFFSET_CAPTURE) === 1) {
-                    $line = substr_count(substr($contents, 0, (int) $match[0][1]), "\n") + 1;
-                    $violations[] = "{$relative}:{$line}: direct database query in service";
-                }
+        foreach (['/->table\s*\(/', '/->query\s*\(/'] as $pattern) {
+            if (preg_match($pattern, $contents, $match, PREG_OFFSET_CAPTURE) === 1) {
+                $line = substr_count(substr($contents, 0, (int) $match[0][1]), "\n") + 1;
+                $violations[] = "{$relative}:{$line}: direct database query in service/resolver";
             }
         }
     }
@@ -76,70 +85,79 @@ foreach ($flatProductPatterns as $pattern) {
 }
 
 $moduleProductRoot = $root . DIRECTORY_SEPARATOR . 'backend' . DIRECTORY_SEPARATOR . 'app' . DIRECTORY_SEPARATOR . 'Modules' . DIRECTORY_SEPARATOR . 'Product';
-if (is_dir($moduleProductRoot)) {
-    $iterator = new RecursiveIteratorIterator(new RecursiveDirectoryIterator($moduleProductRoot));
-    foreach ($iterator as $file) {
-        if (! $file->isFile() || $file->getExtension() !== 'php') {
-            continue;
-        }
-        $relative = str_replace($root . DIRECTORY_SEPARATOR, '', $file->getPathname());
-        $contents = (string) file_get_contents($file->getPathname());
-        if (preg_match('/use\s+App\\\\Modules\\\\Pricing\\\\/m', $contents) === 1) {
-            $violations[] = "{$relative}: Product module imports Pricing module";
-        }
+foreach (phpFiles($moduleProductRoot) as $file) {
+    if (!$file instanceof SplFileInfo || !$file->isFile() || $file->getExtension() !== 'php') {
+        continue;
+    }
+    $relative = str_replace($root . DIRECTORY_SEPARATOR, '', $file->getPathname());
+    $contents = (string) file_get_contents($file->getPathname());
+    if (preg_match('/use\s+App\\\\Modules\\\\Pricing\\\\/m', $contents) === 1) {
+        $violations[] = "{$relative}: Product module imports Pricing module";
     }
 }
 
 $modulePricingRoot = $root . DIRECTORY_SEPARATOR . 'backend' . DIRECTORY_SEPARATOR . 'app' . DIRECTORY_SEPARATOR . 'Modules' . DIRECTORY_SEPARATOR . 'Pricing';
-if (is_dir($modulePricingRoot)) {
-    $iterator = new RecursiveIteratorIterator(new RecursiveDirectoryIterator($modulePricingRoot));
-    foreach ($iterator as $file) {
-        if (! $file->isFile() || $file->getExtension() !== 'php') {
-            continue;
-        }
-        $relative = str_replace($root . DIRECTORY_SEPARATOR, '', $file->getPathname());
-        $contents = (string) file_get_contents($file->getPathname());
-        if (preg_match('/use\s+App\\\\Modules\\\\Product\\\\[^;]*Repository/m', $contents) === 1) {
-            $violations[] = "{$relative}: Pricing module imports a concrete Product repository";
-        }
-    }
-}
-
-$controllerRoot = $root . DIRECTORY_SEPARATOR . 'backend' . DIRECTORY_SEPARATOR . 'app' . DIRECTORY_SEPARATOR . 'Controllers';
-if (is_dir($controllerRoot)) {
-    $iterator = new RecursiveIteratorIterator(new RecursiveDirectoryIterator($controllerRoot));
-    foreach ($iterator as $file) {
-        if (!$file->isFile() || $file->getExtension() !== 'php') {
-            continue;
-        }
-        $relative = str_replace($root . DIRECTORY_SEPARATOR, '', $file->getPathname());
-        $contents = (string) file_get_contents($file->getPathname());
-        if (preg_match('~^use\s+App\\\\Repositories\\\\~m', $contents) === 1) {
-            $violations[] = "{$relative}: controller imports a repository directly";
-        }
-    }
-}
-
-$publicAdapterRoots = ['Commands', 'Filters', 'Adapters', 'Import'];
-foreach ($publicAdapterRoots as $adapterRoot) {
-    $rootPath = $root . DIRECTORY_SEPARATOR . 'backend' . DIRECTORY_SEPARATOR . 'app' . DIRECTORY_SEPARATOR . $adapterRoot;
-    if (!is_dir($rootPath)) {
+foreach (phpFiles($modulePricingRoot) as $file) {
+    if (!$file instanceof SplFileInfo || !$file->isFile() || $file->getExtension() !== 'php') {
         continue;
     }
-    $iterator = new RecursiveIteratorIterator(new RecursiveDirectoryIterator($rootPath));
-    foreach ($iterator as $file) {
-        if (!$file->isFile() || $file->getExtension() !== 'php') {
+    $relative = str_replace($root . DIRECTORY_SEPARATOR, '', $file->getPathname());
+    $contents = (string) file_get_contents($file->getPathname());
+    if (preg_match('/use\s+App\\\\Modules\\\\Product\\\\[^;]*Repository/m', $contents) === 1) {
+        $violations[] = "{$relative}: Pricing module imports a concrete Product repository";
+    }
+}
+
+$sharedImportRoot = $root . DIRECTORY_SEPARATOR . 'backend' . DIRECTORY_SEPARATOR . 'app' . DIRECTORY_SEPARATOR . 'Infrastructure' . DIRECTORY_SEPARATOR . 'Import';
+foreach (phpFiles($sharedImportRoot) as $file) {
+    if (!$file instanceof SplFileInfo || !$file->isFile() || $file->getExtension() !== 'php') {
+        continue;
+    }
+    $relative = str_replace($root . DIRECTORY_SEPARATOR, '', $file->getPathname());
+    $contents = (string) file_get_contents($file->getPathname());
+    if (preg_match('/use\s+App\\\\Modules\\\\/m', $contents) === 1) {
+        $violations[] = "{$relative}: shared Import infrastructure imports a business module";
+    }
+}
+
+$forbiddenTopLevelImportModule = $root . DIRECTORY_SEPARATOR . 'backend' . DIRECTORY_SEPARATOR . 'app' . DIRECTORY_SEPARATOR . 'Modules' . DIRECTORY_SEPARATOR . 'Import';
+if (is_dir($forbiddenTopLevelImportModule)) {
+    $violations[] = 'backend/app/Modules/Import: forbidden top-level Import business module';
+}
+
+$backendAppRoot = $root . DIRECTORY_SEPARATOR . 'backend' . DIRECTORY_SEPARATOR . 'app';
+foreach (phpFiles($backendAppRoot) as $file) {
+    if (!$file instanceof SplFileInfo || !$file->isFile() || $file->getExtension() !== 'php') {
+        continue;
+    }
+    $relative = str_replace($root . DIRECTORY_SEPARATOR, '', $file->getPathname());
+    $normalized = str_replace('\\', '/', $relative);
+    $isController = str_contains($normalized, '/Controllers/') || str_ends_with($normalized, 'Controller.php');
+    if (!$isController) {
+        continue;
+    }
+    $contents = (string) file_get_contents($file->getPathname());
+    if (hasRepositoryImport($contents)) {
+        $violations[] = "{$relative}: controller imports a repository directly";
+    }
+}
+
+$publicAdapterRoots = ['Commands', 'Filters', 'Adapters'];
+foreach ($publicAdapterRoots as $adapterRoot) {
+    $rootPath = $backendAppRoot . DIRECTORY_SEPARATOR . $adapterRoot;
+    foreach (phpFiles($rootPath) as $file) {
+        if (!$file instanceof SplFileInfo || !$file->isFile() || $file->getExtension() !== 'php') {
             continue;
         }
         $relative = str_replace($root . DIRECTORY_SEPARATOR, '', $file->getPathname());
         $contents = (string) file_get_contents($file->getPathname());
-        if (preg_match('~^use\s+App\\\\Repositories\\\\~m', $contents) === 1) {
+        if (hasRepositoryImport($contents)) {
             $violations[] = "{$relative}: public adapter imports a repository directly";
         }
     }
 }
 
-$serviceRoot = $root . DIRECTORY_SEPARATOR . 'backend' . DIRECTORY_SEPARATOR . 'app' . DIRECTORY_SEPARATOR . 'Services';
+$serviceRoot = $backendAppRoot . DIRECTORY_SEPARATOR . 'Services';
 $localeKeys = ['vi' => [], 'en' => []];
 foreach (glob($serviceRoot . DIRECTORY_SEPARATOR . '*.php') ?: [] as $servicePath) {
     $contents = (string) file_get_contents($servicePath);
@@ -148,10 +166,10 @@ foreach (glob($serviceRoot . DIRECTORY_SEPARATOR . '*.php') ?: [] as $servicePat
     }
     $language = preg_replace('/Service$/', '', $classMatch[1]) ?: $classMatch[1];
     foreach (['vi', 'en'] as $locale) {
-        $languagePath = $root . DIRECTORY_SEPARATOR . 'backend' . DIRECTORY_SEPARATOR . 'app' . DIRECTORY_SEPARATOR . 'Language' . DIRECTORY_SEPARATOR . $locale . DIRECTORY_SEPARATOR . $language . '.php';
+        $languagePath = $backendAppRoot . DIRECTORY_SEPARATOR . 'Language' . DIRECTORY_SEPARATOR . $locale . DIRECTORY_SEPARATOR . $language . '.php';
         $keys = [];
         if (is_file($languagePath)) {
-            preg_match_all("/'([A-Z][A-Z0-9_]+)'\s*=>/", (string) file_get_contents($languagePath), $matches);
+            preg_match_all("/'([A-Z][A-Z0-9_]+)'\\s*=>/", (string) file_get_contents($languagePath), $matches);
             $keys = $matches[1] ?? [];
             if (count($keys) !== count(array_unique($keys))) {
                 $violations[] = "{$languagePath}: duplicate translation keys";
