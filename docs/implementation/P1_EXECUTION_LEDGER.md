@@ -4,9 +4,9 @@ This ledger is lightweight operational evidence. It is not architecture
 authority and does not replace UR, FRS, DBD, the Implementation Contract, the
 Implementation Plan, API Design, or UI Design.
 
-As of the P1-PRD-002 task validation, the registry contains exactly 100 P1 tasks.
-Repository evidence verifies 51 completed tasks: Gate 0 is 10/10, Gate 1 is
-14/14, Gate 2 is 8/8, Gate 3 is 10/10, Gate 4 is 7/7, and Gate 5 is 2/11.
+As of the P1-PRD-003 task validation, the registry contains exactly 100 P1 tasks.
+Repository evidence verifies 52 completed tasks: Gate 0 is 10/10, Gate 1 is
+14/14, Gate 2 is 8/8, Gate 3 is 10/10, Gate 4 is 7/7, and Gate 5 is 3/11.
 The previously supplied 28/100 and 4/8 checkpoint is stale: the accepted
 `c4049f0` P1-ORG-002 commit is present in current history.
 No task is downgraded to force that stale count.
@@ -15,13 +15,13 @@ No task is downgraded to force that stale count.
 
 | Measure | Progress |
 |---|---:|
-| P1 tasks DONE | 51/100 |
+| P1 tasks DONE | 52/100 |
 | Gate 0 | 10/10 DONE |
 | Gate 1 | 14/14 DONE |
 | Gate 2 | 8/8 DONE |
 | Gate 3 | 10/10 DONE |
 | Gate 4 | 7/7 DONE |
-| Gate 5 | 2/11 DONE |
+| Gate 5 | 3/11 DONE |
 | Gate 6 | 0/9 DONE |
 | Gate 7 | 0/10 DONE |
 | Gate 8 | 0/12 DONE |
@@ -82,7 +82,7 @@ No task is downgraded to force that stale count.
 | P1-NUM-090 | DONE | a35adda | high-risk | Mandatory Gate 4 Auto Numbering regression/concurrency suite and parser executable-expression regression correction. Evidence: `docs/implementation/evidence/P1-NUM-090/01_auto_numbering_mandatory_regression_assessment.md`. |
 | P1-PRD-001 | DONE | 0b4ed9b | service-standard | ProductGroup repository/service: arbitrary-depth adjacency-list hierarchy, GROUP authorization, effective-active selection, trusted audit, DomainLock transaction, and real reciprocal-reparent regression. Evidence: `docs/implementation/evidence/P1-PRD-001/01_product_group_hierarchy_assessment.md`. |
 | P1-PRD-002 | DONE | aa630fd | service-standard | Product UOM shared master repository/service under `App\\Modules\\Product\\Uom`; GROUP authorization, trusted audit, setstate, active-reference boundary, and focused regression evidence. |
-| P1-PRD-003 | NOT_STARTED | — | high-risk | No accepted implementation evidence. |
+| P1-PRD-003 | DONE | 561ee15 | high-risk | ProductRepository/master mutation service, atomic SIMPLE-to-PARENT conversion, numbering integration, dependency probes, and real same-root concurrency evidence. |
 | P1-PRD-004 | NOT_STARTED | — | high-risk | No accepted implementation evidence. |
 | P1-UOM-001 | NOT_STARTED | — | high-risk | No accepted implementation evidence. |
 | P1-PRC-001 | NOT_STARTED | — | service-standard | No accepted implementation evidence. |

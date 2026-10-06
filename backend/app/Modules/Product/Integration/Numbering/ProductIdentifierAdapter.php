@@ -78,6 +78,9 @@ final class ProductIdentifierAdapter implements ResourceIdentifierAdapter
             if ($current instanceof ProductIdentifierUniqueViolation) {
                 return true;
             }
+            if ($current instanceof DomainException && $current->getErrorCode() === 'PRODUCT_DUPLICATE_CODE') {
+                return true;
+            }
             if (! $current instanceof DatabaseException && ! $current instanceof PersistenceException) {
                 continue;
             }
