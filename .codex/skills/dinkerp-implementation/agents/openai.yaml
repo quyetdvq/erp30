@@ -1,3 +1,3 @@
 interface:
   display_name: "DinkERP Implementation"
-  short_description: "Implement and review DinkERP P1 tasks from the project baselines."
+  short_description: "Implement, review, and hand off DinkERP P1 tasks from bounded authority context."

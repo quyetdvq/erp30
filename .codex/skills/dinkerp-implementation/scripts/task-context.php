@@ -182,6 +182,9 @@ foreach ($selected as $task) {
     $lines[] = sprintf('  Forbidden scope: %s', implode(', ', $task['forbidden_scope'] ?? []));
     $lines[] = sprintf('  Direct source verification: %s', implode('; ', $direct) ?: 'NONE');
     $lines[] = sprintf('  Expected output: %s', $task['expected_output']);
+    if (count($task['execution_notes'] ?? []) > 0) {
+        $lines[] = sprintf('  Execution notes: %s', implode('; ', $task['execution_notes']));
+    }
     if (isset($moduleMap[$task['id']])) {
         $mapping = $moduleMap[$task['id']];
         $lines[] = sprintf('  Module mapping: %s -> %s (%s)', $mapping['module'], $mapping['path'], $mapping['status']);

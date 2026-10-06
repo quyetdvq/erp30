@@ -32,8 +32,10 @@ Validate authority links, headings, scope, spelling/format, and
 ## `db-migration`
 
 Run targeted schema/integrity tests, one fresh rehearsal, one real forward
-rehearsal, and `git diff --check`. Do not run the entire regression suite for
-each migration task. At DB batch end, run full fresh migration, sequential
+rehearsal, and `git diff --check`. Any destructive fresh/reset rehearsal must
+first assert environment `testing` and connected database exactly `erp_test`;
+never run it against `erp`. Do not run the entire regression suite for each
+migration task. At DB batch end, run full fresh migration, sequential
 forward verification, full PHPUnit, PHPStan level 8, and migration
 isolation/inventory checks.
 

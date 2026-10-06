@@ -28,6 +28,16 @@ Default batch sizes: LOW 3–5, MEDIUM 2–3, HIGH 1. Batch only independent dep
 
 For a batch, execute tasks in registry/dependency order. Stop on the first failure, blocker, unexpected worktree change, cache conflict, or authority conflict. A failed task does not authorize moving to dependents.
 
+## Database safety
+
+- Never run destructive migration/reset/refresh operations against the development database `erp`.
+- Before any destructive fresh/reset test, assert the runtime environment is `testing` and the connected database name is exactly `erp_test`; otherwise abort.
+- Forward rehearsal uses a controlled pre-change test state and forward migrations; do not use destructive refresh as a substitute for forward verification.
+
+## Compact Codex prompt handoff
+
+When the user asks for a Codex prompt rather than direct execution, resolve the task through `task-context.php` first, then emit a short handoff instead of restating the baselines. Include only: Task ID/objective, start/preflight command, 2–6 task-specific non-obvious deltas from resolved rules/decisions, required validation profile, commit condition, and closure-report request. Omit global rules already enforced by this skill. Default target: <= 220 words unless the user asks for a detailed handoff. See `references/compact-prompts.md`.
+
 ## Git isolation
 
 At task start, run `git status --short` and record pre-existing paths. One Task ID produces at most one completion commit containing only that task's files. Stage paths explicitly; never use `git add .` or `git add -A`. Run `git diff --check` before a DONE commit.

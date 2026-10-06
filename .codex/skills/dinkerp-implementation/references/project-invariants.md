@@ -31,15 +31,16 @@ Consult the current project docs for complete wording. These are compact guardra
 - No Resource Instance Authorization in P1.
 - Authorization Group `GROUP` participant is not Organization type `GROUP`.
 
-## Evaluation Organization
+## Resource Domain / Evaluation Organization
 
-- Existing target: derive authoritative context from persisted target/owner.
-- Create: derive from canonical owner/parent/scope.
-- Primary Assignment supplies default context only when no authoritative target context exists.
+- Resolve persisted Resource metadata/domain before authorization context. Canonical domains are only `SYSTEM`, `MASTER`, `ORGANIZATION`; `COMPANY` is not a Resource Domain.
+- `resources.domain` is required security metadata; canonical existing Resource domain is immutable in normal P1 runtime.
+- `SYSTEM` and `MASTER` always evaluate at Organization `GROUP`.
+- `ORGANIZATION` must resolve through the explicit registered resolver for that Resource using persisted target/owner or canonical create owner/parent/scope. Missing resolver/context fails closed.
+- Primary Assignment may supply Default Actor Organization Context only for a use-case explicitly allowing default business context; it never completes or overrides Resource authorization scope.
 - `organization.create`: evaluate at Parent Organization.
-- Employee Assignment mutation: evaluate at Assignment Organization.
-- Group-level shared/admin resources may evaluate directly at Organization `GROUP`.
-- Client context is a hint/selector only; mismatch with authoritative context is rejected.
+- Employee Assignment create: request `organization_id`; existing target: persisted Assignment `organization_id`; list: each persisted row context.
+- Client context/filter is a hint/selector only; it never widens or overrides authoritative context.
 - Company summary authorization never substitutes for concrete Organization authorization.
 
 ## Employee assignments
@@ -48,6 +49,17 @@ Consult the current project docs for complete wording. These are compact guardra
 - GROUP assignment can flow to descendants.
 - Sibling/other-Company assignment cannot bleed into the current path.
 - Primary Assignment is not the only authorization lane.
+
+
+## Employee Structure / P1-API-020
+
+- Department, Position, and Employee are Group-shared `MASTER` Resources; their protected API operations evaluate at `GROUP`.
+- Department owns its own hierarchy only: no Organization ownership; reject self-parent/direct-or-indirect cycle.
+- Position has no Department/Organization ownership. Department/Position inactive records are not selectable for new Assignment references but historical references remain.
+- Employee Organization/Department/Position relationships exist only through Employee Assignment. Assignment-derived filters/projections never change Employee authorization scope.
+- Employee Assignment is `ORGANIZATION` scoped by `organization_id`; authorization/data-scope filtering occurs before list totals and pagination.
+- Primary Assignment overlap remains transaction/concurrency protected. Secondary Assignments remain valid authorization lanes when eligible.
+- Strict Employee `gender` enum and exact export media type remain source-open/`CONTRACT_PENDING`; do not invent them.
 
 ## Database / transactions / boundaries
 

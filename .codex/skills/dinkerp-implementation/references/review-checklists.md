@@ -34,13 +34,14 @@ Use only the sections relevant to the task.
 ## Authorization
 
 - Correct Resource + Action.
-- Correct authoritative Evaluation Organization source.
+- Resource catalog/domain resolved before context; only `SYSTEM`/`MASTER`/`ORGANIZATION`, with `SYSTEM`/`MASTER -> GROUP`.
+- Correct authoritative Evaluation Organization source; ORGANIZATION resolver fails closed if missing/unresolved.
 - Base Permission checked first; no System Admin bypass.
 - GROUP vs Authorization Group not confused.
 - Exact ancestor path and assignment eligibility tested where relevant.
 - ABSOLUTE_DENY propagation tested.
 - Invisible target 404 / visible-denied 403 tested.
-- Client context cannot override authoritative context.
+- Client context cannot override authoritative context; Primary Assignment is not a generic Resource-scope fallback.
 
 ## API / Gate 7
 
@@ -56,6 +57,9 @@ Use only the sections relevant to the task.
 - OpenAPI source updated in the same public-contract task; Redocly lint passes.
 - Generated frontend client/types regenerated and not hand-edited; drift/smoke check passes.
 - Exact export media type is not invented while contract remains pending.
+- For P1-API-020, Department/Position/Employee stay MASTER/GROUP; Employee Assignment uses request/persisted row `organization_id` according to operation.
+- Employee Organization/Department/Position filters are data filters only; list scope decisions happen before total/pagination.
+- Strict Employee gender enum is not invented while DEC-P1-001 remains open.
 
 ## UI
 

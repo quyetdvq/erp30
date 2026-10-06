@@ -5,8 +5,26 @@ description: Implement, review, or plan DinkERP P1 work from Task IDs, gate work
 
 # DinkERP Implementation Control Plane
 
-Use this skill for one approved DinkERP task, bounded batch, review, or planning
-outcome. `AGENTS.md` remains the governing repository instruction.
+Use this skill for one approved DinkERP task, bounded batch, review, planning
+outcome, or concise Codex handoff. `AGENTS.md` remains the governing repository
+instruction.
+
+## Mode selection
+
+- **Execute / review**: follow the Execution flow below.
+- **Write a Codex prompt**: use Compact Prompt Mode; do not paste a second copy of the architecture baseline.
+- **Audit a Codex closure report**: verify evidence against task context, required gates, Git isolation, and unresolved blockers before accepting DONE/COMPLETE.
+
+## Compact Prompt Mode
+
+1. Resolve the Task ID with `task-context.php`; require `AUTHORITY_CACHE: VALID`.
+2. Inspect the applicable gate registry and, for HIGH tasks, the exact direct-source pointers only.
+3. Emit a short prompt containing: task/objective; mandatory preflight; 2–6 non-obvious task deltas from resolved rules/decisions; validation/commit condition; compact closure report.
+4. Do not restate global PBAC, transport, migration, Git, or architecture rules already enforced by this skill unless the task changes or directly risks them.
+5. Default to <= 220 words. Expand only for a discovered conflict, source-open boundary, or user request for a detailed implementation handoff.
+6. For database reset/fresh-test language, require guarded `testing` + exact `erp_test`; never instruct destructive operations against `erp`.
+
+Use `references/compact-prompts.md` for the template.
 
 ## Execution flow
 
@@ -85,6 +103,7 @@ forward-only.
   navigation pointers only; authoritative requirements stay in `docs/`.
 - `references/project-invariants.md` — compact architecture/domain guardrails.
 - `references/review-checklists.md` — final self-review, including Gate 7 API.
+- `references/compact-prompts.md` — short Codex prompt template; use only in prompt-handoff mode.
 
 ## Completion shape
 

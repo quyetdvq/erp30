@@ -1,5 +1,5 @@
 {
-  "format": "META-CODEX-002",
+  "format": "META-CODEX-003",
   "rules": [
     {
       "id": "CTRL.AUTHORITY_ORDER",
@@ -17,7 +17,7 @@
       "text": "Migrations are forward-only; never rewrite an applied migration or reset the development schema.",
       "provenance": [
         {
-          "document": "docs/architecture/02_P1_Database_Design_v1.11.md",
+          "document": "docs/architecture/02_P1_Database_Design_v1.12.md",
           "section": "§22 Migration order/forward-only"
         }
       ],
@@ -28,7 +28,7 @@
       "text": "Keep implementation within the declared Task scope and do not change unrelated application layers.",
       "provenance": [
         {
-          "document": "docs/architecture/04_P1_Implementation_Plan_v1.5.md",
+          "document": "docs/architecture/04_P1_Implementation_Plan_v1.6.md",
           "section": "§8 backlog and task contract"
         }
       ],
@@ -39,7 +39,7 @@
       "text": "Select validation gates from changed impact layer; unexpected paths escalate instead of being skipped.",
       "provenance": [
         {
-          "document": "docs/architecture/04_P1_Implementation_Plan_v1.5.md",
+          "document": "docs/architecture/04_P1_Implementation_Plan_v1.6.md",
           "section": "§5 Quality gates"
         }
       ],
@@ -50,7 +50,7 @@
       "text": "Keep BIGINT technical keys and use decimal-safe arithmetic for authoritative money, quantity, conversion, and allocation.",
       "provenance": [
         {
-          "document": "docs/architecture/02_P1_Database_Design_v1.11.md",
+          "document": "docs/architecture/02_P1_Database_Design_v1.12.md",
           "section": "Database conventions and numeric types"
         }
       ],
@@ -61,7 +61,7 @@
       "text": "Repository persistence is primitive; services own invariants and multi-table mutations are atomic.",
       "provenance": [
         {
-          "document": "docs/architecture/03_P1_Implementation_Contract_v1.6.md",
+          "document": "docs/architecture/03_P1_Implementation_Contract_v1.7.md",
           "section": "§9 transaction/concurrency and §15 repository/service boundary"
         }
       ],
@@ -72,7 +72,7 @@
       "text": "Organization create evaluates at the persisted parent; hierarchy changes preserve canonical parent/context invariants.",
       "provenance": [
         {
-          "document": "docs/architecture/03_P1_Implementation_Contract_v1.6.md",
+          "document": "docs/architecture/03_P1_Implementation_Contract_v1.7.md",
           "section": "§3.2 Evaluation Organization Context"
         }
       ],
@@ -94,7 +94,7 @@
       "text": "Per-lane PBAC precedence is ABSOLUTE_DENY, ALLOW, DENY, NO_MATCH; after base permission NO_MATCH allows.",
       "provenance": [
         {
-          "document": "docs/architecture/03_P1_Implementation_Contract_v1.6.md",
+          "document": "docs/architecture/03_P1_Implementation_Contract_v1.7.md",
           "section": "§6 PBAC decision precedence"
         }
       ],
@@ -102,11 +102,15 @@
     },
     {
       "id": "AUTH.EVALUATION_ORG",
-      "text": "Evaluation Organization comes from the persisted target/owner or canonical create parent; client context cannot override it.",
+      "text": "Resolve Resource catalog/domain before authorization context: SYSTEM and MASTER evaluate at GROUP; ORGANIZATION uses its registered authoritative target/owner/parent/persisted-context resolver. Client context cannot override it, Primary Assignment is never a generic Resource-scope fallback, and missing/unknown/unresolved context fails closed.",
       "provenance": [
         {
-          "document": "docs/architecture/03_P1_Implementation_Contract_v1.6.md",
-          "section": "§3.2 Evaluation Organization Context"
+          "document": "docs/architecture/03_P1_Implementation_Contract_v1.7.md",
+          "section": "§3 Resource Domain / Evaluation Organization and §18.3 mandatory API tests"
+        },
+        {
+          "document": "docs/architecture/02_P1_Database_Design_v1.12.md",
+          "section": "§11.1.1 Canonical Resource Domain semantics"
         }
       ],
       "criticality": "CRITICAL"
@@ -116,7 +120,7 @@
       "text": "Base Permission is required and SYSTEM_ADMIN membership never creates a runtime authorization bypass.",
       "provenance": [
         {
-          "document": "docs/architecture/03_P1_Implementation_Contract_v1.6.md",
+          "document": "docs/architecture/03_P1_Implementation_Contract_v1.7.md",
           "section": "§6 authorization and §19 bootstrap"
         }
       ],
@@ -127,7 +131,7 @@
       "text": "Auto Numbering state belongs in auto_numbering_series and auto_numbering_counters, not resources.",
       "provenance": [
         {
-          "document": "docs/architecture/02_P1_Database_Design_v1.11.md",
+          "document": "docs/architecture/02_P1_Database_Design_v1.12.md",
           "section": "§11.5 Auto Numbering"
         }
       ],
@@ -138,7 +142,7 @@
       "text": "Number allocation and business create share one transaction and serialization boundary; rolled-back numbers may be reused.",
       "provenance": [
         {
-          "document": "docs/architecture/03_P1_Implementation_Contract_v1.6.md",
+          "document": "docs/architecture/03_P1_Implementation_Contract_v1.7.md",
           "section": "§8 numbering and §9 transaction/locking"
         }
       ],
@@ -149,7 +153,7 @@
       "text": "P1 has one Product entity with derived SIMPLE, PARENT, CHILD, and COMBO roles; PARENT is not transactionable.",
       "provenance": [
         {
-          "document": "docs/architecture/01_P1_Functional_Requirements_Specification_v1.8.md",
+          "document": "docs/architecture/01_P1_Functional_Requirements_Specification_v1.9.md",
           "section": "FRS-P1-PRD-001..006"
         }
       ],
@@ -160,7 +164,7 @@
       "text": "Nested COMBO composition is allowed only when acyclic and flattened to SIMPLE/CHILD leaves.",
       "provenance": [
         {
-          "document": "docs/architecture/02_P1_Database_Design_v1.11.md",
+          "document": "docs/architecture/02_P1_Database_Design_v1.12.md",
           "section": "§15.6 product_combo_items"
         }
       ],
@@ -171,7 +175,7 @@
       "text": "Pricing resolves Product + UOM + Company + effective time, falling back Company list, Group list, then correct-UOM default.",
       "provenance": [
         {
-          "document": "docs/architecture/03_P1_Implementation_Contract_v1.6.md",
+          "document": "docs/architecture/03_P1_Implementation_Contract_v1.7.md",
           "section": "§14 Pricing"
         }
       ],
@@ -182,7 +186,7 @@
       "text": "The P1 import target is Product only, with CREATE_ONLY, UPDATE_ONLY, and UPSERT modes.",
       "provenance": [
         {
-          "document": "docs/architecture/01_P1_Functional_Requirements_Specification_v1.8.md",
+          "document": "docs/architecture/01_P1_Functional_Requirements_Specification_v1.9.md",
           "section": "FRS-P1-IMP-001..005"
         }
       ],
@@ -193,7 +197,7 @@
       "text": "Import requires product.import and each row still requires normal product mutation authorization.",
       "provenance": [
         {
-          "document": "docs/architecture/03_P1_Implementation_Contract_v1.6.md",
+          "document": "docs/architecture/03_P1_Implementation_Contract_v1.7.md",
           "section": "§12 Import authorization"
         }
       ],
@@ -204,7 +208,7 @@
       "text": "A failed import row leaves no partial business mutation or Auto Number allocation.",
       "provenance": [
         {
-          "document": "docs/architecture/03_P1_Implementation_Contract_v1.6.md",
+          "document": "docs/architecture/03_P1_Implementation_Contract_v1.7.md",
           "section": "§11.8 Row transaction"
         }
       ],
@@ -226,11 +230,11 @@
       "text": "Public APIs use /api/v1, snake_case JSON, string BIGINT/DECIMAL values, stable machine errors, and locale headers.",
       "provenance": [
         {
-          "document": "docs/architecture/05_P1_API_Design_v1.3.md",
+          "document": "docs/architecture/05_P1_API_Design_v1.4.md",
           "section": "§§3–6 common transport/query/mutation/auth"
         },
         {
-          "document": "docs/architecture/03_P1_Implementation_Contract_v1.6.md",
+          "document": "docs/architecture/03_P1_Implementation_Contract_v1.7.md",
           "section": "§4 API transport contract"
         }
       ],
@@ -241,15 +245,15 @@
       "text": "Backend human-readable localization uses CodeIgniter Language. Domain/service errors use stable machine codes and are locale-independent. API presentation resolves vi/en messages and Content-Language. Frontend application-controlled text uses vue-i18n.",
       "provenance": [
         {
-          "document": "docs/architecture/01_P1_Functional_Requirements_Specification_v1.8.md",
+          "document": "docs/architecture/01_P1_Functional_Requirements_Specification_v1.9.md",
           "section": "FRS-P1-GEN-009 Giao diện đa ngôn ngữ và Locale Resolution"
         },
         {
-          "document": "docs/architecture/03_P1_Implementation_Contract_v1.6.md",
+          "document": "docs/architecture/03_P1_Implementation_Contract_v1.7.md",
           "section": "§4.8 Canonical error code convention; §4.9 Language negotiation / localized messages"
         },
         {
-          "document": "docs/architecture/06_P1_UI_Design_v1.4.md",
+          "document": "docs/architecture/06_P1_UI_Design_v1.5.md",
           "section": "Localization and shell conventions"
         }
       ],
@@ -260,7 +264,7 @@
       "text": "Vue UI stores canonical keys, uses vi/en vue-i18n with vi fallback, and does not translate business identifiers or enum codes.",
       "provenance": [
         {
-          "document": "docs/architecture/06_P1_UI_Design_v1.4.md",
+          "document": "docs/architecture/06_P1_UI_Design_v1.5.md",
           "section": "Localization and shell conventions"
         }
       ],
@@ -271,7 +275,7 @@
       "text": "Protected entrypoints flow through an application use case, trusted context, authorization, domain service, and repository; adapters do not bypass the boundary.",
       "provenance": [
         {
-          "document": "docs/architecture/03_P1_Implementation_Contract_v1.6.md",
+          "document": "docs/architecture/03_P1_Implementation_Contract_v1.7.md",
           "section": "§15 Repository/service boundary"
         }
       ],
@@ -282,7 +286,7 @@
       "text": "One operation captures EvaluationTime once, uses a trusted actor or explicit system actor, and stamps UTC audit fields outside caller payload ownership.",
       "provenance": [
         {
-          "document": "docs/architecture/03_P1_Implementation_Contract_v1.6.md",
+          "document": "docs/architecture/03_P1_Implementation_Contract_v1.7.md",
           "section": "§3.1 Evaluation Time; §10 Audit contract"
         }
       ],
@@ -293,7 +297,7 @@
       "text": "Repository query failure is distinct from a successful query with no row or empty collection and must retain a typed persistence identity.",
       "provenance": [
         {
-          "document": "docs/architecture/03_P1_Implementation_Contract_v1.6.md",
+          "document": "docs/architecture/03_P1_Implementation_Contract_v1.7.md",
           "section": "§15.1 Repository"
         }
       ],
@@ -304,7 +308,7 @@
       "text": "Domain lock timeout/deadlock preserves CONCURRENT_MODIFICATION, uses one session, finite configuration, and never masks an earlier domain exception during release.",
       "provenance": [
         {
-          "document": "docs/architecture/03_P1_Implementation_Contract_v1.6.md",
+          "document": "docs/architecture/03_P1_Implementation_Contract_v1.7.md",
           "section": "§§9.2–9.4 DomainLock and deadlock/timeout"
         }
       ],
@@ -315,7 +319,7 @@
       "text": "Positive technical IDs use one canonical parser/normalizer; is_numeric() is not an accepted ID validator.",
       "provenance": [
         {
-          "document": "docs/architecture/03_P1_Implementation_Contract_v1.6.md",
+          "document": "docs/architecture/03_P1_Implementation_Contract_v1.7.md",
           "section": "§4.8 Canonical error code convention"
         }
       ],
@@ -326,11 +330,11 @@
       "text": "Product Group uses nullable parent_id adjacency-list at arbitrary depth; hierarchy mutations reject self-parent/cycles, preserve global code uniqueness, and require product-group-tree serialization.",
       "provenance": [
         {
-          "document": "docs/architecture/02_P1_Database_Design_v1.11.md",
+          "document": "docs/architecture/02_P1_Database_Design_v1.12.md",
           "section": "§15.2 product_groups"
         },
         {
-          "document": "docs/architecture/03_P1_Implementation_Contract_v1.6.md",
+          "document": "docs/architecture/03_P1_Implementation_Contract_v1.7.md",
           "section": "§9.3 lock matrix"
         }
       ],
@@ -341,15 +345,15 @@
       "text": "Import row results preserve original row_number; job counts are derived from persisted SUCCESS/ERROR/SKIPPED rows under import_jobs FOR UPDATE, and generated Product code is the successful row entity_key.",
       "provenance": [
         {
-          "document": "docs/architecture/01_P1_Functional_Requirements_Specification_v1.8.md",
+          "document": "docs/architecture/01_P1_Functional_Requirements_Specification_v1.9.md",
           "section": "FRS-P1-IMP-001..002 and §26.11"
         },
         {
-          "document": "docs/architecture/02_P1_Database_Design_v1.11.md",
+          "document": "docs/architecture/02_P1_Database_Design_v1.12.md",
           "section": "§§17.1–17.2 Import"
         },
         {
-          "document": "docs/architecture/03_P1_Implementation_Contract_v1.6.md",
+          "document": "docs/architecture/03_P1_Implementation_Contract_v1.7.md",
           "section": "§9.3 lock matrix and §18.6 mandatory import tests"
         }
       ],
@@ -360,7 +364,7 @@
       "text": "Implement only CONTRACT_READY public surfaces; CONTRACT_PENDING or source-open fields/actions remain blocked/out-of-scope and must not be guessed.",
       "provenance": [
         {
-          "document": "docs/architecture/05_P1_API_Design_v1.3.md",
+          "document": "docs/architecture/05_P1_API_Design_v1.4.md",
           "section": "§§2.1–2.3 governance, §17 promotion, §18 pending items"
         }
       ],
@@ -371,11 +375,11 @@
       "text": "Every public API contract change updates repository OpenAPI in the same task, passes Redocly lint, regenerates typed frontend artifacts, and never hand-edits generated output.",
       "provenance": [
         {
-          "document": "docs/architecture/05_P1_API_Design_v1.3.md",
+          "document": "docs/architecture/05_P1_API_Design_v1.4.md",
           "section": "§2.2 change rule and §15 OpenAPI structure"
         },
         {
-          "document": "docs/architecture/04_P1_Implementation_Plan_v1.5.md",
+          "document": "docs/architecture/04_P1_Implementation_Plan_v1.6.md",
           "section": "§4.3 API-first convention and P1-API-002"
         }
       ],
@@ -386,11 +390,11 @@
       "text": "List/query fields are allowlisted, authorization/data scope is applied before total/count, and deterministic ordering uses the canonical tie-breaker.",
       "provenance": [
         {
-          "document": "docs/architecture/05_P1_API_Design_v1.3.md",
+          "document": "docs/architecture/05_P1_API_Design_v1.4.md",
           "section": "§4 Common list/query contract"
         },
         {
-          "document": "docs/architecture/03_P1_Implementation_Contract_v1.6.md",
+          "document": "docs/architecture/03_P1_Implementation_Contract_v1.7.md",
           "section": "§5 List/search/filter/sort/pagination"
         }
       ],
@@ -401,12 +405,57 @@
       "text": "COMBO allocation resolves each root price once, ignores nested COMBO price, weights leaves by quantity times Base-UOM products.price, rejects nonpositive total weight, and conserves rounded root amount with deterministic residual/aggregation.",
       "provenance": [
         {
-          "document": "docs/architecture/01_P1_Functional_Requirements_Specification_v1.8.md",
+          "document": "docs/architecture/01_P1_Functional_Requirements_Specification_v1.9.md",
           "section": "§26.9 COMBO Allocation"
         },
         {
-          "document": "docs/architecture/04_P1_Implementation_Plan_v1.5.md",
+          "document": "docs/architecture/04_P1_Implementation_Plan_v1.6.md",
           "section": "P1-CMB-003"
+        }
+      ],
+      "criticality": "CRITICAL"
+    },
+    {
+      "id": "AUTH.RESOURCE_DOMAIN",
+      "text": "resources.domain is required security metadata with canonical values SYSTEM, MASTER, ORGANIZATION; canonical existing Resource domain is immutable in normal P1 runtime. SYSTEM/MASTER -> GROUP; ORGANIZATION -> registered authoritative resolver; no COMPANY domain.",
+      "provenance": [
+        {
+          "document": "docs/architecture/02_P1_Database_Design_v1.12.md",
+          "section": "§11.1 resources and §11.1.1 Canonical Resource Domain semantics"
+        },
+        {
+          "document": "docs/architecture/01_P1_Functional_Requirements_Specification_v1.9.md",
+          "section": "Resource Domain change-control and FRS-P1-IAM-002"
+        }
+      ],
+      "criticality": "CRITICAL"
+    },
+    {
+      "id": "EMP.API020_SCOPE",
+      "text": "P1-API-020 Slice 2 covers Department, Position, Employee, and Employee Assignment. Department/Position/Employee are MASTER at GROUP; Assignment is ORGANIZATION: create uses request organization_id, existing target uses persisted organization_id, list authorizes each persisted row before total/pagination. Employee Organization/Department/Position filters are data filters only. Strict gender enum and exact export media type remain CONTRACT_PENDING.",
+      "provenance": [
+        {
+          "document": "docs/architecture/05_P1_API_Design_v1.4.md",
+          "section": "§8.1–8.4 Slice 2 - Employee Structure"
+        },
+        {
+          "document": "docs/architecture/06_P1_UI_Design_v1.5.md",
+          "section": "§9 Slice 2 UI - Employee Structure"
+        }
+      ],
+      "criticality": "CRITICAL"
+    },
+    {
+      "id": "EMP.ASSIGNMENT_HISTORY",
+      "text": "Employee Assignment create/changed references must satisfy active-selection rules and Primary effective periods must not overlap; historical Assignments remain readable after end/inactivation. Do not make a historical end/inactivate fail solely because an already-referenced Organization/Department/Position later became inactive.",
+      "provenance": [
+        {
+          "document": "docs/architecture/01_P1_Functional_Requirements_Specification_v1.9.md",
+          "section": "FRS-P1-EMP-004 and audit/history requirements"
+        },
+        {
+          "document": "docs/architecture/02_P1_Database_Design_v1.12.md",
+          "section": "§9.4 employee_assignments service-layer invariants"
         }
       ],
       "criticality": "CRITICAL"

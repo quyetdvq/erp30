@@ -1,5 +1,5 @@
 {
-  "format": "META-CODEX-002",
+  "format": "META-CODEX-003",
   "status": "product_owner_approved",
   "note": "These implementation decisions supplement, and do not replace, upstream architecture authority.",
   "decisions": [
@@ -85,6 +85,20 @@
         "Product-specific import business logic lives in App\\Modules\\Product\\Import",
         "Product Import may depend on shared Import infrastructure; shared Import infrastructure must not depend on Product or any business module",
         "Do not create App\\Modules\\Import before a second approved import target establishes real shared business ownership"
+      ]
+    },
+    {
+      "id": "CHANGE-AUTH-DOMAIN-001",
+      "title": "Resource Domain authorization scope normalization",
+      "approved_by": "P1 change control / authority package",
+      "rules": [
+        "canonical Resource Domain values are SYSTEM, MASTER, ORGANIZATION; COMPANY is not a Resource Domain",
+        "resources.domain is required and canonical existing Resource domain is immutable in normal runtime",
+        "SYSTEM and MASTER authorize at GROUP",
+        "ORGANIZATION resolves through an explicit registered authoritative Resource resolver",
+        "missing/unknown domain or unresolved ORGANIZATION context fails closed",
+        "client context and actor Primary Assignment cannot override or complete Resource authorization scope",
+        "P1-API-020 is blocked until authority sync, domain migration/seed, resolver verification, and API-010 Contact owner-scope regression are complete"
       ]
     }
   ]

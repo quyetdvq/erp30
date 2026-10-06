@@ -1,6 +1,6 @@
 {
-  "format": "META-CODEX-002",
-  "source": "Implementation Plan v1.5 plus gate registries",
+  "format": "META-CODEX-003",
+  "source": "Implementation Plan v1.6 plus gate registries",
   "task_count": 100,
   "tasks": [
     {
@@ -1188,9 +1188,9 @@
       "direct_source_verification": [
         "UR-PRD-007",
         "FRS-P1-UOM-001 Product Group hierarchy",
-        "DBD v1.11 product_groups adjacency-list",
-        "Implementation Contract v1.6 product-group-tree",
-        "Implementation Plan v1.5 P1-PRD-001"
+        "DBD v1.12 product_groups adjacency-list",
+        "Implementation Contract v1.7 product-group-tree",
+        "Implementation Plan v1.6 P1-PRD-001"
       ],
       "expected_output": "product-group hierarchy repository/service",
       "forbidden_scope": [
@@ -1819,19 +1819,30 @@
         "API.LOCALE_INDEPENDENT_ERRORS",
         "AUTH.EVALUATION_ORG",
         "AUTH.NO_BYPASS",
-        "HARDEN.APP_BOUNDARY"
+        "HARDEN.APP_BOUNDARY",
+        "AUTH.RESOURCE_DOMAIN",
+        "EMP.API020_SCOPE",
+        "EMP.ASSIGNMENT_HISTORY"
       ],
-      "approved_decision_ids": [],
+      "approved_decision_ids": [
+        "CHANGE-AUTH-DOMAIN-001"
+      ],
       "direct_source_verification": [
-        "API Design §8",
-        "Contract §§4–6",
-        "FRS `FRS-P1-EMP-*`",
-        "IMP Plan `P1-API-020`"
+        "API Design §8.1–8.4",
+        "Contract Resource Domain/Evaluation Organization + §§4–6",
+        "FRS `FRS-P1-EMP-001..005`",
+        "IMP Plan `P1-API-020` + §14.1 CHANGE-AUTH-DOMAIN-001 precondition"
       ],
       "expected_output": "Slice 2 API",
       "forbidden_scope": [
         "unrelated-changes",
         "architecture-baselines"
+      ],
+      "execution_notes": [
+        "Slice includes Department and Position endpoints in API Design §8",
+        "Do not implement export until exact media type is CONTRACT_READY",
+        "Do not invent strict employees.gender enum",
+        "Employee filters through effective Assignment never change Employee MASTER/GROUP authorization scope"
       ]
     },
     {

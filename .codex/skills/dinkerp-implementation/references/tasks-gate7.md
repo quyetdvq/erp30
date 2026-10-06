@@ -4,6 +4,8 @@ Pointers only. Gate 7 exposes existing service contracts; controllers stay thin.
 
 Current source-open/`CONTRACT_PENDING` surfaces must not be invented: Shield User write/state payloads, public Price Resolution authorization, optional COMBO preview endpoints, strict Employee gender enum, and exact export media type.
 
+`P1-API-020` remains the Plan task title "Employee/Assignment endpoints", but API Design §8.1–8.4 makes the Slice 2 surface explicit: Department, Position, Employee, and Employee Assignment. Its CHANGE-AUTH-DOMAIN-001 precondition must be satisfied before implementation; the task must preserve MASTER/GROUP vs ORGANIZATION scope and keep strict gender enum/export media type pending.
+
 | Task | Depends | Risk | Profile | Authority IDs / headings | Primary output | Parallel / follow-up |
 |---|---|---|---|---|---|---|
 | P1-API-001 — Common API response/error/request-id infrastructure | P1-INF-002, P1-AUTH-002 | HIGH | api | API Design §§3–6,16–17; Contract §§3.4–3.5,4,6; FRS `FRS-P1-GEN-*`; IMP Plan `P1-API-001` | common `/api/v1` transport | follow-up API-002/003 and endpoint tasks |
