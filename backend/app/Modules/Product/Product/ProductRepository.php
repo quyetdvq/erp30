@@ -161,6 +161,11 @@ final class ProductRepository
         return $this->existsBy('product_combo_items', 'component_product_id', $productId, 'isComboComponent');
     }
 
+    public function hasComboComposition(mixed $productId): bool
+    {
+        return $this->existsBy('product_combo_items', 'combo_product_id', $productId, 'hasComboComposition');
+    }
+
     /** @param array<string, mixed> $data */
     public function create(array $data, ?OperationContext $operation = null): int
     {

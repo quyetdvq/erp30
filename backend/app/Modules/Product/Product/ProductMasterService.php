@@ -363,6 +363,13 @@ final class ProductMasterService
         if ($type !== 'STANDARD') {
             throw new DomainException(self::ERROR_INVALID_TYPE, ['field' => 'product_type']);
         }
+        if (strtoupper((string) ($current['product_type'] ?? '')) === 'COMBO'
+            && $this->repo()->hasComboComposition($current['id'] ?? null)) {
+            throw new DomainException(self::ERROR_TYPE_CHANGE_INVALID, [
+                'product_type' => 'STANDARD',
+                'reason' => 'combo_composition_exists',
+            ]);
+        }
         if ($parentId !== null) {
             $this->assertChildFields($merged);
             return;

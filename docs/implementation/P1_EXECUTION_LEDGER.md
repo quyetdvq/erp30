@@ -4,9 +4,9 @@ This ledger is lightweight operational evidence. It is not architecture
 authority and does not replace UR, FRS, DBD, the Implementation Contract, the
 Implementation Plan, API Design, or UI Design.
 
-As of the P1-PRC-002 task validation, the registry contains exactly 100 P1 tasks.
-Repository evidence verifies 56 completed tasks: Gate 0 is 10/10, Gate 1 is
-14/14, Gate 2 is 8/8, Gate 3 is 10/10, Gate 4 is 7/7, and Gate 5 is 7/11.
+As of the P1-CMB-001 task validation, the registry contains exactly 100 P1 tasks.
+Repository evidence verifies 57 completed tasks: Gate 0 is 10/10, Gate 1 is
+14/14, Gate 2 is 8/8, Gate 3 is 10/10, Gate 4 is 7/7, and Gate 5 is 8/11.
 The previously supplied 28/100 and 4/8 checkpoint is stale: the accepted
 `c4049f0` P1-ORG-002 commit is present in current history.
 No task is downgraded to force that stale count.
@@ -15,13 +15,13 @@ No task is downgraded to force that stale count.
 
 | Measure | Progress |
 |---|---:|
-| P1 tasks DONE | 56/100 |
+| P1 tasks DONE | 57/100 |
 | Gate 0 | 10/10 DONE |
 | Gate 1 | 14/14 DONE |
 | Gate 2 | 8/8 DONE |
 | Gate 3 | 10/10 DONE |
 | Gate 4 | 7/7 DONE |
-| Gate 5 | 7/11 DONE |
+| Gate 5 | 8/11 DONE |
 | Gate 6 | 0/9 DONE |
 | Gate 7 | 0/10 DONE |
 | Gate 8 | 0/12 DONE |
@@ -87,7 +87,7 @@ No task is downgraded to force that stale count.
 | P1-UOM-001 | DONE | 0e45f6c | high-risk | Product-specific alternate UOM CRUD/status/conversion service, role eligibility, GROUP product.edit authorization, trusted audit, shared structure lock, decimal-safe conversion, and real MariaDB race evidence. Evidence: `docs/implementation/evidence/P1-UOM-001/01_product_uom_service_assessment.md`. |
 | P1-PRC-001 | DONE | bb4aaa4 | service-standard | Canonical Price List header/item repositories and service, GROUP/COMPANY scope, owner-based authorization, ProductRole/ProductUom eligibility, atomic replacement batches, trusted audit, parent-row lock, and real MariaDB concurrency evidence. Evidence: `docs/implementation/evidence/P1-PRC-001/01_price_list_service_assessment.md`. |
 | P1-PRC-002 | DONE | 9092ce5 | high-risk | Canonical internal PricingService: Company -> authoritative GROUP -> Product/UOM default resolution, exact matching, half-open effective intervals, deterministic ordering, and fail-closed default pricing. Evidence: `docs/implementation/evidence/P1-PRC-002/01_pricing_service_assessment.md`. |
-| P1-CMB-001 | NOT_STARTED | — | high-risk | No accepted implementation evidence. |
+| P1-CMB-001 | DONE | 65c08c9 | high-risk | Canonical atomic COMBO composition mutation service, acyclic nested graph validation, deterministic replacement, GROUP Product authorization, lock ordering, owner-conversion guard, and real independent-process concurrency evidence. Evidence: `docs/implementation/evidence/P1-CMB-001/01_combo_composition_mutation_assessment.md`. |
 | P1-CMB-002 | NOT_STARTED | — | high-risk | No accepted implementation evidence. |
 | P1-CMB-003 | NOT_STARTED | — | high-risk | No accepted implementation evidence. |
 | P1-PRD-090 | NOT_STARTED | — | high-risk | No accepted implementation evidence. |
