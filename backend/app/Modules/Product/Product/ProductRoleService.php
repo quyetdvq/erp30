@@ -35,6 +35,12 @@ final class ProductRoleService
         return $this->resolve($product)['role'];
     }
 
+    /** @return array<string, mixed>|null */
+    public function findById(mixed $productId): ?array
+    {
+        return $this->repo()->findById($productId);
+    }
+
     public function isParent(mixed $product): bool
     {
         return $this->getRole($product) === self::ROLE_PARENT;

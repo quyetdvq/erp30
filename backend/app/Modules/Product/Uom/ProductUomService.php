@@ -235,6 +235,42 @@ final class ProductUomService
         return $this->validateBaseUom($product);
     }
 
+    /**
+     * Validate a Product/UOM pair for selling-price configuration.
+     *
+     * @return array{uom: array<string, mixed>, conversion: array<string, mixed>|null, is_base: bool}
+     */
+    public function validateSellingUom(mixed $product, mixed $uomId): array
+    {
+        $row = is_array($product) ? $product : $this->existingProduct($product);
+        $normalizedUomId = PositiveId::normalize($uomId, 'uom_id', self::ERROR_INVALID_REFERENCE);
+        $base = $this->validateBaseUom($row);
+        if ((int) $base['id'] === $normalizedUomId) {
+            return ['uom' => $base, 'conversion' => null, 'is_base' => true];
+        }
+
+        $uom = $this->master()->findById($normalizedUomId);
+        if ($uom === null) {
+            throw new DomainException(self::ERROR_INVALID_REFERENCE, ['uom_id' => $normalizedUomId]);
+        }
+        if (($uom['status'] ?? null) !== 'ACTIVE') {
+            throw new DomainException(self::ERROR_INACTIVE_REFERENCE, ['uom_id' => $normalizedUomId]);
+        }
+
+        $conversion = $this->repo()->findByProductAndUom((int) $row['id'], $normalizedUomId);
+        if ($conversion === null) {
+            throw new DomainException(self::ERROR_INVALID_CONVERSION, ['reason' => 'conversion_not_found', 'uom_id' => $normalizedUomId]);
+        }
+        if (($conversion['status'] ?? null) !== 'ACTIVE') {
+            throw new DomainException(self::ERROR_INACTIVE_REFERENCE, ['uom_id' => $normalizedUomId]);
+        }
+        if (! in_array((string) ($conversion['usage_type'] ?? ''), ['SALES', 'BOTH'], true)) {
+            throw new DomainException(self::ERROR_INVALID_CONVERSION, ['reason' => 'uom_not_sellable', 'uom_id' => $normalizedUomId]);
+        }
+
+        return ['uom' => $uom, 'conversion' => $conversion, 'is_base' => false];
+    }
+
     public function convertToBase(mixed $product, mixed $sourceUomId, mixed $quantity): string
     {
         $row = is_array($product) ? $product : $this->existingProduct($product);
