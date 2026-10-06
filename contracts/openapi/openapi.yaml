@@ -179,6 +179,122 @@ paths:
       summary: Set contact state
       requestBody: {$ref: '#/components/requestBodies/State'}
       responses: {'200': {$ref: '#/components/responses/ContactResponse'}, '401': {$ref: '#/components/responses/Unauthorized'}, '403': {$ref: '#/components/responses/Forbidden'}, '404': {$ref: '#/components/responses/NotFound'}, '422': {$ref: '#/components/responses/UnprocessableEntity'}}
+  /api/v1/departments:
+    get:
+      operationId: listDepartments
+      summary: List authorized departments
+      parameters: [{$ref: '#/components/parameters/AcceptLanguage'}, {$ref: '#/components/parameters/RequestId'}, {$ref: '#/components/parameters/Q'}, {$ref: '#/components/parameters/Page'}, {$ref: '#/components/parameters/PageSize'}, {$ref: '#/components/parameters/Sort'}, {$ref: '#/components/parameters/Filter'}]
+      responses: {'200': {$ref: '#/components/responses/DepartmentCollection'}, '400': {$ref: '#/components/responses/BadRequest'}, '401': {$ref: '#/components/responses/Unauthorized'}}
+    post:
+      operationId: createDepartment
+      summary: Create a department
+      requestBody: {$ref: '#/components/requestBodies/DepartmentCreate'}
+      responses: {'201': {$ref: '#/components/responses/DepartmentResponse'}, '400': {$ref: '#/components/responses/BadRequest'}, '401': {$ref: '#/components/responses/Unauthorized'}, '403': {$ref: '#/components/responses/Forbidden'}, '409': {$ref: '#/components/responses/Conflict'}, '422': {$ref: '#/components/responses/UnprocessableEntity'}}
+  /api/v1/departments/{id}:
+    parameters: [{$ref: '#/components/parameters/Id'}]
+    get:
+      operationId: getDepartment
+      summary: Get a department
+      responses: {'200': {$ref: '#/components/responses/DepartmentResponse'}, '401': {$ref: '#/components/responses/Unauthorized'}, '404': {$ref: '#/components/responses/NotFound'}}
+    patch:
+      operationId: updateDepartment
+      summary: Update a department
+      requestBody: {$ref: '#/components/requestBodies/DepartmentPatch'}
+      responses: {'200': {$ref: '#/components/responses/DepartmentResponse'}, '400': {$ref: '#/components/responses/BadRequest'}, '401': {$ref: '#/components/responses/Unauthorized'}, '403': {$ref: '#/components/responses/Forbidden'}, '404': {$ref: '#/components/responses/NotFound'}, '409': {$ref: '#/components/responses/Conflict'}, '422': {$ref: '#/components/responses/UnprocessableEntity'}}
+  /api/v1/departments/{id}/actions/set-state:
+    parameters: [{$ref: '#/components/parameters/Id'}]
+    post:
+      operationId: setDepartmentState
+      summary: Set department state
+      requestBody: {$ref: '#/components/requestBodies/DepartmentState'}
+      responses: {'200': {$ref: '#/components/responses/DepartmentResponse'}, '401': {$ref: '#/components/responses/Unauthorized'}, '403': {$ref: '#/components/responses/Forbidden'}, '404': {$ref: '#/components/responses/NotFound'}, '422': {$ref: '#/components/responses/UnprocessableEntity'}}
+  /api/v1/positions:
+    get:
+      operationId: listPositions
+      summary: List authorized positions
+      parameters: [{$ref: '#/components/parameters/AcceptLanguage'}, {$ref: '#/components/parameters/RequestId'}, {$ref: '#/components/parameters/Q'}, {$ref: '#/components/parameters/Page'}, {$ref: '#/components/parameters/PageSize'}, {$ref: '#/components/parameters/Sort'}, {$ref: '#/components/parameters/Filter'}]
+      responses: {'200': {$ref: '#/components/responses/PositionCollection'}, '400': {$ref: '#/components/responses/BadRequest'}, '401': {$ref: '#/components/responses/Unauthorized'}}
+    post:
+      operationId: createPosition
+      summary: Create a position
+      requestBody: {$ref: '#/components/requestBodies/PositionCreate'}
+      responses: {'201': {$ref: '#/components/responses/PositionResponse'}, '400': {$ref: '#/components/responses/BadRequest'}, '401': {$ref: '#/components/responses/Unauthorized'}, '403': {$ref: '#/components/responses/Forbidden'}, '409': {$ref: '#/components/responses/Conflict'}, '422': {$ref: '#/components/responses/UnprocessableEntity'}}
+  /api/v1/positions/{id}:
+    parameters: [{$ref: '#/components/parameters/Id'}]
+    get:
+      operationId: getPosition
+      summary: Get a position
+      responses: {'200': {$ref: '#/components/responses/PositionResponse'}, '401': {$ref: '#/components/responses/Unauthorized'}, '404': {$ref: '#/components/responses/NotFound'}}
+    patch:
+      operationId: updatePosition
+      summary: Update a position
+      requestBody: {$ref: '#/components/requestBodies/PositionPatch'}
+      responses: {'200': {$ref: '#/components/responses/PositionResponse'}, '400': {$ref: '#/components/responses/BadRequest'}, '401': {$ref: '#/components/responses/Unauthorized'}, '403': {$ref: '#/components/responses/Forbidden'}, '404': {$ref: '#/components/responses/NotFound'}, '409': {$ref: '#/components/responses/Conflict'}, '422': {$ref: '#/components/responses/UnprocessableEntity'}}
+  /api/v1/positions/{id}/actions/set-state:
+    parameters: [{$ref: '#/components/parameters/Id'}]
+    post:
+      operationId: setPositionState
+      summary: Set position state
+      requestBody: {$ref: '#/components/requestBodies/PositionState'}
+      responses: {'200': {$ref: '#/components/responses/PositionResponse'}, '401': {$ref: '#/components/responses/Unauthorized'}, '403': {$ref: '#/components/responses/Forbidden'}, '404': {$ref: '#/components/responses/NotFound'}, '422': {$ref: '#/components/responses/UnprocessableEntity'}}
+  /api/v1/employees:
+    get:
+      operationId: listEmployees
+      summary: List authorized employees
+      parameters: [{$ref: '#/components/parameters/AcceptLanguage'}, {$ref: '#/components/parameters/RequestId'}, {$ref: '#/components/parameters/Q'}, {$ref: '#/components/parameters/Page'}, {$ref: '#/components/parameters/PageSize'}, {$ref: '#/components/parameters/Sort'}, {$ref: '#/components/parameters/Filter'}]
+      responses: {'200': {$ref: '#/components/responses/EmployeeCollection'}, '400': {$ref: '#/components/responses/BadRequest'}, '401': {$ref: '#/components/responses/Unauthorized'}}
+    post:
+      operationId: createEmployee
+      summary: Create an employee
+      requestBody: {$ref: '#/components/requestBodies/EmployeeCreate'}
+      responses: {'201': {$ref: '#/components/responses/EmployeeResponse'}, '400': {$ref: '#/components/responses/BadRequest'}, '401': {$ref: '#/components/responses/Unauthorized'}, '403': {$ref: '#/components/responses/Forbidden'}, '409': {$ref: '#/components/responses/Conflict'}, '422': {$ref: '#/components/responses/UnprocessableEntity'}}
+  /api/v1/employees/{id}:
+    parameters: [{$ref: '#/components/parameters/Id'}]
+    get:
+      operationId: getEmployee
+      summary: Get an employee
+      responses: {'200': {$ref: '#/components/responses/EmployeeResponse'}, '401': {$ref: '#/components/responses/Unauthorized'}, '404': {$ref: '#/components/responses/NotFound'}}
+    patch:
+      operationId: updateEmployee
+      summary: Update an employee
+      requestBody: {$ref: '#/components/requestBodies/EmployeePatch'}
+      responses: {'200': {$ref: '#/components/responses/EmployeeResponse'}, '400': {$ref: '#/components/responses/BadRequest'}, '401': {$ref: '#/components/responses/Unauthorized'}, '403': {$ref: '#/components/responses/Forbidden'}, '404': {$ref: '#/components/responses/NotFound'}, '409': {$ref: '#/components/responses/Conflict'}, '422': {$ref: '#/components/responses/UnprocessableEntity'}}
+  /api/v1/employees/{id}/actions/set-state:
+    parameters: [{$ref: '#/components/parameters/Id'}]
+    post:
+      operationId: setEmployeeState
+      summary: Set employee state
+      requestBody: {$ref: '#/components/requestBodies/EmployeeState'}
+      responses: {'200': {$ref: '#/components/responses/EmployeeResponse'}, '401': {$ref: '#/components/responses/Unauthorized'}, '403': {$ref: '#/components/responses/Forbidden'}, '404': {$ref: '#/components/responses/NotFound'}, '422': {$ref: '#/components/responses/UnprocessableEntity'}}
+  /api/v1/employee-assignments:
+    get:
+      operationId: listEmployeeAssignments
+      summary: List authorized employee assignments
+      parameters: [{$ref: '#/components/parameters/AcceptLanguage'}, {$ref: '#/components/parameters/RequestId'}, {$ref: '#/components/parameters/Q'}, {$ref: '#/components/parameters/Page'}, {$ref: '#/components/parameters/PageSize'}, {$ref: '#/components/parameters/Sort'}, {$ref: '#/components/parameters/Filter'}]
+      responses: {'200': {$ref: '#/components/responses/EmployeeAssignmentCollection'}, '400': {$ref: '#/components/responses/BadRequest'}, '401': {$ref: '#/components/responses/Unauthorized'}}
+    post:
+      operationId: createEmployeeAssignment
+      summary: Create an employee assignment
+      requestBody: {$ref: '#/components/requestBodies/EmployeeAssignmentCreate'}
+      responses: {'201': {$ref: '#/components/responses/EmployeeAssignmentResponse'}, '400': {$ref: '#/components/responses/BadRequest'}, '401': {$ref: '#/components/responses/Unauthorized'}, '403': {$ref: '#/components/responses/Forbidden'}, '409': {$ref: '#/components/responses/Conflict'}, '422': {$ref: '#/components/responses/UnprocessableEntity'}}
+  /api/v1/employee-assignments/{id}:
+    parameters: [{$ref: '#/components/parameters/Id'}]
+    get:
+      operationId: getEmployeeAssignment
+      summary: Get an employee assignment
+      responses: {'200': {$ref: '#/components/responses/EmployeeAssignmentResponse'}, '401': {$ref: '#/components/responses/Unauthorized'}, '404': {$ref: '#/components/responses/NotFound'}}
+    patch:
+      operationId: updateEmployeeAssignment
+      summary: Update an employee assignment
+      requestBody: {$ref: '#/components/requestBodies/EmployeeAssignmentPatch'}
+      responses: {'200': {$ref: '#/components/responses/EmployeeAssignmentResponse'}, '400': {$ref: '#/components/responses/BadRequest'}, '401': {$ref: '#/components/responses/Unauthorized'}, '403': {$ref: '#/components/responses/Forbidden'}, '404': {$ref: '#/components/responses/NotFound'}, '409': {$ref: '#/components/responses/Conflict'}, '422': {$ref: '#/components/responses/UnprocessableEntity'}}
+  /api/v1/employee-assignments/{id}/actions/set-state:
+    parameters: [{$ref: '#/components/parameters/Id'}]
+    post:
+      operationId: setEmployeeAssignmentState
+      summary: Set employee assignment state
+      requestBody: {$ref: '#/components/requestBodies/EmployeeAssignmentState'}
+      responses: {'200': {$ref: '#/components/responses/EmployeeAssignmentResponse'}, '401': {$ref: '#/components/responses/Unauthorized'}, '403': {$ref: '#/components/responses/Forbidden'}, '404': {$ref: '#/components/responses/NotFound'}, '422': {$ref: '#/components/responses/UnprocessableEntity'}}
 components:
   parameters:
     AcceptLanguage:
@@ -256,6 +372,18 @@ components:
     ContactCreate: {required: true, content: {application/json: {schema: {$ref: '#/components/schemas/ContactCreate'}}}}
     ContactPatch: {required: true, content: {application/json: {schema: {$ref: '#/components/schemas/ContactPatch'}}}}
     State: {required: true, content: {application/json: {schema: {$ref: '#/components/schemas/State'}}}}
+    DepartmentCreate: {required: true, content: {application/json: {schema: {$ref: '#/components/schemas/DepartmentCreate'}}}}
+    DepartmentPatch: {required: true, content: {application/json: {schema: {$ref: '#/components/schemas/DepartmentPatch'}}}}
+    DepartmentState: {required: true, content: {application/json: {schema: {$ref: '#/components/schemas/DepartmentState'}}}}
+    PositionCreate: {required: true, content: {application/json: {schema: {$ref: '#/components/schemas/PositionCreate'}}}}
+    PositionPatch: {required: true, content: {application/json: {schema: {$ref: '#/components/schemas/PositionPatch'}}}}
+    PositionState: {required: true, content: {application/json: {schema: {$ref: '#/components/schemas/PositionState'}}}}
+    EmployeeCreate: {required: true, content: {application/json: {schema: {$ref: '#/components/schemas/EmployeeCreate'}}}}
+    EmployeePatch: {required: true, content: {application/json: {schema: {$ref: '#/components/schemas/EmployeePatch'}}}}
+    EmployeeState: {required: true, content: {application/json: {schema: {$ref: '#/components/schemas/EmployeeState'}}}}
+    EmployeeAssignmentCreate: {required: true, content: {application/json: {schema: {$ref: '#/components/schemas/EmployeeAssignmentCreate'}}}}
+    EmployeeAssignmentPatch: {required: true, content: {application/json: {schema: {$ref: '#/components/schemas/EmployeeAssignmentPatch'}}}}
+    EmployeeAssignmentState: {required: true, content: {application/json: {schema: {$ref: '#/components/schemas/EmployeeAssignmentState'}}}}
   securitySchemes:
     sessionAuth:
       type: http
@@ -295,6 +423,30 @@ components:
     ContactCollection:
       description: Authorized contact collection.
       content: {application/json: {schema: {$ref: '#/components/schemas/ContactCollection'}}}
+    DepartmentResponse:
+      description: Authorized department resource.
+      content: {application/json: {schema: {$ref: '#/components/schemas/DepartmentResponse'}}}
+    DepartmentCollection:
+      description: Authorized department collection.
+      content: {application/json: {schema: {$ref: '#/components/schemas/DepartmentCollection'}}}
+    PositionResponse:
+      description: Authorized position resource.
+      content: {application/json: {schema: {$ref: '#/components/schemas/PositionResponse'}}}
+    PositionCollection:
+      description: Authorized position collection.
+      content: {application/json: {schema: {$ref: '#/components/schemas/PositionCollection'}}}
+    EmployeeResponse:
+      description: Authorized employee resource.
+      content: {application/json: {schema: {$ref: '#/components/schemas/EmployeeResponse'}}}
+    EmployeeCollection:
+      description: Authorized employee collection.
+      content: {application/json: {schema: {$ref: '#/components/schemas/EmployeeCollection'}}}
+    EmployeeAssignmentResponse:
+      description: Authorized employee assignment resource.
+      content: {application/json: {schema: {$ref: '#/components/schemas/EmployeeAssignmentResponse'}}}
+    EmployeeAssignmentCollection:
+      description: Authorized employee assignment collection.
+      content: {application/json: {schema: {$ref: '#/components/schemas/EmployeeAssignmentCollection'}}}
     BadRequest:
       description: Malformed request or query.
       headers:
@@ -613,6 +765,160 @@ components:
     ContactPatch:
       allOf: [{$ref: '#/components/schemas/ContactCreate'}]
       required: []
+    Department:
+      type: object
+      required: [id, code, name, status]
+      properties:
+        id: {$ref: '#/components/schemas/BigInt'}
+        parent_id: {$ref: '#/components/schemas/BigInt'}
+        code: {type: string}
+        name: {type: string}
+        description: {type: [string, 'null']}
+        status: {type: string, enum: [ACTIVE, INACTIVE, CLOSED]}
+    DepartmentCreate:
+      type: object
+      required: [code, name]
+      properties:
+        parent_id: {$ref: '#/components/schemas/BigInt'}
+        code: {type: string}
+        name: {type: string}
+        description: {type: string}
+        status: {type: string, enum: [ACTIVE, INACTIVE, CLOSED], default: ACTIVE}
+    DepartmentPatch:
+      type: object
+      properties:
+        parent_id: {$ref: '#/components/schemas/BigInt'}
+        code: {type: string}
+        name: {type: string}
+        description: {type: [string, 'null']}
+        status: {type: string, enum: [ACTIVE, INACTIVE, CLOSED]}
+    DepartmentState:
+      type: object
+      required: [status]
+      properties:
+        status: {type: string, enum: [ACTIVE, INACTIVE, CLOSED]}
+    Position:
+      type: object
+      required: [id, code, name, status]
+      properties:
+        id: {$ref: '#/components/schemas/BigInt'}
+        code: {type: string}
+        name: {type: string}
+        level: {type: [integer, 'null']}
+        description: {type: [string, 'null']}
+        status: {type: string, enum: [ACTIVE, INACTIVE, CLOSED]}
+    PositionCreate:
+      type: object
+      required: [code, name]
+      properties:
+        code: {type: string}
+        name: {type: string}
+        level: {type: [integer, 'null']}
+        description: {type: string}
+        status: {type: string, enum: [ACTIVE, INACTIVE, CLOSED], default: ACTIVE}
+    PositionPatch:
+      type: object
+      properties:
+        code: {type: string}
+        name: {type: string}
+        level: {type: [integer, 'null']}
+        description: {type: [string, 'null']}
+        status: {type: string, enum: [ACTIVE, INACTIVE, CLOSED]}
+    PositionState:
+      type: object
+      required: [status]
+      properties:
+        status: {type: string, enum: [ACTIVE, INACTIVE, CLOSED]}
+    Employee:
+      type: object
+      required: [id, employee_code, employee_name, status]
+      properties:
+        id: {$ref: '#/components/schemas/BigInt'}
+        user_id: {$ref: '#/components/schemas/BigInt'}
+        employee_code: {type: string}
+        employee_name: {type: string}
+        gender: {type: [string, 'null']}
+        date_of_birth: {type: [string, 'null'], format: date}
+        place_of_origin: {type: [string, 'null']}
+        hire_date: {type: [string, 'null'], format: date}
+        manager_employee_id: {$ref: '#/components/schemas/BigInt'}
+        description: {type: [string, 'null']}
+        status: {type: string, enum: [ACTIVE, INACTIVE]}
+    EmployeeCreate:
+      type: object
+      required: [employee_code, employee_name]
+      properties:
+        user_id: {$ref: '#/components/schemas/BigInt'}
+        employee_code: {type: string}
+        employee_name: {type: string}
+        gender: {type: [string, 'null']}
+        date_of_birth: {type: [string, 'null'], format: date}
+        place_of_origin: {type: [string, 'null']}
+        hire_date: {type: [string, 'null'], format: date}
+        manager_employee_id: {$ref: '#/components/schemas/BigInt'}
+        description: {type: [string, 'null']}
+        status: {type: string, enum: [ACTIVE, INACTIVE], default: ACTIVE}
+    EmployeePatch:
+      type: object
+      properties:
+        user_id: {$ref: '#/components/schemas/BigInt'}
+        employee_code: {type: string}
+        employee_name: {type: string}
+        gender: {type: [string, 'null']}
+        date_of_birth: {type: [string, 'null'], format: date}
+        place_of_origin: {type: [string, 'null']}
+        hire_date: {type: [string, 'null'], format: date}
+        manager_employee_id: {$ref: '#/components/schemas/BigInt'}
+        description: {type: [string, 'null']}
+        status: {type: string, enum: [ACTIVE, INACTIVE]}
+    EmployeeState:
+      type: object
+      required: [status]
+      properties:
+        status: {type: string, enum: [ACTIVE, INACTIVE]}
+    EmployeeAssignment:
+      type: object
+      required: [id, employee_id, organization_id, is_primary, effective_from, status]
+      properties:
+        id: {$ref: '#/components/schemas/BigInt'}
+        employee_id: {$ref: '#/components/schemas/BigInt'}
+        organization_id: {$ref: '#/components/schemas/BigInt'}
+        department_id: {$ref: '#/components/schemas/BigInt'}
+        position_id: {$ref: '#/components/schemas/BigInt'}
+        is_primary: {type: boolean}
+        effective_from: {type: string, format: date}
+        effective_to: {type: [string, 'null'], format: date}
+        description: {type: [string, 'null']}
+        status: {type: string, enum: [ACTIVE, INACTIVE]}
+    EmployeeAssignmentCreate:
+      type: object
+      required: [employee_id, organization_id, effective_from]
+      properties:
+        employee_id: {$ref: '#/components/schemas/BigInt'}
+        organization_id: {$ref: '#/components/schemas/BigInt'}
+        department_id: {$ref: '#/components/schemas/BigInt'}
+        position_id: {$ref: '#/components/schemas/BigInt'}
+        is_primary: {type: boolean, default: false}
+        effective_from: {type: string, format: date}
+        effective_to: {type: [string, 'null'], format: date}
+        description: {type: string}
+        status: {type: string, enum: [ACTIVE, INACTIVE], default: ACTIVE}
+    EmployeeAssignmentPatch:
+      type: object
+      properties:
+        organization_id: {$ref: '#/components/schemas/BigInt'}
+        department_id: {$ref: '#/components/schemas/BigInt'}
+        position_id: {$ref: '#/components/schemas/BigInt'}
+        is_primary: {type: boolean}
+        effective_from: {type: string, format: date}
+        effective_to: {type: [string, 'null'], format: date}
+        description: {type: [string, 'null']}
+        status: {type: string, enum: [ACTIVE, INACTIVE]}
+    EmployeeAssignmentState:
+      type: object
+      required: [status]
+      properties:
+        status: {type: string, enum: [ACTIVE, INACTIVE]}
     State:
       type: object
       required: [status]
@@ -622,7 +928,15 @@ components:
     WardResponse: {allOf: [{$ref: '#/components/schemas/SuccessResponse'}], properties: {data: {$ref: '#/components/schemas/Ward'}}}
     OrganizationResponse: {allOf: [{$ref: '#/components/schemas/SuccessResponse'}], properties: {data: {$ref: '#/components/schemas/Organization'}}}
     ContactResponse: {allOf: [{$ref: '#/components/schemas/SuccessResponse'}], properties: {data: {$ref: '#/components/schemas/Contact'}}}
+    DepartmentResponse: {allOf: [{$ref: '#/components/schemas/SuccessResponse'}], properties: {data: {$ref: '#/components/schemas/Department'}}}
+    PositionResponse: {allOf: [{$ref: '#/components/schemas/SuccessResponse'}], properties: {data: {$ref: '#/components/schemas/Position'}}}
+    EmployeeResponse: {allOf: [{$ref: '#/components/schemas/SuccessResponse'}], properties: {data: {$ref: '#/components/schemas/Employee'}}}
+    EmployeeAssignmentResponse: {allOf: [{$ref: '#/components/schemas/SuccessResponse'}], properties: {data: {$ref: '#/components/schemas/EmployeeAssignment'}}}
     ProvinceCollection: {allOf: [{$ref: '#/components/schemas/CollectionResponse'}], properties: {data: {type: array, items: {$ref: '#/components/schemas/Province'}}}}
     WardCollection: {allOf: [{$ref: '#/components/schemas/CollectionResponse'}], properties: {data: {type: array, items: {$ref: '#/components/schemas/Ward'}}}}
     OrganizationCollection: {allOf: [{$ref: '#/components/schemas/CollectionResponse'}], properties: {data: {type: array, items: {$ref: '#/components/schemas/Organization'}}}}
     ContactCollection: {allOf: [{$ref: '#/components/schemas/CollectionResponse'}], properties: {data: {type: array, items: {$ref: '#/components/schemas/Contact'}}}}
+    DepartmentCollection: {allOf: [{$ref: '#/components/schemas/CollectionResponse'}], properties: {data: {type: array, items: {$ref: '#/components/schemas/Department'}}}}
+    PositionCollection: {allOf: [{$ref: '#/components/schemas/CollectionResponse'}], properties: {data: {type: array, items: {$ref: '#/components/schemas/Position'}}}}
+    EmployeeCollection: {allOf: [{$ref: '#/components/schemas/CollectionResponse'}], properties: {data: {type: array, items: {$ref: '#/components/schemas/Employee'}}}}
+    EmployeeAssignmentCollection: {allOf: [{$ref: '#/components/schemas/CollectionResponse'}], properties: {data: {type: array, items: {$ref: '#/components/schemas/EmployeeAssignment'}}}}

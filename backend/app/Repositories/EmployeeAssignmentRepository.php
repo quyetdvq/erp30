@@ -106,6 +106,21 @@ final class EmployeeAssignmentRepository
     }
 
     /** @return list<array<string, mixed>> */
+    public function findAll(): array
+    {
+        try {
+            $result = $this->db->table('employee_assignments')->orderBy('id', 'ASC')->get();
+        } catch (\Throwable $exception) {
+            throw new PersistenceException(self::ERROR_PERSISTENCE_FAILED, 'findAll', $exception);
+        }
+        if ($result === false) {
+            throw new PersistenceException(self::ERROR_PERSISTENCE_FAILED, 'findAll');
+        }
+
+        return array_values($result->getResultArray());
+    }
+
+    /** @return list<array<string, mixed>> */
     public function findEffective(int $employeeId, string $onDate, bool $primaryOnly = false): array
     {
         $builder = $this->db->table('employee_assignments')
@@ -174,6 +189,30 @@ final class EmployeeAssignmentRepository
     public function positionIsActive(int $positionId): bool
     {
         return $this->activeReferenceExists('positions', $positionId, 'positionIsActive');
+    }
+
+    public function departmentExists(int $departmentId): bool
+    {
+        return $this->referenceExists('departments', $departmentId, 'departmentExists');
+    }
+
+    public function positionExists(int $positionId): bool
+    {
+        return $this->referenceExists('positions', $positionId, 'positionExists');
+    }
+
+    private function referenceExists(string $table, int $id, string $operation): bool
+    {
+        try {
+            $result = $this->db->table($table)->select('id')->where('id', $id)->get();
+        } catch (\Throwable $exception) {
+            throw new PersistenceException(self::ERROR_PERSISTENCE_FAILED, $operation, $exception);
+        }
+        if ($result === false) {
+            throw new PersistenceException(self::ERROR_PERSISTENCE_FAILED, $operation);
+        }
+
+        return $result->getRowArray() !== null;
     }
 
     private function activeReferenceExists(string $table, int $id, string $operation): bool

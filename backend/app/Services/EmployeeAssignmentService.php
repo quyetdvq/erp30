@@ -86,7 +86,13 @@ final class EmployeeAssignmentService
             if ((int) $candidate['employee_id'] !== $currentEmployeeId) {
                 throw new DomainException(self::ERROR_EMPLOYEE_IMMUTABLE, ['field' => 'employee_id']);
             }
-            $this->assertReferences($candidate);
+            $referenceChanged = array_intersect(
+                array_keys($payload),
+                ['employee_id', 'organization_id', 'department_id', 'position_id'],
+            ) !== [];
+            $requiresActiveReferences = $referenceChanged
+                || (($candidate['status'] ?? null) === 'ACTIVE' && ($current['status'] ?? null) !== 'ACTIVE');
+            $this->assertReferences($candidate, $requiresActiveReferences);
             $this->assertPrimaryDoesNotOverlap($candidate, $assignmentId);
 
             $changes = $this->withoutAuditFields($payload);
@@ -120,7 +126,9 @@ final class EmployeeAssignmentService
                 $candidate['effective_to'] = $effectiveTo;
             }
             $candidate = $this->prepare($candidate, false, $operation);
-            $this->assertReferences($candidate);
+            // Ending a historical assignment must remain possible after its
+            // previously selected references have become inactive.
+            $this->assertReferences($candidate, false);
             $this->assertPrimaryDoesNotOverlap($candidate, $assignmentId);
 
             $changes = [
@@ -269,14 +277,14 @@ final class EmployeeAssignmentService
     }
 
     /** @param array<string, mixed> $candidate */
-    private function assertReferences(array $candidate): void
+    private function assertReferences(array $candidate, bool $requireActiveReferences = true): void
     {
         $employeeId = PositiveId::normalize($candidate['employee_id'] ?? null, 'employee_id', self::ERROR_REFERENCE_INVALID);
         $employee = $this->employeeRepo()->find($employeeId);
         if ($employee === null) {
             throw new DomainException(self::ERROR_REFERENCE_INVALID, ['employee_id' => $employeeId]);
         }
-        if (($employee['status'] ?? null) !== 'ACTIVE') {
+        if ($requireActiveReferences && ($employee['status'] ?? null) !== 'ACTIVE') {
             throw new DomainException(self::ERROR_REFERENCE_INACTIVE, ['employee_id' => $employeeId]);
         }
 
@@ -285,13 +293,19 @@ final class EmployeeAssignmentService
         if ($organization === null) {
             throw new DomainException(self::ERROR_REFERENCE_INVALID, ['organization_id' => $organizationId]);
         }
-        if (($organization['status'] ?? null) !== 'ACTIVE') {
+        if ($requireActiveReferences && ($organization['status'] ?? null) !== 'ACTIVE') {
             throw new DomainException(self::ERROR_REFERENCE_INACTIVE, ['organization_id' => $organizationId]);
         }
 
-        foreach (['department_id' => 'departmentIsActive', 'position_id' => 'positionIsActive'] as $field => $method) {
-            if (($candidate[$field] ?? null) !== null && ! $this->repo()->{$method}((int) $candidate[$field])) {
+        foreach (['department_id' => ['departmentExists', 'departmentIsActive'], 'position_id' => ['positionExists', 'positionIsActive']] as $field => [$existsMethod, $activeMethod]) {
+            if (($candidate[$field] ?? null) === null) {
+                continue;
+            }
+            if (! $this->repo()->{$existsMethod}((int) $candidate[$field])) {
                 throw new DomainException(self::ERROR_REFERENCE_INVALID, ['field' => $field]);
+            }
+            if ($requireActiveReferences && ! $this->repo()->{$activeMethod}((int) $candidate[$field])) {
+                throw new DomainException(self::ERROR_REFERENCE_INACTIVE, ['field' => $field]);
             }
         }
     }

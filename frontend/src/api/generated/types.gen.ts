@@ -175,6 +175,148 @@ export type ContactCreate = {
 
 export type ContactPatch = ContactCreate;
 
+export type Department = {
+    id: BigInt;
+    parent_id?: BigInt;
+    code: string;
+    name: string;
+    description?: string | null;
+    status: 'ACTIVE' | 'INACTIVE' | 'CLOSED';
+};
+
+export type DepartmentCreate = {
+    parent_id?: BigInt;
+    code: string;
+    name: string;
+    description?: string;
+    status?: 'ACTIVE' | 'INACTIVE' | 'CLOSED';
+};
+
+export type DepartmentPatch = {
+    parent_id?: BigInt;
+    code?: string;
+    name?: string;
+    description?: string | null;
+    status?: 'ACTIVE' | 'INACTIVE' | 'CLOSED';
+};
+
+export type DepartmentState = {
+    status: 'ACTIVE' | 'INACTIVE' | 'CLOSED';
+};
+
+export type Position = {
+    id: BigInt;
+    code: string;
+    name: string;
+    level?: number | null;
+    description?: string | null;
+    status: 'ACTIVE' | 'INACTIVE' | 'CLOSED';
+};
+
+export type PositionCreate = {
+    code: string;
+    name: string;
+    level?: number | null;
+    description?: string;
+    status?: 'ACTIVE' | 'INACTIVE' | 'CLOSED';
+};
+
+export type PositionPatch = {
+    code?: string;
+    name?: string;
+    level?: number | null;
+    description?: string | null;
+    status?: 'ACTIVE' | 'INACTIVE' | 'CLOSED';
+};
+
+export type PositionState = {
+    status: 'ACTIVE' | 'INACTIVE' | 'CLOSED';
+};
+
+export type Employee = {
+    id: BigInt;
+    user_id?: BigInt;
+    employee_code: string;
+    employee_name: string;
+    gender?: string | null;
+    date_of_birth?: string | null;
+    place_of_origin?: string | null;
+    hire_date?: string | null;
+    manager_employee_id?: BigInt;
+    description?: string | null;
+    status: 'ACTIVE' | 'INACTIVE';
+};
+
+export type EmployeeCreate = {
+    user_id?: BigInt;
+    employee_code: string;
+    employee_name: string;
+    gender?: string | null;
+    date_of_birth?: string | null;
+    place_of_origin?: string | null;
+    hire_date?: string | null;
+    manager_employee_id?: BigInt;
+    description?: string | null;
+    status?: 'ACTIVE' | 'INACTIVE';
+};
+
+export type EmployeePatch = {
+    user_id?: BigInt;
+    employee_code?: string;
+    employee_name?: string;
+    gender?: string | null;
+    date_of_birth?: string | null;
+    place_of_origin?: string | null;
+    hire_date?: string | null;
+    manager_employee_id?: BigInt;
+    description?: string | null;
+    status?: 'ACTIVE' | 'INACTIVE';
+};
+
+export type EmployeeState = {
+    status: 'ACTIVE' | 'INACTIVE';
+};
+
+export type EmployeeAssignment = {
+    id: BigInt;
+    employee_id: BigInt;
+    organization_id: BigInt;
+    department_id?: BigInt;
+    position_id?: BigInt;
+    is_primary: boolean;
+    effective_from: string;
+    effective_to?: string | null;
+    description?: string | null;
+    status: 'ACTIVE' | 'INACTIVE';
+};
+
+export type EmployeeAssignmentCreate = {
+    employee_id: BigInt;
+    organization_id: BigInt;
+    department_id?: BigInt;
+    position_id?: BigInt;
+    is_primary?: boolean;
+    effective_from: string;
+    effective_to?: string | null;
+    description?: string;
+    status?: 'ACTIVE' | 'INACTIVE';
+};
+
+export type EmployeeAssignmentPatch = {
+    organization_id?: BigInt;
+    department_id?: BigInt;
+    position_id?: BigInt;
+    is_primary?: boolean;
+    effective_from?: string;
+    effective_to?: string | null;
+    description?: string | null;
+    status?: 'ACTIVE' | 'INACTIVE';
+};
+
+export type EmployeeAssignmentState = {
+    status: 'ACTIVE' | 'INACTIVE';
+};
+
 export type State = {
     status: 'ACTIVE' | 'INACTIVE' | 'CLOSED';
 };
@@ -195,6 +337,22 @@ export type ContactResponse = SuccessResponse & {
     data?: Contact;
 };
 
+export type DepartmentResponse = SuccessResponse & {
+    data?: Department;
+};
+
+export type PositionResponse = SuccessResponse & {
+    data?: Position;
+};
+
+export type EmployeeResponse = SuccessResponse & {
+    data?: Employee;
+};
+
+export type EmployeeAssignmentResponse = SuccessResponse & {
+    data?: EmployeeAssignment;
+};
+
 export type ProvinceCollection = CollectionResponse & {
     data?: Array<Province>;
 };
@@ -209,6 +367,22 @@ export type OrganizationCollection = CollectionResponse & {
 
 export type ContactCollection = CollectionResponse & {
     data?: Array<Contact>;
+};
+
+export type DepartmentCollection = CollectionResponse & {
+    data?: Array<Department>;
+};
+
+export type PositionCollection = CollectionResponse & {
+    data?: Array<Position>;
+};
+
+export type EmployeeCollection = CollectionResponse & {
+    data?: Array<Employee>;
+};
+
+export type EmployeeAssignmentCollection = CollectionResponse & {
+    data?: Array<EmployeeAssignment>;
 };
 
 /**
@@ -255,6 +429,30 @@ export type ContactCreate2 = ContactCreate;
 export type ContactPatch2 = ContactPatch;
 
 export type State2 = State;
+
+export type DepartmentCreate2 = DepartmentCreate;
+
+export type DepartmentPatch2 = DepartmentPatch;
+
+export type DepartmentState2 = DepartmentState;
+
+export type PositionCreate2 = PositionCreate;
+
+export type PositionPatch2 = PositionPatch;
+
+export type PositionState2 = PositionState;
+
+export type EmployeeCreate2 = EmployeeCreate;
+
+export type EmployeePatch2 = EmployeePatch;
+
+export type EmployeeState2 = EmployeeState;
+
+export type EmployeeAssignmentCreate2 = EmployeeAssignmentCreate;
+
+export type EmployeeAssignmentPatch2 = EmployeeAssignmentPatch;
+
+export type EmployeeAssignmentState2 = EmployeeAssignmentState;
 
 export type GetHealthData = {
     body?: never;
@@ -1176,3 +1374,835 @@ export type SetContactStateResponses = {
 };
 
 export type SetContactStateResponse = SetContactStateResponses[keyof SetContactStateResponses];
+
+export type ListDepartmentsData = {
+    body?: never;
+    headers?: {
+        /**
+         * Supported request language. Unsupported values fall back to vi.
+         */
+        'Accept-Language'?: 'vi' | 'en';
+        /**
+         * Client request correlation identifier; invalid or missing values are replaced by a generated UUID.
+         */
+        'X-Request-ID'?: RequestId;
+    };
+    path?: never;
+    query?: {
+        q?: string;
+        page?: number;
+        page_size?: number;
+        /**
+         * Allowlisted comma-separated sort terms; a final id ASC tie-breaker is applied.
+         */
+        sort?: string;
+        filter?: {
+            [key: string]: string | Array<string>;
+        };
+    };
+    url: '/api/v1/departments';
+};
+
+export type ListDepartmentsErrors = {
+    /**
+     * Malformed request or query.
+     */
+    400: ErrorResponse;
+    /**
+     * Unauthenticated or invalid authentication.
+     */
+    401: ErrorResponse;
+};
+
+export type ListDepartmentsError = ListDepartmentsErrors[keyof ListDepartmentsErrors];
+
+export type ListDepartmentsResponses = {
+    /**
+     * Authorized department collection.
+     */
+    200: DepartmentCollection;
+};
+
+export type ListDepartmentsResponse = ListDepartmentsResponses[keyof ListDepartmentsResponses];
+
+export type CreateDepartmentData = {
+    body: DepartmentCreate2;
+    path?: never;
+    query?: never;
+    url: '/api/v1/departments';
+};
+
+export type CreateDepartmentErrors = {
+    /**
+     * Malformed request or query.
+     */
+    400: ErrorResponse;
+    /**
+     * Unauthenticated or invalid authentication.
+     */
+    401: ErrorResponse;
+    /**
+     * Visible target but action denied.
+     */
+    403: ErrorResponse;
+    /**
+     * Conflict, concurrency, uniqueness, or current-state failure.
+     */
+    409: ErrorResponse;
+    /**
+     * Semantically invalid request.
+     */
+    422: ErrorResponse;
+};
+
+export type CreateDepartmentError = CreateDepartmentErrors[keyof CreateDepartmentErrors];
+
+export type CreateDepartmentResponses = {
+    /**
+     * Authorized department resource.
+     */
+    201: DepartmentResponse;
+};
+
+export type CreateDepartmentResponse = CreateDepartmentResponses[keyof CreateDepartmentResponses];
+
+export type GetDepartmentData = {
+    body?: never;
+    path: {
+        id: BigInt;
+    };
+    query?: never;
+    url: '/api/v1/departments/{id}';
+};
+
+export type GetDepartmentErrors = {
+    /**
+     * Unauthenticated or invalid authentication.
+     */
+    401: ErrorResponse;
+    /**
+     * Target not found or not visible.
+     */
+    404: ErrorResponse;
+};
+
+export type GetDepartmentError = GetDepartmentErrors[keyof GetDepartmentErrors];
+
+export type GetDepartmentResponses = {
+    /**
+     * Authorized department resource.
+     */
+    200: DepartmentResponse;
+};
+
+export type GetDepartmentResponse = GetDepartmentResponses[keyof GetDepartmentResponses];
+
+export type UpdateDepartmentData = {
+    body: DepartmentPatch2;
+    path: {
+        id: BigInt;
+    };
+    query?: never;
+    url: '/api/v1/departments/{id}';
+};
+
+export type UpdateDepartmentErrors = {
+    /**
+     * Malformed request or query.
+     */
+    400: ErrorResponse;
+    /**
+     * Unauthenticated or invalid authentication.
+     */
+    401: ErrorResponse;
+    /**
+     * Visible target but action denied.
+     */
+    403: ErrorResponse;
+    /**
+     * Target not found or not visible.
+     */
+    404: ErrorResponse;
+    /**
+     * Conflict, concurrency, uniqueness, or current-state failure.
+     */
+    409: ErrorResponse;
+    /**
+     * Semantically invalid request.
+     */
+    422: ErrorResponse;
+};
+
+export type UpdateDepartmentError = UpdateDepartmentErrors[keyof UpdateDepartmentErrors];
+
+export type UpdateDepartmentResponses = {
+    /**
+     * Authorized department resource.
+     */
+    200: DepartmentResponse;
+};
+
+export type UpdateDepartmentResponse = UpdateDepartmentResponses[keyof UpdateDepartmentResponses];
+
+export type SetDepartmentStateData = {
+    body: DepartmentState2;
+    path: {
+        id: BigInt;
+    };
+    query?: never;
+    url: '/api/v1/departments/{id}/actions/set-state';
+};
+
+export type SetDepartmentStateErrors = {
+    /**
+     * Unauthenticated or invalid authentication.
+     */
+    401: ErrorResponse;
+    /**
+     * Visible target but action denied.
+     */
+    403: ErrorResponse;
+    /**
+     * Target not found or not visible.
+     */
+    404: ErrorResponse;
+    /**
+     * Semantically invalid request.
+     */
+    422: ErrorResponse;
+};
+
+export type SetDepartmentStateError = SetDepartmentStateErrors[keyof SetDepartmentStateErrors];
+
+export type SetDepartmentStateResponses = {
+    /**
+     * Authorized department resource.
+     */
+    200: DepartmentResponse;
+};
+
+export type SetDepartmentStateResponse = SetDepartmentStateResponses[keyof SetDepartmentStateResponses];
+
+export type ListPositionsData = {
+    body?: never;
+    headers?: {
+        /**
+         * Supported request language. Unsupported values fall back to vi.
+         */
+        'Accept-Language'?: 'vi' | 'en';
+        /**
+         * Client request correlation identifier; invalid or missing values are replaced by a generated UUID.
+         */
+        'X-Request-ID'?: RequestId;
+    };
+    path?: never;
+    query?: {
+        q?: string;
+        page?: number;
+        page_size?: number;
+        /**
+         * Allowlisted comma-separated sort terms; a final id ASC tie-breaker is applied.
+         */
+        sort?: string;
+        filter?: {
+            [key: string]: string | Array<string>;
+        };
+    };
+    url: '/api/v1/positions';
+};
+
+export type ListPositionsErrors = {
+    /**
+     * Malformed request or query.
+     */
+    400: ErrorResponse;
+    /**
+     * Unauthenticated or invalid authentication.
+     */
+    401: ErrorResponse;
+};
+
+export type ListPositionsError = ListPositionsErrors[keyof ListPositionsErrors];
+
+export type ListPositionsResponses = {
+    /**
+     * Authorized position collection.
+     */
+    200: PositionCollection;
+};
+
+export type ListPositionsResponse = ListPositionsResponses[keyof ListPositionsResponses];
+
+export type CreatePositionData = {
+    body: PositionCreate2;
+    path?: never;
+    query?: never;
+    url: '/api/v1/positions';
+};
+
+export type CreatePositionErrors = {
+    /**
+     * Malformed request or query.
+     */
+    400: ErrorResponse;
+    /**
+     * Unauthenticated or invalid authentication.
+     */
+    401: ErrorResponse;
+    /**
+     * Visible target but action denied.
+     */
+    403: ErrorResponse;
+    /**
+     * Conflict, concurrency, uniqueness, or current-state failure.
+     */
+    409: ErrorResponse;
+    /**
+     * Semantically invalid request.
+     */
+    422: ErrorResponse;
+};
+
+export type CreatePositionError = CreatePositionErrors[keyof CreatePositionErrors];
+
+export type CreatePositionResponses = {
+    /**
+     * Authorized position resource.
+     */
+    201: PositionResponse;
+};
+
+export type CreatePositionResponse = CreatePositionResponses[keyof CreatePositionResponses];
+
+export type GetPositionData = {
+    body?: never;
+    path: {
+        id: BigInt;
+    };
+    query?: never;
+    url: '/api/v1/positions/{id}';
+};
+
+export type GetPositionErrors = {
+    /**
+     * Unauthenticated or invalid authentication.
+     */
+    401: ErrorResponse;
+    /**
+     * Target not found or not visible.
+     */
+    404: ErrorResponse;
+};
+
+export type GetPositionError = GetPositionErrors[keyof GetPositionErrors];
+
+export type GetPositionResponses = {
+    /**
+     * Authorized position resource.
+     */
+    200: PositionResponse;
+};
+
+export type GetPositionResponse = GetPositionResponses[keyof GetPositionResponses];
+
+export type UpdatePositionData = {
+    body: PositionPatch2;
+    path: {
+        id: BigInt;
+    };
+    query?: never;
+    url: '/api/v1/positions/{id}';
+};
+
+export type UpdatePositionErrors = {
+    /**
+     * Malformed request or query.
+     */
+    400: ErrorResponse;
+    /**
+     * Unauthenticated or invalid authentication.
+     */
+    401: ErrorResponse;
+    /**
+     * Visible target but action denied.
+     */
+    403: ErrorResponse;
+    /**
+     * Target not found or not visible.
+     */
+    404: ErrorResponse;
+    /**
+     * Conflict, concurrency, uniqueness, or current-state failure.
+     */
+    409: ErrorResponse;
+    /**
+     * Semantically invalid request.
+     */
+    422: ErrorResponse;
+};
+
+export type UpdatePositionError = UpdatePositionErrors[keyof UpdatePositionErrors];
+
+export type UpdatePositionResponses = {
+    /**
+     * Authorized position resource.
+     */
+    200: PositionResponse;
+};
+
+export type UpdatePositionResponse = UpdatePositionResponses[keyof UpdatePositionResponses];
+
+export type SetPositionStateData = {
+    body: PositionState2;
+    path: {
+        id: BigInt;
+    };
+    query?: never;
+    url: '/api/v1/positions/{id}/actions/set-state';
+};
+
+export type SetPositionStateErrors = {
+    /**
+     * Unauthenticated or invalid authentication.
+     */
+    401: ErrorResponse;
+    /**
+     * Visible target but action denied.
+     */
+    403: ErrorResponse;
+    /**
+     * Target not found or not visible.
+     */
+    404: ErrorResponse;
+    /**
+     * Semantically invalid request.
+     */
+    422: ErrorResponse;
+};
+
+export type SetPositionStateError = SetPositionStateErrors[keyof SetPositionStateErrors];
+
+export type SetPositionStateResponses = {
+    /**
+     * Authorized position resource.
+     */
+    200: PositionResponse;
+};
+
+export type SetPositionStateResponse = SetPositionStateResponses[keyof SetPositionStateResponses];
+
+export type ListEmployeesData = {
+    body?: never;
+    headers?: {
+        /**
+         * Supported request language. Unsupported values fall back to vi.
+         */
+        'Accept-Language'?: 'vi' | 'en';
+        /**
+         * Client request correlation identifier; invalid or missing values are replaced by a generated UUID.
+         */
+        'X-Request-ID'?: RequestId;
+    };
+    path?: never;
+    query?: {
+        q?: string;
+        page?: number;
+        page_size?: number;
+        /**
+         * Allowlisted comma-separated sort terms; a final id ASC tie-breaker is applied.
+         */
+        sort?: string;
+        filter?: {
+            [key: string]: string | Array<string>;
+        };
+    };
+    url: '/api/v1/employees';
+};
+
+export type ListEmployeesErrors = {
+    /**
+     * Malformed request or query.
+     */
+    400: ErrorResponse;
+    /**
+     * Unauthenticated or invalid authentication.
+     */
+    401: ErrorResponse;
+};
+
+export type ListEmployeesError = ListEmployeesErrors[keyof ListEmployeesErrors];
+
+export type ListEmployeesResponses = {
+    /**
+     * Authorized employee collection.
+     */
+    200: EmployeeCollection;
+};
+
+export type ListEmployeesResponse = ListEmployeesResponses[keyof ListEmployeesResponses];
+
+export type CreateEmployeeData = {
+    body: EmployeeCreate2;
+    path?: never;
+    query?: never;
+    url: '/api/v1/employees';
+};
+
+export type CreateEmployeeErrors = {
+    /**
+     * Malformed request or query.
+     */
+    400: ErrorResponse;
+    /**
+     * Unauthenticated or invalid authentication.
+     */
+    401: ErrorResponse;
+    /**
+     * Visible target but action denied.
+     */
+    403: ErrorResponse;
+    /**
+     * Conflict, concurrency, uniqueness, or current-state failure.
+     */
+    409: ErrorResponse;
+    /**
+     * Semantically invalid request.
+     */
+    422: ErrorResponse;
+};
+
+export type CreateEmployeeError = CreateEmployeeErrors[keyof CreateEmployeeErrors];
+
+export type CreateEmployeeResponses = {
+    /**
+     * Authorized employee resource.
+     */
+    201: EmployeeResponse;
+};
+
+export type CreateEmployeeResponse = CreateEmployeeResponses[keyof CreateEmployeeResponses];
+
+export type GetEmployeeData = {
+    body?: never;
+    path: {
+        id: BigInt;
+    };
+    query?: never;
+    url: '/api/v1/employees/{id}';
+};
+
+export type GetEmployeeErrors = {
+    /**
+     * Unauthenticated or invalid authentication.
+     */
+    401: ErrorResponse;
+    /**
+     * Target not found or not visible.
+     */
+    404: ErrorResponse;
+};
+
+export type GetEmployeeError = GetEmployeeErrors[keyof GetEmployeeErrors];
+
+export type GetEmployeeResponses = {
+    /**
+     * Authorized employee resource.
+     */
+    200: EmployeeResponse;
+};
+
+export type GetEmployeeResponse = GetEmployeeResponses[keyof GetEmployeeResponses];
+
+export type UpdateEmployeeData = {
+    body: EmployeePatch2;
+    path: {
+        id: BigInt;
+    };
+    query?: never;
+    url: '/api/v1/employees/{id}';
+};
+
+export type UpdateEmployeeErrors = {
+    /**
+     * Malformed request or query.
+     */
+    400: ErrorResponse;
+    /**
+     * Unauthenticated or invalid authentication.
+     */
+    401: ErrorResponse;
+    /**
+     * Visible target but action denied.
+     */
+    403: ErrorResponse;
+    /**
+     * Target not found or not visible.
+     */
+    404: ErrorResponse;
+    /**
+     * Conflict, concurrency, uniqueness, or current-state failure.
+     */
+    409: ErrorResponse;
+    /**
+     * Semantically invalid request.
+     */
+    422: ErrorResponse;
+};
+
+export type UpdateEmployeeError = UpdateEmployeeErrors[keyof UpdateEmployeeErrors];
+
+export type UpdateEmployeeResponses = {
+    /**
+     * Authorized employee resource.
+     */
+    200: EmployeeResponse;
+};
+
+export type UpdateEmployeeResponse = UpdateEmployeeResponses[keyof UpdateEmployeeResponses];
+
+export type SetEmployeeStateData = {
+    body: EmployeeState2;
+    path: {
+        id: BigInt;
+    };
+    query?: never;
+    url: '/api/v1/employees/{id}/actions/set-state';
+};
+
+export type SetEmployeeStateErrors = {
+    /**
+     * Unauthenticated or invalid authentication.
+     */
+    401: ErrorResponse;
+    /**
+     * Visible target but action denied.
+     */
+    403: ErrorResponse;
+    /**
+     * Target not found or not visible.
+     */
+    404: ErrorResponse;
+    /**
+     * Semantically invalid request.
+     */
+    422: ErrorResponse;
+};
+
+export type SetEmployeeStateError = SetEmployeeStateErrors[keyof SetEmployeeStateErrors];
+
+export type SetEmployeeStateResponses = {
+    /**
+     * Authorized employee resource.
+     */
+    200: EmployeeResponse;
+};
+
+export type SetEmployeeStateResponse = SetEmployeeStateResponses[keyof SetEmployeeStateResponses];
+
+export type ListEmployeeAssignmentsData = {
+    body?: never;
+    headers?: {
+        /**
+         * Supported request language. Unsupported values fall back to vi.
+         */
+        'Accept-Language'?: 'vi' | 'en';
+        /**
+         * Client request correlation identifier; invalid or missing values are replaced by a generated UUID.
+         */
+        'X-Request-ID'?: RequestId;
+    };
+    path?: never;
+    query?: {
+        q?: string;
+        page?: number;
+        page_size?: number;
+        /**
+         * Allowlisted comma-separated sort terms; a final id ASC tie-breaker is applied.
+         */
+        sort?: string;
+        filter?: {
+            [key: string]: string | Array<string>;
+        };
+    };
+    url: '/api/v1/employee-assignments';
+};
+
+export type ListEmployeeAssignmentsErrors = {
+    /**
+     * Malformed request or query.
+     */
+    400: ErrorResponse;
+    /**
+     * Unauthenticated or invalid authentication.
+     */
+    401: ErrorResponse;
+};
+
+export type ListEmployeeAssignmentsError = ListEmployeeAssignmentsErrors[keyof ListEmployeeAssignmentsErrors];
+
+export type ListEmployeeAssignmentsResponses = {
+    /**
+     * Authorized employee assignment collection.
+     */
+    200: EmployeeAssignmentCollection;
+};
+
+export type ListEmployeeAssignmentsResponse = ListEmployeeAssignmentsResponses[keyof ListEmployeeAssignmentsResponses];
+
+export type CreateEmployeeAssignmentData = {
+    body: EmployeeAssignmentCreate2;
+    path?: never;
+    query?: never;
+    url: '/api/v1/employee-assignments';
+};
+
+export type CreateEmployeeAssignmentErrors = {
+    /**
+     * Malformed request or query.
+     */
+    400: ErrorResponse;
+    /**
+     * Unauthenticated or invalid authentication.
+     */
+    401: ErrorResponse;
+    /**
+     * Visible target but action denied.
+     */
+    403: ErrorResponse;
+    /**
+     * Conflict, concurrency, uniqueness, or current-state failure.
+     */
+    409: ErrorResponse;
+    /**
+     * Semantically invalid request.
+     */
+    422: ErrorResponse;
+};
+
+export type CreateEmployeeAssignmentError = CreateEmployeeAssignmentErrors[keyof CreateEmployeeAssignmentErrors];
+
+export type CreateEmployeeAssignmentResponses = {
+    /**
+     * Authorized employee assignment resource.
+     */
+    201: EmployeeAssignmentResponse;
+};
+
+export type CreateEmployeeAssignmentResponse = CreateEmployeeAssignmentResponses[keyof CreateEmployeeAssignmentResponses];
+
+export type GetEmployeeAssignmentData = {
+    body?: never;
+    path: {
+        id: BigInt;
+    };
+    query?: never;
+    url: '/api/v1/employee-assignments/{id}';
+};
+
+export type GetEmployeeAssignmentErrors = {
+    /**
+     * Unauthenticated or invalid authentication.
+     */
+    401: ErrorResponse;
+    /**
+     * Target not found or not visible.
+     */
+    404: ErrorResponse;
+};
+
+export type GetEmployeeAssignmentError = GetEmployeeAssignmentErrors[keyof GetEmployeeAssignmentErrors];
+
+export type GetEmployeeAssignmentResponses = {
+    /**
+     * Authorized employee assignment resource.
+     */
+    200: EmployeeAssignmentResponse;
+};
+
+export type GetEmployeeAssignmentResponse = GetEmployeeAssignmentResponses[keyof GetEmployeeAssignmentResponses];
+
+export type UpdateEmployeeAssignmentData = {
+    body: EmployeeAssignmentPatch2;
+    path: {
+        id: BigInt;
+    };
+    query?: never;
+    url: '/api/v1/employee-assignments/{id}';
+};
+
+export type UpdateEmployeeAssignmentErrors = {
+    /**
+     * Malformed request or query.
+     */
+    400: ErrorResponse;
+    /**
+     * Unauthenticated or invalid authentication.
+     */
+    401: ErrorResponse;
+    /**
+     * Visible target but action denied.
+     */
+    403: ErrorResponse;
+    /**
+     * Target not found or not visible.
+     */
+    404: ErrorResponse;
+    /**
+     * Conflict, concurrency, uniqueness, or current-state failure.
+     */
+    409: ErrorResponse;
+    /**
+     * Semantically invalid request.
+     */
+    422: ErrorResponse;
+};
+
+export type UpdateEmployeeAssignmentError = UpdateEmployeeAssignmentErrors[keyof UpdateEmployeeAssignmentErrors];
+
+export type UpdateEmployeeAssignmentResponses = {
+    /**
+     * Authorized employee assignment resource.
+     */
+    200: EmployeeAssignmentResponse;
+};
+
+export type UpdateEmployeeAssignmentResponse = UpdateEmployeeAssignmentResponses[keyof UpdateEmployeeAssignmentResponses];
+
+export type SetEmployeeAssignmentStateData = {
+    body: EmployeeAssignmentState2;
+    path: {
+        id: BigInt;
+    };
+    query?: never;
+    url: '/api/v1/employee-assignments/{id}/actions/set-state';
+};
+
+export type SetEmployeeAssignmentStateErrors = {
+    /**
+     * Unauthenticated or invalid authentication.
+     */
+    401: ErrorResponse;
+    /**
+     * Visible target but action denied.
+     */
+    403: ErrorResponse;
+    /**
+     * Target not found or not visible.
+     */
+    404: ErrorResponse;
+    /**
+     * Semantically invalid request.
+     */
+    422: ErrorResponse;
+};
+
+export type SetEmployeeAssignmentStateError = SetEmployeeAssignmentStateErrors[keyof SetEmployeeAssignmentStateErrors];
+
+export type SetEmployeeAssignmentStateResponses = {
+    /**
+     * Authorized employee assignment resource.
+     */
+    200: EmployeeAssignmentResponse;
+};
+
+export type SetEmployeeAssignmentStateResponse = SetEmployeeAssignmentStateResponses[keyof SetEmployeeAssignmentStateResponses];

@@ -2,7 +2,7 @@
 
 import type { Client, ClientMeta, Options as Options2, RequestResult, TDataShape } from './client';
 import { client } from './client.gen';
-import type { CreateContactData, CreateContactErrors, CreateContactResponses, CreateOrganizationData, CreateOrganizationErrors, CreateOrganizationResponses, CreateProvinceData, CreateProvinceErrors, CreateProvinceResponses, CreateWardData, CreateWardErrors, CreateWardResponses, GetContactData, GetContactErrors, GetContactResponses, GetHealthData, GetHealthErrors, GetHealthResponses, GetOrganizationData, GetOrganizationErrors, GetOrganizationResponses, GetOrganizationTreeData, GetOrganizationTreeErrors, GetOrganizationTreeResponses, GetProvinceData, GetProvinceErrors, GetProvinceResponses, GetWardData, GetWardErrors, GetWardResponses, ListContactsData, ListContactsErrors, ListContactsResponses, ListOrganizationsData, ListOrganizationsErrors, ListOrganizationsResponses, ListProvincesData, ListProvincesErrors, ListProvincesResponses, ListWardsData, ListWardsErrors, ListWardsResponses, SetContactStateData, SetContactStateErrors, SetContactStateResponses, SetOrganizationStateData, SetOrganizationStateErrors, SetOrganizationStateResponses, SetProvinceStateData, SetProvinceStateErrors, SetProvinceStateResponses, SetWardStateData, SetWardStateErrors, SetWardStateResponses, UpdateContactData, UpdateContactErrors, UpdateContactResponses, UpdateOrganizationData, UpdateOrganizationErrors, UpdateOrganizationResponses, UpdateProvinceData, UpdateProvinceErrors, UpdateProvinceResponses, UpdateWardData, UpdateWardErrors, UpdateWardResponses } from './types.gen';
+import type { CreateContactData, CreateContactErrors, CreateContactResponses, CreateDepartmentData, CreateDepartmentErrors, CreateDepartmentResponses, CreateEmployeeAssignmentData, CreateEmployeeAssignmentErrors, CreateEmployeeAssignmentResponses, CreateEmployeeData, CreateEmployeeErrors, CreateEmployeeResponses, CreateOrganizationData, CreateOrganizationErrors, CreateOrganizationResponses, CreatePositionData, CreatePositionErrors, CreatePositionResponses, CreateProvinceData, CreateProvinceErrors, CreateProvinceResponses, CreateWardData, CreateWardErrors, CreateWardResponses, GetContactData, GetContactErrors, GetContactResponses, GetDepartmentData, GetDepartmentErrors, GetDepartmentResponses, GetEmployeeAssignmentData, GetEmployeeAssignmentErrors, GetEmployeeAssignmentResponses, GetEmployeeData, GetEmployeeErrors, GetEmployeeResponses, GetHealthData, GetHealthErrors, GetHealthResponses, GetOrganizationData, GetOrganizationErrors, GetOrganizationResponses, GetOrganizationTreeData, GetOrganizationTreeErrors, GetOrganizationTreeResponses, GetPositionData, GetPositionErrors, GetPositionResponses, GetProvinceData, GetProvinceErrors, GetProvinceResponses, GetWardData, GetWardErrors, GetWardResponses, ListContactsData, ListContactsErrors, ListContactsResponses, ListDepartmentsData, ListDepartmentsErrors, ListDepartmentsResponses, ListEmployeeAssignmentsData, ListEmployeeAssignmentsErrors, ListEmployeeAssignmentsResponses, ListEmployeesData, ListEmployeesErrors, ListEmployeesResponses, ListOrganizationsData, ListOrganizationsErrors, ListOrganizationsResponses, ListPositionsData, ListPositionsErrors, ListPositionsResponses, ListProvincesData, ListProvincesErrors, ListProvincesResponses, ListWardsData, ListWardsErrors, ListWardsResponses, SetContactStateData, SetContactStateErrors, SetContactStateResponses, SetDepartmentStateData, SetDepartmentStateErrors, SetDepartmentStateResponses, SetEmployeeAssignmentStateData, SetEmployeeAssignmentStateErrors, SetEmployeeAssignmentStateResponses, SetEmployeeStateData, SetEmployeeStateErrors, SetEmployeeStateResponses, SetOrganizationStateData, SetOrganizationStateErrors, SetOrganizationStateResponses, SetPositionStateData, SetPositionStateErrors, SetPositionStateResponses, SetProvinceStateData, SetProvinceStateErrors, SetProvinceStateResponses, SetWardStateData, SetWardStateErrors, SetWardStateResponses, UpdateContactData, UpdateContactErrors, UpdateContactResponses, UpdateDepartmentData, UpdateDepartmentErrors, UpdateDepartmentResponses, UpdateEmployeeAssignmentData, UpdateEmployeeAssignmentErrors, UpdateEmployeeAssignmentResponses, UpdateEmployeeData, UpdateEmployeeErrors, UpdateEmployeeResponses, UpdateOrganizationData, UpdateOrganizationErrors, UpdateOrganizationResponses, UpdatePositionData, UpdatePositionErrors, UpdatePositionResponses, UpdateProvinceData, UpdateProvinceErrors, UpdateProvinceResponses, UpdateWardData, UpdateWardErrors, UpdateWardResponses } from './types.gen';
 
 export type Options<TData extends TDataShape = TDataShape, ThrowOnError extends boolean = boolean, TResponse = unknown> = Options2<TData, ThrowOnError, TResponse> & {
     /**
@@ -278,6 +278,254 @@ export const setContactState = <ThrowOnError extends boolean = false>(options: O
     responseType: 'json',
     security: [{ scheme: 'bearer', type: 'http' }],
     url: '/api/v1/contacts/{id}/actions/set-state',
+    ...options,
+    headers: {
+        'Content-Type': 'application/json',
+        ...options.headers
+    }
+});
+
+/**
+ * List authorized departments
+ */
+export const listDepartments = <ThrowOnError extends boolean = false>(options?: Options<ListDepartmentsData, ThrowOnError>): RequestResult<ListDepartmentsResponses, ListDepartmentsErrors, ThrowOnError> => (options?.client ?? client).get<ListDepartmentsResponses, ListDepartmentsErrors, ThrowOnError>({
+    responseType: 'json',
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/api/v1/departments',
+    ...options
+});
+
+/**
+ * Create a department
+ */
+export const createDepartment = <ThrowOnError extends boolean = false>(options: Options<CreateDepartmentData, ThrowOnError>): RequestResult<CreateDepartmentResponses, CreateDepartmentErrors, ThrowOnError> => (options.client ?? client).post<CreateDepartmentResponses, CreateDepartmentErrors, ThrowOnError>({
+    responseType: 'json',
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/api/v1/departments',
+    ...options,
+    headers: {
+        'Content-Type': 'application/json',
+        ...options.headers
+    }
+});
+
+/**
+ * Get a department
+ */
+export const getDepartment = <ThrowOnError extends boolean = false>(options: Options<GetDepartmentData, ThrowOnError>): RequestResult<GetDepartmentResponses, GetDepartmentErrors, ThrowOnError> => (options.client ?? client).get<GetDepartmentResponses, GetDepartmentErrors, ThrowOnError>({
+    responseType: 'json',
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/api/v1/departments/{id}',
+    ...options
+});
+
+/**
+ * Update a department
+ */
+export const updateDepartment = <ThrowOnError extends boolean = false>(options: Options<UpdateDepartmentData, ThrowOnError>): RequestResult<UpdateDepartmentResponses, UpdateDepartmentErrors, ThrowOnError> => (options.client ?? client).patch<UpdateDepartmentResponses, UpdateDepartmentErrors, ThrowOnError>({
+    responseType: 'json',
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/api/v1/departments/{id}',
+    ...options,
+    headers: {
+        'Content-Type': 'application/json',
+        ...options.headers
+    }
+});
+
+/**
+ * Set department state
+ */
+export const setDepartmentState = <ThrowOnError extends boolean = false>(options: Options<SetDepartmentStateData, ThrowOnError>): RequestResult<SetDepartmentStateResponses, SetDepartmentStateErrors, ThrowOnError> => (options.client ?? client).post<SetDepartmentStateResponses, SetDepartmentStateErrors, ThrowOnError>({
+    responseType: 'json',
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/api/v1/departments/{id}/actions/set-state',
+    ...options,
+    headers: {
+        'Content-Type': 'application/json',
+        ...options.headers
+    }
+});
+
+/**
+ * List authorized positions
+ */
+export const listPositions = <ThrowOnError extends boolean = false>(options?: Options<ListPositionsData, ThrowOnError>): RequestResult<ListPositionsResponses, ListPositionsErrors, ThrowOnError> => (options?.client ?? client).get<ListPositionsResponses, ListPositionsErrors, ThrowOnError>({
+    responseType: 'json',
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/api/v1/positions',
+    ...options
+});
+
+/**
+ * Create a position
+ */
+export const createPosition = <ThrowOnError extends boolean = false>(options: Options<CreatePositionData, ThrowOnError>): RequestResult<CreatePositionResponses, CreatePositionErrors, ThrowOnError> => (options.client ?? client).post<CreatePositionResponses, CreatePositionErrors, ThrowOnError>({
+    responseType: 'json',
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/api/v1/positions',
+    ...options,
+    headers: {
+        'Content-Type': 'application/json',
+        ...options.headers
+    }
+});
+
+/**
+ * Get a position
+ */
+export const getPosition = <ThrowOnError extends boolean = false>(options: Options<GetPositionData, ThrowOnError>): RequestResult<GetPositionResponses, GetPositionErrors, ThrowOnError> => (options.client ?? client).get<GetPositionResponses, GetPositionErrors, ThrowOnError>({
+    responseType: 'json',
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/api/v1/positions/{id}',
+    ...options
+});
+
+/**
+ * Update a position
+ */
+export const updatePosition = <ThrowOnError extends boolean = false>(options: Options<UpdatePositionData, ThrowOnError>): RequestResult<UpdatePositionResponses, UpdatePositionErrors, ThrowOnError> => (options.client ?? client).patch<UpdatePositionResponses, UpdatePositionErrors, ThrowOnError>({
+    responseType: 'json',
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/api/v1/positions/{id}',
+    ...options,
+    headers: {
+        'Content-Type': 'application/json',
+        ...options.headers
+    }
+});
+
+/**
+ * Set position state
+ */
+export const setPositionState = <ThrowOnError extends boolean = false>(options: Options<SetPositionStateData, ThrowOnError>): RequestResult<SetPositionStateResponses, SetPositionStateErrors, ThrowOnError> => (options.client ?? client).post<SetPositionStateResponses, SetPositionStateErrors, ThrowOnError>({
+    responseType: 'json',
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/api/v1/positions/{id}/actions/set-state',
+    ...options,
+    headers: {
+        'Content-Type': 'application/json',
+        ...options.headers
+    }
+});
+
+/**
+ * List authorized employees
+ */
+export const listEmployees = <ThrowOnError extends boolean = false>(options?: Options<ListEmployeesData, ThrowOnError>): RequestResult<ListEmployeesResponses, ListEmployeesErrors, ThrowOnError> => (options?.client ?? client).get<ListEmployeesResponses, ListEmployeesErrors, ThrowOnError>({
+    responseType: 'json',
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/api/v1/employees',
+    ...options
+});
+
+/**
+ * Create an employee
+ */
+export const createEmployee = <ThrowOnError extends boolean = false>(options: Options<CreateEmployeeData, ThrowOnError>): RequestResult<CreateEmployeeResponses, CreateEmployeeErrors, ThrowOnError> => (options.client ?? client).post<CreateEmployeeResponses, CreateEmployeeErrors, ThrowOnError>({
+    responseType: 'json',
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/api/v1/employees',
+    ...options,
+    headers: {
+        'Content-Type': 'application/json',
+        ...options.headers
+    }
+});
+
+/**
+ * Get an employee
+ */
+export const getEmployee = <ThrowOnError extends boolean = false>(options: Options<GetEmployeeData, ThrowOnError>): RequestResult<GetEmployeeResponses, GetEmployeeErrors, ThrowOnError> => (options.client ?? client).get<GetEmployeeResponses, GetEmployeeErrors, ThrowOnError>({
+    responseType: 'json',
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/api/v1/employees/{id}',
+    ...options
+});
+
+/**
+ * Update an employee
+ */
+export const updateEmployee = <ThrowOnError extends boolean = false>(options: Options<UpdateEmployeeData, ThrowOnError>): RequestResult<UpdateEmployeeResponses, UpdateEmployeeErrors, ThrowOnError> => (options.client ?? client).patch<UpdateEmployeeResponses, UpdateEmployeeErrors, ThrowOnError>({
+    responseType: 'json',
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/api/v1/employees/{id}',
+    ...options,
+    headers: {
+        'Content-Type': 'application/json',
+        ...options.headers
+    }
+});
+
+/**
+ * Set employee state
+ */
+export const setEmployeeState = <ThrowOnError extends boolean = false>(options: Options<SetEmployeeStateData, ThrowOnError>): RequestResult<SetEmployeeStateResponses, SetEmployeeStateErrors, ThrowOnError> => (options.client ?? client).post<SetEmployeeStateResponses, SetEmployeeStateErrors, ThrowOnError>({
+    responseType: 'json',
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/api/v1/employees/{id}/actions/set-state',
+    ...options,
+    headers: {
+        'Content-Type': 'application/json',
+        ...options.headers
+    }
+});
+
+/**
+ * List authorized employee assignments
+ */
+export const listEmployeeAssignments = <ThrowOnError extends boolean = false>(options?: Options<ListEmployeeAssignmentsData, ThrowOnError>): RequestResult<ListEmployeeAssignmentsResponses, ListEmployeeAssignmentsErrors, ThrowOnError> => (options?.client ?? client).get<ListEmployeeAssignmentsResponses, ListEmployeeAssignmentsErrors, ThrowOnError>({
+    responseType: 'json',
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/api/v1/employee-assignments',
+    ...options
+});
+
+/**
+ * Create an employee assignment
+ */
+export const createEmployeeAssignment = <ThrowOnError extends boolean = false>(options: Options<CreateEmployeeAssignmentData, ThrowOnError>): RequestResult<CreateEmployeeAssignmentResponses, CreateEmployeeAssignmentErrors, ThrowOnError> => (options.client ?? client).post<CreateEmployeeAssignmentResponses, CreateEmployeeAssignmentErrors, ThrowOnError>({
+    responseType: 'json',
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/api/v1/employee-assignments',
+    ...options,
+    headers: {
+        'Content-Type': 'application/json',
+        ...options.headers
+    }
+});
+
+/**
+ * Get an employee assignment
+ */
+export const getEmployeeAssignment = <ThrowOnError extends boolean = false>(options: Options<GetEmployeeAssignmentData, ThrowOnError>): RequestResult<GetEmployeeAssignmentResponses, GetEmployeeAssignmentErrors, ThrowOnError> => (options.client ?? client).get<GetEmployeeAssignmentResponses, GetEmployeeAssignmentErrors, ThrowOnError>({
+    responseType: 'json',
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/api/v1/employee-assignments/{id}',
+    ...options
+});
+
+/**
+ * Update an employee assignment
+ */
+export const updateEmployeeAssignment = <ThrowOnError extends boolean = false>(options: Options<UpdateEmployeeAssignmentData, ThrowOnError>): RequestResult<UpdateEmployeeAssignmentResponses, UpdateEmployeeAssignmentErrors, ThrowOnError> => (options.client ?? client).patch<UpdateEmployeeAssignmentResponses, UpdateEmployeeAssignmentErrors, ThrowOnError>({
+    responseType: 'json',
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/api/v1/employee-assignments/{id}',
+    ...options,
+    headers: {
+        'Content-Type': 'application/json',
+        ...options.headers
+    }
+});
+
+/**
+ * Set employee assignment state
+ */
+export const setEmployeeAssignmentState = <ThrowOnError extends boolean = false>(options: Options<SetEmployeeAssignmentStateData, ThrowOnError>): RequestResult<SetEmployeeAssignmentStateResponses, SetEmployeeAssignmentStateErrors, ThrowOnError> => (options.client ?? client).post<SetEmployeeAssignmentStateResponses, SetEmployeeAssignmentStateErrors, ThrowOnError>({
+    responseType: 'json',
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/api/v1/employee-assignments/{id}/actions/set-state',
     ...options,
     headers: {
         'Content-Type': 'application/json',

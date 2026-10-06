@@ -192,6 +192,180 @@ export const zContactCreate = z.object({
 
 export const zContactPatch = zContactCreate;
 
+export const zDepartment = z.object({
+    id: zBigInt,
+    parent_id: zBigInt.optional(),
+    code: z.string(),
+    name: z.string(),
+    description: z.string().nullish(),
+    status: z.enum([
+        'ACTIVE',
+        'INACTIVE',
+        'CLOSED'
+    ])
+});
+
+export const zDepartmentCreate = z.object({
+    parent_id: zBigInt.optional(),
+    code: z.string(),
+    name: z.string(),
+    description: z.string().optional(),
+    status: z.enum([
+        'ACTIVE',
+        'INACTIVE',
+        'CLOSED'
+    ]).optional().default('ACTIVE')
+});
+
+export const zDepartmentPatch = z.object({
+    parent_id: zBigInt.optional(),
+    code: z.string().optional(),
+    name: z.string().optional(),
+    description: z.string().nullish(),
+    status: z.enum([
+        'ACTIVE',
+        'INACTIVE',
+        'CLOSED'
+    ]).optional()
+});
+
+export const zDepartmentState = z.object({
+    status: z.enum([
+        'ACTIVE',
+        'INACTIVE',
+        'CLOSED'
+    ])
+});
+
+export const zPosition = z.object({
+    id: zBigInt,
+    code: z.string(),
+    name: z.string(),
+    level: z.int().nullish(),
+    description: z.string().nullish(),
+    status: z.enum([
+        'ACTIVE',
+        'INACTIVE',
+        'CLOSED'
+    ])
+});
+
+export const zPositionCreate = z.object({
+    code: z.string(),
+    name: z.string(),
+    level: z.int().nullish(),
+    description: z.string().optional(),
+    status: z.enum([
+        'ACTIVE',
+        'INACTIVE',
+        'CLOSED'
+    ]).optional().default('ACTIVE')
+});
+
+export const zPositionPatch = z.object({
+    code: z.string().optional(),
+    name: z.string().optional(),
+    level: z.int().nullish(),
+    description: z.string().nullish(),
+    status: z.enum([
+        'ACTIVE',
+        'INACTIVE',
+        'CLOSED'
+    ]).optional()
+});
+
+export const zPositionState = z.object({
+    status: z.enum([
+        'ACTIVE',
+        'INACTIVE',
+        'CLOSED'
+    ])
+});
+
+export const zEmployee = z.object({
+    id: zBigInt,
+    user_id: zBigInt.optional(),
+    employee_code: z.string(),
+    employee_name: z.string(),
+    gender: z.string().nullish(),
+    date_of_birth: z.iso.date().nullish(),
+    place_of_origin: z.string().nullish(),
+    hire_date: z.iso.date().nullish(),
+    manager_employee_id: zBigInt.optional(),
+    description: z.string().nullish(),
+    status: z.enum(['ACTIVE', 'INACTIVE'])
+});
+
+export const zEmployeeCreate = z.object({
+    user_id: zBigInt.optional(),
+    employee_code: z.string(),
+    employee_name: z.string(),
+    gender: z.string().nullish(),
+    date_of_birth: z.iso.date().nullish(),
+    place_of_origin: z.string().nullish(),
+    hire_date: z.iso.date().nullish(),
+    manager_employee_id: zBigInt.optional(),
+    description: z.string().nullish(),
+    status: z.enum(['ACTIVE', 'INACTIVE']).optional().default('ACTIVE')
+});
+
+export const zEmployeePatch = z.object({
+    user_id: zBigInt.optional(),
+    employee_code: z.string().optional(),
+    employee_name: z.string().optional(),
+    gender: z.string().nullish(),
+    date_of_birth: z.iso.date().nullish(),
+    place_of_origin: z.string().nullish(),
+    hire_date: z.iso.date().nullish(),
+    manager_employee_id: zBigInt.optional(),
+    description: z.string().nullish(),
+    status: z.enum(['ACTIVE', 'INACTIVE']).optional()
+});
+
+export const zEmployeeState = z.object({
+    status: z.enum(['ACTIVE', 'INACTIVE'])
+});
+
+export const zEmployeeAssignment = z.object({
+    id: zBigInt,
+    employee_id: zBigInt,
+    organization_id: zBigInt,
+    department_id: zBigInt.optional(),
+    position_id: zBigInt.optional(),
+    is_primary: z.boolean(),
+    effective_from: z.iso.date(),
+    effective_to: z.iso.date().nullish(),
+    description: z.string().nullish(),
+    status: z.enum(['ACTIVE', 'INACTIVE'])
+});
+
+export const zEmployeeAssignmentCreate = z.object({
+    employee_id: zBigInt,
+    organization_id: zBigInt,
+    department_id: zBigInt.optional(),
+    position_id: zBigInt.optional(),
+    is_primary: z.boolean().optional().default(false),
+    effective_from: z.iso.date(),
+    effective_to: z.iso.date().nullish(),
+    description: z.string().optional(),
+    status: z.enum(['ACTIVE', 'INACTIVE']).optional().default('ACTIVE')
+});
+
+export const zEmployeeAssignmentPatch = z.object({
+    organization_id: zBigInt.optional(),
+    department_id: zBigInt.optional(),
+    position_id: zBigInt.optional(),
+    is_primary: z.boolean().optional(),
+    effective_from: z.iso.date().optional(),
+    effective_to: z.iso.date().nullish(),
+    description: z.string().nullish(),
+    status: z.enum(['ACTIVE', 'INACTIVE']).optional()
+});
+
+export const zEmployeeAssignmentState = z.object({
+    status: z.enum(['ACTIVE', 'INACTIVE'])
+});
+
 export const zState = z.object({
     status: z.enum([
         'ACTIVE',
@@ -216,6 +390,22 @@ export const zContactResponse = zSuccessResponse.and(z.object({
     data: zContact.optional()
 }));
 
+export const zDepartmentResponse = zSuccessResponse.and(z.object({
+    data: zDepartment.optional()
+}));
+
+export const zPositionResponse = zSuccessResponse.and(z.object({
+    data: zPosition.optional()
+}));
+
+export const zEmployeeResponse = zSuccessResponse.and(z.object({
+    data: zEmployee.optional()
+}));
+
+export const zEmployeeAssignmentResponse = zSuccessResponse.and(z.object({
+    data: zEmployeeAssignment.optional()
+}));
+
 export const zProvinceCollection = zCollectionResponse.and(z.object({
     data: z.array(zProvince).optional()
 }));
@@ -230,6 +420,22 @@ export const zOrganizationCollection = zCollectionResponse.and(z.object({
 
 export const zContactCollection = zCollectionResponse.and(z.object({
     data: z.array(zContact).optional()
+}));
+
+export const zDepartmentCollection = zCollectionResponse.and(z.object({
+    data: z.array(zDepartment).optional()
+}));
+
+export const zPositionCollection = zCollectionResponse.and(z.object({
+    data: z.array(zPosition).optional()
+}));
+
+export const zEmployeeCollection = zCollectionResponse.and(z.object({
+    data: z.array(zEmployee).optional()
+}));
+
+export const zEmployeeAssignmentCollection = zCollectionResponse.and(z.object({
+    data: z.array(zEmployeeAssignment).optional()
 }));
 
 /**
@@ -277,6 +483,30 @@ export const zContactCreate2 = zContactCreate;
 export const zContactPatch2 = zContactPatch;
 
 export const zState2 = zState;
+
+export const zDepartmentCreate2 = zDepartmentCreate;
+
+export const zDepartmentPatch2 = zDepartmentPatch;
+
+export const zDepartmentState2 = zDepartmentState;
+
+export const zPositionCreate2 = zPositionCreate;
+
+export const zPositionPatch2 = zPositionPatch;
+
+export const zPositionState2 = zPositionState;
+
+export const zEmployeeCreate2 = zEmployeeCreate;
+
+export const zEmployeePatch2 = zEmployeePatch;
+
+export const zEmployeeState2 = zEmployeeState;
+
+export const zEmployeeAssignmentCreate2 = zEmployeeAssignmentCreate;
+
+export const zEmployeeAssignmentPatch2 = zEmployeeAssignmentPatch;
+
+export const zEmployeeAssignmentState2 = zEmployeeAssignmentState;
 
 export const zGetHealthHeaders = z.object({
     'Accept-Language': z.enum(['vi', 'en']).optional().default('vi'),
@@ -544,3 +774,239 @@ export const zSetContactStatePath = z.object({
  * Contact resource.
  */
 export const zSetContactStateResponse = zContactResponse;
+
+export const zListDepartmentsHeaders = z.object({
+    'Accept-Language': z.enum(['vi', 'en']).optional().default('vi'),
+    'X-Request-ID': zRequestId.optional()
+});
+
+export const zListDepartmentsQuery = z.object({
+    q: z.string().optional(),
+    page: z.int().gte(1).optional().default(1),
+    page_size: z.int().gte(1).lte(200).optional().default(50),
+    sort: z.string().optional(),
+    filter: z.record(z.string(), z.union([
+        z.string(),
+        z.array(z.string())
+    ])).optional()
+});
+
+/**
+ * Authorized department collection.
+ */
+export const zListDepartmentsResponse = zDepartmentCollection;
+
+export const zCreateDepartmentBody = zDepartmentCreate2;
+
+/**
+ * Authorized department resource.
+ */
+export const zCreateDepartmentResponse = zDepartmentResponse;
+
+export const zGetDepartmentPath = z.object({
+    id: zBigInt
+});
+
+/**
+ * Authorized department resource.
+ */
+export const zGetDepartmentResponse = zDepartmentResponse;
+
+export const zUpdateDepartmentBody = zDepartmentPatch2;
+
+export const zUpdateDepartmentPath = z.object({
+    id: zBigInt
+});
+
+/**
+ * Authorized department resource.
+ */
+export const zUpdateDepartmentResponse = zDepartmentResponse;
+
+export const zSetDepartmentStateBody = zDepartmentState2;
+
+export const zSetDepartmentStatePath = z.object({
+    id: zBigInt
+});
+
+/**
+ * Authorized department resource.
+ */
+export const zSetDepartmentStateResponse = zDepartmentResponse;
+
+export const zListPositionsHeaders = z.object({
+    'Accept-Language': z.enum(['vi', 'en']).optional().default('vi'),
+    'X-Request-ID': zRequestId.optional()
+});
+
+export const zListPositionsQuery = z.object({
+    q: z.string().optional(),
+    page: z.int().gte(1).optional().default(1),
+    page_size: z.int().gte(1).lte(200).optional().default(50),
+    sort: z.string().optional(),
+    filter: z.record(z.string(), z.union([
+        z.string(),
+        z.array(z.string())
+    ])).optional()
+});
+
+/**
+ * Authorized position collection.
+ */
+export const zListPositionsResponse = zPositionCollection;
+
+export const zCreatePositionBody = zPositionCreate2;
+
+/**
+ * Authorized position resource.
+ */
+export const zCreatePositionResponse = zPositionResponse;
+
+export const zGetPositionPath = z.object({
+    id: zBigInt
+});
+
+/**
+ * Authorized position resource.
+ */
+export const zGetPositionResponse = zPositionResponse;
+
+export const zUpdatePositionBody = zPositionPatch2;
+
+export const zUpdatePositionPath = z.object({
+    id: zBigInt
+});
+
+/**
+ * Authorized position resource.
+ */
+export const zUpdatePositionResponse = zPositionResponse;
+
+export const zSetPositionStateBody = zPositionState2;
+
+export const zSetPositionStatePath = z.object({
+    id: zBigInt
+});
+
+/**
+ * Authorized position resource.
+ */
+export const zSetPositionStateResponse = zPositionResponse;
+
+export const zListEmployeesHeaders = z.object({
+    'Accept-Language': z.enum(['vi', 'en']).optional().default('vi'),
+    'X-Request-ID': zRequestId.optional()
+});
+
+export const zListEmployeesQuery = z.object({
+    q: z.string().optional(),
+    page: z.int().gte(1).optional().default(1),
+    page_size: z.int().gte(1).lte(200).optional().default(50),
+    sort: z.string().optional(),
+    filter: z.record(z.string(), z.union([
+        z.string(),
+        z.array(z.string())
+    ])).optional()
+});
+
+/**
+ * Authorized employee collection.
+ */
+export const zListEmployeesResponse = zEmployeeCollection;
+
+export const zCreateEmployeeBody = zEmployeeCreate2;
+
+/**
+ * Authorized employee resource.
+ */
+export const zCreateEmployeeResponse = zEmployeeResponse;
+
+export const zGetEmployeePath = z.object({
+    id: zBigInt
+});
+
+/**
+ * Authorized employee resource.
+ */
+export const zGetEmployeeResponse = zEmployeeResponse;
+
+export const zUpdateEmployeeBody = zEmployeePatch2;
+
+export const zUpdateEmployeePath = z.object({
+    id: zBigInt
+});
+
+/**
+ * Authorized employee resource.
+ */
+export const zUpdateEmployeeResponse = zEmployeeResponse;
+
+export const zSetEmployeeStateBody = zEmployeeState2;
+
+export const zSetEmployeeStatePath = z.object({
+    id: zBigInt
+});
+
+/**
+ * Authorized employee resource.
+ */
+export const zSetEmployeeStateResponse = zEmployeeResponse;
+
+export const zListEmployeeAssignmentsHeaders = z.object({
+    'Accept-Language': z.enum(['vi', 'en']).optional().default('vi'),
+    'X-Request-ID': zRequestId.optional()
+});
+
+export const zListEmployeeAssignmentsQuery = z.object({
+    q: z.string().optional(),
+    page: z.int().gte(1).optional().default(1),
+    page_size: z.int().gte(1).lte(200).optional().default(50),
+    sort: z.string().optional(),
+    filter: z.record(z.string(), z.union([
+        z.string(),
+        z.array(z.string())
+    ])).optional()
+});
+
+/**
+ * Authorized employee assignment collection.
+ */
+export const zListEmployeeAssignmentsResponse = zEmployeeAssignmentCollection;
+
+export const zCreateEmployeeAssignmentBody = zEmployeeAssignmentCreate2;
+
+/**
+ * Authorized employee assignment resource.
+ */
+export const zCreateEmployeeAssignmentResponse = zEmployeeAssignmentResponse;
+
+export const zGetEmployeeAssignmentPath = z.object({
+    id: zBigInt
+});
+
+/**
+ * Authorized employee assignment resource.
+ */
+export const zGetEmployeeAssignmentResponse = zEmployeeAssignmentResponse;
+
+export const zUpdateEmployeeAssignmentBody = zEmployeeAssignmentPatch2;
+
+export const zUpdateEmployeeAssignmentPath = z.object({
+    id: zBigInt
+});
+
+/**
+ * Authorized employee assignment resource.
+ */
+export const zUpdateEmployeeAssignmentResponse = zEmployeeAssignmentResponse;
+
+export const zSetEmployeeAssignmentStateBody = zEmployeeAssignmentState2;
+
+export const zSetEmployeeAssignmentStatePath = z.object({
+    id: zBigInt
+});
+
+/**
+ * Authorized employee assignment resource.
+ */
+export const zSetEmployeeAssignmentStateResponse = zEmployeeAssignmentResponse;

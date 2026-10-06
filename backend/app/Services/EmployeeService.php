@@ -22,6 +22,9 @@ final class EmployeeService
     public const ERROR_MANAGER_INACTIVE = 'EMP_MANAGER_INACTIVE';
     public const ERROR_MANAGER_REFERENCE_INVALID = 'EMP_MANAGER_REFERENCE_INVALID';
     public const ERROR_MANAGER_MUTATION_FAILED = 'EMP_MANAGER_MUTATION_FAILED';
+    public const ERROR_CODE_DUPLICATE = 'EMPLOYEE_CODE_DUPLICATE';
+    public const ERROR_USER_DUPLICATE = 'EMPLOYEE_USER_DUPLICATE';
+    public const ERROR_STATUS_INVALID = 'EMPLOYEE_STATUS_INVALID';
 
     /** @var ConnectionInterface<mixed, mixed> */
     private ConnectionInterface $db;
@@ -42,6 +45,8 @@ final class EmployeeService
     {
         $operation = $this->operation();
         $payload = array_merge($this->withoutAuditFields($data), $operation->createdAudit());
+        $payload = $this->prepare($payload, true);
+        $this->assertUnique($payload);
         $managerId = $this->managerId($payload, false);
         if ($managerId === null) {
             return $this->repo()->insert($payload);
@@ -64,6 +69,8 @@ final class EmployeeService
         }
 
         $payload = array_merge($this->withoutAuditFields($data), $operation->updatedAudit());
+        $payload = $this->prepare($payload, false);
+        $this->assertUnique($payload, $id);
         $managerChange = array_key_exists('manager_employee_id', $payload);
         $statusChangeToInactive = ($payload['status'] ?? null) === 'INACTIVE';
         if (! $managerChange && ! $statusChangeToInactive) {
@@ -115,6 +122,66 @@ final class EmployeeService
         unset($data['created_by'], $data['updated_by'], $data['created_at'], $data['updated_at']);
 
         return $data;
+    }
+
+    /**
+     * @param array<string, mixed> $data
+     * @return array<string, mixed>
+     */
+    private function prepare(array $data, bool $creating): array
+    {
+        foreach ($data as $field => $_value) {
+            if (! in_array($field, [
+                'user_id', 'employee_code', 'employee_name', 'gender', 'date_of_birth',
+                'place_of_origin', 'hire_date', 'manager_employee_id', 'description', 'status',
+                'created_by', 'updated_by', 'created_at', 'updated_at',
+            ], true)) {
+                throw new DomainException(EmployeeRepository::ERROR_FIELD_UNSUPPORTED, ['field' => $field]);
+            }
+        }
+        if (array_key_exists('employee_code', $data)) {
+            if (! is_string($data['employee_code']) || trim($data['employee_code']) === '') {
+                throw new DomainException(EmployeeRepository::ERROR_FIELD_REQUIRED, ['field' => 'employee_code']);
+            }
+            $data['employee_code'] = trim($data['employee_code']);
+        }
+        if (array_key_exists('employee_name', $data)) {
+            if (! is_string($data['employee_name']) || trim($data['employee_name']) === '') {
+                throw new DomainException(EmployeeRepository::ERROR_FIELD_REQUIRED, ['field' => 'employee_name']);
+            }
+            $data['employee_name'] = trim($data['employee_name']);
+        }
+        if (array_key_exists('status', $data)) {
+            if (! is_string($data['status'])) {
+                throw new DomainException(self::ERROR_STATUS_INVALID, ['status' => '']);
+            }
+            $data['status'] = strtoupper(trim($data['status']));
+            if (! in_array($data['status'], ['ACTIVE', 'INACTIVE'], true)) {
+                throw new DomainException(self::ERROR_STATUS_INVALID, ['status' => $data['status']]);
+            }
+        } elseif ($creating) {
+            $data['status'] = 'ACTIVE';
+        }
+
+        return $data;
+    }
+
+    /** @param array<string, mixed> $data */
+    private function assertUnique(array $data, ?int $excludeId = null): void
+    {
+        if (array_key_exists('employee_code', $data)) {
+            $row = $this->repo()->findByCode((string) $data['employee_code']);
+            if ($row !== null && ($excludeId === null || (int) $row['id'] !== $excludeId)) {
+                throw new DomainException(self::ERROR_CODE_DUPLICATE, ['field' => 'employee_code']);
+            }
+        }
+        if (array_key_exists('user_id', $data) && $data['user_id'] !== null) {
+            $userId = PositiveId::normalize($data['user_id'], 'user_id', self::ERROR_USER_DUPLICATE);
+            $row = $this->repo()->findByUserId($userId);
+            if ($row !== null && ($excludeId === null || (int) $row['id'] !== $excludeId)) {
+                throw new DomainException(self::ERROR_USER_DUPLICATE, ['field' => 'user_id']);
+            }
+        }
     }
 
     /** @param array<string, mixed> $data */

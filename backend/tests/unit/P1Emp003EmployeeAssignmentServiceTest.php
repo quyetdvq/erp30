@@ -150,6 +150,25 @@ final class P1Emp003EmployeeAssignmentServiceTest extends CIUnitTestCase
         }
     }
 
+    public function testEndingHistoricalAssignmentDoesNotRequireReferencesToRemainActive(): void
+    {
+        [$employeeId, $organizationId, $departmentId, $positionId] = $this->references();
+        $service = new EmployeeAssignmentService(null, $this->db);
+        $id = $service->create($this->assignment($employeeId, $organizationId, true, '2026-01-01', null) + [
+            'department_id' => $departmentId,
+            'position_id' => $positionId,
+        ]);
+        $this->db->table('organizations')->where('id', $organizationId)->update(['status' => 'INACTIVE']);
+        $this->db->table('departments')->where('id', $departmentId)->update(['status' => 'INACTIVE']);
+        $this->db->table('positions')->where('id', $positionId)->update(['status' => 'INACTIVE']);
+
+        $service->update($id, ['effective_to' => '2026-10-05']);
+        $row = (new EmployeeAssignmentRepository($this->db))->find($id);
+        $this->assertSame('2026-10-05', $row['effective_to']);
+        $service->end($id);
+        $this->assertSame('INACTIVE', (new EmployeeAssignmentRepository($this->db))->find($id)['status']);
+    }
+
     public function testConcurrentOverlappingPrimaryAssignmentsCannotBothCommit(): void
     {
         [$employeeId, $organizationId] = $this->references();
