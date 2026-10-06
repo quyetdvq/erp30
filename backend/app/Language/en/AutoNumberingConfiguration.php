@@ -13,4 +13,13 @@ return [
     'NUM_PATTERN_VALIDATOR_REQUIRED' => 'An active numbering series requires the canonical pattern validator.',
     'NUM_PATTERN_INVALID' => 'The numbering pattern is invalid.',
     'NUM_PATTERN_COLLISION' => 'The numbering pattern collides with another active series.',
+    'NUM_SCOPE_INVALID' => 'The numbering scope or reset policy is invalid.',
+    'NUM_SCOPE_CONTEXT_REQUIRED' => 'An authoritative evaluation organization is required for this scope.',
+    'NUM_SCOPE_RESOLUTION_FAILED' => 'The authoritative numbering scope could not be resolved.',
+    'NUM_GROUP_ROOT_INVALID' => 'The canonical GROUP root is missing, inactive, or ambiguous.',
+    'NUM_COMPANY_CONTEXT_REQUIRED' => 'A canonical Company context is required for this numbering operation.',
+    'NUM_BUSINESS_TIMEZONE_REQUIRED' => 'A configured business timezone is required for this numbering period.',
+    'NUM_BUSINESS_TIMEZONE_INVALID' => 'The configured business timezone is invalid.',
+    'NUM_BUSINESS_TIMEZONE_RESOLUTION_FAILED' => 'The business timezone could not be resolved.',
+    'NUM_PATTERN_METADATA_REQUIRED' => 'Parsed canonical pattern metadata is required.',
 ];

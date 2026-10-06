@@ -9,7 +9,7 @@ use CodeIgniter\Settings\Settings;
 use DateTimeZone;
 use InvalidArgumentException;
 
-final class BusinessTimezoneResolver
+final class BusinessTimezoneResolver implements BusinessTimezoneProvider
 {
     public function __construct(private readonly Settings $settings)
     {

@@ -4,9 +4,9 @@ This ledger is lightweight operational evidence. It is not architecture
 authority and does not replace UR, FRS, DBD, the Implementation Contract, the
 Implementation Plan, API Design, or UI Design.
 
-As of the P1-NUM-002 task commit, the registry contains exactly 100 P1 tasks.
-Repository evidence verifies 44 completed tasks: Gate 0 is 10/10, Gate 1 is
-14/14, Gate 2 is 8/8, Gate 3 is 10/10, and Gate 4 is 2/7. The previously supplied 28/100 and 4/8 checkpoint is
+As of the P1-NUM-003 task commit, the registry contains exactly 100 P1 tasks.
+Repository evidence verifies 45 completed tasks: Gate 0 is 10/10, Gate 1 is
+14/14, Gate 2 is 8/8, Gate 3 is 10/10, and Gate 4 is 3/7. The previously supplied 28/100 and 4/8 checkpoint is
 stale: the accepted `c4049f0` P1-ORG-002 commit is present in current history.
 No task is downgraded to force that stale count.
 
@@ -14,12 +14,12 @@ No task is downgraded to force that stale count.
 
 | Measure | Progress |
 |---|---:|
-| P1 tasks DONE | 44/100 |
+| P1 tasks DONE | 45/100 |
 | Gate 0 | 10/10 DONE |
 | Gate 1 | 14/14 DONE |
 | Gate 2 | 8/8 DONE |
 | Gate 3 | 10/10 DONE |
-| Gate 4 | 2/7 DONE |
+| Gate 4 | 3/7 DONE |
 | Gate 5 | 0/11 DONE |
 | Gate 6 | 0/9 DONE |
 | Gate 7 | 0/10 DONE |
@@ -74,7 +74,7 @@ No task is downgraded to force that stale count.
 | P1-AUTH-090 | DONE | ad296e099285 | high-risk | Mandatory Gate 3 regression suite and HIGH-risk assessment evidence: `docs/implementation/evidence/P1-AUTH-090/01_mandatory_authorization_regression_assessment.md`. |
 | P1-NUM-001 | DONE | 5fe860568834 | high-risk | Series repository/configuration service, Resource-row serialization, issuance immutability/no-hard-delete, independent configure_numbering authorization, fail-closed NUM-002 pattern boundary, and real MariaDB concurrency evidence. Evidence: `docs/implementation/evidence/P1-NUM-001/01_numbering_series_configuration_assessment.md`. |
 | P1-NUM-002 | DONE | 0990482 | high-risk | Canonical pure pattern parser/validator, immutable parsed metadata, reset/scope/namespace checks, deterministic collision validation, and NUM-001 integration. Evidence: `docs/implementation/evidence/P1-NUM-002/01_numbering_pattern_validator_assessment.md`. |
-| P1-NUM-003 | NOT_STARTED | — | high-risk | No accepted implementation evidence. |
+| P1-NUM-003 | DONE | 20cea5e | high-risk | Authoritative GROUP/COMPANY/ORGANIZATION scope and Evaluation Time/business-timezone period resolver; no counter allocation or rendering. Evidence: `docs/implementation/evidence/P1-NUM-003/01_scope_period_resolver_assessment.md`. |
 | P1-NUM-004 | NOT_STARTED | — | high-risk | No accepted implementation evidence. |
 | P1-NUM-005 | NOT_STARTED | — | high-risk | No accepted implementation evidence. |
 | P1-NUM-006 | NOT_STARTED | — | high-risk | No accepted implementation evidence. |
