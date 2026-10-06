@@ -7,7 +7,7 @@ namespace App\Infrastructure\Import\Reader;
 /** One generic CSV data record with its logical source row number. */
 final readonly class CsvImportRow
 {
-    /** @param list<string> $cells */
+    /** @param list<mixed> $cells */
     public function __construct(
         public int $rowNumber,
         public array $cells,
@@ -19,7 +19,7 @@ final readonly class CsvImportRow
         return $this->rowNumber;
     }
 
-    /** @return list<string> */
+    /** @return list<mixed> */
     public function getCells(): array
     {
         return $this->cells;

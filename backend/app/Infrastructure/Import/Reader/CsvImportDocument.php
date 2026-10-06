@@ -8,7 +8,7 @@ namespace App\Infrastructure\Import\Reader;
 final readonly class CsvImportDocument
 {
     /**
-     * @param list<string> $header
+     * @param list<mixed> $header
      * @param list<CsvImportRow> $rows
      */
     public function __construct(
@@ -17,7 +17,7 @@ final readonly class CsvImportDocument
     ) {
     }
 
-    /** @return list<string> */
+    /** @return list<mixed> */
     public function getHeader(): array
     {
         return $this->header;
