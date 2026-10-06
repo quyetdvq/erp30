@@ -101,6 +101,17 @@ final class ProductRepository
         return $this->findRow('findByBarcode', fn () => $this->db->table('products')->where('barcode', $barcode)->get());
     }
 
+    /** @return array<string, mixed>|null */
+    public function findParent(mixed $id): ?array
+    {
+        $child = $this->findById($id);
+        if ($child === null || ($child['parent_product_id'] ?? null) === null) {
+            return null;
+        }
+
+        return $this->findById($child['parent_product_id']);
+    }
+
     /** @return list<array<string, mixed>> */
     public function listChildren(mixed $parentId): array
     {

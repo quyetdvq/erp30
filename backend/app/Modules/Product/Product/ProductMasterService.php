@@ -89,6 +89,7 @@ final class ProductMasterService
         ?ConnectionInterface $db = null,
         private readonly ?MutationContext $mutationContext = null,
         private readonly ?Clock $clock = null,
+        private readonly ?ProductRoleService $roles = null,
     ) {
         $this->db = $db ?? db_connect();
     }
@@ -343,7 +344,7 @@ final class ProductMasterService
     {
         $type = strtoupper((string) ($merged['product_type'] ?? ''));
         $parentId = $merged['parent_product_id'] ?? null;
-        $hasChildren = $this->repo()->hasChildren((int) ($current['id'] ?? 0));
+        $hasChildren = $this->roles()->isParent($current);
         if (($merged['manual_standard_cost'] ?? null) !== null) {
             $this->assertNonNegative($merged['manual_standard_cost'], self::ERROR_NEGATIVE_COST);
         }
@@ -770,6 +771,11 @@ final class ProductMasterService
     private function history(): ProductHistoryProvider
     {
         return $this->history ?? new NoProductHistoryProvider();
+    }
+
+    private function roles(): ProductRoleService
+    {
+        return $this->roles ?? new ProductRoleService(repository: $this->repo(), db: $this->db);
     }
 
     private function auth(): AuthorizationService
