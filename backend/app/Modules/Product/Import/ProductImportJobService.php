@@ -6,6 +6,7 @@ namespace App\Modules\Product\Import;
 
 use App\Exceptions\DomainException;
 use App\Infrastructure\Import\Persistence\ImportJobRepository;
+use App\Infrastructure\Import\Persistence\ImportJobRowRepository;
 use App\Infrastructure\Mutation\MutationContext;
 use App\Infrastructure\Mutation\OperationContext;
 use App\Infrastructure\Time\Clock;
@@ -21,12 +22,18 @@ final class ProductImportJobService
     public const FORMAT_CSV = 'CSV';
     public const FORMAT_XLSX = 'XLSX';
     public const STATUS_PENDING = 'PENDING';
+    public const STATUS_PROCESSING = 'PROCESSING';
+    public const STATUS_COMPLETED = 'COMPLETED';
+    public const STATUS_COMPLETED_WITH_ERRORS = 'COMPLETED_WITH_ERRORS';
+    public const STATUS_FAILED = 'FAILED';
 
     public const ERROR_INVALID_ENTITY_TYPE = 'IMPORT_JOB_INVALID_ENTITY_TYPE';
     public const ERROR_INVALID_MODE = 'IMPORT_JOB_INVALID_MODE';
     public const ERROR_INVALID_FORMAT = 'IMPORT_JOB_INVALID_FORMAT';
     public const ERROR_REQUIRED_FIELD = 'IMPORT_JOB_REQUIRED_FIELD';
     public const ERROR_INVALID_FIELD = 'IMPORT_JOB_INVALID_FIELD';
+    public const ERROR_NOT_FOUND = 'IMPORT_JOB_NOT_FOUND';
+    public const ERROR_CONNECTION_INVALID = 'IMPORT_JOB_CONNECTION_INVALID';
 
     /** @var ConnectionInterface<mixed, mixed> */
     private ConnectionInterface $db;
@@ -65,6 +72,66 @@ final class ProductImportJobService
     public function find(mixed $id): ?array
     {
         return $this->findById($id);
+    }
+
+    public function startProcessing(int $id, OperationContext $operation): bool
+    {
+        return $this->repo()->updateLifecycle($id, [
+            'status' => self::STATUS_PROCESSING,
+            'started_at' => $operation->evaluationTime->utc()->format('Y-m-d H:i:s'),
+            'completed_at' => null,
+        ], $operation);
+    }
+
+    public function markFailed(int $id, OperationContext $operation): bool
+    {
+        return $this->repo()->updateLifecycle($id, [
+            'status' => self::STATUS_FAILED,
+            'completed_at' => $operation->evaluationTime->utc()->format('Y-m-d H:i:s'),
+        ], $operation);
+    }
+
+    /** @return array<string, mixed> */
+    public function reconcile(int $id, ImportJobRowRepository $rows, OperationContext $operation): array
+    {
+        if (! $this->db instanceof \CodeIgniter\Database\BaseConnection || ! $this->db->transBegin()) {
+            throw new DomainException(self::ERROR_CONNECTION_INVALID, ['operation' => 'reconcile']);
+        }
+        try {
+            $job = $this->repo()->findForUpdate($id);
+            if ($job === null) {
+                throw new DomainException(self::ERROR_NOT_FOUND, ['import_job_id' => $id]);
+            }
+            $persisted = $rows->findByJobId($id);
+            $total = count($persisted);
+            $success = count(array_filter($persisted, static fn (array $row): bool => strtoupper((string) ($row['row_status'] ?? '')) === 'SUCCESS'));
+            $errors = count(array_filter($persisted, static fn (array $row): bool => strtoupper((string) ($row['row_status'] ?? '')) === 'ERROR'));
+            $status = $errors > 0 ? self::STATUS_COMPLETED_WITH_ERRORS : self::STATUS_COMPLETED;
+            $this->repo()->updateLifecycle($id, [
+                'status' => $status,
+                'total_rows' => $total,
+                'success_rows' => $success,
+                'error_rows' => $errors,
+                'completed_at' => $operation->evaluationTime->utc()->format('Y-m-d H:i:s'),
+            ], $operation);
+            if (! $this->db->transStatus() || ! $this->db->transCommit()) {
+                throw new DomainException(self::ERROR_CONNECTION_INVALID, ['operation' => 'reconcile']);
+            }
+        } catch (\Throwable $exception) {
+            $this->db->transRollback();
+            $this->db->resetTransStatus();
+            if ($exception instanceof DomainException) {
+                throw $exception;
+            }
+            throw new DomainException(self::ERROR_CONNECTION_INVALID, ['operation' => 'reconcile'], $exception);
+        }
+
+        $result = $this->findById($id);
+        if ($result === null) {
+            throw new DomainException(self::ERROR_NOT_FOUND, ['import_job_id' => $id]);
+        }
+
+        return $result;
     }
 
     /** @param array<string, mixed> $data

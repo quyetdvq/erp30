@@ -14,6 +14,7 @@ final readonly class ProductImportRowResult
         public ?string $entityKey = null,
         public ?string $error = null,
         public ?string $errorCode = null,
+        public ?string $rowStatus = null,
     ) {
     }
 
@@ -25,6 +26,11 @@ final readonly class ProductImportRowResult
     public static function error(int $rowNumber, string $errorCode): self
     {
         return new self($rowNumber, false, null, null, $errorCode, $errorCode);
+    }
+
+    public static function skipped(int $rowNumber, ?string $message = null): self
+    {
+        return new self($rowNumber, false, null, null, $message, null, 'SKIPPED');
     }
 
     public function isSuccess(): bool
@@ -60,5 +66,10 @@ final readonly class ProductImportRowResult
     public function getErrorCode(): ?string
     {
         return $this->errorCode;
+    }
+
+    public function getRowStatus(): string
+    {
+        return $this->rowStatus ?? ($this->success ? 'SUCCESS' : 'ERROR');
     }
 }

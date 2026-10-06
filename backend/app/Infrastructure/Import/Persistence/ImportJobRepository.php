@@ -10,6 +10,7 @@ use App\Infrastructure\Id\PositiveId;
 use App\Infrastructure\Mutation\MutationContext;
 use App\Infrastructure\Mutation\OperationContext;
 use CodeIgniter\Database\BaseConnection;
+use CodeIgniter\Database\BaseResult;
 use CodeIgniter\Database\ConnectionInterface;
 
 /** Persistence primitives for the generic import job record. */
@@ -18,6 +19,8 @@ final class ImportJobRepository
     public const ERROR_PERSISTENCE_FAILED = 'IMPORT_JOB_PERSISTENCE_FAILED';
     public const ERROR_INVALID_ID = 'IMPORT_JOB_INVALID_ID';
     public const ERROR_FIELD_UNSUPPORTED = 'IMPORT_JOB_FIELD_UNSUPPORTED';
+    public const ERROR_CONNECTION_INVALID = 'IMPORT_JOB_CONNECTION_INVALID';
+    public const ERROR_UPDATE_EMPTY = 'IMPORT_JOB_UPDATE_EMPTY';
 
     /** @var list<string> */
     private const FIELDS = [
@@ -58,6 +61,54 @@ final class ImportJobRepository
     public function find(mixed $id): ?array
     {
         return $this->findById($id);
+    }
+
+    /** @return array<string, mixed>|null */
+    public function findForUpdate(mixed $id): ?array
+    {
+        $normalizedId = PositiveId::normalize($id, 'import_job_id', self::ERROR_INVALID_ID);
+        if (! $this->db instanceof BaseConnection) {
+            throw new DomainException(self::ERROR_CONNECTION_INVALID, ['operation' => 'findForUpdate']);
+        }
+        try {
+            $builder = $this->db->table('import_jobs')->where('id', $normalizedId);
+            $result = $this->db->query($builder->getCompiledSelect() . ' FOR UPDATE');
+        } catch (\Throwable $exception) {
+            throw new PersistenceException(self::ERROR_PERSISTENCE_FAILED, 'findForUpdate', $exception);
+        }
+        if (! $result instanceof BaseResult) {
+            throw new PersistenceException(self::ERROR_PERSISTENCE_FAILED, 'findForUpdate');
+        }
+
+        $row = $result->getRowArray();
+
+        return $row === null ? null : $row;
+    }
+
+    /** @param array<string, mixed> $data */
+    public function updateLifecycle(mixed $id, array $data, ?OperationContext $operation = null): bool
+    {
+        $normalizedId = PositiveId::normalize($id, 'import_job_id', self::ERROR_INVALID_ID);
+        $allowed = ['status', 'total_rows', 'success_rows', 'error_rows', 'started_at', 'completed_at'];
+        foreach ($data as $field => $_value) {
+            if (! in_array($field, $allowed, true)) {
+                throw new DomainException(self::ERROR_FIELD_UNSUPPORTED, ['field' => $field]);
+            }
+        }
+        if ($data === []) {
+            throw new DomainException(self::ERROR_UPDATE_EMPTY);
+        }
+        $payload = array_merge($data, $this->updatedAudit($operation));
+        try {
+            $updated = $this->db->table('import_jobs')->where('id', $normalizedId)->update($payload);
+        } catch (\Throwable $exception) {
+            throw new PersistenceException(self::ERROR_PERSISTENCE_FAILED, 'updateLifecycle', $exception);
+        }
+        if (! $updated) {
+            throw new PersistenceException(self::ERROR_PERSISTENCE_FAILED, 'updateLifecycle');
+        }
+
+        return true;
     }
 
     /** @param array<string, mixed> $data */
@@ -108,5 +159,11 @@ final class ImportJobRepository
     private function createdAudit(?OperationContext $operation): array
     {
         return ($operation ?? MutationContext::system(service('clock'))->begin())->createdAudit();
+    }
+
+    /** @return array{updated_by: int|null, updated_at: string} */
+    private function updatedAudit(?OperationContext $operation): array
+    {
+        return ($operation ?? MutationContext::system(service('clock'))->begin())->updatedAudit();
     }
 }
