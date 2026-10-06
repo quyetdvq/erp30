@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Services;
 
 use App\Exceptions\DomainException;
+use CodeIgniter\Database\ConnectionInterface;
 
 /** Explicit deterministic registry for approved Resource identifier adapters. */
 final class ResourceIdentifierAdapterRegistry
@@ -12,9 +13,15 @@ final class ResourceIdentifierAdapterRegistry
     /** @var array<string, ResourceIdentifierAdapter> */
     private array $adapters = [];
 
-    /** @param array<int|string, mixed> $adapters */
-    public function __construct(array $adapters = [])
+    /**
+     * @param array<int|string, mixed> $adapters
+     * @param ConnectionInterface<mixed, mixed>|null $db
+     */
+    public function __construct(array $adapters = [], ?ConnectionInterface $db = null)
     {
+        if ($adapters === []) {
+            $adapters[] = new ProductIdentifierAdapter($db);
+        }
         foreach ($adapters as $key => $adapter) {
             if (! $adapter instanceof ResourceIdentifierAdapter) {
                 throw new DomainException(ResourceIdentifierAdapter::ERROR_ADAPTER_REGISTRATION_INVALID, ['key' => (string) $key]);

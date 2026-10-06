@@ -4,9 +4,9 @@ This ledger is lightweight operational evidence. It is not architecture
 authority and does not replace UR, FRS, DBD, the Implementation Contract, the
 Implementation Plan, API Design, or UI Design.
 
-As of the P1-NUM-005 task commit, the registry contains exactly 100 P1 tasks.
-Repository evidence verifies 47 completed tasks: Gate 0 is 10/10, Gate 1 is
-14/14, Gate 2 is 8/8, Gate 3 is 10/10, and Gate 4 is 5/7. The previously supplied 28/100 and 4/8 checkpoint is
+As of the P1-NUM-006 task commit, the registry contains exactly 100 P1 tasks.
+Repository evidence verifies 48 completed tasks: Gate 0 is 10/10, Gate 1 is
+14/14, Gate 2 is 8/8, Gate 3 is 10/10, and Gate 4 is 6/7. The previously supplied 28/100 and 4/8 checkpoint is
 stale: the accepted `c4049f0` P1-ORG-002 commit is present in current history.
 No task is downgraded to force that stale count.
 
@@ -14,12 +14,12 @@ No task is downgraded to force that stale count.
 
 | Measure | Progress |
 |---|---:|
-| P1 tasks DONE | 47/100 |
+| P1 tasks DONE | 48/100 |
 | Gate 0 | 10/10 DONE |
 | Gate 1 | 14/14 DONE |
 | Gate 2 | 8/8 DONE |
 | Gate 3 | 10/10 DONE |
-| Gate 4 | 5/7 DONE |
+| Gate 4 | 6/7 DONE |
 | Gate 5 | 0/11 DONE |
 | Gate 6 | 0/9 DONE |
 | Gate 7 | 0/10 DONE |
@@ -77,7 +77,7 @@ No task is downgraded to force that stale count.
 | P1-NUM-003 | DONE | 20cea5e | high-risk | Authoritative GROUP/COMPANY/ORGANIZATION scope and Evaluation Time/business-timezone period resolver; no counter allocation or rendering. Evidence: `docs/implementation/evidence/P1-NUM-003/01_scope_period_resolver_assessment.md`. |
 | P1-NUM-004 | DONE | df032c9 | high-risk | Counter repository, FOR UPDATE/advisory first-use locking, parsed-pattern rendering, bounded collision advance, and atomic business callback transaction. Evidence: `docs/implementation/evidence/P1-NUM-004/01_counter_allocator_assessment.md`. |
 | P1-NUM-005 | DONE | 0d7d0a5 | high-risk | Generic Resource identifier metadata/adapter port, explicit deterministic registry, canonical Resource/series selection, NUM-002 metadata validation, NUM-003 context pass-through, and NUM-004 transaction/collision integration. Evidence: `docs/implementation/evidence/P1-NUM-005/01_resource_identifier_adapter_assessment.md`. |
-| P1-NUM-006 | NOT_STARTED | — | high-risk | No accepted implementation evidence. |
+| P1-NUM-006 | DONE | d70827f | high-risk | Concrete Product adapter for `product_code` to `products.code`, GLOBAL occupancy, canonical code-only collision classification, 50-character enforcement, explicit registry registration, and NUM-002/004/005 integration. Evidence: `docs/implementation/evidence/P1-NUM-006/01_product_identifier_adapter_assessment.md`. |
 | P1-NUM-090 | NOT_STARTED | — | high-risk | No accepted implementation evidence. |
 | P1-PRD-001 | NOT_STARTED | — | service-standard | No accepted implementation evidence. |
 | P1-PRD-002 | NOT_STARTED | — | service-standard | No accepted implementation evidence. |

@@ -419,17 +419,23 @@ final class AutoNumberingConfigurationService
      */
     private function withIdentifierMetadata(array $candidate): array
     {
-        if ($this->identifierAdapters === null) {
-            return $candidate;
-        }
         $resource = $this->repo()->findResource($candidate['resource_id'] ?? null);
         if ($resource === null) {
             throw new DomainException(self::ERROR_RESOURCE_NOT_FOUND, [
                 'resource_id' => $candidate['resource_id'] ?? null,
             ]);
         }
-        $metadata = $this->identifierAdapters->resolve((string) ($resource['type'] ?? ''))->metadata();
-        if ($metadata->resourceType !== strtolower((string) ($resource['type'] ?? ''))) {
+        $registry = $this->identifierAdapters ?? new ResourceIdentifierAdapterRegistry(db: $this->db);
+        $resourceType = strtolower((string) ($resource['type'] ?? ''));
+        if (! $registry->has($resourceType)) {
+            if ($this->identifierAdapters !== null) {
+                $registry->resolve($resourceType);
+            }
+
+            return $candidate;
+        }
+        $metadata = $registry->resolve($resourceType)->metadata();
+        if ($metadata->resourceType !== $resourceType) {
             throw new DomainException(ResourceIdentifierAdapter::ERROR_RESOURCE_IDENTITY_MISMATCH, [
                 'resource_type' => $resource['type'] ?? null,
             ]);

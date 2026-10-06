@@ -171,7 +171,7 @@ final class AutoNumberService
 
     private function registry(): ResourceIdentifierAdapterRegistry
     {
-        return $this->adapters ?? new ResourceIdentifierAdapterRegistry();
+        return $this->adapters ?? new ResourceIdentifierAdapterRegistry(db: $this->db);
     }
 
     private function repo(): AutoNumberingSeriesRepository
