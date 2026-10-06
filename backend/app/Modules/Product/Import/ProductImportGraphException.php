@@ -1,0 +1,27 @@
+<?php
+
+declare(strict_types=1);
+
+namespace App\Modules\Product\Import;
+
+use App\Exceptions\DomainException;
+
+/** Stable failure raised while building a read-only Product import plan. */
+final class ProductImportGraphException extends DomainException
+{
+    public const ERROR_SOURCE_KEY_REQUIRED = 'IMPORT_SOURCE_KEY_REQUIRED';
+    public const ERROR_DUPLICATE_SOURCE_KEY = 'IMPORT_DUPLICATE_SOURCE_KEY';
+    public const ERROR_DUPLICATE_PRODUCT_CODE = 'IMPORT_DUPLICATE_PRODUCT_CODE';
+    public const ERROR_PRODUCT_CODE_REQUIRED = 'IMPORT_PRODUCT_CODE_REQUIRED';
+    public const ERROR_PRODUCT_NOT_FOUND = 'IMPORT_PRODUCT_NOT_FOUND';
+    public const ERROR_MISSING_SOURCE_REFERENCE = 'IMPORT_MISSING_SOURCE_REFERENCE';
+    public const ERROR_MISSING_PRODUCT_REFERENCE = 'IMPORT_MISSING_PRODUCT_REFERENCE';
+    public const ERROR_REFERENCE_CONFLICT = 'IMPORT_REFERENCE_CONFLICT';
+    public const ERROR_GROUP_NOT_FOUND = 'IMPORT_PRODUCT_GROUP_NOT_FOUND';
+    public const ERROR_UOM_NOT_FOUND = 'IMPORT_UOM_NOT_FOUND';
+    public const ERROR_INVALID_PARENT = 'IMPORT_INVALID_PARENT_REFERENCE';
+    public const ERROR_INVALID_COMBO_REFERENCE = 'IMPORT_INVALID_COMBO_REFERENCE';
+    public const ERROR_DUPLICATE_UOM_CONVERSION = 'IMPORT_DUPLICATE_UOM_CONVERSION';
+    public const ERROR_DUPLICATE_COMBO_ITEM = 'IMPORT_DUPLICATE_COMBO_ITEM';
+    public const ERROR_CYCLE = 'IMPORT_DEPENDENCY_CYCLE';
+}
