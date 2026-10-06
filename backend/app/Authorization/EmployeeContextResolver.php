@@ -6,6 +6,9 @@ namespace App\Authorization;
 
 use App\Infrastructure\Time\Clock;
 use App\Infrastructure\Time\EvaluationTime;
+use App\Repositories\EmployeeAssignmentRepository;
+use App\Repositories\EmployeeRepository;
+use App\Repositories\OrganizationRepository;
 use CodeIgniter\Database\ConnectionInterface;
 
 final class EmployeeContextResolver
@@ -14,7 +17,13 @@ final class EmployeeContextResolver
     private ConnectionInterface $db;
 
     /** @param ConnectionInterface<mixed, mixed>|null $db */
-    public function __construct(?ConnectionInterface $db = null, ?Clock $clock = null)
+    public function __construct(
+        ?ConnectionInterface $db = null,
+        ?Clock $clock = null,
+        private readonly ?EmployeeRepository $employees = null,
+        private readonly ?EmployeeAssignmentRepository $assignments = null,
+        private readonly ?OrganizationRepository $organizations = null,
+    )
     {
         $this->db = $db ?? db_connect();
         $this->clock = $clock ?? service('clock');
@@ -24,30 +33,14 @@ final class EmployeeContextResolver
 
     public function resolve(int $userId): ?EmployeeContext
     {
-        $employeeResult = $this->db->table('employees')
-            ->select('id')
-            ->where('user_id', $userId)
-            ->where('status', 'ACTIVE')
-            ->get();
+        $employee = $this->employeeRepository()->findByUserId($userId);
 
-        $employee = $employeeResult === false ? null : $employeeResult->getRowArray();
-
-        if ($employee === null) {
+        if ($employee === null || (string) ($employee['status'] ?? '') !== 'ACTIVE') {
             return null;
         }
 
         $today = EvaluationTime::capture($this->clock)->businessDate(new \DateTimeZone('UTC'));
-        $assignmentResult = $this->db->table('employee_assignments')
-            ->select('organization_id, department_id, position_id')
-            ->where('employee_id', (int) $employee['id'])
-            ->where('status', 'ACTIVE')
-            ->where('effective_from <=', $today)
-            ->groupStart()
-            ->where('effective_to IS NULL', null, false)
-            ->orWhere('effective_to >=', $today)
-            ->groupEnd()
-            ->get();
-        $assignments = $assignmentResult === false ? [] : $assignmentResult->getResultArray();
+        $assignments = $this->assignmentRepository()->findEffective((int) $employee['id'], $today);
 
         $organizationIds = [];
         $departmentIds = [];
@@ -78,10 +71,7 @@ final class EmployeeContextResolver
      */
     public function getOrganizationTreeIds(array $rootIds): array
     {
-        $rowsResult = $this->db->table('organizations')
-            ->select('id, parent_id')
-            ->get();
-        $rows = $rowsResult === false ? [] : $rowsResult->getResultArray();
+        $rows = $this->organizationRepository()->findAll();
 
         $children = [];
 
@@ -102,6 +92,21 @@ final class EmployeeContextResolver
         }
 
         return $result;
+    }
+
+    private function employeeRepository(): EmployeeRepository
+    {
+        return $this->employees ?? new EmployeeRepository($this->db);
+    }
+
+    private function assignmentRepository(): EmployeeAssignmentRepository
+    {
+        return $this->assignments ?? new EmployeeAssignmentRepository($this->db);
+    }
+
+    private function organizationRepository(): OrganizationRepository
+    {
+        return $this->organizations ?? new OrganizationRepository($this->db);
     }
 
     /**

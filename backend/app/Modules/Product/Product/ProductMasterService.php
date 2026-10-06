@@ -22,6 +22,7 @@ use App\Modules\Product\ProductGroup\ProductGroupService;
 use App\Modules\Product\Uom\ProductUomMasterService;
 use App\Modules\Product\Uom\ProductUomService;
 use App\Repositories\AutoNumberingSeriesRepository;
+use App\Repositories\OrganizationRepository;
 use App\Services\AutoNumberService;
 use App\Services\AutoNumberingBusinessMutation;
 use App\Services\NumberingScopePeriodContext;
@@ -92,6 +93,7 @@ final class ProductMasterService
         private readonly ?Clock $clock = null,
         private readonly ?ProductRoleService $roles = null,
         private readonly ?ProductUomService $productUomService = null,
+        private readonly ?OrganizationRepository $organizations = null,
     ) {
         $this->db = $db ?? db_connect();
     }
@@ -720,11 +722,15 @@ final class ProductMasterService
 
     private function numberingContext(int $groupId): EvaluationOrganizationContext
     {
-        $result = $this->db->table('organizations')->where('id', $groupId)->get();
-        if ($result === false || $result->getRowArray() === null) {
+        if ($this->organizationRepository()->find($groupId) === null) {
             throw new DomainException('EVALUATION_ORGANIZATION_NOT_FOUND', ['organization_id' => $groupId]);
         }
         return new EvaluationOrganizationContext($groupId, 'GROUP', 'AUTHORITATIVE');
+    }
+
+    private function organizationRepository(): OrganizationRepository
+    {
+        return $this->organizations ?? new OrganizationRepository($this->db);
     }
 
     /** @param array<string, mixed>|null $target
