@@ -37,6 +37,7 @@ function failValidation(string $message): void
 try {
     $manifest = readJsonFile($manifestPath);
     $tasksCatalog = readJsonFile($compiled . DIRECTORY_SEPARATOR . 'tasks.json');
+    $moduleCatalog = readJsonFile($compiled . DIRECTORY_SEPARATOR . 'module-map.json');
     $correctiveCatalog = readJsonFile($compiled . DIRECTORY_SEPARATOR . 'corrective-tasks.json');
     $rulesCatalog = readJsonFile($compiled . DIRECTORY_SEPARATOR . 'rules.json');
     $decisionsCatalog = readJsonFile($compiled . DIRECTORY_SEPARATOR . 'approved-decisions.json');
@@ -80,6 +81,7 @@ $tasks = $tasksCatalog['tasks'] ?? [];
 if ((int) ($tasksCatalog['task_count'] ?? 0) !== 100 || count($tasks) !== 100) {
     failValidation('expected exactly 100 tasks');
 }
+$moduleMappings = $moduleCatalog['mappings'] ?? [];
 $taskMap = [];
 $edges = [];
 $allowedImpacts = ['db', 'backend-domain', 'backend-security', 'api-contract', 'frontend', 'cross-layer', 'release'];
@@ -143,6 +145,16 @@ foreach (($correctiveCatalog['tasks'] ?? []) as $task) {
     foreach (($task['required_rule_ids'] ?? []) as $ruleId) {
         if (!isset($ruleMap[(string) $ruleId])) {
             failValidation("{$id} references missing rule {$ruleId}");
+        }
+    }
+}
+foreach ($moduleMappings as $taskId => $mapping) {
+    if (!isset($taskMap[$taskId])) {
+        failValidation("module mapping references unknown task {$taskId}");
+    }
+    foreach (['module', 'path', 'status'] as $field) {
+        if (trim((string) ($mapping[$field] ?? '')) === '') {
+            failValidation("module mapping {$taskId} lacks {$field}");
         }
     }
 }

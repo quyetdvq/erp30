@@ -2,10 +2,14 @@
 
 declare(strict_types=1);
 
-namespace App\Services;
+namespace App\Modules\Product\Integration\Numbering;
 
 use App\Exceptions\DomainException;
 use App\Exceptions\PersistenceException;
+use App\Services\AutoNumberingIdentifierCollision;
+use App\Services\NumberingScopePeriodContext;
+use App\Services\ResourceIdentifierAdapter;
+use App\Services\ResourceIdentifierMetadata;
 use CodeIgniter\Database\ConnectionInterface;
 use CodeIgniter\Database\Exceptions\DatabaseException;
 

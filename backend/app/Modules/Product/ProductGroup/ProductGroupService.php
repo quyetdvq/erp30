@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace App\Services;
+namespace App\Modules\Product\ProductGroup;
 
 use App\Authorization\AuthorizationAuditService;
 use App\Authorization\AuthorizationService;
@@ -15,7 +15,6 @@ use App\Infrastructure\Lock\MariaDbDomainLockService;
 use App\Infrastructure\Mutation\MutationContext;
 use App\Infrastructure\Mutation\OperationContext;
 use App\Infrastructure\Time\Clock;
-use App\Repositories\ProductGroupRepository;
 use CodeIgniter\Database\BaseConnection;
 use CodeIgniter\Database\ConnectionInterface;
 

@@ -60,3 +60,18 @@ Implementation Contract, Implementation Plan, API Design, or UI Design.
 - Product Group is a shared GROUP-level master; no Company ownership or Product Company Usage Scope is introduced.
 - Hierarchy mutation is serialized by DomainLockService key `product-group-tree` in the same transaction before cycle validation.
 - No closure table, nested-set, materialized-path, level/depth helper, or other hierarchy table is introduced.
+
+## DEC-ARCH-001 — Product and Pricing modular-monolith boundaries
+
+- Product and Pricing are separate backend modules under `App\\Modules\\Product`
+  and `App\\Modules\\Pricing`.
+- Product owns ProductGroup, UOM, Product, role/ParentChild, structural Combo,
+  and Product-specific numbering integration.
+- Pricing owns PriceList, pricing resolution, and monetary Combo allocation.
+- Product must not depend on Pricing. Pricing may consume Product only through
+  stable public Product contracts/read ports and must not bind to concrete Product
+  repositories.
+- Generic Auto Numbering remains shared infrastructure; ProductIdentifierAdapter
+  belongs to Product. Import remains separate.
+- This is a physical relocation only: no schema, API, UI, or business semantic
+  change. The completed P1-PRD-001 implementation is moved, not reimplemented.

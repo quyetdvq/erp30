@@ -7,8 +7,8 @@ use App\Exceptions\DomainException;
 use App\Infrastructure\Lock\DomainLockService;
 use App\Infrastructure\Mutation\OperationContext;
 use App\Infrastructure\Time\EvaluationTime;
-use App\Repositories\ProductGroupRepository;
-use App\Services\ProductGroupService;
+use App\Modules\Product\ProductGroup\ProductGroupRepository;
+use App\Modules\Product\ProductGroup\ProductGroupService;
 use CodeIgniter\Test\CIUnitTestCase;
 use CodeIgniter\Test\DatabaseTestTrait;
 
@@ -183,7 +183,7 @@ final class P1Prd001ProductGroupServiceTest extends CIUnitTestCase
         $bId = $service->create($this->group('RACE-B'), $operation);
         $directory = sys_get_temp_dir() . DIRECTORY_SEPARATOR . 'dinkerp-prd001-' . bin2hex(random_bytes(8));
         mkdir($directory);
-        $worker = realpath(__DIR__ . '/../fixtures/product_group_concurrency_worker.php');
+        $worker = realpath(__DIR__ . '/../../../fixtures/Product/ProductGroup/product_group_concurrency_worker.php');
         $this->assertNotFalse($worker);
         $startPath = $directory . DIRECTORY_SEPARATOR . 'start';
         $processes = [];

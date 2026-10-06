@@ -50,3 +50,22 @@ UTC. Caller payloads cannot set `created_by`, `updated_by`, `created_at`, or
 Business timezone lookup accepts explicit Company and optional GROUP context.
 It does not infer that an arbitrary Organization ID is both a Company and a
 GROUP. Unresolved context remains unresolved rather than being guessed.
+
+## Modular Product/Pricing boundary
+
+New Gate 5+ Product business/domain code MUST live under
+`App\\Modules\\Product\\...`. New Pricing business/domain code MUST live under
+`App\\Modules\\Pricing\\...`.
+
+Do not add future Product or Pricing classes to flat `App\\Services` or
+`App\\Repositories` locations unless the class is genuinely shared
+infrastructure. Existing Gate 0-4 classes may remain in their current locations;
+this rule does not require a repository-wide cleanup.
+
+Product MUST NOT depend on `App\\Modules\\Pricing\\...`. Pricing may consume
+Product only through an approved stable public Product contract/read port and
+must not depend directly on concrete Product repository implementations.
+
+Structural Combo composition and expansion belong to Product; monetary Combo
+allocation belongs to Pricing. Generic Auto Numbering remains shared and the
+ProductIdentifierAdapter is Product-owned. Import remains a separate boundary.

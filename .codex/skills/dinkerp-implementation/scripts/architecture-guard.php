@@ -14,6 +14,8 @@ $checked = [];
 $scanRoots = [
     $root . DIRECTORY_SEPARATOR . 'backend' . DIRECTORY_SEPARATOR . 'app' . DIRECTORY_SEPARATOR . 'Services',
     $root . DIRECTORY_SEPARATOR . 'backend' . DIRECTORY_SEPARATOR . 'app' . DIRECTORY_SEPARATOR . 'Authorization',
+    $root . DIRECTORY_SEPARATOR . 'backend' . DIRECTORY_SEPARATOR . 'app' . DIRECTORY_SEPARATOR . 'Modules' . DIRECTORY_SEPARATOR . 'Product',
+    $root . DIRECTORY_SEPARATOR . 'backend' . DIRECTORY_SEPARATOR . 'app' . DIRECTORY_SEPARATOR . 'Modules' . DIRECTORY_SEPARATOR . 'Pricing',
 ];
 
 foreach ($scanRoots as $scanRoot) {
@@ -50,6 +52,55 @@ foreach ($scanRoots as $scanRoot) {
                     $violations[] = "{$relative}:{$line}: direct database query in service";
                 }
             }
+        }
+    }
+}
+
+$flatProductPatterns = [
+    $root . DIRECTORY_SEPARATOR . 'backend' . DIRECTORY_SEPARATOR . 'app' . DIRECTORY_SEPARATOR . 'Services' . DIRECTORY_SEPARATOR . 'Product*.php',
+    $root . DIRECTORY_SEPARATOR . 'backend' . DIRECTORY_SEPARATOR . 'app' . DIRECTORY_SEPARATOR . 'Repositories' . DIRECTORY_SEPARATOR . 'Product*.php',
+    $root . DIRECTORY_SEPARATOR . 'backend' . DIRECTORY_SEPARATOR . 'app' . DIRECTORY_SEPARATOR . 'Services' . DIRECTORY_SEPARATOR . 'Price*.php',
+    $root . DIRECTORY_SEPARATOR . 'backend' . DIRECTORY_SEPARATOR . 'app' . DIRECTORY_SEPARATOR . 'Repositories' . DIRECTORY_SEPARATOR . 'Price*.php',
+    $root . DIRECTORY_SEPARATOR . 'backend' . DIRECTORY_SEPARATOR . 'app' . DIRECTORY_SEPARATOR . 'Services' . DIRECTORY_SEPARATOR . 'Pricing*.php',
+    $root . DIRECTORY_SEPARATOR . 'backend' . DIRECTORY_SEPARATOR . 'app' . DIRECTORY_SEPARATOR . 'Repositories' . DIRECTORY_SEPARATOR . 'Pricing*.php',
+    $root . DIRECTORY_SEPARATOR . 'backend' . DIRECTORY_SEPARATOR . 'app' . DIRECTORY_SEPARATOR . 'Services' . DIRECTORY_SEPARATOR . 'Combo*.php',
+    $root . DIRECTORY_SEPARATOR . 'backend' . DIRECTORY_SEPARATOR . 'app' . DIRECTORY_SEPARATOR . 'Repositories' . DIRECTORY_SEPARATOR . 'Combo*.php',
+    $root . DIRECTORY_SEPARATOR . 'backend' . DIRECTORY_SEPARATOR . 'app' . DIRECTORY_SEPARATOR . 'Services' . DIRECTORY_SEPARATOR . 'Uom*.php',
+    $root . DIRECTORY_SEPARATOR . 'backend' . DIRECTORY_SEPARATOR . 'app' . DIRECTORY_SEPARATOR . 'Repositories' . DIRECTORY_SEPARATOR . 'Uom*.php',
+];
+foreach ($flatProductPatterns as $pattern) {
+    foreach (glob($pattern) ?: [] as $path) {
+        $relative = str_replace($root . DIRECTORY_SEPARATOR, '', $path);
+        $violations[] = "{$relative}: Product/Pricing class remains in flat legacy namespace";
+    }
+}
+
+$moduleProductRoot = $root . DIRECTORY_SEPARATOR . 'backend' . DIRECTORY_SEPARATOR . 'app' . DIRECTORY_SEPARATOR . 'Modules' . DIRECTORY_SEPARATOR . 'Product';
+if (is_dir($moduleProductRoot)) {
+    $iterator = new RecursiveIteratorIterator(new RecursiveDirectoryIterator($moduleProductRoot));
+    foreach ($iterator as $file) {
+        if (! $file->isFile() || $file->getExtension() !== 'php') {
+            continue;
+        }
+        $relative = str_replace($root . DIRECTORY_SEPARATOR, '', $file->getPathname());
+        $contents = (string) file_get_contents($file->getPathname());
+        if (preg_match('/use\s+App\\\\Modules\\\\Pricing\\\\/m', $contents) === 1) {
+            $violations[] = "{$relative}: Product module imports Pricing module";
+        }
+    }
+}
+
+$modulePricingRoot = $root . DIRECTORY_SEPARATOR . 'backend' . DIRECTORY_SEPARATOR . 'app' . DIRECTORY_SEPARATOR . 'Modules' . DIRECTORY_SEPARATOR . 'Pricing';
+if (is_dir($modulePricingRoot)) {
+    $iterator = new RecursiveIteratorIterator(new RecursiveDirectoryIterator($modulePricingRoot));
+    foreach ($iterator as $file) {
+        if (! $file->isFile() || $file->getExtension() !== 'php') {
+            continue;
+        }
+        $relative = str_replace($root . DIRECTORY_SEPARATOR, '', $file->getPathname());
+        $contents = (string) file_get_contents($file->getPathname());
+        if (preg_match('/use\s+App\\\\Modules\\\\Product\\\\[^;]*Repository/m', $contents) === 1) {
+            $violations[] = "{$relative}: Pricing module imports a concrete Product repository";
         }
     }
 }

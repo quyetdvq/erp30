@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace App\Services;
+namespace App\Modules\Product\Integration\Numbering;
 
 use App\Exceptions\DomainException;
 

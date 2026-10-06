@@ -2,13 +2,13 @@
 
 declare(strict_types=1);
 
-chdir(dirname(__DIR__, 2));
+chdir(dirname(__DIR__, 4));
 require 'vendor/codeigniter4/framework/system/Test/bootstrap.php';
 
 use App\Exceptions\DomainException;
 use App\Infrastructure\Mutation\OperationContext;
 use App\Infrastructure\Time\EvaluationTime;
-use App\Services\ProductGroupService;
+use App\Modules\Product\ProductGroup\ProductGroupService;
 
 $actorId = (int) ($argv[1] ?? 0);
 $targetId = (int) ($argv[2] ?? 0);

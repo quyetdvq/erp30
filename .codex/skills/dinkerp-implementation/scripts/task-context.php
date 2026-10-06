@@ -91,6 +91,7 @@ try {
         exit(2);
     }
     $taskCatalog = readJson($compiled . DIRECTORY_SEPARATOR . 'tasks.json');
+    $moduleCatalog = readJson($compiled . DIRECTORY_SEPARATOR . 'module-map.json');
     $correctiveCatalog = readJson($compiled . DIRECTORY_SEPARATOR . 'corrective-tasks.json');
     $ruleCatalog = readJson($compiled . DIRECTORY_SEPARATOR . 'rules.json');
     $decisionCatalog = readJson($compiled . DIRECTORY_SEPARATOR . 'approved-decisions.json');
@@ -122,6 +123,7 @@ foreach (($decisionCatalog['decisions'] ?? []) as $decision) {
         $decisions[(string) $decision['id']] = $decision;
     }
 }
+$moduleMap = $moduleCatalog['mappings'] ?? [];
 
 $selected = [];
 $ruleIds = [];
@@ -180,6 +182,10 @@ foreach ($selected as $task) {
     $lines[] = sprintf('  Forbidden scope: %s', implode(', ', $task['forbidden_scope'] ?? []));
     $lines[] = sprintf('  Direct source verification: %s', implode('; ', $direct) ?: 'NONE');
     $lines[] = sprintf('  Expected output: %s', $task['expected_output']);
+    if (isset($moduleMap[$task['id']])) {
+        $mapping = $moduleMap[$task['id']];
+        $lines[] = sprintf('  Module mapping: %s -> %s (%s)', $mapping['module'], $mapping['path'], $mapping['status']);
+    }
 }
 $lines[] = 'Resolved rules:';
 foreach ($ruleIds as $ruleId) {

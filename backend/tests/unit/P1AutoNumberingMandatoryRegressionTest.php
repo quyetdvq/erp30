@@ -16,7 +16,7 @@ use App\Services\AutoNumberingIdentifierCollision;
 use App\Services\CanonicalNumberingPatternValidator;
 use App\Services\NumberingAuthorizationPort;
 use App\Services\NumberingScopePeriodContext;
-use App\Services\ProductIdentifierAdapter;
+use App\Modules\Product\Integration\Numbering\ProductIdentifierAdapter;
 use App\Services\ResourceIdentifierAdapter;
 use App\Services\ResourceIdentifierAdapterRegistry;
 use CodeIgniter\Test\CIUnitTestCase;
@@ -192,7 +192,7 @@ final class P1AutoNumberingMandatoryRegressionTest extends CIUnitTestCase
         $this->assertFalse($this->db->fieldExists('timezone', 'organizations'));
         $this->assertTrue($this->db->tableExists('auto_numbering_series'));
         $this->assertTrue($this->db->tableExists('auto_numbering_counters'));
-        $productAdapter = file_get_contents(APPPATH . 'Services/ProductIdentifierAdapter.php');
+        $productAdapter = file_get_contents(APPPATH . 'Modules/Product/Integration/Numbering/ProductIdentifierAdapter.php');
         $this->assertIsString($productAdapter);
         $this->assertStringNotContainsString('sku', strtolower($productAdapter));
         $this->assertStringNotContainsString('barcode', strtolower($productAdapter));

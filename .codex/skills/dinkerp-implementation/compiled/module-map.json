@@ -1,0 +1,61 @@
+{
+    "format": "META-CODEX-003",
+    "source": "CHANGE-ARCH-001 Product/Pricing module convention",
+    "mappings": {
+        "P1-PRD-001": {
+            "module": "Product",
+            "path": "App\\Modules\\Product\\ProductGroup",
+            "status": "DONE"
+        },
+        "P1-PRD-002": {
+            "module": "Product",
+            "path": "App\\Modules\\Product\\Uom",
+            "status": "PLANNED"
+        },
+        "P1-PRD-003": {
+            "module": "Product",
+            "path": "App\\Modules\\Product\\Product",
+            "status": "PLANNED"
+        },
+        "P1-PRD-004": {
+            "module": "Product",
+            "path": "App\\Modules\\Product\\Product",
+            "status": "PLANNED"
+        },
+        "P1-UOM-001": {
+            "module": "Product",
+            "path": "App\\Modules\\Product\\Uom",
+            "status": "PLANNED"
+        },
+        "P1-CMB-001": {
+            "module": "Product",
+            "path": "App\\Modules\\Product\\Combo",
+            "status": "PLANNED"
+        },
+        "P1-CMB-002": {
+            "module": "Product",
+            "path": "App\\Modules\\Product\\Combo",
+            "status": "PLANNED"
+        },
+        "P1-PRC-001": {
+            "module": "Pricing",
+            "path": "App\\Modules\\Pricing\\PriceList",
+            "status": "PLANNED"
+        },
+        "P1-PRC-002": {
+            "module": "Pricing",
+            "path": "App\\Modules\\Pricing\\Resolution",
+            "status": "PLANNED"
+        },
+        "P1-CMB-003": {
+            "module": "Pricing",
+            "path": "App\\Modules\\Pricing\\ComboAllocation",
+            "status": "PLANNED"
+        },
+        "P1-PRD-090": {
+            "module": "CrossModule",
+            "path": "Product/Pricing regression",
+            "status": "PLANNED"
+        }
+    }
+}

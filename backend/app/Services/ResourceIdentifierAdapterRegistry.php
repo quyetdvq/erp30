@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Services;
 
 use App\Exceptions\DomainException;
+use App\Modules\Product\Integration\Numbering\ProductIdentifierAdapter;
 use CodeIgniter\Database\ConnectionInterface;
 
 /** Explicit deterministic registry for approved Resource identifier adapters. */
