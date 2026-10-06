@@ -4,17 +4,16 @@ declare(strict_types=1);
 
 namespace App\Controllers\Api;
 
-use App\Controllers\BaseController;
 use CodeIgniter\HTTP\ResponseInterface;
 use CodeIgniter\Shield\Authentication\Authenticators\Session;
 use CodeIgniter\Shield\Entities\User;
 use CodeIgniter\Shield\Models\UserModel;
 
-final class Auth extends BaseController
+final class Auth extends ApiController
 {
     public function options(): ResponseInterface
     {
-        return $this->response->setStatusCode(204);
+        return $this->respondNoContent();
     }
 
     public function login(): ResponseInterface
@@ -24,10 +23,11 @@ final class Auth extends BaseController
         $password = (string) ($payload['password'] ?? '');
 
         if ($identity === '' || $password === '') {
-            return $this->response->setStatusCode(422)->setJSON([
-                'error' => 'INVALID_CREDENTIALS',
-                'message' => 'Email/tài khoản và mật khẩu là bắt buộc.',
-            ]);
+            return $this->respondError('INVALID_CREDENTIALS', 422, [[
+                'field' => 'password',
+                'code' => 'INVALID_CREDENTIALS',
+                'message' => \App\Infrastructure\Api\ApiTransport::message('INVALID_CREDENTIALS', 422),
+            ]]);
         }
 
         $authenticator = auth('session')->getAuthenticator();
@@ -39,15 +39,12 @@ final class Auth extends BaseController
                 : ['username' => $identity, 'password' => $password]);
 
         if (! $result->isOK()) {
-            return $this->response->setStatusCode(401)->setJSON([
-                'error' => 'INVALID_CREDENTIALS',
-                'message' => $result->reason(),
-            ]);
+            return $this->respondError('INVALID_CREDENTIALS', 401);
         }
 
         $user = auth()->user();
 
-        return $this->response->setJSON([
+        return $this->respondData([
             'user' => $user instanceof User ? $this->userPayload($user) : null,
         ]);
     }
@@ -56,24 +53,24 @@ final class Auth extends BaseController
     {
         auth()->logout();
 
-        return $this->response->setJSON(['ok' => true]);
+        return $this->respondData(['ok' => true]);
     }
 
     public function me(): ResponseInterface
     {
         $user = auth()->user();
         if (! $user instanceof User) {
-            return $this->response->setStatusCode(401)->setJSON(['error' => 'UNAUTHENTICATED']);
+            return $this->respondError('UNAUTHENTICATED', 401);
         }
 
-        return $this->response->setJSON(['user' => $this->userPayload($user)]);
+        return $this->respondData(['user' => $this->userPayload($user)]);
     }
 
     public function profile(): ResponseInterface
     {
         $user = auth()->user();
         if (! $user instanceof User) {
-            return $this->response->setStatusCode(401)->setJSON(['error' => 'UNAUTHENTICATED']);
+            return $this->respondError('UNAUTHENTICATED', 401);
         }
 
         $payload = $this->jsonPayload();
@@ -82,10 +79,11 @@ final class Auth extends BaseController
         $password = (string) ($payload['password'] ?? '');
 
         if ($username === '' || $email === '' || ! filter_var($email, FILTER_VALIDATE_EMAIL)) {
-            return $this->response->setStatusCode(422)->setJSON([
-                'error' => 'INVALID_PROFILE',
-                'message' => 'Tên tài khoản và email hợp lệ là bắt buộc.',
-            ]);
+            return $this->respondError('INVALID_PROFILE', 422, [[
+                'field' => 'email',
+                'code' => 'INVALID_PROFILE',
+                'message' => \App\Infrastructure\Api\ApiTransport::message('INVALID_PROFILE', 422),
+            ]]);
         }
 
         $users = model(UserModel::class);
@@ -98,13 +96,10 @@ final class Auth extends BaseController
         try {
             $users->save($user);
         } catch (\Throwable $exception) {
-            return $this->response->setStatusCode(422)->setJSON([
-                'error' => 'PROFILE_UPDATE_FAILED',
-                'message' => $exception->getMessage(),
-            ]);
+            return $this->respondError('PROFILE_UPDATE_FAILED', 422);
         }
 
-        return $this->response->setJSON(['user' => $this->userPayload($user)]);
+        return $this->respondData(['user' => $this->userPayload($user)]);
     }
 
     /** @return array<string, mixed> */
