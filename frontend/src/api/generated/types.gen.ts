@@ -71,6 +71,146 @@ export type HealthResponse = {
     meta: Meta;
 };
 
+export type Province = {
+    id: BigInt;
+    code: string;
+    name: string;
+    status: 'ACTIVE' | 'INACTIVE' | 'CLOSED';
+};
+
+export type ProvinceCreate = {
+    code: string;
+    name: string;
+    status: 'ACTIVE' | 'INACTIVE' | 'CLOSED';
+};
+
+export type ProvincePatch = ProvinceCreate;
+
+export type Ward = {
+    id: BigInt;
+    province_id: BigInt;
+    code: string;
+    name: string;
+    name_full?: string | null;
+    status: 'ACTIVE' | 'INACTIVE' | 'CLOSED';
+};
+
+export type WardCreate = {
+    province_id: BigInt;
+    code: string;
+    name: string;
+    name_full?: string | null;
+    status: 'ACTIVE' | 'INACTIVE' | 'CLOSED';
+};
+
+export type WardPatch = WardCreate;
+
+export type Organization = {
+    id: BigInt;
+    parent_id?: BigInt;
+    type: 'GROUP' | 'COMPANY' | 'BRANCH' | 'PLANT' | 'WAREHOUSE';
+    code: string;
+    name: string;
+    legal_name?: string | null;
+    tax_code?: string | null;
+    address?: string | null;
+    province_id?: BigInt;
+    ward_id?: BigInt;
+    description?: string | null;
+    status: string;
+    active_from?: string | null;
+    active_to?: string | null;
+};
+
+export type OrganizationCreate = {
+    parent_id?: BigInt;
+    type: string;
+    code: string;
+    name: string;
+    legal_name?: string;
+    tax_code?: string;
+    address?: string;
+    province_id?: BigInt;
+    ward_id?: BigInt;
+    description?: string;
+    status: string;
+    active_from?: string;
+    active_to?: string;
+};
+
+export type OrganizationPatch = OrganizationCreate;
+
+export type Contact = {
+    id: BigInt;
+    contact_type: 'EMPLOYEE' | 'ORGANIZATION';
+    contact_ref_id: BigInt;
+    description?: string | null;
+    status: string;
+    name?: string | null;
+    email?: string | null;
+    phone?: string | null;
+    mobile?: string | null;
+    address?: string | null;
+    province_id?: BigInt;
+    ward_id?: BigInt;
+    province_name?: string | null;
+    ward_name?: string | null;
+};
+
+export type ContactCreate = {
+    contact_type: 'EMPLOYEE' | 'ORGANIZATION';
+    contact_ref_id: BigInt;
+    description?: string;
+    status: string;
+    name?: string;
+    email?: string;
+    phone?: string;
+    mobile?: string;
+    address?: string;
+    province_id?: BigInt;
+    ward_id?: BigInt;
+    province_name?: string;
+    ward_name?: string;
+};
+
+export type ContactPatch = ContactCreate;
+
+export type State = {
+    status: 'ACTIVE' | 'INACTIVE' | 'CLOSED';
+};
+
+export type ProvinceResponse = SuccessResponse & {
+    data?: Province;
+};
+
+export type WardResponse = SuccessResponse & {
+    data?: Ward;
+};
+
+export type OrganizationResponse = SuccessResponse & {
+    data?: Organization;
+};
+
+export type ContactResponse = SuccessResponse & {
+    data?: Contact;
+};
+
+export type ProvinceCollection = CollectionResponse & {
+    data?: Array<Province>;
+};
+
+export type WardCollection = CollectionResponse & {
+    data?: Array<Ward>;
+};
+
+export type OrganizationCollection = CollectionResponse & {
+    data?: Array<Organization>;
+};
+
+export type ContactCollection = CollectionResponse & {
+    data?: Array<Contact>;
+};
+
 /**
  * Supported request language. Unsupported values fall back to vi.
  */
@@ -80,6 +220,41 @@ export type AcceptLanguage = 'vi' | 'en';
  * Client request correlation identifier; invalid or missing values are replaced by a generated UUID.
  */
 export type RequestId2 = RequestId;
+
+export type Id = BigInt;
+
+export type Q = string;
+
+export type Page = number;
+
+export type PageSize = number;
+
+/**
+ * Allowlisted comma-separated sort terms; a final id ASC tie-breaker is applied.
+ */
+export type Sort = string;
+
+export type Filter = {
+    [key: string]: string | Array<string>;
+};
+
+export type ProvinceCreate2 = ProvinceCreate;
+
+export type ProvincePatch2 = ProvincePatch;
+
+export type WardCreate2 = WardCreate;
+
+export type WardPatch2 = WardPatch;
+
+export type OrganizationCreate2 = OrganizationCreate;
+
+export type OrganizationPatch2 = OrganizationPatch;
+
+export type ContactCreate2 = ContactCreate;
+
+export type ContactPatch2 = ContactPatch;
+
+export type State2 = State;
 
 export type GetHealthData = {
     body?: never;
@@ -139,3 +314,865 @@ export type GetHealthResponses = {
 };
 
 export type GetHealthResponse = GetHealthResponses[keyof GetHealthResponses];
+
+export type ListProvincesData = {
+    body?: never;
+    headers?: {
+        /**
+         * Supported request language. Unsupported values fall back to vi.
+         */
+        'Accept-Language'?: 'vi' | 'en';
+        /**
+         * Client request correlation identifier; invalid or missing values are replaced by a generated UUID.
+         */
+        'X-Request-ID'?: RequestId;
+    };
+    path?: never;
+    query?: {
+        q?: string;
+        page?: number;
+        page_size?: number;
+        /**
+         * Allowlisted comma-separated sort terms; a final id ASC tie-breaker is applied.
+         */
+        sort?: string;
+        filter?: {
+            [key: string]: string | Array<string>;
+        };
+    };
+    url: '/api/v1/provinces';
+};
+
+export type ListProvincesErrors = {
+    /**
+     * Malformed request or query.
+     */
+    400: ErrorResponse;
+    /**
+     * Unauthenticated or invalid authentication.
+     */
+    401: ErrorResponse;
+    /**
+     * Visible target but action denied.
+     */
+    403: ErrorResponse;
+};
+
+export type ListProvincesError = ListProvincesErrors[keyof ListProvincesErrors];
+
+export type ListProvincesResponses = {
+    /**
+     * Authorized province collection.
+     */
+    200: ProvinceCollection;
+};
+
+export type ListProvincesResponse = ListProvincesResponses[keyof ListProvincesResponses];
+
+export type CreateProvinceData = {
+    body: ProvinceCreate2;
+    path?: never;
+    query?: never;
+    url: '/api/v1/provinces';
+};
+
+export type CreateProvinceErrors = {
+    /**
+     * Malformed request or query.
+     */
+    400: ErrorResponse;
+    /**
+     * Unauthenticated or invalid authentication.
+     */
+    401: ErrorResponse;
+    /**
+     * Visible target but action denied.
+     */
+    403: ErrorResponse;
+    /**
+     * Conflict, concurrency, uniqueness, or current-state failure.
+     */
+    409: ErrorResponse;
+    /**
+     * Semantically invalid request.
+     */
+    422: ErrorResponse;
+};
+
+export type CreateProvinceError = CreateProvinceErrors[keyof CreateProvinceErrors];
+
+export type CreateProvinceResponses = {
+    /**
+     * Province resource.
+     */
+    201: ProvinceResponse;
+};
+
+export type CreateProvinceResponse = CreateProvinceResponses[keyof CreateProvinceResponses];
+
+export type GetProvinceData = {
+    body?: never;
+    path: {
+        id: BigInt;
+    };
+    query?: never;
+    url: '/api/v1/provinces/{id}';
+};
+
+export type GetProvinceErrors = {
+    /**
+     * Unauthenticated or invalid authentication.
+     */
+    401: ErrorResponse;
+    /**
+     * Target not found or not visible.
+     */
+    404: ErrorResponse;
+};
+
+export type GetProvinceError = GetProvinceErrors[keyof GetProvinceErrors];
+
+export type GetProvinceResponses = {
+    /**
+     * Province resource.
+     */
+    200: ProvinceResponse;
+};
+
+export type GetProvinceResponse = GetProvinceResponses[keyof GetProvinceResponses];
+
+export type UpdateProvinceData = {
+    body: ProvincePatch2;
+    path: {
+        id: BigInt;
+    };
+    query?: never;
+    url: '/api/v1/provinces/{id}';
+};
+
+export type UpdateProvinceErrors = {
+    /**
+     * Unauthenticated or invalid authentication.
+     */
+    401: ErrorResponse;
+    /**
+     * Visible target but action denied.
+     */
+    403: ErrorResponse;
+    /**
+     * Target not found or not visible.
+     */
+    404: ErrorResponse;
+    /**
+     * Conflict, concurrency, uniqueness, or current-state failure.
+     */
+    409: ErrorResponse;
+    /**
+     * Semantically invalid request.
+     */
+    422: ErrorResponse;
+};
+
+export type UpdateProvinceError = UpdateProvinceErrors[keyof UpdateProvinceErrors];
+
+export type UpdateProvinceResponses = {
+    /**
+     * Province resource.
+     */
+    200: ProvinceResponse;
+};
+
+export type UpdateProvinceResponse = UpdateProvinceResponses[keyof UpdateProvinceResponses];
+
+export type SetProvinceStateData = {
+    body: State2;
+    path: {
+        id: BigInt;
+    };
+    query?: never;
+    url: '/api/v1/provinces/{id}/actions/set-state';
+};
+
+export type SetProvinceStateErrors = {
+    /**
+     * Unauthenticated or invalid authentication.
+     */
+    401: ErrorResponse;
+    /**
+     * Visible target but action denied.
+     */
+    403: ErrorResponse;
+    /**
+     * Target not found or not visible.
+     */
+    404: ErrorResponse;
+    /**
+     * Semantically invalid request.
+     */
+    422: ErrorResponse;
+};
+
+export type SetProvinceStateError = SetProvinceStateErrors[keyof SetProvinceStateErrors];
+
+export type SetProvinceStateResponses = {
+    /**
+     * Province resource.
+     */
+    200: ProvinceResponse;
+};
+
+export type SetProvinceStateResponse = SetProvinceStateResponses[keyof SetProvinceStateResponses];
+
+export type ListWardsData = {
+    body?: never;
+    headers?: {
+        /**
+         * Supported request language. Unsupported values fall back to vi.
+         */
+        'Accept-Language'?: 'vi' | 'en';
+        /**
+         * Client request correlation identifier; invalid or missing values are replaced by a generated UUID.
+         */
+        'X-Request-ID'?: RequestId;
+    };
+    path?: never;
+    query?: {
+        q?: string;
+        page?: number;
+        page_size?: number;
+        /**
+         * Allowlisted comma-separated sort terms; a final id ASC tie-breaker is applied.
+         */
+        sort?: string;
+        filter?: {
+            [key: string]: string | Array<string>;
+        };
+    };
+    url: '/api/v1/wards';
+};
+
+export type ListWardsErrors = {
+    /**
+     * Malformed request or query.
+     */
+    400: ErrorResponse;
+    /**
+     * Unauthenticated or invalid authentication.
+     */
+    401: ErrorResponse;
+};
+
+export type ListWardsError = ListWardsErrors[keyof ListWardsErrors];
+
+export type ListWardsResponses = {
+    /**
+     * Authorized ward collection.
+     */
+    200: WardCollection;
+};
+
+export type ListWardsResponse = ListWardsResponses[keyof ListWardsResponses];
+
+export type CreateWardData = {
+    body: WardCreate2;
+    path?: never;
+    query?: never;
+    url: '/api/v1/wards';
+};
+
+export type CreateWardErrors = {
+    /**
+     * Malformed request or query.
+     */
+    400: ErrorResponse;
+    /**
+     * Unauthenticated or invalid authentication.
+     */
+    401: ErrorResponse;
+    /**
+     * Visible target but action denied.
+     */
+    403: ErrorResponse;
+    /**
+     * Conflict, concurrency, uniqueness, or current-state failure.
+     */
+    409: ErrorResponse;
+    /**
+     * Semantically invalid request.
+     */
+    422: ErrorResponse;
+};
+
+export type CreateWardError = CreateWardErrors[keyof CreateWardErrors];
+
+export type CreateWardResponses = {
+    /**
+     * Ward resource.
+     */
+    201: WardResponse;
+};
+
+export type CreateWardResponse = CreateWardResponses[keyof CreateWardResponses];
+
+export type GetWardData = {
+    body?: never;
+    path: {
+        id: BigInt;
+    };
+    query?: never;
+    url: '/api/v1/wards/{id}';
+};
+
+export type GetWardErrors = {
+    /**
+     * Unauthenticated or invalid authentication.
+     */
+    401: ErrorResponse;
+    /**
+     * Target not found or not visible.
+     */
+    404: ErrorResponse;
+};
+
+export type GetWardError = GetWardErrors[keyof GetWardErrors];
+
+export type GetWardResponses = {
+    /**
+     * Ward resource.
+     */
+    200: WardResponse;
+};
+
+export type GetWardResponse = GetWardResponses[keyof GetWardResponses];
+
+export type UpdateWardData = {
+    body: WardPatch2;
+    path: {
+        id: BigInt;
+    };
+    query?: never;
+    url: '/api/v1/wards/{id}';
+};
+
+export type UpdateWardErrors = {
+    /**
+     * Unauthenticated or invalid authentication.
+     */
+    401: ErrorResponse;
+    /**
+     * Visible target but action denied.
+     */
+    403: ErrorResponse;
+    /**
+     * Target not found or not visible.
+     */
+    404: ErrorResponse;
+    /**
+     * Conflict, concurrency, uniqueness, or current-state failure.
+     */
+    409: ErrorResponse;
+    /**
+     * Semantically invalid request.
+     */
+    422: ErrorResponse;
+};
+
+export type UpdateWardError = UpdateWardErrors[keyof UpdateWardErrors];
+
+export type UpdateWardResponses = {
+    /**
+     * Ward resource.
+     */
+    200: WardResponse;
+};
+
+export type UpdateWardResponse = UpdateWardResponses[keyof UpdateWardResponses];
+
+export type SetWardStateData = {
+    body: State2;
+    path: {
+        id: BigInt;
+    };
+    query?: never;
+    url: '/api/v1/wards/{id}/actions/set-state';
+};
+
+export type SetWardStateErrors = {
+    /**
+     * Unauthenticated or invalid authentication.
+     */
+    401: ErrorResponse;
+    /**
+     * Visible target but action denied.
+     */
+    403: ErrorResponse;
+    /**
+     * Target not found or not visible.
+     */
+    404: ErrorResponse;
+    /**
+     * Semantically invalid request.
+     */
+    422: ErrorResponse;
+};
+
+export type SetWardStateError = SetWardStateErrors[keyof SetWardStateErrors];
+
+export type SetWardStateResponses = {
+    /**
+     * Ward resource.
+     */
+    200: WardResponse;
+};
+
+export type SetWardStateResponse = SetWardStateResponses[keyof SetWardStateResponses];
+
+export type ListOrganizationsData = {
+    body?: never;
+    headers?: {
+        /**
+         * Supported request language. Unsupported values fall back to vi.
+         */
+        'Accept-Language'?: 'vi' | 'en';
+        /**
+         * Client request correlation identifier; invalid or missing values are replaced by a generated UUID.
+         */
+        'X-Request-ID'?: RequestId;
+    };
+    path?: never;
+    query?: {
+        q?: string;
+        page?: number;
+        page_size?: number;
+        /**
+         * Allowlisted comma-separated sort terms; a final id ASC tie-breaker is applied.
+         */
+        sort?: string;
+        filter?: {
+            [key: string]: string | Array<string>;
+        };
+    };
+    url: '/api/v1/organizations';
+};
+
+export type ListOrganizationsErrors = {
+    /**
+     * Malformed request or query.
+     */
+    400: ErrorResponse;
+    /**
+     * Unauthenticated or invalid authentication.
+     */
+    401: ErrorResponse;
+};
+
+export type ListOrganizationsError = ListOrganizationsErrors[keyof ListOrganizationsErrors];
+
+export type ListOrganizationsResponses = {
+    /**
+     * Authorized organization collection.
+     */
+    200: OrganizationCollection;
+};
+
+export type ListOrganizationsResponse = ListOrganizationsResponses[keyof ListOrganizationsResponses];
+
+export type CreateOrganizationData = {
+    body: OrganizationCreate2;
+    path?: never;
+    query?: never;
+    url: '/api/v1/organizations';
+};
+
+export type CreateOrganizationErrors = {
+    /**
+     * Malformed request or query.
+     */
+    400: ErrorResponse;
+    /**
+     * Unauthenticated or invalid authentication.
+     */
+    401: ErrorResponse;
+    /**
+     * Visible target but action denied.
+     */
+    403: ErrorResponse;
+    /**
+     * Conflict, concurrency, uniqueness, or current-state failure.
+     */
+    409: ErrorResponse;
+    /**
+     * Semantically invalid request.
+     */
+    422: ErrorResponse;
+};
+
+export type CreateOrganizationError = CreateOrganizationErrors[keyof CreateOrganizationErrors];
+
+export type CreateOrganizationResponses = {
+    /**
+     * Organization resource.
+     */
+    201: OrganizationResponse;
+};
+
+export type CreateOrganizationResponse = CreateOrganizationResponses[keyof CreateOrganizationResponses];
+
+export type GetOrganizationTreeData = {
+    body?: never;
+    headers?: {
+        /**
+         * Supported request language. Unsupported values fall back to vi.
+         */
+        'Accept-Language'?: 'vi' | 'en';
+        /**
+         * Client request correlation identifier; invalid or missing values are replaced by a generated UUID.
+         */
+        'X-Request-ID'?: RequestId;
+    };
+    path?: never;
+    query?: {
+        q?: string;
+        page?: number;
+        page_size?: number;
+        /**
+         * Allowlisted comma-separated sort terms; a final id ASC tie-breaker is applied.
+         */
+        sort?: string;
+        filter?: {
+            [key: string]: string | Array<string>;
+        };
+    };
+    url: '/api/v1/organizations/tree';
+};
+
+export type GetOrganizationTreeErrors = {
+    /**
+     * Malformed request or query.
+     */
+    400: ErrorResponse;
+    /**
+     * Unauthenticated or invalid authentication.
+     */
+    401: ErrorResponse;
+};
+
+export type GetOrganizationTreeError = GetOrganizationTreeErrors[keyof GetOrganizationTreeErrors];
+
+export type GetOrganizationTreeResponses = {
+    /**
+     * Authorized organization collection.
+     */
+    200: OrganizationCollection;
+};
+
+export type GetOrganizationTreeResponse = GetOrganizationTreeResponses[keyof GetOrganizationTreeResponses];
+
+export type GetOrganizationData = {
+    body?: never;
+    path: {
+        id: BigInt;
+    };
+    query?: never;
+    url: '/api/v1/organizations/{id}';
+};
+
+export type GetOrganizationErrors = {
+    /**
+     * Unauthenticated or invalid authentication.
+     */
+    401: ErrorResponse;
+    /**
+     * Target not found or not visible.
+     */
+    404: ErrorResponse;
+};
+
+export type GetOrganizationError = GetOrganizationErrors[keyof GetOrganizationErrors];
+
+export type GetOrganizationResponses = {
+    /**
+     * Organization resource.
+     */
+    200: OrganizationResponse;
+};
+
+export type GetOrganizationResponse = GetOrganizationResponses[keyof GetOrganizationResponses];
+
+export type UpdateOrganizationData = {
+    body: OrganizationPatch2;
+    path: {
+        id: BigInt;
+    };
+    query?: never;
+    url: '/api/v1/organizations/{id}';
+};
+
+export type UpdateOrganizationErrors = {
+    /**
+     * Unauthenticated or invalid authentication.
+     */
+    401: ErrorResponse;
+    /**
+     * Visible target but action denied.
+     */
+    403: ErrorResponse;
+    /**
+     * Target not found or not visible.
+     */
+    404: ErrorResponse;
+    /**
+     * Conflict, concurrency, uniqueness, or current-state failure.
+     */
+    409: ErrorResponse;
+    /**
+     * Semantically invalid request.
+     */
+    422: ErrorResponse;
+};
+
+export type UpdateOrganizationError = UpdateOrganizationErrors[keyof UpdateOrganizationErrors];
+
+export type UpdateOrganizationResponses = {
+    /**
+     * Organization resource.
+     */
+    200: OrganizationResponse;
+};
+
+export type UpdateOrganizationResponse = UpdateOrganizationResponses[keyof UpdateOrganizationResponses];
+
+export type SetOrganizationStateData = {
+    body: State2;
+    path: {
+        id: BigInt;
+    };
+    query?: never;
+    url: '/api/v1/organizations/{id}/actions/set-state';
+};
+
+export type SetOrganizationStateErrors = {
+    /**
+     * Unauthenticated or invalid authentication.
+     */
+    401: ErrorResponse;
+    /**
+     * Visible target but action denied.
+     */
+    403: ErrorResponse;
+    /**
+     * Target not found or not visible.
+     */
+    404: ErrorResponse;
+    /**
+     * Semantically invalid request.
+     */
+    422: ErrorResponse;
+};
+
+export type SetOrganizationStateError = SetOrganizationStateErrors[keyof SetOrganizationStateErrors];
+
+export type SetOrganizationStateResponses = {
+    /**
+     * Organization resource.
+     */
+    200: OrganizationResponse;
+};
+
+export type SetOrganizationStateResponse = SetOrganizationStateResponses[keyof SetOrganizationStateResponses];
+
+export type ListContactsData = {
+    body?: never;
+    headers?: {
+        /**
+         * Supported request language. Unsupported values fall back to vi.
+         */
+        'Accept-Language'?: 'vi' | 'en';
+        /**
+         * Client request correlation identifier; invalid or missing values are replaced by a generated UUID.
+         */
+        'X-Request-ID'?: RequestId;
+    };
+    path?: never;
+    query?: {
+        q?: string;
+        page?: number;
+        page_size?: number;
+        /**
+         * Allowlisted comma-separated sort terms; a final id ASC tie-breaker is applied.
+         */
+        sort?: string;
+        filter?: {
+            [key: string]: string | Array<string>;
+        };
+    };
+    url: '/api/v1/contacts';
+};
+
+export type ListContactsErrors = {
+    /**
+     * Malformed request or query.
+     */
+    400: ErrorResponse;
+    /**
+     * Unauthenticated or invalid authentication.
+     */
+    401: ErrorResponse;
+};
+
+export type ListContactsError = ListContactsErrors[keyof ListContactsErrors];
+
+export type ListContactsResponses = {
+    /**
+     * Authorized contact collection.
+     */
+    200: ContactCollection;
+};
+
+export type ListContactsResponse = ListContactsResponses[keyof ListContactsResponses];
+
+export type CreateContactData = {
+    body: ContactCreate2;
+    path?: never;
+    query?: never;
+    url: '/api/v1/contacts';
+};
+
+export type CreateContactErrors = {
+    /**
+     * Malformed request or query.
+     */
+    400: ErrorResponse;
+    /**
+     * Unauthenticated or invalid authentication.
+     */
+    401: ErrorResponse;
+    /**
+     * Visible target but action denied.
+     */
+    403: ErrorResponse;
+    /**
+     * Semantically invalid request.
+     */
+    422: ErrorResponse;
+};
+
+export type CreateContactError = CreateContactErrors[keyof CreateContactErrors];
+
+export type CreateContactResponses = {
+    /**
+     * Contact resource.
+     */
+    201: ContactResponse;
+};
+
+export type CreateContactResponse = CreateContactResponses[keyof CreateContactResponses];
+
+export type GetContactData = {
+    body?: never;
+    path: {
+        id: BigInt;
+    };
+    query?: never;
+    url: '/api/v1/contacts/{id}';
+};
+
+export type GetContactErrors = {
+    /**
+     * Unauthenticated or invalid authentication.
+     */
+    401: ErrorResponse;
+    /**
+     * Target not found or not visible.
+     */
+    404: ErrorResponse;
+};
+
+export type GetContactError = GetContactErrors[keyof GetContactErrors];
+
+export type GetContactResponses = {
+    /**
+     * Contact resource.
+     */
+    200: ContactResponse;
+};
+
+export type GetContactResponse = GetContactResponses[keyof GetContactResponses];
+
+export type UpdateContactData = {
+    body: ContactPatch2;
+    path: {
+        id: BigInt;
+    };
+    query?: never;
+    url: '/api/v1/contacts/{id}';
+};
+
+export type UpdateContactErrors = {
+    /**
+     * Unauthenticated or invalid authentication.
+     */
+    401: ErrorResponse;
+    /**
+     * Visible target but action denied.
+     */
+    403: ErrorResponse;
+    /**
+     * Target not found or not visible.
+     */
+    404: ErrorResponse;
+    /**
+     * Semantically invalid request.
+     */
+    422: ErrorResponse;
+};
+
+export type UpdateContactError = UpdateContactErrors[keyof UpdateContactErrors];
+
+export type UpdateContactResponses = {
+    /**
+     * Contact resource.
+     */
+    200: ContactResponse;
+};
+
+export type UpdateContactResponse = UpdateContactResponses[keyof UpdateContactResponses];
+
+export type SetContactStateData = {
+    body: State2;
+    path: {
+        id: BigInt;
+    };
+    query?: never;
+    url: '/api/v1/contacts/{id}/actions/set-state';
+};
+
+export type SetContactStateErrors = {
+    /**
+     * Unauthenticated or invalid authentication.
+     */
+    401: ErrorResponse;
+    /**
+     * Visible target but action denied.
+     */
+    403: ErrorResponse;
+    /**
+     * Target not found or not visible.
+     */
+    404: ErrorResponse;
+    /**
+     * Semantically invalid request.
+     */
+    422: ErrorResponse;
+};
+
+export type SetContactStateError = SetContactStateErrors[keyof SetContactStateErrors];
+
+export type SetContactStateResponses = {
+    /**
+     * Contact resource.
+     */
+    200: ContactResponse;
+};
+
+export type SetContactStateResponse = SetContactStateResponses[keyof SetContactStateResponses];

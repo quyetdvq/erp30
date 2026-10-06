@@ -10,6 +10,8 @@ info:
     authority documents and implementation tasks reach CONTRACT_READY.
 servers:
   - url: https://api.monmin.net
+security:
+  - sessionAuth: []
 paths:
   /api/v1/health:
     get:
@@ -45,6 +47,138 @@ paths:
           $ref: '#/components/responses/UnprocessableEntity'
         '500':
           $ref: '#/components/responses/InternalServerError'
+  /api/v1/provinces:
+    get:
+      operationId: listProvinces
+      summary: List authorized provinces
+      parameters: [{$ref: '#/components/parameters/AcceptLanguage'}, {$ref: '#/components/parameters/RequestId'}, {$ref: '#/components/parameters/Q'}, {$ref: '#/components/parameters/Page'}, {$ref: '#/components/parameters/PageSize'}, {$ref: '#/components/parameters/Sort'}, {$ref: '#/components/parameters/Filter'}]
+      responses:
+        '200': {$ref: '#/components/responses/ProvinceCollection'}
+        '400': {$ref: '#/components/responses/BadRequest'}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+    post:
+      operationId: createProvince
+      summary: Create a province
+      requestBody: {$ref: '#/components/requestBodies/ProvinceCreate'}
+      responses:
+        '201': {$ref: '#/components/responses/ProvinceResponse'}
+        '400': {$ref: '#/components/responses/BadRequest'}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+        '409': {$ref: '#/components/responses/Conflict'}
+        '422': {$ref: '#/components/responses/UnprocessableEntity'}
+  /api/v1/provinces/{id}:
+    parameters: [{$ref: '#/components/parameters/Id'}]
+    get:
+      operationId: getProvince
+      summary: Get a province
+      responses: {'200': {$ref: '#/components/responses/ProvinceResponse'}, '401': {$ref: '#/components/responses/Unauthorized'}, '404': {$ref: '#/components/responses/NotFound'}}
+    patch:
+      operationId: updateProvince
+      summary: Update a province
+      requestBody: {$ref: '#/components/requestBodies/ProvincePatch'}
+      responses: {'200': {$ref: '#/components/responses/ProvinceResponse'}, '401': {$ref: '#/components/responses/Unauthorized'}, '403': {$ref: '#/components/responses/Forbidden'}, '404': {$ref: '#/components/responses/NotFound'}, '409': {$ref: '#/components/responses/Conflict'}, '422': {$ref: '#/components/responses/UnprocessableEntity'}}
+  /api/v1/provinces/{id}/actions/set-state:
+    parameters: [{$ref: '#/components/parameters/Id'}]
+    post:
+      operationId: setProvinceState
+      summary: Set province state
+      requestBody: {$ref: '#/components/requestBodies/State'}
+      responses: {'200': {$ref: '#/components/responses/ProvinceResponse'}, '401': {$ref: '#/components/responses/Unauthorized'}, '403': {$ref: '#/components/responses/Forbidden'}, '404': {$ref: '#/components/responses/NotFound'}, '422': {$ref: '#/components/responses/UnprocessableEntity'}}
+  /api/v1/wards:
+    get:
+      operationId: listWards
+      summary: List authorized wards
+      parameters: [{$ref: '#/components/parameters/AcceptLanguage'}, {$ref: '#/components/parameters/RequestId'}, {$ref: '#/components/parameters/Q'}, {$ref: '#/components/parameters/Page'}, {$ref: '#/components/parameters/PageSize'}, {$ref: '#/components/parameters/Sort'}, {$ref: '#/components/parameters/Filter'}]
+      responses: {'200': {$ref: '#/components/responses/WardCollection'}, '400': {$ref: '#/components/responses/BadRequest'}, '401': {$ref: '#/components/responses/Unauthorized'}}
+    post:
+      operationId: createWard
+      summary: Create a ward
+      requestBody: {$ref: '#/components/requestBodies/WardCreate'}
+      responses: {'201': {$ref: '#/components/responses/WardResponse'}, '400': {$ref: '#/components/responses/BadRequest'}, '401': {$ref: '#/components/responses/Unauthorized'}, '403': {$ref: '#/components/responses/Forbidden'}, '409': {$ref: '#/components/responses/Conflict'}, '422': {$ref: '#/components/responses/UnprocessableEntity'}}
+  /api/v1/wards/{id}:
+    parameters: [{$ref: '#/components/parameters/Id'}]
+    get:
+      operationId: getWard
+      summary: Get a ward
+      responses: {'200': {$ref: '#/components/responses/WardResponse'}, '401': {$ref: '#/components/responses/Unauthorized'}, '404': {$ref: '#/components/responses/NotFound'}}
+    patch:
+      operationId: updateWard
+      summary: Update a ward
+      requestBody: {$ref: '#/components/requestBodies/WardPatch'}
+      responses: {'200': {$ref: '#/components/responses/WardResponse'}, '401': {$ref: '#/components/responses/Unauthorized'}, '403': {$ref: '#/components/responses/Forbidden'}, '404': {$ref: '#/components/responses/NotFound'}, '409': {$ref: '#/components/responses/Conflict'}, '422': {$ref: '#/components/responses/UnprocessableEntity'}}
+  /api/v1/wards/{id}/actions/set-state:
+    parameters: [{$ref: '#/components/parameters/Id'}]
+    post:
+      operationId: setWardState
+      summary: Set ward state
+      requestBody: {$ref: '#/components/requestBodies/State'}
+      responses: {'200': {$ref: '#/components/responses/WardResponse'}, '401': {$ref: '#/components/responses/Unauthorized'}, '403': {$ref: '#/components/responses/Forbidden'}, '404': {$ref: '#/components/responses/NotFound'}, '422': {$ref: '#/components/responses/UnprocessableEntity'}}
+  /api/v1/organizations:
+    get:
+      operationId: listOrganizations
+      summary: List authorized organizations
+      parameters: [{$ref: '#/components/parameters/AcceptLanguage'}, {$ref: '#/components/parameters/RequestId'}, {$ref: '#/components/parameters/Q'}, {$ref: '#/components/parameters/Page'}, {$ref: '#/components/parameters/PageSize'}, {$ref: '#/components/parameters/Sort'}, {$ref: '#/components/parameters/Filter'}]
+      responses: {'200': {$ref: '#/components/responses/OrganizationCollection'}, '400': {$ref: '#/components/responses/BadRequest'}, '401': {$ref: '#/components/responses/Unauthorized'}}
+    post:
+      operationId: createOrganization
+      summary: Create an organization
+      requestBody: {$ref: '#/components/requestBodies/OrganizationCreate'}
+      responses: {'201': {$ref: '#/components/responses/OrganizationResponse'}, '400': {$ref: '#/components/responses/BadRequest'}, '401': {$ref: '#/components/responses/Unauthorized'}, '403': {$ref: '#/components/responses/Forbidden'}, '409': {$ref: '#/components/responses/Conflict'}, '422': {$ref: '#/components/responses/UnprocessableEntity'}}
+  /api/v1/organizations/tree:
+    get:
+      operationId: getOrganizationTree
+      summary: Get visible organization hierarchy
+      parameters: [{$ref: '#/components/parameters/AcceptLanguage'}, {$ref: '#/components/parameters/RequestId'}, {$ref: '#/components/parameters/Q'}, {$ref: '#/components/parameters/Page'}, {$ref: '#/components/parameters/PageSize'}, {$ref: '#/components/parameters/Sort'}, {$ref: '#/components/parameters/Filter'}]
+      responses: {'200': {$ref: '#/components/responses/OrganizationCollection'}, '400': {$ref: '#/components/responses/BadRequest'}, '401': {$ref: '#/components/responses/Unauthorized'}}
+  /api/v1/organizations/{id}:
+    parameters: [{$ref: '#/components/parameters/Id'}]
+    get:
+      operationId: getOrganization
+      summary: Get an organization
+      responses: {'200': {$ref: '#/components/responses/OrganizationResponse'}, '401': {$ref: '#/components/responses/Unauthorized'}, '404': {$ref: '#/components/responses/NotFound'}}
+    patch:
+      operationId: updateOrganization
+      summary: Update an organization
+      requestBody: {$ref: '#/components/requestBodies/OrganizationPatch'}
+      responses: {'200': {$ref: '#/components/responses/OrganizationResponse'}, '401': {$ref: '#/components/responses/Unauthorized'}, '403': {$ref: '#/components/responses/Forbidden'}, '404': {$ref: '#/components/responses/NotFound'}, '409': {$ref: '#/components/responses/Conflict'}, '422': {$ref: '#/components/responses/UnprocessableEntity'}}
+  /api/v1/organizations/{id}/actions/set-state:
+    parameters: [{$ref: '#/components/parameters/Id'}]
+    post:
+      operationId: setOrganizationState
+      summary: Set organization state
+      requestBody: {$ref: '#/components/requestBodies/State'}
+      responses: {'200': {$ref: '#/components/responses/OrganizationResponse'}, '401': {$ref: '#/components/responses/Unauthorized'}, '403': {$ref: '#/components/responses/Forbidden'}, '404': {$ref: '#/components/responses/NotFound'}, '422': {$ref: '#/components/responses/UnprocessableEntity'}}
+  /api/v1/contacts:
+    get:
+      operationId: listContacts
+      summary: List authorized contacts
+      parameters: [{$ref: '#/components/parameters/AcceptLanguage'}, {$ref: '#/components/parameters/RequestId'}, {$ref: '#/components/parameters/Q'}, {$ref: '#/components/parameters/Page'}, {$ref: '#/components/parameters/PageSize'}, {$ref: '#/components/parameters/Sort'}, {$ref: '#/components/parameters/Filter'}]
+      responses: {'200': {$ref: '#/components/responses/ContactCollection'}, '400': {$ref: '#/components/responses/BadRequest'}, '401': {$ref: '#/components/responses/Unauthorized'}}
+    post:
+      operationId: createContact
+      summary: Create a contact
+      requestBody: {$ref: '#/components/requestBodies/ContactCreate'}
+      responses: {'201': {$ref: '#/components/responses/ContactResponse'}, '400': {$ref: '#/components/responses/BadRequest'}, '401': {$ref: '#/components/responses/Unauthorized'}, '403': {$ref: '#/components/responses/Forbidden'}, '422': {$ref: '#/components/responses/UnprocessableEntity'}}
+  /api/v1/contacts/{id}:
+    parameters: [{$ref: '#/components/parameters/Id'}]
+    get:
+      operationId: getContact
+      summary: Get a contact
+      responses: {'200': {$ref: '#/components/responses/ContactResponse'}, '401': {$ref: '#/components/responses/Unauthorized'}, '404': {$ref: '#/components/responses/NotFound'}}
+    patch:
+      operationId: updateContact
+      summary: Update a contact
+      requestBody: {$ref: '#/components/requestBodies/ContactPatch'}
+      responses: {'200': {$ref: '#/components/responses/ContactResponse'}, '401': {$ref: '#/components/responses/Unauthorized'}, '403': {$ref: '#/components/responses/Forbidden'}, '404': {$ref: '#/components/responses/NotFound'}, '422': {$ref: '#/components/responses/UnprocessableEntity'}}
+  /api/v1/contacts/{id}/actions/set-state:
+    parameters: [{$ref: '#/components/parameters/Id'}]
+    post:
+      operationId: setContactState
+      summary: Set contact state
+      requestBody: {$ref: '#/components/requestBodies/State'}
+      responses: {'200': {$ref: '#/components/responses/ContactResponse'}, '401': {$ref: '#/components/responses/Unauthorized'}, '403': {$ref: '#/components/responses/Forbidden'}, '404': {$ref: '#/components/responses/NotFound'}, '422': {$ref: '#/components/responses/UnprocessableEntity'}}
 components:
   parameters:
     AcceptLanguage:
@@ -63,6 +197,69 @@ components:
       description: Client request correlation identifier; invalid or missing values are replaced by a generated UUID.
       schema:
         $ref: '#/components/schemas/RequestId'
+    Id:
+      name: id
+      in: path
+      required: true
+      schema:
+        $ref: '#/components/schemas/BigInt'
+    Q:
+      name: q
+      in: query
+      required: false
+      schema:
+        type: string
+    Page:
+      name: page
+      in: query
+      required: false
+      schema:
+        type: integer
+        minimum: 1
+        default: 1
+    PageSize:
+      name: page_size
+      in: query
+      required: false
+      schema:
+        type: integer
+        minimum: 1
+        maximum: 200
+        default: 50
+    Sort:
+      name: sort
+      in: query
+      required: false
+      schema:
+        type: string
+      description: Allowlisted comma-separated sort terms; a final id ASC tie-breaker is applied.
+    Filter:
+      name: filter
+      in: query
+      required: false
+      style: deepObject
+      explode: true
+      schema:
+        type: object
+        additionalProperties:
+          oneOf:
+            - type: string
+            - type: array
+              items: {type: string}
+  requestBodies:
+    ProvinceCreate: {required: true, content: {application/json: {schema: {$ref: '#/components/schemas/ProvinceCreate'}}}}
+    ProvincePatch: {required: true, content: {application/json: {schema: {$ref: '#/components/schemas/ProvincePatch'}}}}
+    WardCreate: {required: true, content: {application/json: {schema: {$ref: '#/components/schemas/WardCreate'}}}}
+    WardPatch: {required: true, content: {application/json: {schema: {$ref: '#/components/schemas/WardPatch'}}}}
+    OrganizationCreate: {required: true, content: {application/json: {schema: {$ref: '#/components/schemas/OrganizationCreate'}}}}
+    OrganizationPatch: {required: true, content: {application/json: {schema: {$ref: '#/components/schemas/OrganizationPatch'}}}}
+    ContactCreate: {required: true, content: {application/json: {schema: {$ref: '#/components/schemas/ContactCreate'}}}}
+    ContactPatch: {required: true, content: {application/json: {schema: {$ref: '#/components/schemas/ContactPatch'}}}}
+    State: {required: true, content: {application/json: {schema: {$ref: '#/components/schemas/State'}}}}
+  securitySchemes:
+    sessionAuth:
+      type: http
+      scheme: bearer
   headers:
     RequestId:
       description: Accepted or generated request correlation identifier.
@@ -74,6 +271,30 @@ components:
         type: string
         enum: [vi, en]
   responses:
+    ProvinceResponse:
+      description: Province resource.
+      content: {application/json: {schema: {$ref: '#/components/schemas/ProvinceResponse'}}}
+    ProvinceCollection:
+      description: Authorized province collection.
+      content: {application/json: {schema: {$ref: '#/components/schemas/ProvinceCollection'}}}
+    WardResponse:
+      description: Ward resource.
+      content: {application/json: {schema: {$ref: '#/components/schemas/WardResponse'}}}
+    WardCollection:
+      description: Authorized ward collection.
+      content: {application/json: {schema: {$ref: '#/components/schemas/WardCollection'}}}
+    OrganizationResponse:
+      description: Organization resource.
+      content: {application/json: {schema: {$ref: '#/components/schemas/OrganizationResponse'}}}
+    OrganizationCollection:
+      description: Authorized organization collection.
+      content: {application/json: {schema: {$ref: '#/components/schemas/OrganizationCollection'}}}
+    ContactResponse:
+      description: Contact resource.
+      content: {application/json: {schema: {$ref: '#/components/schemas/ContactResponse'}}}
+    ContactCollection:
+      description: Authorized contact collection.
+      content: {application/json: {schema: {$ref: '#/components/schemas/ContactCollection'}}}
     BadRequest:
       description: Malformed request or query.
       headers:
@@ -276,3 +497,132 @@ components:
           $ref: '#/components/schemas/HealthData'
         meta:
           $ref: '#/components/schemas/Meta'
+    Province:
+      type: object
+      required: [id, code, name, status]
+      properties:
+        id: {$ref: '#/components/schemas/BigInt'}
+        code: {type: string}
+        name: {type: string}
+        status: {type: string, enum: [ACTIVE, INACTIVE, CLOSED]}
+    ProvinceCreate:
+      type: object
+      required: [code, name, status]
+      properties:
+        code: {type: string}
+        name: {type: string}
+        status: {type: string, enum: [ACTIVE, INACTIVE, CLOSED]}
+    ProvincePatch:
+      allOf: [{$ref: '#/components/schemas/ProvinceCreate'}]
+      required: []
+    Ward:
+      type: object
+      required: [id, province_id, code, name, status]
+      properties:
+        id: {$ref: '#/components/schemas/BigInt'}
+        province_id: {$ref: '#/components/schemas/BigInt'}
+        code: {type: string}
+        name: {type: string}
+        name_full: {type: [string, 'null']}
+        status: {type: string, enum: [ACTIVE, INACTIVE, CLOSED]}
+    WardCreate:
+      type: object
+      required: [province_id, code, name, status]
+      properties:
+        province_id: {$ref: '#/components/schemas/BigInt'}
+        code: {type: string}
+        name: {type: string}
+        name_full: {type: [string, 'null']}
+        status: {type: string, enum: [ACTIVE, INACTIVE, CLOSED]}
+    WardPatch:
+      allOf: [{$ref: '#/components/schemas/WardCreate'}]
+      required: []
+    Organization:
+      type: object
+      required: [id, type, code, name, status]
+      properties:
+        id: {$ref: '#/components/schemas/BigInt'}
+        parent_id: {$ref: '#/components/schemas/BigInt'}
+        type: {type: string, enum: [GROUP, COMPANY, BRANCH, PLANT, WAREHOUSE]}
+        code: {type: string}
+        name: {type: string}
+        legal_name: {type: [string, 'null']}
+        tax_code: {type: [string, 'null']}
+        address: {type: [string, 'null']}
+        province_id: {$ref: '#/components/schemas/BigInt'}
+        ward_id: {$ref: '#/components/schemas/BigInt'}
+        description: {type: [string, 'null']}
+        status: {type: string}
+        active_from: {type: [string, 'null'], format: date}
+        active_to: {type: [string, 'null'], format: date}
+    OrganizationCreate:
+      type: object
+      required: [type, code, name, status]
+      properties:
+        parent_id: {$ref: '#/components/schemas/BigInt'}
+        type: {type: string}
+        code: {type: string}
+        name: {type: string}
+        legal_name: {type: string}
+        tax_code: {type: string}
+        address: {type: string}
+        province_id: {$ref: '#/components/schemas/BigInt'}
+        ward_id: {$ref: '#/components/schemas/BigInt'}
+        description: {type: string}
+        status: {type: string}
+        active_from: {type: string, format: date}
+        active_to: {type: string, format: date}
+    OrganizationPatch:
+      allOf: [{$ref: '#/components/schemas/OrganizationCreate'}]
+      required: []
+    Contact:
+      type: object
+      required: [id, contact_type, contact_ref_id, status]
+      properties:
+        id: {$ref: '#/components/schemas/BigInt'}
+        contact_type: {type: string, enum: [EMPLOYEE, ORGANIZATION]}
+        contact_ref_id: {$ref: '#/components/schemas/BigInt'}
+        description: {type: [string, 'null']}
+        status: {type: string}
+        name: {type: [string, 'null']}
+        email: {type: [string, 'null']}
+        phone: {type: [string, 'null']}
+        mobile: {type: [string, 'null']}
+        address: {type: [string, 'null']}
+        province_id: {$ref: '#/components/schemas/BigInt'}
+        ward_id: {$ref: '#/components/schemas/BigInt'}
+        province_name: {type: [string, 'null']}
+        ward_name: {type: [string, 'null']}
+    ContactCreate:
+      type: object
+      required: [contact_type, contact_ref_id, status]
+      properties:
+        contact_type: {type: string, enum: [EMPLOYEE, ORGANIZATION]}
+        contact_ref_id: {$ref: '#/components/schemas/BigInt'}
+        description: {type: string}
+        status: {type: string}
+        name: {type: string}
+        email: {type: string}
+        phone: {type: string}
+        mobile: {type: string}
+        address: {type: string}
+        province_id: {$ref: '#/components/schemas/BigInt'}
+        ward_id: {$ref: '#/components/schemas/BigInt'}
+        province_name: {type: string}
+        ward_name: {type: string}
+    ContactPatch:
+      allOf: [{$ref: '#/components/schemas/ContactCreate'}]
+      required: []
+    State:
+      type: object
+      required: [status]
+      properties:
+        status: {type: string, enum: [ACTIVE, INACTIVE, CLOSED]}
+    ProvinceResponse: {allOf: [{$ref: '#/components/schemas/SuccessResponse'}], properties: {data: {$ref: '#/components/schemas/Province'}}}
+    WardResponse: {allOf: [{$ref: '#/components/schemas/SuccessResponse'}], properties: {data: {$ref: '#/components/schemas/Ward'}}}
+    OrganizationResponse: {allOf: [{$ref: '#/components/schemas/SuccessResponse'}], properties: {data: {$ref: '#/components/schemas/Organization'}}}
+    ContactResponse: {allOf: [{$ref: '#/components/schemas/SuccessResponse'}], properties: {data: {$ref: '#/components/schemas/Contact'}}}
+    ProvinceCollection: {allOf: [{$ref: '#/components/schemas/CollectionResponse'}], properties: {data: {type: array, items: {$ref: '#/components/schemas/Province'}}}}
+    WardCollection: {allOf: [{$ref: '#/components/schemas/CollectionResponse'}], properties: {data: {type: array, items: {$ref: '#/components/schemas/Ward'}}}}
+    OrganizationCollection: {allOf: [{$ref: '#/components/schemas/CollectionResponse'}], properties: {data: {type: array, items: {$ref: '#/components/schemas/Organization'}}}}
+    ContactCollection: {allOf: [{$ref: '#/components/schemas/CollectionResponse'}], properties: {data: {type: array, items: {$ref: '#/components/schemas/Contact'}}}}

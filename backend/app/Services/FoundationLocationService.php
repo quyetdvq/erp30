@@ -1,0 +1,161 @@
+<?php
+
+declare(strict_types=1);
+
+namespace App\Services;
+
+use App\Exceptions\DomainException;
+use App\Infrastructure\Id\PositiveId;
+use App\Infrastructure\Mutation\MutationContext;
+use App\Infrastructure\Time\Clock;
+use App\Repositories\FoundationLocationRepository;
+use CodeIgniter\Database\ConnectionInterface;
+
+/** Domain service for the existing Province/Ward foundation tables. */
+final class FoundationLocationService
+{
+    public const ERROR_PROVINCE_NOT_FOUND = 'PROVINCE_NOT_FOUND';
+    public const ERROR_WARD_NOT_FOUND = 'WARD_NOT_FOUND';
+    public const ERROR_PROVINCE_REFERENCE_INVALID = 'WARD_PROVINCE_NOT_FOUND';
+    public const ERROR_WARD_PROVINCE_MISMATCH = 'WARD_PROVINCE_MISMATCH';
+    public const ERROR_STATUS_INVALID = 'LOCATION_STATUS_INVALID';
+    public const ERROR_CODE_DUPLICATE = 'LOCATION_CODE_DUPLICATE';
+
+    /** @var list<string> */
+    private const STATUSES = ['ACTIVE', 'INACTIVE', 'CLOSED'];
+
+    /** @var ConnectionInterface<mixed, mixed> */
+    private ConnectionInterface $db;
+
+    /** @param ConnectionInterface<mixed, mixed>|null $db */
+    public function __construct(
+        private readonly ?FoundationLocationRepository $repository = null,
+        ?ConnectionInterface $db = null,
+        private readonly ?MutationContext $mutationContext = null,
+        private readonly ?Clock $clock = null,
+    ) {
+        $this->db = $db ?? db_connect();
+    }
+
+    /** @param array<string, mixed> $data */
+    public function createProvince(array $data): int
+    {
+        $payload = $this->locationPayload($data, ['code', 'name', 'status']);
+        $this->assertCodeAvailable('provinces', (string) $payload['code']);
+
+        return $this->repo()->insert('provinces', $payload, ['code', 'name', 'status'], $this->operation());
+    }
+
+    /** @param array<string, mixed> $data */
+    public function updateProvince(int $id, array $data): bool
+    {
+        $current = $this->province($id);
+        $payload = $this->locationPayload($data, []);
+        $candidate = array_merge($current, $payload);
+        $this->assertCodeAvailable('provinces', (string) $candidate['code'], $id);
+
+        return $this->repo()->update('provinces', $id, $payload, $this->operation());
+    }
+
+    /** @param array<string, mixed> $data */
+    public function createWard(array $data): int
+    {
+        $payload = $this->locationPayload($data, ['province_id', 'code', 'name', 'status']);
+        $payload['province_id'] = PositiveId::normalize($payload['province_id'], 'province_id', self::ERROR_PROVINCE_REFERENCE_INVALID);
+        $this->province($payload['province_id']);
+        $this->assertCodeAvailable('wards', (string) $payload['code']);
+
+        return $this->repo()->insert('wards', $payload, ['province_id', 'code', 'name', 'status'], $this->operation());
+    }
+
+    /** @param array<string, mixed> $data */
+    public function updateWard(int $id, array $data): bool
+    {
+        $current = $this->ward($id);
+        $payload = $this->locationPayload($data, []);
+        $candidate = array_merge($current, $payload);
+        $candidate['province_id'] = PositiveId::normalize($candidate['province_id'], 'province_id', self::ERROR_PROVINCE_REFERENCE_INVALID);
+        $this->province($candidate['province_id']);
+        $this->assertCodeAvailable('wards', (string) $candidate['code'], $id);
+
+        return $this->repo()->update('wards', $id, $payload, $this->operation());
+    }
+
+    public function setProvinceState(int $id, string $status): bool
+    {
+        return $this->updateProvince($id, ['status' => $status]);
+    }
+
+    public function setWardState(int $id, string $status): bool
+    {
+        return $this->updateWard($id, ['status' => $status]);
+    }
+
+    /** @return array<string, mixed> */
+    public function province(int $id): array
+    {
+        $row = $this->repo()->find('provinces', PositiveId::normalize($id, 'province_id', self::ERROR_PROVINCE_NOT_FOUND));
+        if ($row === null) {
+            throw new DomainException(self::ERROR_PROVINCE_NOT_FOUND, ['province_id' => $id]);
+        }
+
+        return $row;
+    }
+
+    /** @return array<string, mixed> */
+    public function ward(int $id): array
+    {
+        $row = $this->repo()->find('wards', PositiveId::normalize($id, 'ward_id', self::ERROR_WARD_NOT_FOUND));
+        if ($row === null) {
+            throw new DomainException(self::ERROR_WARD_NOT_FOUND, ['ward_id' => $id]);
+        }
+
+        return $row;
+    }
+
+    /**
+     * @param array<string, mixed> $data
+     * @param list<string> $required
+     * @return array<string, mixed>
+     */
+    private function locationPayload(array $data, array $required): array
+    {
+        unset($data['created_by'], $data['updated_by'], $data['created_at'], $data['updated_at']);
+        if (array_key_exists('status', $data)) {
+            if (! is_string($data['status'])) {
+                throw new DomainException(self::ERROR_STATUS_INVALID, ['field' => 'status']);
+            }
+            $data['status'] = strtoupper(trim($data['status']));
+            if (! in_array($data['status'], self::STATUSES, true)) {
+                throw new DomainException(self::ERROR_STATUS_INVALID, ['field' => 'status']);
+            }
+        }
+        foreach ($required as $field) {
+            if (! array_key_exists($field, $data)) {
+                throw new DomainException(FoundationLocationRepository::ERROR_FIELD_REQUIRED, ['field' => $field]);
+            }
+        }
+
+        return $data;
+    }
+
+    private function assertCodeAvailable(string $table, string $code, ?int $ignoreId = null): void
+    {
+        $existing = $this->repo()->findByCode($table, $code);
+        if ($existing !== null && ($ignoreId === null || (int) $existing['id'] !== $ignoreId)) {
+            throw new DomainException(self::ERROR_CODE_DUPLICATE, ['field' => 'code']);
+        }
+    }
+
+    private function operation(): \App\Infrastructure\Mutation\OperationContext
+    {
+        $context = $this->mutationContext ?? MutationContext::system($this->clock ?? service('clock'));
+
+        return $context->begin();
+    }
+
+    private function repo(): FoundationLocationRepository
+    {
+        return $this->repository ?? new FoundationLocationRepository($this->db);
+    }
+}

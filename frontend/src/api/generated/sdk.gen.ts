@@ -2,7 +2,7 @@
 
 import type { Client, ClientMeta, Options as Options2, RequestResult, TDataShape } from './client';
 import { client } from './client.gen';
-import type { GetHealthData, GetHealthErrors, GetHealthResponses } from './types.gen';
+import type { CreateContactData, CreateContactErrors, CreateContactResponses, CreateOrganizationData, CreateOrganizationErrors, CreateOrganizationResponses, CreateProvinceData, CreateProvinceErrors, CreateProvinceResponses, CreateWardData, CreateWardErrors, CreateWardResponses, GetContactData, GetContactErrors, GetContactResponses, GetHealthData, GetHealthErrors, GetHealthResponses, GetOrganizationData, GetOrganizationErrors, GetOrganizationResponses, GetOrganizationTreeData, GetOrganizationTreeErrors, GetOrganizationTreeResponses, GetProvinceData, GetProvinceErrors, GetProvinceResponses, GetWardData, GetWardErrors, GetWardResponses, ListContactsData, ListContactsErrors, ListContactsResponses, ListOrganizationsData, ListOrganizationsErrors, ListOrganizationsResponses, ListProvincesData, ListProvincesErrors, ListProvincesResponses, ListWardsData, ListWardsErrors, ListWardsResponses, SetContactStateData, SetContactStateErrors, SetContactStateResponses, SetOrganizationStateData, SetOrganizationStateErrors, SetOrganizationStateResponses, SetProvinceStateData, SetProvinceStateErrors, SetProvinceStateResponses, SetWardStateData, SetWardStateErrors, SetWardStateResponses, UpdateContactData, UpdateContactErrors, UpdateContactResponses, UpdateOrganizationData, UpdateOrganizationErrors, UpdateOrganizationResponses, UpdateProvinceData, UpdateProvinceErrors, UpdateProvinceResponses, UpdateWardData, UpdateWardErrors, UpdateWardResponses } from './types.gen';
 
 export type Options<TData extends TDataShape = TDataShape, ThrowOnError extends boolean = boolean, TResponse = unknown> = Options2<TData, ThrowOnError, TResponse> & {
     /**
@@ -25,4 +25,262 @@ export const getHealth = <ThrowOnError extends boolean = false>(options?: Option
     responseType: 'json',
     url: '/api/v1/health',
     ...options
+});
+
+/**
+ * List authorized provinces
+ */
+export const listProvinces = <ThrowOnError extends boolean = false>(options?: Options<ListProvincesData, ThrowOnError>): RequestResult<ListProvincesResponses, ListProvincesErrors, ThrowOnError> => (options?.client ?? client).get<ListProvincesResponses, ListProvincesErrors, ThrowOnError>({
+    responseType: 'json',
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/api/v1/provinces',
+    ...options
+});
+
+/**
+ * Create a province
+ */
+export const createProvince = <ThrowOnError extends boolean = false>(options: Options<CreateProvinceData, ThrowOnError>): RequestResult<CreateProvinceResponses, CreateProvinceErrors, ThrowOnError> => (options.client ?? client).post<CreateProvinceResponses, CreateProvinceErrors, ThrowOnError>({
+    responseType: 'json',
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/api/v1/provinces',
+    ...options,
+    headers: {
+        'Content-Type': 'application/json',
+        ...options.headers
+    }
+});
+
+/**
+ * Get a province
+ */
+export const getProvince = <ThrowOnError extends boolean = false>(options: Options<GetProvinceData, ThrowOnError>): RequestResult<GetProvinceResponses, GetProvinceErrors, ThrowOnError> => (options.client ?? client).get<GetProvinceResponses, GetProvinceErrors, ThrowOnError>({
+    responseType: 'json',
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/api/v1/provinces/{id}',
+    ...options
+});
+
+/**
+ * Update a province
+ */
+export const updateProvince = <ThrowOnError extends boolean = false>(options: Options<UpdateProvinceData, ThrowOnError>): RequestResult<UpdateProvinceResponses, UpdateProvinceErrors, ThrowOnError> => (options.client ?? client).patch<UpdateProvinceResponses, UpdateProvinceErrors, ThrowOnError>({
+    responseType: 'json',
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/api/v1/provinces/{id}',
+    ...options,
+    headers: {
+        'Content-Type': 'application/json',
+        ...options.headers
+    }
+});
+
+/**
+ * Set province state
+ */
+export const setProvinceState = <ThrowOnError extends boolean = false>(options: Options<SetProvinceStateData, ThrowOnError>): RequestResult<SetProvinceStateResponses, SetProvinceStateErrors, ThrowOnError> => (options.client ?? client).post<SetProvinceStateResponses, SetProvinceStateErrors, ThrowOnError>({
+    responseType: 'json',
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/api/v1/provinces/{id}/actions/set-state',
+    ...options,
+    headers: {
+        'Content-Type': 'application/json',
+        ...options.headers
+    }
+});
+
+/**
+ * List authorized wards
+ */
+export const listWards = <ThrowOnError extends boolean = false>(options?: Options<ListWardsData, ThrowOnError>): RequestResult<ListWardsResponses, ListWardsErrors, ThrowOnError> => (options?.client ?? client).get<ListWardsResponses, ListWardsErrors, ThrowOnError>({
+    responseType: 'json',
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/api/v1/wards',
+    ...options
+});
+
+/**
+ * Create a ward
+ */
+export const createWard = <ThrowOnError extends boolean = false>(options: Options<CreateWardData, ThrowOnError>): RequestResult<CreateWardResponses, CreateWardErrors, ThrowOnError> => (options.client ?? client).post<CreateWardResponses, CreateWardErrors, ThrowOnError>({
+    responseType: 'json',
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/api/v1/wards',
+    ...options,
+    headers: {
+        'Content-Type': 'application/json',
+        ...options.headers
+    }
+});
+
+/**
+ * Get a ward
+ */
+export const getWard = <ThrowOnError extends boolean = false>(options: Options<GetWardData, ThrowOnError>): RequestResult<GetWardResponses, GetWardErrors, ThrowOnError> => (options.client ?? client).get<GetWardResponses, GetWardErrors, ThrowOnError>({
+    responseType: 'json',
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/api/v1/wards/{id}',
+    ...options
+});
+
+/**
+ * Update a ward
+ */
+export const updateWard = <ThrowOnError extends boolean = false>(options: Options<UpdateWardData, ThrowOnError>): RequestResult<UpdateWardResponses, UpdateWardErrors, ThrowOnError> => (options.client ?? client).patch<UpdateWardResponses, UpdateWardErrors, ThrowOnError>({
+    responseType: 'json',
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/api/v1/wards/{id}',
+    ...options,
+    headers: {
+        'Content-Type': 'application/json',
+        ...options.headers
+    }
+});
+
+/**
+ * Set ward state
+ */
+export const setWardState = <ThrowOnError extends boolean = false>(options: Options<SetWardStateData, ThrowOnError>): RequestResult<SetWardStateResponses, SetWardStateErrors, ThrowOnError> => (options.client ?? client).post<SetWardStateResponses, SetWardStateErrors, ThrowOnError>({
+    responseType: 'json',
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/api/v1/wards/{id}/actions/set-state',
+    ...options,
+    headers: {
+        'Content-Type': 'application/json',
+        ...options.headers
+    }
+});
+
+/**
+ * List authorized organizations
+ */
+export const listOrganizations = <ThrowOnError extends boolean = false>(options?: Options<ListOrganizationsData, ThrowOnError>): RequestResult<ListOrganizationsResponses, ListOrganizationsErrors, ThrowOnError> => (options?.client ?? client).get<ListOrganizationsResponses, ListOrganizationsErrors, ThrowOnError>({
+    responseType: 'json',
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/api/v1/organizations',
+    ...options
+});
+
+/**
+ * Create an organization
+ */
+export const createOrganization = <ThrowOnError extends boolean = false>(options: Options<CreateOrganizationData, ThrowOnError>): RequestResult<CreateOrganizationResponses, CreateOrganizationErrors, ThrowOnError> => (options.client ?? client).post<CreateOrganizationResponses, CreateOrganizationErrors, ThrowOnError>({
+    responseType: 'json',
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/api/v1/organizations',
+    ...options,
+    headers: {
+        'Content-Type': 'application/json',
+        ...options.headers
+    }
+});
+
+/**
+ * Get visible organization hierarchy
+ */
+export const getOrganizationTree = <ThrowOnError extends boolean = false>(options?: Options<GetOrganizationTreeData, ThrowOnError>): RequestResult<GetOrganizationTreeResponses, GetOrganizationTreeErrors, ThrowOnError> => (options?.client ?? client).get<GetOrganizationTreeResponses, GetOrganizationTreeErrors, ThrowOnError>({
+    responseType: 'json',
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/api/v1/organizations/tree',
+    ...options
+});
+
+/**
+ * Get an organization
+ */
+export const getOrganization = <ThrowOnError extends boolean = false>(options: Options<GetOrganizationData, ThrowOnError>): RequestResult<GetOrganizationResponses, GetOrganizationErrors, ThrowOnError> => (options.client ?? client).get<GetOrganizationResponses, GetOrganizationErrors, ThrowOnError>({
+    responseType: 'json',
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/api/v1/organizations/{id}',
+    ...options
+});
+
+/**
+ * Update an organization
+ */
+export const updateOrganization = <ThrowOnError extends boolean = false>(options: Options<UpdateOrganizationData, ThrowOnError>): RequestResult<UpdateOrganizationResponses, UpdateOrganizationErrors, ThrowOnError> => (options.client ?? client).patch<UpdateOrganizationResponses, UpdateOrganizationErrors, ThrowOnError>({
+    responseType: 'json',
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/api/v1/organizations/{id}',
+    ...options,
+    headers: {
+        'Content-Type': 'application/json',
+        ...options.headers
+    }
+});
+
+/**
+ * Set organization state
+ */
+export const setOrganizationState = <ThrowOnError extends boolean = false>(options: Options<SetOrganizationStateData, ThrowOnError>): RequestResult<SetOrganizationStateResponses, SetOrganizationStateErrors, ThrowOnError> => (options.client ?? client).post<SetOrganizationStateResponses, SetOrganizationStateErrors, ThrowOnError>({
+    responseType: 'json',
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/api/v1/organizations/{id}/actions/set-state',
+    ...options,
+    headers: {
+        'Content-Type': 'application/json',
+        ...options.headers
+    }
+});
+
+/**
+ * List authorized contacts
+ */
+export const listContacts = <ThrowOnError extends boolean = false>(options?: Options<ListContactsData, ThrowOnError>): RequestResult<ListContactsResponses, ListContactsErrors, ThrowOnError> => (options?.client ?? client).get<ListContactsResponses, ListContactsErrors, ThrowOnError>({
+    responseType: 'json',
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/api/v1/contacts',
+    ...options
+});
+
+/**
+ * Create a contact
+ */
+export const createContact = <ThrowOnError extends boolean = false>(options: Options<CreateContactData, ThrowOnError>): RequestResult<CreateContactResponses, CreateContactErrors, ThrowOnError> => (options.client ?? client).post<CreateContactResponses, CreateContactErrors, ThrowOnError>({
+    responseType: 'json',
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/api/v1/contacts',
+    ...options,
+    headers: {
+        'Content-Type': 'application/json',
+        ...options.headers
+    }
+});
+
+/**
+ * Get a contact
+ */
+export const getContact = <ThrowOnError extends boolean = false>(options: Options<GetContactData, ThrowOnError>): RequestResult<GetContactResponses, GetContactErrors, ThrowOnError> => (options.client ?? client).get<GetContactResponses, GetContactErrors, ThrowOnError>({
+    responseType: 'json',
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/api/v1/contacts/{id}',
+    ...options
+});
+
+/**
+ * Update a contact
+ */
+export const updateContact = <ThrowOnError extends boolean = false>(options: Options<UpdateContactData, ThrowOnError>): RequestResult<UpdateContactResponses, UpdateContactErrors, ThrowOnError> => (options.client ?? client).patch<UpdateContactResponses, UpdateContactErrors, ThrowOnError>({
+    responseType: 'json',
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/api/v1/contacts/{id}',
+    ...options,
+    headers: {
+        'Content-Type': 'application/json',
+        ...options.headers
+    }
+});
+
+/**
+ * Set contact state
+ */
+export const setContactState = <ThrowOnError extends boolean = false>(options: Options<SetContactStateData, ThrowOnError>): RequestResult<SetContactStateResponses, SetContactStateErrors, ThrowOnError> => (options.client ?? client).post<SetContactStateResponses, SetContactStateErrors, ThrowOnError>({
+    responseType: 'json',
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/api/v1/contacts/{id}/actions/set-state',
+    ...options,
+    headers: {
+        'Content-Type': 'application/json',
+        ...options.headers
+    }
 });

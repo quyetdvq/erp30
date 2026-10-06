@@ -66,6 +66,172 @@ export const zHealthResponse = z.object({
     meta: zMeta
 });
 
+export const zProvince = z.object({
+    id: zBigInt,
+    code: z.string(),
+    name: z.string(),
+    status: z.enum([
+        'ACTIVE',
+        'INACTIVE',
+        'CLOSED'
+    ])
+});
+
+export const zProvinceCreate = z.object({
+    code: z.string(),
+    name: z.string(),
+    status: z.enum([
+        'ACTIVE',
+        'INACTIVE',
+        'CLOSED'
+    ])
+});
+
+export const zProvincePatch = zProvinceCreate;
+
+export const zWard = z.object({
+    id: zBigInt,
+    province_id: zBigInt,
+    code: z.string(),
+    name: z.string(),
+    name_full: z.string().nullish(),
+    status: z.enum([
+        'ACTIVE',
+        'INACTIVE',
+        'CLOSED'
+    ])
+});
+
+export const zWardCreate = z.object({
+    province_id: zBigInt,
+    code: z.string(),
+    name: z.string(),
+    name_full: z.string().nullish(),
+    status: z.enum([
+        'ACTIVE',
+        'INACTIVE',
+        'CLOSED'
+    ])
+});
+
+export const zWardPatch = zWardCreate;
+
+export const zOrganization = z.object({
+    id: zBigInt,
+    parent_id: zBigInt.optional(),
+    type: z.enum([
+        'GROUP',
+        'COMPANY',
+        'BRANCH',
+        'PLANT',
+        'WAREHOUSE'
+    ]),
+    code: z.string(),
+    name: z.string(),
+    legal_name: z.string().nullish(),
+    tax_code: z.string().nullish(),
+    address: z.string().nullish(),
+    province_id: zBigInt.optional(),
+    ward_id: zBigInt.optional(),
+    description: z.string().nullish(),
+    status: z.string(),
+    active_from: z.iso.date().nullish(),
+    active_to: z.iso.date().nullish()
+});
+
+export const zOrganizationCreate = z.object({
+    parent_id: zBigInt.optional(),
+    type: z.string(),
+    code: z.string(),
+    name: z.string(),
+    legal_name: z.string().optional(),
+    tax_code: z.string().optional(),
+    address: z.string().optional(),
+    province_id: zBigInt.optional(),
+    ward_id: zBigInt.optional(),
+    description: z.string().optional(),
+    status: z.string(),
+    active_from: z.iso.date().optional(),
+    active_to: z.iso.date().optional()
+});
+
+export const zOrganizationPatch = zOrganizationCreate;
+
+export const zContact = z.object({
+    id: zBigInt,
+    contact_type: z.enum(['EMPLOYEE', 'ORGANIZATION']),
+    contact_ref_id: zBigInt,
+    description: z.string().nullish(),
+    status: z.string(),
+    name: z.string().nullish(),
+    email: z.string().nullish(),
+    phone: z.string().nullish(),
+    mobile: z.string().nullish(),
+    address: z.string().nullish(),
+    province_id: zBigInt.optional(),
+    ward_id: zBigInt.optional(),
+    province_name: z.string().nullish(),
+    ward_name: z.string().nullish()
+});
+
+export const zContactCreate = z.object({
+    contact_type: z.enum(['EMPLOYEE', 'ORGANIZATION']),
+    contact_ref_id: zBigInt,
+    description: z.string().optional(),
+    status: z.string(),
+    name: z.string().optional(),
+    email: z.string().optional(),
+    phone: z.string().optional(),
+    mobile: z.string().optional(),
+    address: z.string().optional(),
+    province_id: zBigInt.optional(),
+    ward_id: zBigInt.optional(),
+    province_name: z.string().optional(),
+    ward_name: z.string().optional()
+});
+
+export const zContactPatch = zContactCreate;
+
+export const zState = z.object({
+    status: z.enum([
+        'ACTIVE',
+        'INACTIVE',
+        'CLOSED'
+    ])
+});
+
+export const zProvinceResponse = zSuccessResponse.and(z.object({
+    data: zProvince.optional()
+}));
+
+export const zWardResponse = zSuccessResponse.and(z.object({
+    data: zWard.optional()
+}));
+
+export const zOrganizationResponse = zSuccessResponse.and(z.object({
+    data: zOrganization.optional()
+}));
+
+export const zContactResponse = zSuccessResponse.and(z.object({
+    data: zContact.optional()
+}));
+
+export const zProvinceCollection = zCollectionResponse.and(z.object({
+    data: z.array(zProvince).optional()
+}));
+
+export const zWardCollection = zCollectionResponse.and(z.object({
+    data: z.array(zWard).optional()
+}));
+
+export const zOrganizationCollection = zCollectionResponse.and(z.object({
+    data: z.array(zOrganization).optional()
+}));
+
+export const zContactCollection = zCollectionResponse.and(z.object({
+    data: z.array(zContact).optional()
+}));
+
 /**
  * Supported request language. Unsupported values fall back to vi.
  */
@@ -76,6 +242,42 @@ export const zAcceptLanguage = z.enum(['vi', 'en']).default('vi');
  */
 export const zRequestId2 = zRequestId;
 
+export const zId = zBigInt;
+
+export const zQ = z.string();
+
+export const zPage = z.int().gte(1).default(1);
+
+export const zPageSize = z.int().gte(1).lte(200).default(50);
+
+/**
+ * Allowlisted comma-separated sort terms; a final id ASC tie-breaker is applied.
+ */
+export const zSort = z.string();
+
+export const zFilter = z.record(z.string(), z.union([
+    z.string(),
+    z.array(z.string())
+]));
+
+export const zProvinceCreate2 = zProvinceCreate;
+
+export const zProvincePatch2 = zProvincePatch;
+
+export const zWardCreate2 = zWardCreate;
+
+export const zWardPatch2 = zWardPatch;
+
+export const zOrganizationCreate2 = zOrganizationCreate;
+
+export const zOrganizationPatch2 = zOrganizationPatch;
+
+export const zContactCreate2 = zContactCreate;
+
+export const zContactPatch2 = zContactPatch;
+
+export const zState2 = zState;
+
 export const zGetHealthHeaders = z.object({
     'Accept-Language': z.enum(['vi', 'en']).optional().default('vi'),
     'X-Request-ID': zRequestId.optional()
@@ -85,3 +287,260 @@ export const zGetHealthHeaders = z.object({
  * Service is available.
  */
 export const zGetHealthResponse = zHealthResponse;
+
+export const zListProvincesHeaders = z.object({
+    'Accept-Language': z.enum(['vi', 'en']).optional().default('vi'),
+    'X-Request-ID': zRequestId.optional()
+});
+
+export const zListProvincesQuery = z.object({
+    q: z.string().optional(),
+    page: z.int().gte(1).optional().default(1),
+    page_size: z.int().gte(1).lte(200).optional().default(50),
+    sort: z.string().optional(),
+    filter: z.record(z.string(), z.union([
+        z.string(),
+        z.array(z.string())
+    ])).optional()
+});
+
+/**
+ * Authorized province collection.
+ */
+export const zListProvincesResponse = zProvinceCollection;
+
+export const zCreateProvinceBody = zProvinceCreate2;
+
+/**
+ * Province resource.
+ */
+export const zCreateProvinceResponse = zProvinceResponse;
+
+export const zGetProvincePath = z.object({
+    id: zBigInt
+});
+
+/**
+ * Province resource.
+ */
+export const zGetProvinceResponse = zProvinceResponse;
+
+export const zUpdateProvinceBody = zProvincePatch2;
+
+export const zUpdateProvincePath = z.object({
+    id: zBigInt
+});
+
+/**
+ * Province resource.
+ */
+export const zUpdateProvinceResponse = zProvinceResponse;
+
+export const zSetProvinceStateBody = zState2;
+
+export const zSetProvinceStatePath = z.object({
+    id: zBigInt
+});
+
+/**
+ * Province resource.
+ */
+export const zSetProvinceStateResponse = zProvinceResponse;
+
+export const zListWardsHeaders = z.object({
+    'Accept-Language': z.enum(['vi', 'en']).optional().default('vi'),
+    'X-Request-ID': zRequestId.optional()
+});
+
+export const zListWardsQuery = z.object({
+    q: z.string().optional(),
+    page: z.int().gte(1).optional().default(1),
+    page_size: z.int().gte(1).lte(200).optional().default(50),
+    sort: z.string().optional(),
+    filter: z.record(z.string(), z.union([
+        z.string(),
+        z.array(z.string())
+    ])).optional()
+});
+
+/**
+ * Authorized ward collection.
+ */
+export const zListWardsResponse = zWardCollection;
+
+export const zCreateWardBody = zWardCreate2;
+
+/**
+ * Ward resource.
+ */
+export const zCreateWardResponse = zWardResponse;
+
+export const zGetWardPath = z.object({
+    id: zBigInt
+});
+
+/**
+ * Ward resource.
+ */
+export const zGetWardResponse = zWardResponse;
+
+export const zUpdateWardBody = zWardPatch2;
+
+export const zUpdateWardPath = z.object({
+    id: zBigInt
+});
+
+/**
+ * Ward resource.
+ */
+export const zUpdateWardResponse = zWardResponse;
+
+export const zSetWardStateBody = zState2;
+
+export const zSetWardStatePath = z.object({
+    id: zBigInt
+});
+
+/**
+ * Ward resource.
+ */
+export const zSetWardStateResponse = zWardResponse;
+
+export const zListOrganizationsHeaders = z.object({
+    'Accept-Language': z.enum(['vi', 'en']).optional().default('vi'),
+    'X-Request-ID': zRequestId.optional()
+});
+
+export const zListOrganizationsQuery = z.object({
+    q: z.string().optional(),
+    page: z.int().gte(1).optional().default(1),
+    page_size: z.int().gte(1).lte(200).optional().default(50),
+    sort: z.string().optional(),
+    filter: z.record(z.string(), z.union([
+        z.string(),
+        z.array(z.string())
+    ])).optional()
+});
+
+/**
+ * Authorized organization collection.
+ */
+export const zListOrganizationsResponse = zOrganizationCollection;
+
+export const zCreateOrganizationBody = zOrganizationCreate2;
+
+/**
+ * Organization resource.
+ */
+export const zCreateOrganizationResponse = zOrganizationResponse;
+
+export const zGetOrganizationTreeHeaders = z.object({
+    'Accept-Language': z.enum(['vi', 'en']).optional().default('vi'),
+    'X-Request-ID': zRequestId.optional()
+});
+
+export const zGetOrganizationTreeQuery = z.object({
+    q: z.string().optional(),
+    page: z.int().gte(1).optional().default(1),
+    page_size: z.int().gte(1).lte(200).optional().default(50),
+    sort: z.string().optional(),
+    filter: z.record(z.string(), z.union([
+        z.string(),
+        z.array(z.string())
+    ])).optional()
+});
+
+/**
+ * Authorized organization collection.
+ */
+export const zGetOrganizationTreeResponse = zOrganizationCollection;
+
+export const zGetOrganizationPath = z.object({
+    id: zBigInt
+});
+
+/**
+ * Organization resource.
+ */
+export const zGetOrganizationResponse = zOrganizationResponse;
+
+export const zUpdateOrganizationBody = zOrganizationPatch2;
+
+export const zUpdateOrganizationPath = z.object({
+    id: zBigInt
+});
+
+/**
+ * Organization resource.
+ */
+export const zUpdateOrganizationResponse = zOrganizationResponse;
+
+export const zSetOrganizationStateBody = zState2;
+
+export const zSetOrganizationStatePath = z.object({
+    id: zBigInt
+});
+
+/**
+ * Organization resource.
+ */
+export const zSetOrganizationStateResponse = zOrganizationResponse;
+
+export const zListContactsHeaders = z.object({
+    'Accept-Language': z.enum(['vi', 'en']).optional().default('vi'),
+    'X-Request-ID': zRequestId.optional()
+});
+
+export const zListContactsQuery = z.object({
+    q: z.string().optional(),
+    page: z.int().gte(1).optional().default(1),
+    page_size: z.int().gte(1).lte(200).optional().default(50),
+    sort: z.string().optional(),
+    filter: z.record(z.string(), z.union([
+        z.string(),
+        z.array(z.string())
+    ])).optional()
+});
+
+/**
+ * Authorized contact collection.
+ */
+export const zListContactsResponse = zContactCollection;
+
+export const zCreateContactBody = zContactCreate2;
+
+/**
+ * Contact resource.
+ */
+export const zCreateContactResponse = zContactResponse;
+
+export const zGetContactPath = z.object({
+    id: zBigInt
+});
+
+/**
+ * Contact resource.
+ */
+export const zGetContactResponse = zContactResponse;
+
+export const zUpdateContactBody = zContactPatch2;
+
+export const zUpdateContactPath = z.object({
+    id: zBigInt
+});
+
+/**
+ * Contact resource.
+ */
+export const zUpdateContactResponse = zContactResponse;
+
+export const zSetContactStateBody = zState2;
+
+export const zSetContactStatePath = z.object({
+    id: zBigInt
+});
+
+/**
+ * Contact resource.
+ */
+export const zSetContactStateResponse = zContactResponse;
