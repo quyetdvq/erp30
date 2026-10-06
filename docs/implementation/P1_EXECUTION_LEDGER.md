@@ -14,13 +14,13 @@ No task is downgraded to force that stale count.
 
 | Measure | Progress |
 |---|---:|
-| P1 tasks DONE | 49/100 |
+| P1 tasks DONE | 50/100 |
 | Gate 0 | 10/10 DONE |
 | Gate 1 | 14/14 DONE |
 | Gate 2 | 8/8 DONE |
 | Gate 3 | 10/10 DONE |
 | Gate 4 | 7/7 DONE |
-| Gate 5 | 0/11 DONE |
+| Gate 5 | 1/11 DONE |
 | Gate 6 | 0/9 DONE |
 | Gate 7 | 0/10 DONE |
 | Gate 8 | 0/12 DONE |
@@ -79,7 +79,7 @@ No task is downgraded to force that stale count.
 | P1-NUM-005 | DONE | 0d7d0a5 | high-risk | Generic Resource identifier metadata/adapter port, explicit deterministic registry, canonical Resource/series selection, NUM-002 metadata validation, NUM-003 context pass-through, and NUM-004 transaction/collision integration. Evidence: `docs/implementation/evidence/P1-NUM-005/01_resource_identifier_adapter_assessment.md`. |
 | P1-NUM-006 | DONE | d70827f | high-risk | Concrete Product adapter for `product_code` to `products.code`, GLOBAL occupancy, canonical code-only collision classification, 50-character enforcement, explicit registry registration, and NUM-002/004/005 integration. Evidence: `docs/implementation/evidence/P1-NUM-006/01_product_identifier_adapter_assessment.md`. |
 | P1-NUM-090 | DONE | a35adda | high-risk | Mandatory Gate 4 Auto Numbering regression/concurrency suite and parser executable-expression regression correction. Evidence: `docs/implementation/evidence/P1-NUM-090/01_auto_numbering_mandatory_regression_assessment.md`. |
-| P1-PRD-001 | NOT_STARTED | — | service-standard | No accepted implementation evidence. |
+| P1-PRD-001 | DONE | PENDING | service-standard | ProductGroup repository/service: arbitrary-depth adjacency-list hierarchy, GROUP authorization, effective-active selection, trusted audit, DomainLock transaction, and real reciprocal-reparent regression. Evidence: `docs/implementation/evidence/P1-PRD-001/01_product_group_hierarchy_assessment.md`. |
 | P1-PRD-002 | NOT_STARTED | — | service-standard | No accepted implementation evidence. |
 | P1-PRD-003 | NOT_STARTED | — | high-risk | No accepted implementation evidence. |
 | P1-PRD-004 | NOT_STARTED | — | high-risk | No accepted implementation evidence. |
