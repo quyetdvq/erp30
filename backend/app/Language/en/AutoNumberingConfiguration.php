@@ -12,4 +12,5 @@ return [
     'NUM_ISSUED_NO_HARD_DELETE' => 'An issued numbering series cannot be hard-deleted.',
     'NUM_PATTERN_VALIDATOR_REQUIRED' => 'An active numbering series requires the canonical pattern validator.',
     'NUM_PATTERN_INVALID' => 'The numbering pattern is invalid.',
+    'NUM_PATTERN_COLLISION' => 'The numbering pattern collides with another active series.',
 ];

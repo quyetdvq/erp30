@@ -85,6 +85,7 @@ final class AutoNumberingConfigurationService
                 ]);
             }
             $this->assertPatternIfActive($payload);
+            $this->assertPatternSetIfSupported($resourceId, $payload);
             $this->assertActiveDefaultAvailable(
                 $resourceId,
                 (string) $payload['status'] === 'ACTIVE' && $this->flag($payload['is_default']),
@@ -152,6 +153,7 @@ final class AutoNumberingConfigurationService
                 ]);
             }
             $this->assertPatternIfActive($candidate);
+            $this->assertPatternSetIfSupported((int) $candidate['resource_id'], $candidate, $seriesId);
             $this->assertActiveDefaultAvailable(
                 (int) $candidate['resource_id'],
                 (string) $candidate['status'] === 'ACTIVE' && $this->flag($candidate['is_default']),
@@ -390,6 +392,25 @@ final class AutoNumberingConfigurationService
         } catch (\Throwable $exception) {
             throw new DomainException(self::ERROR_PATTERN_INVALID, ['field' => 'pattern'], $exception);
         }
+    }
+
+    /** @param array<string, mixed> $candidate */
+    private function assertPatternSetIfSupported(int $resourceId, array $candidate, ?int $excludeId = null): void
+    {
+        if ((string) ($candidate['status'] ?? '') !== 'ACTIVE'
+            || ! $this->patternValidator instanceof NumberingPatternCompatibilityValidator) {
+            return;
+        }
+
+        $series = [];
+        foreach ($this->repo()->findByResource($resourceId) as $existing) {
+            if ($excludeId !== null && (int) ($existing['id'] ?? 0) === $excludeId) {
+                continue;
+            }
+            $series[] = $existing;
+        }
+        $series[] = $candidate;
+        $this->patternValidator->validateSeriesSet($series);
     }
 
     private function assertActiveDefaultAvailable(int $resourceId, bool $isActiveDefault, ?int $excludeId): void

@@ -4,10 +4,7 @@ declare(strict_types=1);
 
 namespace App\Services;
 
-/**
- * NUM-002 integration boundary. The configuration service deliberately does
- * not implement token parsing or uniqueness-namespace compatibility rules.
- */
+/** NUM-002 integration boundary for active-series pattern validation. */
 interface NumberingPatternValidator
 {
     /** @param array<string, mixed> $series */

@@ -12,4 +12,5 @@ return [
     'NUM_ISSUED_NO_HARD_DELETE' => 'Numbering series đã phát hành không thể hard-delete.',
     'NUM_PATTERN_VALIDATOR_REQUIRED' => 'Active numbering series yêu cầu pattern validator chuẩn.',
     'NUM_PATTERN_INVALID' => 'Pattern đánh số không hợp lệ.',
+    'NUM_PATTERN_COLLISION' => 'Pattern đánh số xung đột với một series active khác.',
 ];
