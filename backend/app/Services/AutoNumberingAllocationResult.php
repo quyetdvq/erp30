@@ -9,15 +9,15 @@ final readonly class AutoNumberingAllocationResult
 {
     public function __construct(
         public string $identifier,
-        public int $sequenceValue,
-        public int $seriesId,
-        public int $scopeOrganizationId,
-        public string $periodKey,
+        public ?int $sequenceValue,
+        public ?int $seriesId,
+        public ?int $scopeOrganizationId,
+        public ?string $periodKey,
         public bool $generated = true,
     ) {
     }
 
-    /** @return array<string, int|string|bool> */
+    /** @return array<string, int|string|bool|null> */
     public function toArray(): array
     {
         return [

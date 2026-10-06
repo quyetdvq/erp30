@@ -29,6 +29,7 @@ final class AutoNumberingSeriesRepository
     public const ERROR_INVALID_ID = 'NUM_SERIES_INVALID_ID';
     public const ERROR_DUPLICATE = 'NUM_SERIES_DUPLICATE';
     public const ERROR_MUTATION_FAILED = 'NUM_SERIES_MUTATION_FAILED';
+    public const ERROR_RESOURCE_TYPE_AMBIGUOUS = 'NUM_RESOURCE_TYPE_AMBIGUOUS';
 
     /** @var list<string> */
     private const FIELDS = [
@@ -112,6 +113,30 @@ final class AutoNumberingSeriesRepository
         $resourceId = $this->id($resourceId, 'resource_id');
 
         return $this->findRow('findResource', fn () => $this->db->table('resources')->where('id', $resourceId)->get());
+    }
+
+    /** @return array<string, mixed>|null */
+    public function findResourceByType(string $resourceType): ?array
+    {
+        $resourceType = trim($resourceType);
+        if ($resourceType === '') {
+            throw new DomainException(self::ERROR_FIELD_REQUIRED, ['field' => 'resource_type']);
+        }
+
+        try {
+            $result = $this->db->table('resources')->where('type', $resourceType)->get();
+        } catch (\Throwable $exception) {
+            throw new PersistenceException(self::ERROR_PERSISTENCE_FAILED, 'findResourceByType', $exception);
+        }
+        if ($result === false) {
+            throw new PersistenceException(self::ERROR_PERSISTENCE_FAILED, 'findResourceByType');
+        }
+        $rows = $result->getResultArray();
+        if (count($rows) > 1) {
+            throw new DomainException(self::ERROR_RESOURCE_TYPE_AMBIGUOUS, ['resource_type' => $resourceType]);
+        }
+
+        return $rows[0] ?? null;
     }
 
     /** @return array<string, mixed>|null */

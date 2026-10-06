@@ -50,6 +50,7 @@ final class AutoNumberingConfigurationService
         ?ConnectionInterface $db = null,
         private readonly ?MutationContext $mutationContext = null,
         private readonly ?Clock $clock = null,
+        private readonly ?ResourceIdentifierAdapterRegistry $identifierAdapters = null,
     ) {
         $this->db = $db ?? db_connect();
     }
@@ -386,7 +387,7 @@ final class AutoNumberingConfigurationService
             ]);
         }
         try {
-            $this->patternValidator->validate((string) $candidate['pattern'], $candidate);
+            $this->patternValidator->validate((string) $candidate['pattern'], $this->withIdentifierMetadata($candidate));
         } catch (DomainException $exception) {
             throw $exception;
         } catch (\Throwable $exception) {
@@ -407,10 +408,36 @@ final class AutoNumberingConfigurationService
             if ($excludeId !== null && (int) ($existing['id'] ?? 0) === $excludeId) {
                 continue;
             }
-            $series[] = $existing;
+            $series[] = $this->withIdentifierMetadata($existing);
         }
-        $series[] = $candidate;
+        $series[] = $this->withIdentifierMetadata($candidate);
         $this->patternValidator->validateSeriesSet($series);
+    }
+
+    /** @param array<string, mixed> $candidate
+     *  @return array<string, mixed>
+     */
+    private function withIdentifierMetadata(array $candidate): array
+    {
+        if ($this->identifierAdapters === null) {
+            return $candidate;
+        }
+        $resource = $this->repo()->findResource($candidate['resource_id'] ?? null);
+        if ($resource === null) {
+            throw new DomainException(self::ERROR_RESOURCE_NOT_FOUND, [
+                'resource_id' => $candidate['resource_id'] ?? null,
+            ]);
+        }
+        $metadata = $this->identifierAdapters->resolve((string) ($resource['type'] ?? ''))->metadata();
+        if ($metadata->resourceType !== strtolower((string) ($resource['type'] ?? ''))) {
+            throw new DomainException(ResourceIdentifierAdapter::ERROR_RESOURCE_IDENTITY_MISMATCH, [
+                'resource_type' => $resource['type'] ?? null,
+            ]);
+        }
+        $candidate['identifier_max_length'] = $metadata->identifierMaxLength;
+        $candidate['identifier_uniqueness_scope'] = $metadata->identifierUniquenessScope;
+
+        return $candidate;
     }
 
     private function assertActiveDefaultAvailable(int $resourceId, bool $isActiveDefault, ?int $excludeId): void
