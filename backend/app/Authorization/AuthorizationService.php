@@ -12,6 +12,7 @@ use App\Repositories\OrganizationRepository;
 use App\Repositories\PolicyRepository;
 use App\Services\EmployeeAssignmentService;
 use App\Services\LifecycleAuthorizationPort;
+use App\Services\NumberingAuthorizationPort;
 use App\Services\OrganizationService;
 use CodeIgniter\Database\ConnectionInterface;
 
@@ -19,7 +20,7 @@ use CodeIgniter\Database\ConnectionInterface;
  * Core PBAC decision pipeline. Repositories provide persistence primitives;
  * this class owns only context, lane, precedence, and intersection rules.
  */
-final class AuthorizationService implements LifecycleAuthorizationPort
+final class AuthorizationService implements LifecycleAuthorizationPort, NumberingAuthorizationPort
 {
     public const DECISION_ALLOW = 'ALLOW';
     public const DECISION_DENY = 'DENY';
