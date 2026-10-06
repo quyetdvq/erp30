@@ -190,7 +190,9 @@ components:
           type: integer
           minimum: 1
         total:
-          $ref: '#/components/schemas/BigInt'
+          type: integer
+          minimum: 0
+          description: Number of records after authorization and data-scope filtering.
         request_id:
           $ref: '#/components/schemas/RequestId'
     CollectionResponse:

@@ -27,7 +27,10 @@ export type SuccessResponse = {
 export type CollectionMeta = {
     page: number;
     page_size: number;
-    total: BigInt;
+    /**
+     * Number of records after authorization and data-scope filtering.
+     */
+    total: number;
     request_id: RequestId;
 };
 

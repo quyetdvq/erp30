@@ -131,19 +131,33 @@ final class P1Api003ListQueryTest extends CIUnitTestCase
         $this->assertSame([], iterator_to_array($result->data));
     }
 
-    public function testCollectionEnvelopePreservesRequestIdAndStringTotal(): void
+    public function testCollectionEnvelopeUsesNumericMetadataAndStringEntityBigIntId(): void
     {
         $response = ApiTransport::collection(service('response'), [
             ['id' => 9223372036854775807, 'amount' => '12.50'],
-        ], 2, 25, '9223372036854775808');
+        ], 2, 25, '25');
         $payload = json_decode((string) $response->getBody(), true, 512, JSON_THROW_ON_ERROR);
 
         $this->assertSame(2, $payload['meta']['page']);
         $this->assertSame(25, $payload['meta']['page_size']);
-        $this->assertSame('9223372036854775808', $payload['meta']['total']);
+        $this->assertSame(25, $payload['meta']['total']);
+        $this->assertIsInt($payload['meta']['page']);
+        $this->assertIsInt($payload['meta']['page_size']);
+        $this->assertIsInt($payload['meta']['total']);
         $this->assertArrayHasKey('request_id', $payload['meta']);
+        $this->assertIsString($payload['meta']['request_id']);
         $this->assertSame('9223372036854775807', $payload['data'][0]['id']);
+        $this->assertIsString($payload['data'][0]['id']);
         $this->assertSame('12.50', $payload['data'][0]['amount']);
+    }
+
+    public function testCollectionEnvelopeSerializesZeroTotalAsNumericInteger(): void
+    {
+        $response = ApiTransport::collection(service('response'), [], 1, 50, '0');
+        $payload = json_decode((string) $response->getBody(), true, 512, JSON_THROW_ON_ERROR);
+
+        $this->assertSame(0, $payload['meta']['total']);
+        $this->assertIsInt($payload['meta']['total']);
     }
 
     private function adapter(): CommonListQueryAdapter

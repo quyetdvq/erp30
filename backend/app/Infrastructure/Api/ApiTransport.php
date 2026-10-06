@@ -37,8 +37,8 @@ final class ApiTransport
     /**
      * Emit the canonical collection envelope used by authorized list APIs.
      *
-     * Totals are deliberately serialized as strings because they are BIGINT
-     * domain values and may exceed the JavaScript safe integer range.
+     * Collection totals are transport metadata and therefore remain JSON
+     * integers; entity BIGINT identifiers are still normalized as strings.
      *
      * @param iterable<mixed> $data
      */
@@ -53,15 +53,35 @@ final class ApiTransport
         if ($page < 1 || $pageSize < 1 || (is_int($total) && $total < 0)) {
             throw new \InvalidArgumentException('Collection metadata is invalid.');
         }
-        if (is_string($total) && preg_match('/\A[0-9]+\z/', $total) !== 1) {
-            throw new \InvalidArgumentException('Collection total must be a non-negative integer string.');
-        }
+        $numericTotal = self::collectionTotal($total);
 
         return self::success($response, $data, $status, [
             'page' => $page,
             'page_size' => $pageSize,
-            'total' => (string) $total,
+            'total' => $numericTotal,
         ]);
+    }
+
+    private static function collectionTotal(int|string $total): int
+    {
+        if (is_int($total)) {
+            if ($total < 0) {
+                throw new \InvalidArgumentException('Collection total cannot be negative.');
+            }
+
+            return $total;
+        }
+
+        if (preg_match('/\A(?:0|[1-9][0-9]*)\z/', $total) !== 1) {
+            throw new \InvalidArgumentException('Collection total must be a non-negative integer.');
+        }
+
+        $numericTotal = filter_var($total, FILTER_VALIDATE_INT, ['options' => ['min_range' => 0]]);
+        if (! is_int($numericTotal)) {
+            throw new \InvalidArgumentException('Collection total exceeds the JSON integer transport range.');
+        }
+
+        return $numericTotal;
     }
 
     /** @param list<array<string, mixed>> $details */

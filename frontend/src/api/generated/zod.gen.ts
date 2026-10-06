@@ -20,7 +20,7 @@ export const zDecimal = z.string().regex(/^-?(0|[1-9][0-9]*)(\.[0-9]+)?$/);
 export const zCollectionMeta = z.object({
     page: z.int().gte(1),
     page_size: z.int().gte(1),
-    total: zBigInt,
+    total: z.int().gte(0),
     request_id: zRequestId
 });
 
