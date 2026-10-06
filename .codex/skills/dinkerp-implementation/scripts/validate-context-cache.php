@@ -160,7 +160,7 @@ foreach ($moduleMappings as $taskId => $mapping) {
 }
 
 // Parse the authoritative Plan task tables (Task ID, title, depends, output).
-$planPath = $root . DIRECTORY_SEPARATOR . 'docs' . DIRECTORY_SEPARATOR . 'architecture' . DIRECTORY_SEPARATOR . '04_P1_Implementation_Plan_v1.4.md';
+$planPath = $root . DIRECTORY_SEPARATOR . 'docs' . DIRECTORY_SEPARATOR . 'architecture' . DIRECTORY_SEPARATOR . '04_P1_Implementation_Plan_v1.5.md';
 $planRows = [];
 foreach (file($planPath, FILE_IGNORE_NEW_LINES) ?: [] as $line) {
     if (preg_match('/^\|\s*(P1-[A-Z]+-[0-9]+)\s*\|\s*(.*?)\s*\|\s*(.*?)\s*\|\s*(.*?)\s*\|/', $line, $match)) {
@@ -229,9 +229,9 @@ if ($architectureStatus !== '') {
         'docs/architecture/01_P1_Functional_Requirements_Specification_v1.8.md',
         'docs/architecture/02_P1_Database_Design_v1.11.md',
         'docs/architecture/03_P1_Implementation_Contract_v1.6.md',
-        'docs/architecture/04_P1_Implementation_Plan_v1.4.md',
-        'docs/architecture/05_P1_API_Design_v1.2.md',
-        'docs/architecture/06_P1_UI_Design_v1.3.md',
+        'docs/architecture/04_P1_Implementation_Plan_v1.5.md',
+        'docs/architecture/05_P1_API_Design_v1.3.md',
+        'docs/architecture/06_P1_UI_Design_v1.4.md',
     ];
     foreach (preg_split('/\R/', $architectureStatus) ?: [] as $statusLine) {
         $relative = trim(substr($statusLine, 3));

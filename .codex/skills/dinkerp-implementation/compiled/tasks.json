@@ -1,6 +1,6 @@
 {
   "format": "META-CODEX-002",
-  "source": "Implementation Plan v1.4 plus gate registries",
+  "source": "Implementation Plan v1.5 plus gate registries",
   "task_count": 100,
   "tasks": [
     {
@@ -1190,7 +1190,7 @@
         "FRS-P1-UOM-001 Product Group hierarchy",
         "DBD v1.11 product_groups adjacency-list",
         "Implementation Contract v1.6 product-group-tree",
-        "Implementation Plan v1.4 P1-PRD-001"
+        "Implementation Plan v1.5 P1-PRD-001"
       ],
       "expected_output": "product-group hierarchy repository/service",
       "forbidden_scope": [

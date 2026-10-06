@@ -28,7 +28,7 @@
       "text": "Keep implementation within the declared Task scope and do not change unrelated application layers.",
       "provenance": [
         {
-          "document": "docs/architecture/04_P1_Implementation_Plan_v1.4.md",
+          "document": "docs/architecture/04_P1_Implementation_Plan_v1.5.md",
           "section": "§8 backlog and task contract"
         }
       ],
@@ -39,7 +39,7 @@
       "text": "Select validation gates from changed impact layer; unexpected paths escalate instead of being skipped.",
       "provenance": [
         {
-          "document": "docs/architecture/04_P1_Implementation_Plan_v1.4.md",
+          "document": "docs/architecture/04_P1_Implementation_Plan_v1.5.md",
           "section": "§5 Quality gates"
         }
       ],
@@ -226,7 +226,7 @@
       "text": "Public APIs use /api/v1, snake_case JSON, string BIGINT/DECIMAL values, stable machine errors, and locale headers.",
       "provenance": [
         {
-          "document": "docs/architecture/05_P1_API_Design_v1.2.md",
+          "document": "docs/architecture/05_P1_API_Design_v1.3.md",
           "section": "§§3–6 common transport/query/mutation/auth"
         },
         {
@@ -249,7 +249,7 @@
           "section": "§4.8 Canonical error code convention; §4.9 Language negotiation / localized messages"
         },
         {
-          "document": "docs/architecture/06_P1_UI_Design_v1.3.md",
+          "document": "docs/architecture/06_P1_UI_Design_v1.4.md",
           "section": "Localization and shell conventions"
         }
       ],
@@ -260,7 +260,7 @@
       "text": "Vue UI stores canonical keys, uses vi/en vue-i18n with vi fallback, and does not translate business identifiers or enum codes.",
       "provenance": [
         {
-          "document": "docs/architecture/06_P1_UI_Design_v1.3.md",
+          "document": "docs/architecture/06_P1_UI_Design_v1.4.md",
           "section": "Localization and shell conventions"
         }
       ],
@@ -360,7 +360,7 @@
       "text": "Implement only CONTRACT_READY public surfaces; CONTRACT_PENDING or source-open fields/actions remain blocked/out-of-scope and must not be guessed.",
       "provenance": [
         {
-          "document": "docs/architecture/05_P1_API_Design_v1.2.md",
+          "document": "docs/architecture/05_P1_API_Design_v1.3.md",
           "section": "§§2.1–2.3 governance, §17 promotion, §18 pending items"
         }
       ],
@@ -371,11 +371,11 @@
       "text": "Every public API contract change updates repository OpenAPI in the same task, passes Redocly lint, regenerates typed frontend artifacts, and never hand-edits generated output.",
       "provenance": [
         {
-          "document": "docs/architecture/05_P1_API_Design_v1.2.md",
+          "document": "docs/architecture/05_P1_API_Design_v1.3.md",
           "section": "§2.2 change rule and §15 OpenAPI structure"
         },
         {
-          "document": "docs/architecture/04_P1_Implementation_Plan_v1.4.md",
+          "document": "docs/architecture/04_P1_Implementation_Plan_v1.5.md",
           "section": "§4.3 API-first convention and P1-API-002"
         }
       ],
@@ -386,7 +386,7 @@
       "text": "List/query fields are allowlisted, authorization/data scope is applied before total/count, and deterministic ordering uses the canonical tie-breaker.",
       "provenance": [
         {
-          "document": "docs/architecture/05_P1_API_Design_v1.2.md",
+          "document": "docs/architecture/05_P1_API_Design_v1.3.md",
           "section": "§4 Common list/query contract"
         },
         {
@@ -405,7 +405,7 @@
           "section": "§26.9 COMBO Allocation"
         },
         {
-          "document": "docs/architecture/04_P1_Implementation_Plan_v1.4.md",
+          "document": "docs/architecture/04_P1_Implementation_Plan_v1.5.md",
           "section": "P1-CMB-003"
         }
       ],
