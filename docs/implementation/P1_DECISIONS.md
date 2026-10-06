@@ -48,3 +48,15 @@ Implementation Contract, Implementation Plan, API Design, or UI Design.
 - Approved nullable fields are `NULL`.
 - A conflicting GROUP root is a blocking condition.
 - No Company is seeded.
+
+## DEC-PRD-001 — Multi-level Product Group hierarchy
+
+- Approved by the Product Owner before Gate 5; this is an approved decision, not an open assumption.
+- Product Group persistence is an adjacency list with nullable `parent_id` self FK; `NULL` is the root and depth is arbitrary.
+- Product Group code remains globally unique within the business Group.
+- Self-parent and direct/indirect cycles are rejected; valid reparenting is allowed.
+- Status is persisted per node; inactivation does not cascade to descendants.
+- New Product selection requires an ACTIVE target and ACTIVE every-ancestor path; existing Product references remain valid/readable.
+- Product Group is a shared GROUP-level master; no Company ownership or Product Company Usage Scope is introduced.
+- Hierarchy mutation is serialized by DomainLockService key `product-group-tree` in the same transaction before cycle validation.
+- No closure table, nested-set, materialized-path, level/depth helper, or other hierarchy table is introduced.

@@ -148,7 +148,7 @@ foreach (($correctiveCatalog['tasks'] ?? []) as $task) {
 }
 
 // Parse the authoritative Plan task tables (Task ID, title, depends, output).
-$planPath = $root . DIRECTORY_SEPARATOR . 'docs' . DIRECTORY_SEPARATOR . 'architecture' . DIRECTORY_SEPARATOR . '04_P1_Implementation_Plan_v1.3.md';
+$planPath = $root . DIRECTORY_SEPARATOR . 'docs' . DIRECTORY_SEPARATOR . 'architecture' . DIRECTORY_SEPARATOR . '04_P1_Implementation_Plan_v1.4.md';
 $planRows = [];
 foreach (file($planPath, FILE_IGNORE_NEW_LINES) ?: [] as $line) {
     if (preg_match('/^\|\s*(P1-[A-Z]+-[0-9]+)\s*\|\s*(.*?)\s*\|\s*(.*?)\s*\|\s*(.*?)\s*\|/', $line, $match)) {
@@ -212,7 +212,21 @@ foreach (array_keys($edges) as $id) {
 
 $architectureStatus = trim((string) shell_exec('git status --short -- docs/architecture'));
 if ($architectureStatus !== '') {
-    failValidation('architecture baseline files are modified');
+    $allowedNewRevisions = [
+        'docs/architecture/00_User_Requirements_v1.0.13.md',
+        'docs/architecture/01_P1_Functional_Requirements_Specification_v1.8.md',
+        'docs/architecture/02_P1_Database_Design_v1.11.md',
+        'docs/architecture/03_P1_Implementation_Contract_v1.6.md',
+        'docs/architecture/04_P1_Implementation_Plan_v1.4.md',
+        'docs/architecture/05_P1_API_Design_v1.2.md',
+        'docs/architecture/06_P1_UI_Design_v1.3.md',
+    ];
+    foreach (preg_split('/\R/', $architectureStatus) ?: [] as $statusLine) {
+        $relative = trim(substr($statusLine, 3));
+        if ($statusLine === '' || $statusLine[0] !== 'A' || !in_array($relative, $allowedNewRevisions, true)) {
+            failValidation('architecture baseline files are modified outside approved next revisions');
+        }
+    }
 }
 
 echo "CACHE_VALIDATION: PASS\n";
