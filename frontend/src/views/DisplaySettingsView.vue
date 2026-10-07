@@ -469,6 +469,7 @@ onMounted(async () => {
 .display-settings-panel {
   display: grid;
   gap: 20px;
+  padding: 18px 20px 20px;
 }
 .context-toolbar {
   display: flex;
@@ -581,6 +582,9 @@ onMounted(async () => {
   }
 }
 @media (max-width: 900px) {
+  .display-settings-panel {
+    padding: 16px;
+  }
   .display-field {
     grid-template-columns: 1fr;
   }

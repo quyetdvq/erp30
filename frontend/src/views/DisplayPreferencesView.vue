@@ -233,6 +233,7 @@ function onLocaleChange(event: Event): void {
 .preference-panel {
   display: grid;
   gap: 22px;
+  padding: 18px 20px 20px;
 }
 .preference-language {
   display: grid;
@@ -307,6 +308,9 @@ function onLocaleChange(event: Event): void {
   font-size: 12px;
 }
 @media (max-width: 700px) {
+  .preference-panel {
+    padding: 16px;
+  }
   .preference-language,
   .preference-fields {
     grid-template-columns: 1fr;
