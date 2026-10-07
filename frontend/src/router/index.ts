@@ -1,6 +1,7 @@
 import { createRouter, createWebHistory } from 'vue-router'
 
 import AppShell from '@/components/AppShell.vue'
+import { i18n } from '@/i18n'
 import { useAuthStore } from '@/stores/auth'
 import DashboardView from '@/views/DashboardView.vue'
 import GroupsView from '@/views/GroupsView.vue'
@@ -8,30 +9,58 @@ import LoginView from '@/views/LoginView.vue'
 import OrganizationsView from '@/views/OrganizationsView.vue'
 import PlaceholderView from '@/views/PlaceholderView.vue'
 import ProfileView from '@/views/ProfileView.vue'
+import NotFoundView from '@/views/NotFoundView.vue'
 import UsersView from '@/views/UsersView.vue'
+import { useWorkspaceStore } from '@/stores/workspace'
 
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
   routes: [
-    { path: '/login', name: 'login', component: LoginView, meta: { public: true } },
+    {
+      path: '/login',
+      name: 'login',
+      component: LoginView,
+      meta: { public: true, closable: false },
+    },
     {
       path: '/',
       component: AppShell,
       children: [
-        { path: '', name: 'dashboard', component: DashboardView },
-        { path: 'profile', name: 'profile', component: ProfileView },
-        { path: 'admin/users', name: 'users', component: UsersView, meta: { admin: true } },
-        { path: 'admin/groups', name: 'groups', component: GroupsView, meta: { admin: true } },
+        {
+          path: '',
+          name: 'dashboard',
+          component: DashboardView,
+          meta: { labelKey: 'nav.dashboard', closable: false },
+        },
+        {
+          path: 'profile',
+          name: 'profile',
+          component: ProfileView,
+          meta: { labelKey: 'shell.profile' },
+        },
+        {
+          path: 'admin/users',
+          name: 'users',
+          component: UsersView,
+          meta: { labelKey: 'nav.users' },
+        },
+        {
+          path: 'admin/groups',
+          name: 'groups',
+          component: GroupsView,
+          meta: { labelKey: 'nav.groups' },
+        },
         {
           path: 'organizations',
           name: 'organizations',
           component: OrganizationsView,
-          meta: { admin: true },
+          meta: { labelKey: 'nav.organizations' },
         },
         {
           path: 'approvals',
           name: 'approvals',
           component: PlaceholderView,
+          meta: { labelKey: 'nav.approvals' },
           props: { title: 'Phê duyệt của tôi', description: 'Các yêu cầu đang chờ bạn xử lý.' },
         },
         {
@@ -42,6 +71,7 @@ const router = createRouter({
             title: 'Sản phẩm và vòng đời',
             description: 'Danh mục sản phẩm và lifecycle của doanh nghiệp.',
           },
+          meta: { labelKey: 'nav.products' },
         },
         {
           path: 'sales',
@@ -51,21 +81,36 @@ const router = createRouter({
             title: 'Bán hàng và khách hàng',
             description: 'Không gian quản lý bán hàng và quan hệ khách hàng.',
           },
+          meta: { labelKey: 'nav.sales' },
+        },
+        {
+          path: ':pathMatch(.*)*',
+          name: 'not-found',
+          component: NotFoundView,
+          meta: { labelKey: 'errors.status.404' },
         },
       ],
     },
   ],
 })
 
-router.beforeEach(async (to) => {
+router.beforeEach(async (to, from) => {
   const auth = useAuthStore()
+  const workspace = useWorkspaceStore()
+  if (from.fullPath !== to.fullPath && workspace.isDirty(String(from.name || from.path))) {
+    const allow =
+      typeof window === 'undefined' || typeof window.confirm !== 'function'
+        ? true
+        : window.confirm(i18n.global.t('shell.dirtyCloseConfirm'))
+    if (!allow) return false
+    workspace.markDirty(String(from.name || from.path), false)
+  }
   await auth.hydrate()
   if (to.meta.public) {
     if (auth.isAuthenticated) return '/'
     return true
   }
   if (!auth.isAuthenticated) return '/login'
-  if (to.meta.admin && !auth.isAdmin) return '/'
   return true
 })
 

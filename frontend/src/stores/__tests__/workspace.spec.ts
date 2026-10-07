@@ -1,0 +1,43 @@
+import { beforeEach, describe, expect, it } from 'vitest'
+import { createPinia, setActivePinia } from 'pinia'
+
+import { useWorkspaceStore } from '@/stores/workspace'
+
+describe('workspace shell state', () => {
+  beforeEach(() => {
+    setActivePinia(createPinia())
+    window.localStorage.clear()
+  })
+
+  it('isolates sidebar preferences by authenticated user', () => {
+    const store = useWorkspaceStore()
+    store.activateUser(7)
+    store.setSidebarMode('favorites')
+    store.setSidebarCollapsed(true)
+    store.setSidebarWidth(480)
+
+    store.activateUser(8)
+    expect(store.sidebarMode).toBe('menu')
+    expect(store.sidebarCollapsed).toBe(false)
+    expect(store.sidebarWidth).toBe(288)
+
+    store.activateUser(7)
+    expect(store.sidebarMode).toBe('favorites')
+    expect(store.sidebarCollapsed).toBe(true)
+    expect(store.sidebarWidth).toBe(420)
+  })
+
+  it('deduplicates tabs and protects dirty close', () => {
+    const store = useWorkspaceStore()
+    store.activateUser(7)
+    store.openTab({ key: 'products', path: '/products', labelKey: 'nav.products', closable: true })
+    store.openTab({ key: 'products', path: '/products', labelKey: 'nav.products', closable: true })
+    expect(store.tabs).toHaveLength(1)
+
+    store.markDirty('products')
+    expect(store.closeTab('products', () => false)).toBeNull()
+    expect(store.tabs).toHaveLength(1)
+    expect(store.closeTab('products', () => true)).toBeNull()
+    expect(store.tabs).toHaveLength(1)
+  })
+})

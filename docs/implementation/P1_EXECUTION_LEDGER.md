@@ -120,7 +120,7 @@ registry.
 | P1-DSP-003 | DONE | 0000000 | high-risk | Authorized atomic Display Settings SET/RESET mutation, approved configuration_audit_events sink/migration, PBAC negative paths, rollback, and authorization_logs isolation. Evidence: `docs/implementation/evidence/P1-DSP-003/01_display_settings_mutation_assessment.md`. |
 | P1-DSP-004 | DONE | 0000000 | api | Display Settings runtime/definitions/values/set/reset API, OpenAPI, generated client, authorization/visibility/error contract, and focused/full regression evidence. Evidence: `docs/implementation/evidence/P1-DSP-004/01_display_settings_api_assessment.md`. |
 | P1-DSP-005 | DONE | 0000000 | high-risk | Frontend runtime store, 15-key user-isolated local overlay, shared presentation formatter surface, canonical-value/timezone/locale boundaries, generated-client integration, and frontend/API regression evidence. Evidence: `docs/implementation/evidence/P1-DSP-005/01_display_runtime_formatter_assessment.md`. |
-| P1-FE-001 | NOT_STARTED | — | service-standard | No accepted implementation evidence. |
+| P1-FE-001 | DONE | 0000000 | service-standard | Naive UI app shell with exactly five sidebar modes, authenticated-user workspace preferences, protected router/session bootstrap, deduplicated/dirty-safe tabs, vi/en shell locale, common API error boundary with request correlation, accessibility/browser evidence. Evidence: `docs/implementation/evidence/P1-FE-001/01_app_shell_router_session_error_assessment.md`. |
 | P1-FE-002 | NOT_STARTED | — | service-standard | No accepted implementation evidence. |
 | P1-DSP-006 | NOT_STARTED | — | high-risk | No accepted implementation evidence. |
 | P1-DSP-090 | NOT_STARTED | — | high-risk | No accepted implementation evidence. |

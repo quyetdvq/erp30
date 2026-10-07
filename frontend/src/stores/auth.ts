@@ -10,6 +10,7 @@ import {
   type AuthUser,
 } from '@/services/auth'
 import { useDisplaySettingsStore } from '@/stores/displaySettings'
+import { useWorkspaceStore } from '@/stores/workspace'
 
 export const useAuthStore = defineStore('auth', () => {
   const user = ref<AuthUser | null>(null)
@@ -18,9 +19,6 @@ export const useAuthStore = defineStore('auth', () => {
   const error = ref('')
 
   const isAuthenticated = computed(() => user.value !== null)
-  const isAdmin = computed(
-    () => user.value?.groups.some((group) => ['orgadmin', 'systemadmin'].includes(group)) ?? false,
-  )
 
   async function hydrate(): Promise<void> {
     if (hydrated.value) return
@@ -28,11 +26,13 @@ export const useAuthStore = defineStore('auth', () => {
     try {
       user.value = await getCurrentUser()
       useDisplaySettingsStore().activateUser(user.value.id)
+      useWorkspaceStore().activateUser(user.value.id)
     } catch (requestError: unknown) {
       if (!axios.isAxiosError(requestError) || requestError.response?.status !== 401)
         error.value = 'Không thể tải phiên đăng nhập.'
       user.value = null
       useDisplaySettingsStore().clearSession()
+      useWorkspaceStore().clearSession()
     }
   }
 
@@ -43,6 +43,7 @@ export const useAuthStore = defineStore('auth', () => {
       user.value = await loginRequest({ email, password, remember })
       hydrated.value = true
       useDisplaySettingsStore().activateUser(user.value.id)
+      useWorkspaceStore().activateUser(user.value.id)
     } catch (requestError: unknown) {
       error.value = axios.isAxiosError(requestError)
         ? (requestError.response?.data?.message ?? 'Đăng nhập không thành công.')
@@ -54,9 +55,13 @@ export const useAuthStore = defineStore('auth', () => {
   }
 
   async function logout(): Promise<void> {
-    await logoutRequest()
-    user.value = null
-    useDisplaySettingsStore().clearSession()
+    try {
+      await logoutRequest()
+    } finally {
+      user.value = null
+      useDisplaySettingsStore().clearSession()
+      useWorkspaceStore().clearSession()
+    }
   }
 
   async function saveProfile(payload: {
@@ -77,7 +82,6 @@ export const useAuthStore = defineStore('auth', () => {
     busy,
     error,
     isAuthenticated,
-    isAdmin,
     hydrate,
     login,
     logout,

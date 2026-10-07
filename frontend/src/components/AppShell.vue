@@ -1,104 +1,186 @@
 <script setup lang="ts">
-import { computed, onBeforeUnmount, ref, watch } from 'vue'
+import { computed, h, onBeforeUnmount, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
+import {
+  NAlert,
+  NAvatar,
+  NBadge,
+  NButton,
+  NIcon,
+  NInput,
+  NLayout,
+  NLayoutHeader,
+  NLayoutSider,
+  NMenu,
+  NModal,
+  NSpace,
+  NTabPane,
+  NTabs,
+  NDropdown,
+  type MenuOption,
+} from 'naive-ui'
+import {
+  AddOutline,
+  AlertCircleOutline,
+  BusinessOutline,
+  CheckmarkCircleOutline,
+  ChevronBackOutline,
+  ChevronDownOutline,
+  ChevronForwardOutline,
+  CloseOutline,
+  CubeOutline,
+  GridOutline,
+  HomeOutline,
+  InformationCircleOutline,
+  MenuOutline,
+  MoonOutline,
+  NotificationsOutline,
+  PeopleOutline,
+  PersonCircleOutline,
+  SearchOutline,
+  SettingsOutline,
+  StarOutline,
+  TimeOutline,
+} from '@vicons/ionicons5'
 import { RouterLink, RouterView, useRoute, useRouter } from 'vue-router'
 
 import { setLocale, type AppLocale } from '@/i18n'
+import { dismissApiError, errorNotices, clearApiErrors } from '@/services/errorBoundary'
 import { useAuthStore } from '@/stores/auth'
+import {
+  SIDEBAR_MODES,
+  useWorkspaceStore,
+  type SidebarMode,
+  type WorkspaceTab,
+} from '@/stores/workspace'
 
 const auth = useAuthStore()
+const workspace = useWorkspaceStore()
 const route = useRoute()
 const router = useRouter()
 const { t, locale } = useI18n()
-const commandOpen = ref(false)
+
 const mobileMenuOpen = ref(false)
+const commandOpen = ref(false)
+const menuSearch = ref('')
+const commandSearch = ref('')
 const userMenuOpen = ref(false)
-const activeMode = ref(localStorage.getItem('ui.sidebar.active_mode') || 'menu')
-const sidebarWidth = ref(Number(localStorage.getItem('ui.sidebar.width')) || 290)
-const sidebarCollapsed = ref(localStorage.getItem('ui.sidebar.collapsed') === 'true')
+
+const icon = (component: object) => () => h(NIcon, null, { default: () => h(component) })
 
 const sidebarModes = [
-  { key: 'menu', labelKey: 'shell.modes.menu', icon: '☰' },
-  { key: 'favorites', labelKey: 'shell.modes.favorites', icon: '☆' },
-  { key: 'recent', labelKey: 'shell.modes.recent', icon: '◷' },
-  { key: 'system', labelKey: 'shell.modes.system', icon: '⚙' },
-  { key: 'organization', labelKey: 'shell.modes.organization', icon: '▦' },
+  { key: 'menu', labelKey: 'shell.modes.menu', icon: MenuOutline },
+  { key: 'favorites', labelKey: 'shell.modes.favorites', icon: StarOutline },
+  { key: 'recent', labelKey: 'shell.modes.recent', icon: TimeOutline },
+  { key: 'system', labelKey: 'shell.modes.system', icon: SettingsOutline },
+  { key: 'organization', labelKey: 'shell.modes.organization', icon: BusinessOutline },
+] as const
+
+type NavigationItem = { labelKey: string; to: string; icon: object; group?: string }
+
+const navItems: NavigationItem[] = [
+  { labelKey: 'nav.dashboard', to: '/', icon: HomeOutline },
+  { labelKey: 'nav.approvals', to: '/approvals', icon: CheckmarkCircleOutline },
+  { labelKey: 'nav.organizations', to: '/organizations', icon: BusinessOutline },
+  { labelKey: 'nav.groups', to: '/admin/groups', icon: PeopleOutline, group: 'orgadmin' },
+  { labelKey: 'nav.products', to: '/products', icon: CubeOutline },
+  { labelKey: 'nav.sales', to: '/sales', icon: GridOutline },
+  { labelKey: 'nav.users', to: '/admin/users', icon: SettingsOutline, group: 'orgadmin' },
 ]
 
-const navItems = [
-  { labelKey: 'nav.dashboard', to: '/', icon: '⌂' },
-  { labelKey: 'nav.approvals', to: '/approvals', icon: '✓' },
-  { labelKey: 'nav.organizations', to: '/organizations', icon: '▦' },
-  { labelKey: 'nav.groups', to: '/admin/groups', icon: '⬡' },
-  { labelKey: 'nav.products', to: '/products', icon: '◇' },
-  { labelKey: 'nav.sales', to: '/sales', icon: '▤' },
-  { labelKey: 'nav.users', to: '/admin/users', icon: 'ⓘ' },
+const localeOptions = [
+  { label: 'Tiếng Việt', key: 'vi' },
+  { label: 'English', key: 'en' },
 ]
 
-const tabs = computed(() => {
-  const current = navItems.find(
-    (item) => route.path === item.to || route.path.startsWith(`${item.to}/`),
-  )
-  return current ? [{ label: t(current.labelKey), to: current.to }] : []
-})
+const userOptions = computed(() => [
+  { label: t('shell.profile'), key: 'profile', icon: icon(PersonCircleOutline) },
+  { label: t('shell.signOut'), key: 'signOut', icon: icon(CloseOutline) },
+])
 
-const visibleNavItems = computed(() => {
-  if (activeMode.value === 'system')
-    return navItems.filter((item) => ['/admin/users', '/admin/groups'].includes(item.to))
-  if (activeMode.value === 'organization')
-    return navItems.filter((item) => item.to === '/organizations')
-  if (activeMode.value !== 'menu') return []
-  return navItems
-})
-
+const activeMode = computed(() => workspace.sidebarMode)
+const sidebarWidth = computed(() => (workspace.sidebarCollapsed ? 72 : workspace.sidebarWidth))
+const currentTabKey = computed(() => String(route.name || route.path))
+const localeLabel = computed(() => (locale.value === 'vi' ? 'Tiếng Việt' : 'English'))
 const activeModeLabel = computed(() => {
-  const mode = sidebarModes.find((item) => item.key === activeMode.value) || sidebarModes[0]!
+  const mode = sidebarModes.find((item) => item.key === activeMode.value) || sidebarModes[0]
   return t(mode.labelKey)
 })
-const sidebarStyle = computed(() => ({
-  '--sidebar-width': `${sidebarCollapsed.value ? 72 : sidebarWidth.value}px`,
-}))
+
+const allowedNavItems = computed(() =>
+  navItems.filter((item) => !item.group || auth.user?.groups.includes(item.group)),
+)
+
+const modeItems = computed(() => {
+  if (activeMode.value === 'favorites' || activeMode.value === 'recent') {
+    const tabItems = workspace.tabs
+      .map((tab) => ({ labelKey: tab.labelKey, to: tab.path, icon: InformationCircleOutline }))
+      .filter((item) => t(item.labelKey).toLowerCase().includes(menuSearch.value.toLowerCase()))
+    return tabItems.length > 0 ? tabItems : allowedNavItems.value
+  }
+  if (activeMode.value === 'system') {
+    return allowedNavItems.value.filter((item) =>
+      ['/admin/users', '/admin/groups'].includes(item.to),
+    )
+  }
+  if (activeMode.value === 'organization') {
+    return allowedNavItems.value.filter((item) => item.to === '/organizations')
+  }
+  return allowedNavItems.value.filter((item) =>
+    t(item.labelKey).toLowerCase().includes(menuSearch.value.toLowerCase()),
+  )
+})
+
+const menuOptions = computed<MenuOption[]>(() =>
+  modeItems.value.map((item) => ({ key: item.to, label: t(item.labelKey), icon: icon(item.icon) })),
+)
+
+const commandOptions = computed(() =>
+  navItems
+    .filter((item) => !item.group || auth.user?.groups.includes(item.group))
+    .filter((item) => t(item.labelKey).toLowerCase().includes(commandSearch.value.toLowerCase()))
+    .map((item) => ({ key: item.to, label: t(item.labelKey), icon: icon(item.icon) })),
+)
+
+function tabForRoute(): Omit<WorkspaceTab, 'dirty'> {
+  const meta = route.meta as { labelKey?: string; closable?: boolean }
+  return {
+    key: String(route.name || route.path),
+    path: route.fullPath,
+    labelKey: meta.labelKey || 'nav.dashboard',
+    closable: meta.closable !== false && route.name !== 'dashboard',
+  }
+}
 
 watch(
-  () => route.path,
-  () => {
-    if (activeMode.value === 'menu') localStorage.setItem('ui.sidebar.active_mode', 'menu')
-  },
+  () => route.fullPath,
+  () => workspace.openTab(tabForRoute()),
   { immediate: true },
 )
 
-const commands = [
-  { labelKey: 'commands.dashboard', to: '/' },
-  { labelKey: 'commands.profile', to: '/profile' },
-  { labelKey: 'commands.users', to: '/admin/users' },
-  { labelKey: 'commands.organizations', to: '/organizations' },
-  { labelKey: 'commands.products', to: '/products' },
-]
-
 function selectMode(mode: string): void {
-  activeMode.value = mode
-  localStorage.setItem('ui.sidebar.active_mode', mode)
-  if (sidebarCollapsed.value) sidebarCollapsed.value = false
+  if (SIDEBAR_MODES.includes(mode as SidebarMode)) workspace.setSidebarMode(mode as SidebarMode)
+  if (workspace.sidebarCollapsed) workspace.setSidebarCollapsed(false)
+}
+
+function handleMenuSelect(key: string): void {
+  menuSearch.value = ''
+  mobileMenuOpen.value = false
+  void router.push(key)
 }
 
 function toggleSidebar(): void {
-  sidebarCollapsed.value = !sidebarCollapsed.value
-  localStorage.setItem('ui.sidebar.collapsed', String(sidebarCollapsed.value))
-}
-
-function setSidebarWidth(width: number): void {
-  sidebarWidth.value = Math.min(420, Math.max(240, width))
-  localStorage.setItem('ui.sidebar.width', String(sidebarWidth.value))
+  workspace.setSidebarCollapsed(!workspace.sidebarCollapsed)
 }
 
 let resizeMove: ((event: PointerEvent) => void) | null = null
 let resizeEnd: (() => void) | null = null
 
 function startResize(event: PointerEvent): void {
-  if (sidebarCollapsed.value) return
+  if (workspace.sidebarCollapsed) return
   const startX = event.clientX
-  const startWidth = sidebarWidth.value
-  resizeMove = (moveEvent) => setSidebarWidth(startWidth + moveEvent.clientX - startX)
+  const startWidth = workspace.sidebarWidth
+  resizeMove = (moveEvent) => workspace.setSidebarWidth(startWidth + moveEvent.clientX - startX)
   resizeEnd = () => {
     if (resizeMove) window.removeEventListener('pointermove', resizeMove)
     if (resizeEnd) window.removeEventListener('pointerup', resizeEnd)
@@ -110,179 +192,470 @@ function startResize(event: PointerEvent): void {
 }
 
 function handleResizeKey(event: KeyboardEvent): void {
-  if (event.key === 'Home') setSidebarWidth(240)
-  else if (event.key === 'End') setSidebarWidth(420)
-  else if (event.key === 'ArrowLeft') setSidebarWidth(sidebarWidth.value - 16)
-  else if (event.key === 'ArrowRight') setSidebarWidth(sidebarWidth.value + 16)
+  if (event.key === 'Home') workspace.setSidebarWidth(workspace.MIN_SIDEBAR_WIDTH)
+  if (event.key === 'End') workspace.setSidebarWidth(workspace.MAX_SIDEBAR_WIDTH)
+  if (event.key === 'ArrowLeft') workspace.setSidebarWidth(workspace.sidebarWidth - 16)
+  if (event.key === 'ArrowRight') workspace.setSidebarWidth(workspace.sidebarWidth + 16)
 }
 
-function toggleLocale(): void {
-  setLocale((locale.value === 'vi' ? 'en' : 'vi') as AppLocale)
+function confirmDirtyClose(tab: WorkspaceTab): boolean {
+  if (!tab.dirty || typeof window === 'undefined' || typeof window.confirm !== 'function')
+    return true
+  return window.confirm(t('shell.dirtyCloseConfirm'))
 }
 
-function navigate(to: string): void {
-  commandOpen.value = false
-  mobileMenuOpen.value = false
-  void router.push(to)
+function closeTab(key: string): void {
+  const nextPath = workspace.closeTab(key, confirmDirtyClose)
+  if (nextPath && key === currentTabKey.value) void router.push(nextPath)
+}
+
+function handleTabChange(key: string | number): void {
+  const tab = workspace.tabs.find((candidate) => candidate.key === String(key))
+  if (tab) void router.push(tab.path)
+}
+
+function handleLocale(value: string): void {
+  if (value === 'vi' || value === 'en') setLocale(value as AppLocale)
+}
+
+function handleUserAction(key: string): void {
+  userMenuOpen.value = false
+  if (key === 'profile') void router.push('/profile')
+  if (key === 'signOut') void signOut()
 }
 
 async function signOut(): Promise<void> {
-  userMenuOpen.value = false
   await auth.logout()
+  clearApiErrors()
   void router.push('/login')
+}
+
+function openCommandPalette(): void {
+  commandSearch.value = ''
+  commandOpen.value = true
+}
+
+function openCommandRoute(key: string | number): void {
+  handleMenuSelect(String(key))
+  commandOpen.value = false
+}
+
+function dismissError(id: string): void {
+  dismissApiError(id)
 }
 
 onBeforeUnmount(() => resizeEnd?.())
 </script>
 
 <template>
-  <div class="app-frame" :style="sidebarStyle">
-    <header class="topbar">
-      <button
-        class="icon-button menu-trigger"
-        :aria-label="t('shell.openMenu')"
-        @click="mobileMenuOpen = !mobileMenuOpen"
-      >
-        ☰
-      </button>
-      <RouterLink class="brand" to="/">
-        <span class="brand-mark">D</span>
-        <span class="brand-copy"
-          ><strong>Dinktech</strong><small>{{ t('common.brandSubtitle') }}</small></span
-        >
-      </RouterLink>
-      <button class="workspace-search" type="button" @click="commandOpen = true">
-        <span>⌕</span><span>{{ t('shell.searchWorkspace') }}</span
-        ><kbd>/</kbd>
-      </button>
-      <div class="topbar-actions">
-        <button class="icon-button notification-button" :aria-label="t('shell.notifications')">
-          ♧<b>15</b>
-        </button>
-        <button class="icon-button" :aria-label="t('shell.theme')">☾</button>
-        <button
-          class="language-button"
-          :aria-label="t('shell.language')"
-          type="button"
-          @click="toggleLocale"
-        >
-          {{ locale === 'vi' ? 'Tiếng Việt' : 'English' }}⌄
-        </button>
-        <div class="user-menu-wrap">
-          <button class="user-chip" type="button" @click="userMenuOpen = !userMenuOpen">
-            <span class="avatar">{{ (auth.user?.username || 'U').slice(0, 1).toUpperCase() }}</span
-            ><span>{{ auth.user?.username || 'quyetdv' }}</span
-            ><span>⌄</span>
-          </button>
-          <div v-if="userMenuOpen" class="user-menu">
-            <button type="button" @click="navigate('/profile')">{{ t('shell.profile') }}</button>
-            <button type="button" @click="signOut">{{ t('shell.signOut') }}</button>
-          </div>
-        </div>
-      </div>
-    </header>
-
-    <aside
-      class="sidebar"
-      :class="{ 'sidebar--open': mobileMenuOpen, 'sidebar--collapsed': sidebarCollapsed }"
-    >
-      <div class="sidebar-search"><span>⌕</span><input :placeholder="t('shell.searchMenu')" /></div>
-      <div class="sidebar-tools">
-        <button
-          v-for="mode in sidebarModes"
-          :key="mode.key"
-          :class="{ active: activeMode === mode.key }"
-          :aria-label="t(mode.labelKey)"
-          :title="t(mode.labelKey)"
-          type="button"
-          @click="selectMode(mode.key)"
-        >
-          {{ mode.icon }}
-        </button>
-      </div>
-      <button
-        class="sidebar-collapse"
-        type="button"
-        :aria-label="t('shell.openMenu')"
-        @click="toggleSidebar"
-      >
-        {{ sidebarCollapsed ? '›' : '‹' }}
-      </button>
-      <div
-        v-if="!sidebarCollapsed"
-        class="sidebar-resize"
-        role="separator"
-        aria-orientation="vertical"
-        tabindex="0"
-        @pointerdown="startResize"
-        @dblclick="setSidebarWidth(290)"
-        @keydown="handleResizeKey"
-      ></div>
-      <nav class="nav-list">
-        <p class="nav-section">{{ activeModeLabel }}</p>
-        <RouterLink
-          v-for="item in visibleNavItems"
-          :key="item.to"
-          :to="item.to"
-          class="nav-link"
-          :class="{
-            'nav-link--active': route.path === item.to || route.path.startsWith(`${item.to}/`),
-          }"
-          @click="mobileMenuOpen = false"
-        >
-          <span class="nav-icon">{{ item.icon }}</span
-          ><span>{{ t(item.labelKey) }}</span
-          ><span
-            v-if="item.to === '/organizations' || item.to === '/admin/users'"
-            class="nav-chevron"
-            >›</span
+  <div class="erp-shell" :style="{ '--sidebar-width': `${sidebarWidth}px` }">
+    <NLayout has-sider class="shell-layout">
+      <NLayoutHeader bordered class="shell-header">
+        <NSpace align="center" :size="10" class="header-left">
+          <NButton
+            quaternary
+            circle
+            :aria-label="t('shell.openMenu')"
+            @click="mobileMenuOpen = !mobileMenuOpen"
           >
-        </RouterLink>
-      </nav>
-      <div class="sidebar-footer">♢ &nbsp; {{ t('shell.filteredByPermission') }}</div>
-    </aside>
+            <template #icon
+              ><NIcon><MenuOutline /></NIcon
+            ></template>
+          </NButton>
+          <RouterLink class="brand" to="/">
+            <NAvatar color="#1769aa" :size="32">D</NAvatar>
+            <span class="brand-copy"
+              ><strong>Dinktech</strong><small>{{ t('common.brandSubtitle') }}</small></span
+            >
+          </RouterLink>
+          <NButton class="workspace-search" secondary @click="openCommandPalette">
+            <template #icon
+              ><NIcon><SearchOutline /></NIcon
+            ></template>
+            {{ t('shell.searchWorkspace') }}<kbd>/</kbd>
+          </NButton>
+        </NSpace>
+        <NSpace align="center" :size="6" class="header-actions">
+          <NBadge :value="15" :max="99" type="error">
+            <NButton quaternary circle :aria-label="t('shell.notifications')">
+              <template #icon
+                ><NIcon><NotificationsOutline /></NIcon
+              ></template>
+            </NButton>
+          </NBadge>
+          <NButton quaternary circle :aria-label="t('shell.theme')">
+            <template #icon
+              ><NIcon><MoonOutline /></NIcon
+            ></template>
+          </NButton>
+          <NDropdown :options="localeOptions" trigger="click" @select="handleLocale">
+            <NButton quaternary size="small" :aria-label="t('shell.language')">
+              {{ localeLabel }}<NIcon><ChevronDownOutline /></NIcon>
+            </NButton>
+          </NDropdown>
+          <NDropdown
+            v-model:show="userMenuOpen"
+            trigger="click"
+            :options="userOptions"
+            @select="handleUserAction"
+          >
+            <NButton quaternary class="user-button">
+              <template #icon
+                ><NIcon><PersonCircleOutline /></NIcon
+              ></template>
+              {{ auth.user?.username || 'quyetdv' }}<NIcon><ChevronDownOutline /></NIcon>
+            </NButton>
+          </NDropdown>
+        </NSpace>
+      </NLayoutHeader>
 
-    <main class="workspace">
-      <div class="tabs-bar">
-        <RouterLink v-for="tab in tabs" :key="tab.to" :to="tab.to" class="workspace-tab"
-          >{{ tab.label }} <span>×</span></RouterLink
-        ><button class="tab-add" :aria-label="t('shell.openNewTab')">＋</button>
-      </div>
-      <div class="page-content"><RouterView /></div>
-    </main>
-
-    <div v-if="commandOpen" class="overlay" @click.self="commandOpen = false">
-      <section
-        class="command-palette"
-        role="dialog"
-        aria-modal="true"
-        :aria-label="t('shell.commandPalette')"
+      <NLayoutSider
+        bordered
+        :width="sidebarWidth"
+        :collapsed-width="72"
+        :collapsed="workspace.sidebarCollapsed"
+        collapse-mode="width"
+        class="shell-sider"
+        :class="{ 'sider-mobile-open': mobileMenuOpen }"
       >
-        <div class="command-heading">
-          <span>⌕</span>
-          <div>
-            <strong>{{ t('shell.commandPalette') }}</strong
-            ><small>{{ t('shell.commandDescription') }}</small>
+        <div class="sider-content">
+          <NInput v-model:value="menuSearch" clearable :placeholder="t('shell.searchMenu')">
+            <template #prefix
+              ><NIcon><SearchOutline /></NIcon
+            ></template>
+          </NInput>
+          <div class="mode-switcher" role="group" :aria-label="t('shell.sidebarModes')">
+            <NButton
+              v-for="mode in sidebarModes"
+              :key="mode.key"
+              quaternary
+              :type="activeMode === mode.key ? 'primary' : 'default'"
+              :aria-label="t(mode.labelKey)"
+              :title="t(mode.labelKey)"
+              @click="selectMode(mode.key)"
+            >
+              <template #icon><NIcon :component="mode.icon" /></template>
+            </NButton>
           </div>
-          <button class="icon-button" :aria-label="t('shell.close')" @click="commandOpen = false">
-            ×
+          <div v-if="!workspace.sidebarCollapsed && !mobileMenuOpen" class="sider-heading">
+            {{ activeModeLabel }}
+          </div>
+          <NMenu
+            :value="route.path"
+            :options="menuOptions"
+            :collapsed="workspace.sidebarCollapsed"
+            :collapsed-width="72"
+            :collapsed-icon-size="20"
+            @update:value="handleMenuSelect"
+          />
+          <div v-if="!workspace.sidebarCollapsed && !mobileMenuOpen" class="sider-footer">
+            <NIcon><InformationCircleOutline /></NIcon
+            ><span>{{ t('shell.filteredByPermission') }}</span>
+          </div>
+          <button
+            class="sider-collapse"
+            type="button"
+            :aria-label="
+              workspace.sidebarCollapsed ? t('shell.expandSidebar') : t('shell.collapseSidebar')
+            "
+            @click="toggleSidebar"
+          >
+            <NIcon
+              ><ChevronForwardOutline v-if="workspace.sidebarCollapsed" /><ChevronBackOutline
+                v-else
+            /></NIcon>
           </button>
+          <div
+            v-if="!workspace.sidebarCollapsed"
+            class="sider-resize"
+            role="separator"
+            aria-orientation="vertical"
+            tabindex="0"
+            :aria-valuemin="workspace.MIN_SIDEBAR_WIDTH"
+            :aria-valuemax="workspace.MAX_SIDEBAR_WIDTH"
+            :aria-valuenow="workspace.sidebarWidth"
+            @pointerdown="startResize"
+            @keydown="handleResizeKey"
+          />
         </div>
-        <input autofocus class="command-input" :placeholder="t('shell.searchCommand')" />
-        <button
-          v-for="command in commands"
-          :key="command.to"
-          class="command-item"
-          type="button"
-          @click="navigate(command.to)"
+      </NLayoutSider>
+
+      <NLayout class="workspace-layout">
+        <div class="workspace-tabs-wrap">
+          <NTabs
+            type="card"
+            size="small"
+            :value="currentTabKey"
+            closable
+            @update:value="handleTabChange"
+            @close="closeTab"
+          >
+            <NTabPane
+              v-for="tab in workspace.tabs"
+              :key="tab.key"
+              :name="tab.key"
+              :closable="tab.closable"
+            >
+              <template #tab>{{ t(tab.labelKey) }}</template>
+            </NTabPane>
+          </NTabs>
+          <NButton
+            quaternary
+            circle
+            :aria-label="t('shell.openNewTab')"
+            @click="openCommandPalette"
+          >
+            <template #icon
+              ><NIcon><AddOutline /></NIcon
+            ></template>
+          </NButton>
+        </div>
+        <div class="error-stack" aria-live="polite">
+          <NAlert
+            v-for="notice in errorNotices"
+            :key="notice.id"
+            :type="notice.status === 401 || notice.status === 403 ? 'warning' : 'error'"
+            closable
+            @close="dismissError(notice.id)"
+          >
+            <template #icon
+              ><NIcon><AlertCircleOutline /></NIcon
+            ></template>
+            <strong>{{ t(`errors.status.${notice.status}`) }}</strong>
+            <span>{{ notice.message || t('errors.defaultMessage') }}</span>
+            <small v-if="notice.code || notice.requestId" class="error-meta"
+              >{{ notice.code || t('errors.unknownCode')
+              }}<span v-if="notice.requestId"> · {{ notice.requestId }}</span></small
+            >
+          </NAlert>
+        </div>
+        <main class="workspace-content"><RouterView /></main>
+      </NLayout>
+    </NLayout>
+
+    <NModal
+      v-model:show="commandOpen"
+      preset="card"
+      :title="t('shell.commandPalette')"
+      class="command-modal"
+    >
+      <p class="modal-description">{{ t('shell.commandDescription') }}</p>
+      <NInput v-model:value="commandSearch" autofocus :placeholder="t('shell.searchCommand')">
+        <template #prefix
+          ><NIcon><SearchOutline /></NIcon
+        ></template>
+      </NInput>
+      <div class="command-list">
+        <NButton
+          v-for="command in commandOptions"
+          :key="command.key"
+          quaternary
+          block
+          @click="openCommandRoute(command.key)"
         >
-          <span>◇</span>{{ t(command.labelKey) }}
-        </button>
-        <footer class="command-footer">
-          <kbd>Esc</kbd> {{ t('shell.commandClose') }} <kbd>↑</kbd><kbd>↓</kbd>
-          {{ t('shell.commandMove') }} <kbd>Enter</kbd> {{ t('shell.commandOpen') }}
-        </footer>
-      </section>
-    </div>
+          <template #icon><NIcon :component="command.icon" /></template>{{ command.label }}
+        </NButton>
+      </div>
+    </NModal>
   </div>
 </template>
+
+<style scoped>
+.erp-shell,
+.shell-layout {
+  min-height: 100vh;
+  background: #f5f7fa;
+}
+.shell-header {
+  z-index: 20;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  height: 62px;
+  padding: 0 18px 0 16px;
+  background: #fff;
+}
+.header-left,
+.header-actions {
+  min-width: 0;
+}
+.brand {
+  display: inline-flex;
+  align-items: center;
+  gap: 9px;
+  min-width: 170px;
+}
+.brand-copy {
+  display: grid;
+  line-height: 1.1;
+}
+.brand-copy strong {
+  color: #17324d;
+  font-size: 15px;
+}
+.brand-copy small {
+  margin-top: 3px;
+  color: #718298;
+  font-size: 10px;
+}
+.workspace-search {
+  width: min(430px, 40vw);
+  justify-content: flex-start;
+  color: #718298;
+  text-align: left;
+}
+.workspace-search kbd {
+  margin-left: auto;
+}
+.locale-select {
+  width: 122px;
+}
+.user-button {
+  gap: 7px;
+}
+.shell-sider {
+  position: relative;
+  background: #fff;
+}
+.sider-content {
+  position: relative;
+  display: flex;
+  height: 100%;
+  flex-direction: column;
+  gap: 14px;
+  padding: 16px 12px 12px;
+}
+.mode-switcher {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 2px;
+}
+.sider-heading {
+  padding: 0 8px;
+  color: #7b8a9b;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+.sider-content :deep(.n-menu) {
+  flex: 1;
+}
+.sider-footer {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 10px 8px;
+  border-top: 1px solid #e9eef2;
+  color: #718298;
+  font-size: 11px;
+}
+.sider-collapse {
+  position: absolute;
+  top: 86px;
+  right: -13px;
+  z-index: 3;
+  display: grid;
+  width: 26px;
+  height: 26px;
+  place-items: center;
+  border: 1px solid #dbe4eb;
+  border-radius: 50%;
+  background: #fff;
+  color: #55708b;
+  cursor: pointer;
+  box-shadow: 0 2px 8px rgb(24 47 68 / 8%);
+}
+.sider-resize {
+  position: absolute;
+  top: 0;
+  right: -3px;
+  bottom: 0;
+  z-index: 3;
+  width: 6px;
+  cursor: col-resize;
+}
+.workspace-layout {
+  min-width: 0;
+  background: #f5f7fa;
+}
+.workspace-tabs-wrap {
+  display: flex;
+  align-items: center;
+  min-height: 44px;
+  padding: 5px 12px 0;
+  border-bottom: 1px solid #dfe7ed;
+  background: #fff;
+}
+.workspace-tabs-wrap :deep(.n-tabs) {
+  flex: 1;
+  min-width: 0;
+}
+.workspace-tabs-wrap :deep(.n-tabs-nav) {
+  margin-bottom: 0;
+}
+.error-stack {
+  display: grid;
+  gap: 8px;
+  padding: 12px 28px 0;
+}
+.error-stack :deep(.n-alert) {
+  align-items: flex-start;
+}
+.error-meta {
+  display: block;
+  margin-top: 4px;
+  color: #728095;
+}
+.workspace-content {
+  min-width: 0;
+  padding: 22px 28px 48px;
+}
+.command-modal {
+  width: min(620px, calc(100vw - 32px));
+}
+.modal-description {
+  margin: 0 0 14px;
+  color: #718298;
+  font-size: 13px;
+}
+.command-list {
+  display: grid;
+  gap: 4px;
+  max-height: 360px;
+  margin-top: 12px;
+  overflow: auto;
+}
+@media (max-width: 800px) {
+  .shell-header {
+    padding-inline: 10px;
+  }
+  .brand {
+    min-width: auto;
+  }
+  .brand-copy {
+    display: none;
+  }
+  .workspace-search {
+    width: min(260px, 44vw);
+  }
+  .header-actions > :deep(.n-button:nth-child(2)),
+  .locale-select {
+    display: none;
+  }
+  .shell-sider {
+    position: fixed;
+    inset: 62px auto 0 0;
+    z-index: 15;
+    height: calc(100vh - 62px);
+    transform: translateX(-100%);
+    box-shadow: 8px 0 24px rgb(26 51 73 / 14%);
+  }
+  .shell-sider.sider-mobile-open {
+    transform: translateX(0);
+  }
+  .workspace-content {
+    padding-inline: 14px;
+  }
+}
+</style>

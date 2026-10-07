@@ -23,6 +23,10 @@ export const messages = {
       commandClose: 'Đóng',
       commandMove: 'Di chuyển',
       commandOpen: 'Mở',
+      sidebarModes: 'Chế độ sidebar',
+      collapseSidebar: 'Thu gọn sidebar',
+      expandSidebar: 'Mở rộng sidebar',
+      dirtyCloseConfirm: 'Biểu mẫu chưa lưu. Bạn có chắc muốn đóng không?',
       modes: {
         menu: 'Menu',
         favorites: 'Yêu thích',
@@ -74,6 +78,20 @@ export const messages = {
     common: {
       brandSubtitle: 'ERP Workspace',
     },
+    errors: {
+      defaultMessage: 'Đã xảy ra lỗi khi xử lý yêu cầu.',
+      unknownCode: 'Lỗi không xác định',
+      notFoundDescription: 'Đường dẫn bạn yêu cầu không tồn tại trong workspace.',
+      backToWorkspace: 'Về workspace',
+      status: {
+        '401': 'Phiên đăng nhập đã hết hạn',
+        '403': 'Bạn không có quyền thực hiện thao tác này',
+        '404': 'Không tìm thấy tài nguyên',
+        '409': 'Dữ liệu đang xung đột',
+        '422': 'Dữ liệu không hợp lệ',
+        '500': 'Lỗi máy chủ',
+      },
+    },
   },
   en: {
     shell: {
@@ -94,6 +112,10 @@ export const messages = {
       commandClose: 'Close',
       commandMove: 'Move',
       commandOpen: 'Open',
+      sidebarModes: 'Sidebar modes',
+      collapseSidebar: 'Collapse sidebar',
+      expandSidebar: 'Expand sidebar',
+      dirtyCloseConfirm: 'This form has unsaved changes. Close it anyway?',
       modes: {
         menu: 'Menu',
         favorites: 'Favorites',
@@ -144,6 +166,20 @@ export const messages = {
     },
     common: {
       brandSubtitle: 'ERP Workspace',
+    },
+    errors: {
+      defaultMessage: 'An error occurred while processing the request.',
+      unknownCode: 'Unknown error',
+      notFoundDescription: 'The requested path does not exist in this workspace.',
+      backToWorkspace: 'Back to workspace',
+      status: {
+        '401': 'Your session has expired',
+        '403': 'You are not allowed to perform this action',
+        '404': 'Resource not found',
+        '409': 'The data is in conflict',
+        '422': 'The submitted data is invalid',
+        '500': 'Server error',
+      },
     },
   },
 } as const
