@@ -4,9 +4,9 @@ This ledger is lightweight operational evidence. It is not architecture
 authority and does not replace UR, FRS, DBD, the Implementation Contract, the
 Implementation Plan, API Design, or UI Design.
 
-The registry contains exactly 100 P1 tasks. Current ledger state records 78
+The registry contains exactly 100 P1 tasks. Current ledger state records 79
 completed tasks: Gate 0 is 10/10, Gate 1 is 14/14, Gate 2 is 8/8, Gate 3 is
-10/10, Gate 4 is 7/7, Gate 5 is 11/11, Gate 6 is 9/9, and Gate 7 is 9/10.
+10/10, Gate 4 is 7/7, Gate 5 is 11/11, Gate 6 is 9/9, and Gate 7 is 10/10.
 These summaries are derived from the task rows below and the canonical Gate
 registry.
 
@@ -14,7 +14,7 @@ registry.
 
 | Measure | Progress |
 |---|---:|
-| P1 tasks DONE | 78/100 |
+| P1 tasks DONE | 79/100 |
 | Gate 0 | 10/10 DONE |
 | Gate 1 | 14/14 DONE |
 | Gate 2 | 8/8 DONE |
@@ -22,7 +22,7 @@ registry.
 | Gate 4 | 7/7 DONE |
 | Gate 5 | 11/11 DONE |
 | Gate 6 | 9/9 DONE |
-| Gate 7 | 9/10 DONE |
+| Gate 7 | 10/10 DONE |
 | Gate 8 | 0/12 DONE |
 | Gate 9 | 0/9 DONE |
 
@@ -108,7 +108,7 @@ registry.
 | P1-API-040 | DONE | bb2a3c7 | api | Auto Numbering API: six Resource numbering-series operations, configure-numbering authorization, non-consuming validation, concurrency-safe default invariant, and generated client. Evidence: `docs/implementation/evidence/P1-API-040/01_auto_numbering_api_assessment.md`. |
 | P1-API-050 | DONE | 1f0d578 | high-risk | Product/UOM/Pricing/COMBO API implementation, authenticated 26-operation acceptance, canonical `erp_test` rebuild, OpenAPI/codegen, regression, concurrency, and full-suite evidence in `docs/implementation/evidence/P1-API-050/01_product_uom_pricing_combo_api_assessment.md`. |
 | P1-API-060 | DONE | cce76c0 | high-risk | Product Import API: authenticated four-operation runtime/OpenAPI surface, two-gate authorization, Product-only modes, row atomicity/reconciliation, canonical `erp_test` rebuild, OpenAPI/codegen, regression, and full-suite evidence in `docs/implementation/evidence/P1-API-060/01_product_import_api_assessment.md`. |
-| P1-API-090 | NOT_STARTED | — | high-risk | No accepted implementation evidence. |
+| P1-API-090 | DONE | e9d5ee2 | high-risk | Gate 7 API contract regression suite: dynamic 117-operation runtime/OpenAPI parity, transport/auth/query/error/locale/serialization guards, CONTRACT_PENDING absence, slice regressions, OpenAPI/codegen/frontend/full-suite evidence in `docs/implementation/evidence/P1-API-090/01_api_contract_regression_assessment.md`. |
 | P1-FE-001 | NOT_STARTED | — | service-standard | No accepted implementation evidence. |
 | P1-FE-002 | NOT_STARTED | — | service-standard | No accepted implementation evidence. |
 | P1-FE-003 | NOT_STARTED | — | service-standard | No accepted implementation evidence. |
