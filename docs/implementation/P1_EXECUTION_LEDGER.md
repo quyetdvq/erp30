@@ -8,6 +8,11 @@ The registry contains exactly 107 P1 tasks. Current ledger state records 79
 completed tasks: Gate 0 is 10/10, Gate 1 is 14/14, Gate 2 is 8/8, Gate 3 is
 10/10, Gate 4 is 7/7, Gate 5 is 11/11, Gate 6 is 9/9, Gate 7 is 10/15,
 Gate 8 is 0/14, and Gate 9 is 0/9.
+
+The Implementation Plan v1.8 retains a planning snapshot of `69/107`; the
+`79/107` value below is evidence-derived from the current Git/ledger history
+and is intentionally preserved until the planning snapshot is formally
+reconciled. This operational ledger does not amend Plan authority.
 These summaries are derived from the task rows below and the canonical Gate
 registry.
 
