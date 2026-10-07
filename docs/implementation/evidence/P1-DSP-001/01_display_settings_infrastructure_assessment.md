@@ -118,7 +118,7 @@ Validation run against `CI_ENVIRONMENT=testing` and `erp_test` where applicable:
 |---|---|
 | `P1Dsp001DisplaySettingsTest.php --no-coverage` | PASS; 11 tests, 100 assertions |
 | Gate 0 + CTX-001 + ORG-002 tests | PASS; 18 tests, 47 assertions |
-| Full backend PHPUnit `--no-coverage` | PASS; 414 tests, 3750 assertions |
+| Full backend PHPUnit `--no-coverage` | PASS; 414 tests, 3754 assertions |
 | PHPStan level 8 (`app` + focused test) | PASS; no errors |
 | Architecture guard | PASS; 44 application files checked |
 | Context cache/module-map/task registry validator | PASS; cache valid, 107 tasks, acyclic graph |
