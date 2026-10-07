@@ -6,13 +6,15 @@ async function mockAuthenticatedSession(page: Page): Promise<void> {
       status: 200,
       contentType: 'application/json',
       body: JSON.stringify({
-        user: {
-          id: 7,
-          username: 'quyetdv',
-          email: 'quyetdv@example.test',
-          active: true,
-          status: 'ACTIVE',
-          groups: ['orgadmin'],
+        data: {
+          user: {
+            id: 7,
+            username: 'quyetdv',
+            email: 'quyetdv@example.test',
+            active: true,
+            status: 'ACTIVE',
+            groups: ['orgadmin'],
+          },
         },
       }),
     })
