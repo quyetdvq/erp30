@@ -1,0 +1,196 @@
+import AxeBuilder from '@axe-core/playwright'
+import { expect, test, type Page } from '@playwright/test'
+
+const groupId = '9007199254740993'
+const companyId = '9007199254740994'
+const warehouseId = '9007199254740995'
+
+const collection = (data: unknown[], total = data.length) =>
+  JSON.stringify({ data, meta: { page: 1, page_size: 50, total, request_id: 'fe010-test' } })
+
+async function mockSession(page: Page): Promise<void> {
+  await page.route('**/api/v1/auth/me', (route) =>
+    route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify({ data: { user: { id: 7, username: 'admin', groups: ['orgadmin'] } } }),
+    }),
+  )
+}
+
+async function mockOrganizationApi(
+  page: Page,
+  options: { treeStatus?: number } = {},
+): Promise<void> {
+  const tree = [
+    {
+      id: groupId,
+      parent_id: undefined,
+      type: 'GROUP',
+      code: 'G-01',
+      name: 'Root Group',
+      status: 'ACTIVE',
+      active_from: null,
+      active_to: null,
+    },
+    {
+      id: companyId,
+      parent_id: groupId,
+      type: 'COMPANY',
+      code: 'C-01',
+      name: 'Main Company',
+      status: 'ACTIVE',
+      legal_name: 'Main Company LLC',
+      tax_code: 'T-01',
+      active_from: '2026-01-01',
+      active_to: null,
+    },
+    {
+      id: warehouseId,
+      parent_id: companyId,
+      type: 'WAREHOUSE',
+      code: 'W-01',
+      name: 'Main Warehouse',
+      status: 'ACTIVE',
+      active_from: null,
+      active_to: null,
+    },
+  ]
+  await page.route('**/api/v1/organizations/tree**', (route) =>
+    route.fulfill({
+      status: options.treeStatus ?? 200,
+      contentType: 'application/json',
+      body: options.treeStatus
+        ? JSON.stringify({
+            error: { code: 'NOT_FOUND', message: 'Not found' },
+            meta: { request_id: 'fe010-not-found' },
+          })
+        : collection(tree),
+    }),
+  )
+  await page.route('**/api/v1/organizations', async (route) => {
+    if (route.request().method() === 'POST' || route.request().method() === 'PATCH') {
+      return route.fulfill({
+        status: route.request().method() === 'POST' ? 201 : 200,
+        contentType: 'application/json',
+        body: JSON.stringify({ data: tree[1], meta: { request_id: 'fe010-write' } }),
+      })
+    }
+    return route.fulfill({ status: 200, contentType: 'application/json', body: collection(tree) })
+  })
+  await page.route('**/api/v1/contacts**', (route) =>
+    route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: collection([
+        {
+          id: '7001',
+          contact_type: 'ORGANIZATION',
+          contact_ref_id: companyId,
+          name: 'Alice',
+          email: 'alice@test',
+          phone: '0900',
+          mobile: null,
+          status: 'ACTIVE',
+        },
+      ]),
+    }),
+  )
+}
+
+test('Organization tree, parent matrix, contacts history, and accessibility', async ({ page }) => {
+  await mockSession(page)
+  await mockOrganizationApi(page)
+  await page.goto('/organizations')
+
+  await expect(page.getByRole('button', { name: /G-01/ })).toBeVisible()
+  await expect(page.getByText('Main Company')).toBeVisible()
+  await page
+    .getByRole('button', { name: /G-01/ })
+    .evaluate((element) => (element as HTMLElement).click())
+  await page
+    .getByRole('button', { name: /Tạo đơn vị con/ })
+    .evaluate((element) => (element as HTMLElement).click())
+  await expect(
+    page.locator('.modal-card').getByRole('option', { name: 'COMPANY', exact: true }),
+  ).toHaveCount(1)
+  await expect(page.getByText('Thông tin Company')).toBeVisible()
+  await page
+    .getByRole('button', { name: 'Đóng' })
+    .evaluate((element) => (element as HTMLElement).click())
+
+  await page
+    .getByRole('button', { name: /W-01/ })
+    .evaluate((element) => (element as HTMLElement).click())
+  await expect(page.getByRole('button', { name: /Tạo đơn vị con/ })).toBeDisabled()
+  await page
+    .getByRole('tab', { name: 'Liên hệ' })
+    .evaluate((element) => (element as HTMLElement).click())
+  await expect(page.getByRole('cell', { name: 'Alice', exact: true })).toBeVisible()
+  const contactRegion = page.getByRole('region', { name: 'Liên hệ' })
+  await contactRegion
+    .getByRole('tab', { name: 'Lịch sử' })
+    .evaluate((element) => (element as HTMLElement).click())
+  await expect(contactRegion.getByRole('tab', { name: 'Lịch sử' })).toHaveAttribute(
+    'aria-selected',
+    'true',
+  )
+
+  const accessibility = await new AxeBuilder({ page }).include('.organization-detail').analyze()
+  expect(accessibility.violations).toEqual([])
+})
+
+test('Ward filtering and active Province-only create selection', async ({ page }) => {
+  await mockSession(page)
+  const provinces = [
+    { id: '11', code: 'P1', name: 'Active Province', status: 'ACTIVE' },
+    { id: '12', code: 'P2', name: 'Inactive Province', status: 'INACTIVE' },
+  ]
+  await page.route('**/api/v1/provinces**', (route) =>
+    route.fulfill({ status: 200, contentType: 'application/json', body: collection(provinces, 2) }),
+  )
+  await page.route('**/api/v1/wards**', (route) =>
+    route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: collection([
+        {
+          id: '21',
+          province_id: '11',
+          code: 'W1',
+          name: 'Ward One',
+          name_full: 'Ward One, Active Province',
+          status: 'ACTIVE',
+        },
+      ]),
+    }),
+  )
+  await page.goto('/settings/locations/wards')
+  await expect(page.getByRole('cell', { name: 'Ward One', exact: true })).toBeVisible()
+  await page
+    .getByRole('button', { name: /Tạo/ })
+    .evaluate((element) => (element as HTMLElement).click())
+  const provinceSelect = page.locator('.modal-card select').first()
+  await expect(provinceSelect.locator('option', { hasText: 'Active Province' })).toHaveCount(1)
+  await expect(provinceSelect.locator('option', { hasText: 'Inactive Province' })).toHaveCount(0)
+})
+
+test('403 and 404 list responses remain visible as common error states', async ({ page }) => {
+  await mockSession(page)
+  await page.route('**/api/v1/provinces**', (route) =>
+    route.fulfill({
+      status: 403,
+      contentType: 'application/json',
+      body: JSON.stringify({
+        error: { code: 'FORBIDDEN', message: 'Forbidden' },
+        meta: { request_id: 'fe010-forbidden' },
+      }),
+    }),
+  )
+  await page.goto('/settings/locations/provinces')
+  await expect(page.locator('.list-shell__state[role="alert"]')).toBeVisible()
+
+  await mockOrganizationApi(page, { treeStatus: 404 })
+  await page.goto('/organizations')
+  await expect(page.locator('.list-shell__state[role="alert"]')).toBeVisible()
+})

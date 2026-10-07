@@ -4,7 +4,7 @@ This ledger is lightweight operational evidence. It is not architecture
 authority and does not replace UR, FRS, DBD, the Implementation Contract, the
 Implementation Plan, API Design, or UI Design.
 
-The registry contains exactly 107 P1 tasks. Current ledger state records 89
+The registry contains exactly 107 P1 tasks. Current ledger state records 90
 completed tasks: Gate 0 is 10/10, Gate 1 is 14/14, Gate 2 is 8/8, Gate 3 is
 10/10, Gate 4 is 7/7, Gate 5 is 11/11, Gate 6 is 9/9, Gate 7 is 15/15,
 Gate 8 is 5/14, and Gate 9 is 0/9.
@@ -20,7 +20,7 @@ registry.
 
 | Measure | Progress |
 |---|---:|
-| P1 tasks DONE | 89/107 |
+| P1 tasks DONE | 90/107 |
 | Gate 0 | 10/10 DONE |
 | Gate 1 | 14/14 DONE |
 | Gate 2 | 8/8 DONE |
@@ -29,7 +29,7 @@ registry.
 | Gate 5 | 11/11 DONE |
 | Gate 6 | 9/9 DONE |
 | Gate 7 | 15/15 DONE |
-| Gate 8 | 5/14 DONE |
+| Gate 8 | 6/14 DONE |
 | Gate 9 | 0/9 DONE |
 
 ## Task Ledger
@@ -125,7 +125,7 @@ registry.
 | P1-DSP-006 | DONE | 0000000 | high-risk | Display Settings administration at `/system/display-settings`, SYSTEM/Organization context and inherited/source/override/reset rendering, formatter previews, and user-menu My Display Preferences with 15-key authenticated local overlay plus locale independence. Evidence: `docs/implementation/evidence/P1-DSP-006/01_display_settings_ui_assessment.md`. |
 | P1-DSP-090 | DONE | 0000000 | high-risk | Display Settings cross-layer regression closure: System/Organization set-reset and inheritance/isolation, PBAC/visibility paths, canonical-vs-formatted values, timezone/business-timezone and locale boundaries, OpenAPI/client ownership, and 27/27 Playwright administrative/self-preference coverage. Evidence: `docs/implementation/evidence/P1-DSP-090/01_display_settings_regression_assessment.md`. |
 | P1-FE-003 | DONE | 0000000 | service-standard | Shared list shell/query controls/table/pagination/export plumbing using FE-002/API-003 contracts, DSP-005 formatters, canonical string preservation, state-transition coverage, and evidence: `docs/implementation/evidence/P1-FE-003/01_common_list_components_assessment.md`. |
-| P1-FE-010 | NOT_STARTED | — | service-standard | No accepted implementation evidence. |
+| P1-FE-010 | DONE | 0000000 | service-standard | Location/Organization/Contact Slice 1 UI; FE-003 list states, generated API-010 client boundary, canonical parent/type matrix, reusable Contact UI, critical Playwright and frontend/API validation. Evidence: `docs/implementation/evidence/P1-FE-010/01_slice1_ui_assessment.md`. |
 | P1-FE-020 | NOT_STARTED | — | high-risk | No accepted implementation evidence. |
 | P1-FE-030 | NOT_STARTED | — | high-risk | No accepted implementation evidence. |
 | P1-FE-040 | NOT_STARTED | — | service-standard | No accepted implementation evidence. |

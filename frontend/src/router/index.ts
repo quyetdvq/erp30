@@ -8,6 +8,7 @@ import DisplayPreferencesView from '@/views/DisplayPreferencesView.vue'
 import DisplaySettingsView from '@/views/DisplaySettingsView.vue'
 import GroupsView from '@/views/GroupsView.vue'
 import LoginView from '@/views/LoginView.vue'
+import LocationsView from '@/views/LocationsView.vue'
 import OrganizationsView from '@/views/OrganizationsView.vue'
 import PlaceholderView from '@/views/PlaceholderView.vue'
 import ProfileView from '@/views/ProfileView.vue'
@@ -69,6 +70,18 @@ const router = createRouter({
           name: 'organizations',
           component: OrganizationsView,
           meta: { labelKey: 'nav.organizations' },
+        },
+        {
+          path: 'settings/locations/provinces',
+          name: 'locations-provinces',
+          component: LocationsView,
+          meta: { labelKey: 'nav.locations' },
+        },
+        {
+          path: 'settings/locations/wards',
+          name: 'locations-wards',
+          component: LocationsView,
+          meta: { labelKey: 'nav.locations' },
         },
         {
           path: 'approvals',

@@ -1,4 +1,4 @@
-<script setup lang="ts" generic="TRow extends Record<string, unknown>">
+<script setup lang="ts" generic="TRow extends object">
 import { computed } from 'vue'
 import { useI18n } from 'vue-i18n'
 
@@ -29,7 +29,7 @@ function labelFor(key: string): string {
 }
 
 function valueFor(row: TRow, column: ListColumn<TRow>): unknown {
-  return column.value ? column.value(row) : row[column.key]
+  return column.value ? column.value(row) : (row as Record<string, unknown>)[column.key]
 }
 
 function displayValue(row: TRow, column: ListColumn<TRow>): string {
@@ -55,7 +55,10 @@ function displayValue(row: TRow, column: ListColumn<TRow>): string {
 }
 
 function keyFor(row: TRow, index: number): string {
-  const value = typeof props.rowKey === 'function' ? props.rowKey(row, index) : row[props.rowKey]
+  const value =
+    typeof props.rowKey === 'function'
+      ? props.rowKey(row, index)
+      : (row as Record<string, unknown>)[props.rowKey]
   return value === null || value === undefined ? String(index) : String(value)
 }
 

@@ -87,6 +87,8 @@ const navItems: NavigationItem[] = [
   { labelKey: 'nav.dashboard', to: '/', icon: HomeOutline },
   { labelKey: 'nav.approvals', to: '/approvals', icon: CheckmarkCircleOutline },
   { labelKey: 'nav.organizations', to: '/organizations', icon: BusinessOutline },
+  { labelKey: 'nav.locations', to: '/settings/locations/provinces', icon: BusinessOutline },
+  { labelKey: 'nav.wards', to: '/settings/locations/wards', icon: BusinessOutline },
   { labelKey: 'nav.groups', to: '/admin/groups', icon: PeopleOutline, group: 'orgadmin' },
   {
     labelKey: 'nav.displaySettings',
@@ -152,7 +154,11 @@ const modeItems = computed(() => {
     )
   }
   if (activeMode.value === 'organization') {
-    return allowedNavItems.value.filter((item) => item.to === '/organizations')
+    return allowedNavItems.value.filter((item) =>
+      ['/organizations', '/settings/locations/provinces', '/settings/locations/wards'].includes(
+        item.to,
+      ),
+    )
   }
   return allowedNavItems.value.filter((item) =>
     t(item.labelKey).toLowerCase().includes(menuSearch.value.toLowerCase()),

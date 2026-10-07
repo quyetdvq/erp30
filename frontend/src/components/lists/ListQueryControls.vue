@@ -128,7 +128,7 @@ function reset(): void {
           :value="option.value"
           :selected="definition.multiple && selectedFor(definition.key, option.value)"
         >
-          {{ t(option.labelKey) }}
+          {{ option.label ?? t(option.labelKey) }}
         </option>
       </select>
       <input

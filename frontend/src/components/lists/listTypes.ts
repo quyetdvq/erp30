@@ -26,6 +26,7 @@ export type ListResponse<T> = {
 export type ListFilterOption = {
   value: string
   labelKey: string
+  label?: string
 }
 
 export type ListFilterDefinition = {
@@ -44,7 +45,7 @@ export type ListSortOption = {
 export type ListColumnFormat =
   'text' | 'date' | 'datetime' | 'time' | 'quantity' | 'percentage' | 'money'
 
-export type ListColumn<T extends Record<string, unknown> = Record<string, unknown>> = {
+export type ListColumn<T = Record<string, unknown>> = {
   key: string
   labelKey: string
   sortable?: boolean
