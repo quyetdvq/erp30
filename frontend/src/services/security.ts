@@ -48,7 +48,7 @@ import type {
 import { withTypedClient } from '@/api/client'
 import { i18n } from '@/i18n'
 import type { ListQuery, ListResponse } from '@/components/lists/listTypes'
-import { getUsers, type ManagedUser } from '@/services/admin'
+import type { ManagedUser } from '@/services/admin'
 import { getCurrentUser, type AuthUser } from '@/services/auth'
 
 export type SecurityAction = {
@@ -122,8 +122,50 @@ export function listAuthorizationGroupPage(
   )
 }
 
+async function loadSecurityUsers(): Promise<ManagedUser[]> {
+  const [groupPage, currentUser] = await Promise.all([
+    listAuthorizationGroupPage({
+      q: '',
+      page: 1,
+      page_size: 200,
+      sort: 'code',
+      filter: {},
+    }),
+    getCurrentUser(),
+  ])
+  const userMap = new Map<number, ManagedUser>()
+  const memberships = await Promise.all(
+    groupPage.data.map(async (group) => ({
+      group,
+      members: await getGroupMembers(String(group.id)),
+    })),
+  )
+  for (const { group, members } of memberships) {
+    for (const member of members) {
+      const id = Number(member.id)
+      const existing = userMap.get(id)
+      userMap.set(id, {
+        id,
+        username: member.username,
+        email: existing?.email ?? (id === currentUser.id ? currentUser.email : null),
+        status: member.status ?? (member.active ? 'ACTIVE' : 'INACTIVE'),
+        active: member.active,
+        created_at: null,
+        groups: [...new Set([...(existing?.groups ?? []), group.code])],
+      })
+    }
+  }
+  if (!userMap.has(currentUser.id)) {
+    userMap.set(currentUser.id, {
+      ...currentUser,
+      created_at: null,
+    })
+  }
+  return [...userMap.values()]
+}
+
 export async function listSecurityUserPage(query: ListQuery): Promise<ListResponse<ManagedUser>> {
-  const users = await getUsers()
+  const users = await loadSecurityUsers()
   const search = query.q.trim().toLowerCase()
   const filtered = users
     .filter((user) =>
@@ -144,7 +186,7 @@ export async function listSecurityUserPage(query: ListQuery): Promise<ListRespon
 }
 
 export async function getSecurityUserById(id: string): Promise<ManagedUser> {
-  const user = (await getUsers()).find((candidate) => String(candidate.id) === id)
+  const user = (await loadSecurityUsers()).find((candidate) => String(candidate.id) === id)
   if (!user) throw new Error('User not found.')
   return user
 }

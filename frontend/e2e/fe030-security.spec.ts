@@ -20,60 +20,6 @@ async function mockSession(page: Page): Promise<void> {
       }),
     }),
   )
-  await page.route('**/api/v1/admin/users*', async (route) => {
-    const isDetail = new URL(route.request().url()).pathname.endsWith('/7')
-    await route.fulfill({
-      status: 200,
-      contentType: 'application/json',
-      body: JSON.stringify(
-        isDetail
-          ? {
-              data: {
-                id: '7',
-                username: 'quyetdv',
-                email: 'quyetdv@example.test',
-                active: true,
-                status: 'ACTIVE',
-                groups: ['orgadmin'],
-                direct_permission_count: 1,
-                employee_id: '11',
-                employee_code: 'EMP-001',
-                employee_name: 'Quyet Do',
-              },
-              meta: { request_id: 'test-user-detail' },
-            }
-          : {
-              data: [
-                {
-                  id: '7',
-                  username: 'quyetdv',
-                  email: 'quyetdv@example.test',
-                  active: true,
-                  status: 'ACTIVE',
-                  groups: ['orgadmin'],
-                  direct_permission_count: 1,
-                  employee_id: '11',
-                  employee_code: 'EMP-001',
-                  employee_name: 'Quyet Do',
-                },
-                {
-                  id: '8',
-                  username: 'linhpt',
-                  email: 'linhpt@example.test',
-                  active: true,
-                  status: 'ACTIVE',
-                  groups: [],
-                  direct_permission_count: 0,
-                  employee_id: null,
-                  employee_code: null,
-                  employee_name: null,
-                },
-              ],
-              meta: { page: 1, page_size: 200, total: 2, request_id: 'test-users' },
-            },
-      ),
-    })
-  })
 }
 
 test.describe('P1-FE-030 security surfaces', () => {
