@@ -910,15 +910,13 @@ export const zSecurityUserGroup = z.object({
 export const zSecurityUser = z.object({
     id: zBigInt,
     username: z.string(),
+    name: z.string().nullable(),
     email: z.string().nullable(),
     active: z.boolean(),
     status: z.string().nullable(),
     created_at: z.iso.datetime().nullable(),
     groups: z.array(zSecurityUserGroup),
-    direct_permission_count: z.int().gte(0),
-    employee_id: zNullableBigInt,
-    employee_code: z.string().nullable(),
-    employee_name: z.string().nullable()
+    direct_permission_count: z.int().gte(0)
 });
 
 export const zSecurityUserCollection = zCollectionResponse.and(z.object({

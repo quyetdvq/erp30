@@ -29,6 +29,7 @@ const busy = ref(false)
 const columns: readonly ListColumn<ManagedUser>[] = [
   { key: 'id', labelKey: 'users.id', sortable: true },
   { key: 'username', labelKey: 'users.username', sortable: true },
+  { key: 'name', labelKey: 'users.name', sortable: true },
   { key: 'email', labelKey: 'users.email' },
   { key: 'status', labelKey: 'users.status', sortable: true },
   { key: 'groups', labelKey: 'users.groups' },
@@ -40,6 +41,7 @@ const detailFields = computed<readonly TableDetailField[]>(() => {
   return [
     { key: 'id', label: t('users.id'), value: String(user.id) },
     { key: 'username', label: t('users.username'), value: user.username },
+    { key: 'name', label: t('users.name'), value: user.name ?? t('list.noValue') },
     { key: 'email', label: t('users.email'), value: user.email ?? t('list.noValue') },
     { key: 'status', label: t('users.status'), status: user.active },
     {
@@ -126,6 +128,7 @@ onMounted(() => void load())
         <template #cell-username="{ row }"
           ><strong>{{ row.username || t('list.noValue') }}</strong></template
         >
+        <template #cell-name="{ row }">{{ row.name || t('list.noValue') }}</template>
         <template #cell-status="{ row }"><TableStatus :status="row.active" /></template>
         <template #cell-groups="{ row }"
           ><span class="group-summary">{{ groupLabel(row) }}</span></template

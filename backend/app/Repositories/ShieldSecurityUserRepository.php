@@ -25,9 +25,8 @@ final class ShieldSecurityUserRepository
         $tables = config('Auth')->tables;
         try {
             $result = $this->db->table($tables['users'] . ' u')
-                ->select('u.id, u.username, u.active, u.status, u.created_at, ai.secret AS email, e.id AS employee_id, e.employee_code, e.employee_name')
+                ->select('u.id, u.username, u.active, u.status, u.created_at, ai.name, ai.secret AS email')
                 ->join($tables['identities'] . ' ai', "ai.user_id = u.id AND ai.type = 'email_password'", 'left')
-                ->join('employees e', 'e.user_id = u.id', 'left')
                 ->where('u.deleted_at', null)
                 ->orderBy('u.id', 'ASC')
                 ->get();
@@ -44,15 +43,13 @@ final class ShieldSecurityUserRepository
             $users[$id] = [
                 'id' => $id,
                 'username' => (string) ($row['username'] ?? ''),
+                'name' => $row['name'] === null ? null : (string) $row['name'],
                 'email' => $row['email'] === null ? null : (string) $row['email'],
                 'active' => (bool) ($row['active'] ?? false),
                 'status' => $row['status'] === null ? null : strtoupper((string) $row['status']),
                 'created_at' => $row['created_at'] === null ? null : (string) $row['created_at'],
                 'groups' => [],
                 'direct_permission_count' => 0,
-                'employee_id' => $row['employee_id'] === null ? null : (int) $row['employee_id'],
-                'employee_code' => $row['employee_code'] === null ? null : (string) $row['employee_code'],
-                'employee_name' => $row['employee_name'] === null ? null : (string) $row['employee_name'],
             ];
         }
 

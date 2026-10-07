@@ -34,6 +34,7 @@ test.describe('P1-FE-030 security surfaces', () => {
             {
               id: '7',
               username: 'quyetdv',
+              name: 'Quyet Do Van',
               email: 'quyetdv@example.test',
               active: true,
               status: 'ACTIVE',
@@ -47,22 +48,17 @@ test.describe('P1-FE-030 security surfaces', () => {
                 },
               ],
               direct_permission_count: 0,
-              employee_id: null,
-              employee_code: null,
-              employee_name: null,
             },
             {
               id: '8',
               username: 'linhpt',
+              name: 'Linh Pham Thi',
               email: 'linhpt@example.test',
               active: true,
               status: 'ACTIVE',
               created_at: null,
               groups: [],
               direct_permission_count: 0,
-              employee_id: null,
-              employee_code: null,
-              employee_name: null,
             },
           ],
           meta: { page: 1, page_size: 25, total: 2, request_id: 'test-security-users' },
@@ -228,6 +224,7 @@ test.describe('P1-FE-030 security surfaces', () => {
     await page.goto('/security/users')
     await expect(page.getByRole('heading', { name: 'Người dùng' })).toBeVisible()
     await expect(page.getByRole('cell', { name: 'quyetdv', exact: true })).toBeVisible()
+    await expect(page.getByRole('cell', { name: 'Quyet Do Van', exact: true })).toBeVisible()
     await expect(page.getByRole('cell', { name: 'linhpt', exact: true })).toBeVisible()
     await expect(
       page.getByRole('table', { name: 'Danh sách dữ liệu' }).getByRole('row'),

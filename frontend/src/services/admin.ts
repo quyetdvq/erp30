@@ -3,15 +3,13 @@ import { apiClient } from '@/services/api'
 export type ManagedUser = {
   id: number | string
   username: string
+  name?: string | null
   email: string | null
   status: string | null
   active: boolean
   created_at: string | null
   groups: string[]
   direct_permission_count?: number
-  employee_id?: number | string | null
-  employee_code?: string | null
-  employee_name?: string | null
 }
 
 export type Group = {

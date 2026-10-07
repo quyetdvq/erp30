@@ -798,15 +798,13 @@ export type SecurityUserGroup = {
 export type SecurityUser = {
     id: BigInt;
     username: string;
+    name: string | null;
     email: string | null;
     active: boolean;
     status: string | null;
     created_at: string | null;
     groups: Array<SecurityUserGroup>;
     direct_permission_count: number;
-    employee_id: NullableBigInt;
-    employee_code: string | null;
-    employee_name: string | null;
 };
 
 export type SecurityUserCollection = CollectionResponse & {

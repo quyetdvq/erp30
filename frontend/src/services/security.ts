@@ -128,15 +128,13 @@ function mapSecurityUser(user: SecurityUser): ManagedUser {
   return {
     id: user.id,
     username: user.username,
+    name: user.name,
     email: user.email,
     status: user.status,
     active: user.active,
     created_at: user.created_at,
     groups: user.groups.map((group) => group.name ?? group.code),
     direct_permission_count: user.direct_permission_count,
-    employee_id: user.employee_id,
-    employee_code: user.employee_code,
-    employee_name: user.employee_name,
   }
 }
 

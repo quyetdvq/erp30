@@ -7,7 +7,7 @@ surfaces only. `P1-FE-040` and `P1-FE-050` were not started.
 
 Implemented routes:
 
-- `/security/users` — Table First read-only user list backed by the dedicated `GET /api/v1/security/users` aggregate endpoint. The backend returns each visible Shield User once with email, status, Authorization Group summaries, employee mapping, and direct-permission count, then applies the standard search/filter/sort/pagination contract. The frontend makes one generated-client request for the table and opens detail from the loaded row; it does not call `auth/me` or any per-group Members endpoint to build the list. No Shield User create/edit/state or Direct Permission writes are presented because the current API does not expose those operations.
+- `/security/users` — Table First read-only user list backed by the dedicated `GET /api/v1/security/users` aggregate endpoint. The backend returns each visible Shield User once with the full name from `auth_identities.name`, email, status, Authorization Group summaries, and direct-permission count, then applies the standard search/filter/sort/pagination contract. The frontend makes one generated-client request for the table and opens detail from the loaded row; it does not call `auth/me`, join Employee data, or call any per-group Members endpoint to build the list. No Shield User create/edit/state or Direct Permission writes are presented because those API contracts remain pending.
 - `/security/authorization-groups` — Table First Authorization Group CRUD/state, modal detail tabs, complete backend Members rendering and all-user member replacement, plus canonical Resource Action permission replacement with Resource/Action/ALLOW detail rows.
 - `/security/resources` — Resource CRUD and Resource Action CRUD. New Domain choices are exactly `SYSTEM`, `MASTER`, and `ORGANIZATION`; existing Domain is immutable/read-only and `COMPANY` is absent.
 - `/security/policies` — Organization scope, Resource, optional all-state selection, exact participant types `USER|GROUP|POSITION|DEPARTMENT|ORGANIZATION`, and `ALLOW|DENY|ABSOLUTE_DENY` action/effect rows. UI text states that Policy does not grant missing Base Permission.
@@ -53,6 +53,6 @@ authorization regressions above provide the security regression evidence.
 
 - DB: none.
 - Authorization: frontend controls remain UX only; API-030 remains the authority.
-- API/OpenAPI: added contract-ready `GET /api/v1/security/users` with backend aggregation and generated client/types; existing Group/Members contracts remain for group detail editing only.
+- API/OpenAPI: added contract-ready `GET /api/v1/security/users` with backend aggregation and generated client/types; the projection reads `auth_identities.name` and avoids the unused Employee JOIN. Shield User writes/password/state remain API-contract pending.
 - UI/i18n/accessibility: added vi/en key parity, Security navigation/routes,
   accessible labels, scoped Axe coverage, and shared delete row action support.
