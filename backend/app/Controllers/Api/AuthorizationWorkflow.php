@@ -17,6 +17,12 @@ final class AuthorizationWorkflow extends ApiController
         return ApiTransport::collection($this->response, $result->data, $result->query->page, $result->query->pageSize, $result->total);
     }
 
+    public function securityUsers(): ResponseInterface
+    {
+        $result = $this->service()->securityUsers($this->request->getGet());
+        return ApiTransport::collection($this->response, $result->data, $result->query->page, $result->query->pageSize, $result->total);
+    }
+
     public function create(string $resource): ResponseInterface
     {
         return $this->respondData($this->service()->create($resource, $this->jsonPayload()), 201);

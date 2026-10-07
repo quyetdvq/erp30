@@ -43,6 +43,8 @@ $routes->group('api/v1', ['filter' => 'cors'], static function (RouteCollection 
     $routes->post('employee-assignments/(:num)/actions/set-state', 'Api\\EmployeeStructure::setState/employee_assignment/$1');
     $routes->get('organizations/tree', 'Api\\FoundationOrganizationContact::tree');
 
+    $routes->get('security/users', 'Api\\AuthorizationWorkflow::securityUsers');
+
     foreach (['authorization-groups' => 'authorization_group', 'resources' => 'resource', 'policies' => 'policy', 'authorization-logs' => 'authorization_log', 'workflow-states' => 'workflow_state', 'lifecycles' => 'lifecycle'] as $path => $resource) {
         $routes->get($path, 'Api\\AuthorizationWorkflow::list/' . $resource);
         if ($resource !== 'authorization_log') {

@@ -14,6 +14,7 @@ import {
   listAuthorizationGroupPermissions,
   listAuthorizationGroups,
   listAuthorizationLogs,
+  listSecurityUsers,
   listDepartments,
   listOrganizations,
   listPolicies,
@@ -43,6 +44,7 @@ import type {
   Resource,
   ResourceActionCreate,
   ResourceActionPatch,
+  SecurityUser,
   WorkflowState,
 } from '@/api/generated/types.gen'
 import { withTypedClient } from '@/api/client'
@@ -122,85 +124,34 @@ export function listAuthorizationGroupPage(
   )
 }
 
-async function loadSecurityUsers(): Promise<ManagedUser[]> {
-  const [groupPage, currentUser] = await Promise.all([
-    listAuthorizationGroupPage({
-      q: '',
-      page: 1,
-      page_size: 200,
-      sort: 'code',
-      filter: {},
-    }),
-    getCurrentUser(),
-  ])
-  const userMap = new Map<string, ManagedUser>()
-  const findExisting = (id: number, username: string): [string, ManagedUser] | undefined =>
-    [...userMap.entries()].find(
-      ([, user]) => String(user.id) === String(id) || user.username === username,
-    )
-  const memberships = await Promise.all(
-    groupPage.data.map(async (group) => ({
-      group,
-      members: await getGroupMembers(String(group.id)),
-    })),
-  )
-  for (const { group, members } of memberships) {
-    for (const member of members) {
-      const id = Number(member.id)
-      const existingEntry = findExisting(id, member.username)
-      const existing = existingEntry?.[1]
-      userMap.set(existingEntry?.[0] ?? `id:${String(id)}`, {
-        id,
-        username: member.username,
-        email: existing?.email ?? (id === currentUser.id ? currentUser.email : null),
-        status: member.status ?? (member.active ? 'ACTIVE' : 'INACTIVE'),
-        active: member.active,
-        created_at: null,
-        groups: [...new Set([...(existing?.groups ?? []), group.code])],
-      })
-    }
+function mapSecurityUser(user: SecurityUser): ManagedUser {
+  return {
+    id: Number(user.id),
+    username: user.username,
+    email: user.email,
+    status: user.status,
+    active: user.active,
+    created_at: user.created_at,
+    groups: user.groups.map((group) => group.name ?? group.code),
+    direct_permission_count: user.direct_permission_count,
+    employee_id: user.employee_id === null ? null : Number(user.employee_id),
+    employee_code: user.employee_code,
+    employee_name: user.employee_name,
   }
-  const currentEntry = findExisting(currentUser.id, currentUser.username)
-  if (currentEntry) {
-    userMap.set(currentEntry[0], {
-      ...currentEntry[1],
-      email: currentEntry[1].email ?? currentUser.email,
-      groups: [...new Set([...currentEntry[1].groups, ...currentUser.groups])],
-    })
-  } else {
-    userMap.set(`id:${String(currentUser.id)}`, {
-      ...currentUser,
-      created_at: null,
-    })
-  }
-  return [...userMap.values()]
 }
 
 export async function listSecurityUserPage(query: ListQuery): Promise<ListResponse<ManagedUser>> {
-  const users = await loadSecurityUsers()
-  const search = query.q.trim().toLowerCase()
-  const filtered = users
-    .filter((user) =>
-      search.length === 0
-        ? true
-        : `${user.username} ${user.email ?? ''}`.toLowerCase().includes(search),
-    )
-    .sort((left, right) => {
-      const direction = query.sort.startsWith('-') ? -1 : 1
-      const field = query.sort.replace(/^-/, '') as 'id' | 'username' | 'email' | 'status'
-      return String(left[field] ?? '').localeCompare(String(right[field] ?? '')) * direction
-    })
-  const start = (query.page - 1) * query.page_size
-  return {
-    data: filtered.slice(start, start + query.page_size),
-    meta: { page: query.page, page_size: query.page_size, total: filtered.length },
-  }
-}
-
-export async function getSecurityUserById(id: string): Promise<ManagedUser> {
-  const user = (await loadSecurityUsers()).find((candidate) => String(candidate.id) === id)
-  if (!user) throw new Error('User not found.')
-  return user
+  return withTypedClient((client) =>
+    listSecurityUsers({
+      client,
+      headers: headers(),
+      query: apiQuery(query),
+      throwOnError: true,
+    }).then((response) => {
+      const page = collection(response)
+      return { ...page, data: page.data.map(mapSecurityUser) }
+    }),
+  )
 }
 
 export async function saveAuthorizationGroup(

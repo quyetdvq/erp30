@@ -356,6 +356,12 @@ paths:
       summary: Set employee assignment state
       requestBody: {$ref: '#/components/requestBodies/EmployeeAssignmentState'}
       responses: {'200': {$ref: '#/components/responses/EmployeeAssignmentResponse'}, '401': {$ref: '#/components/responses/Unauthorized'}, '403': {$ref: '#/components/responses/Forbidden'}, '404': {$ref: '#/components/responses/NotFound'}, '422': {$ref: '#/components/responses/UnprocessableEntity'}}
+  /api/v1/security/users:
+    get:
+      operationId: listSecurityUsers
+      summary: List authorized Shield users for Security Users
+      parameters: [{$ref: '#/components/parameters/AcceptLanguage'}, {$ref: '#/components/parameters/RequestId'}, {$ref: '#/components/parameters/Q'}, {$ref: '#/components/parameters/Page'}, {$ref: '#/components/parameters/PageSize'}, {$ref: '#/components/parameters/Sort'}, {$ref: '#/components/parameters/Filter'}]
+      responses: {'200': {$ref: '#/components/responses/SecurityUserCollection'}, '401': {$ref: '#/components/responses/Unauthorized'}, '403': {$ref: '#/components/responses/Forbidden'}}
   /api/v1/authorization-groups:
     get:
       operationId: listAuthorizationGroups
@@ -975,6 +981,7 @@ components:
     NoContent: {description: Mutation completed successfully.}
     AuthorizationGroupResponse: {description: Authorization group response., content: {application/json: {schema: {$ref: '#/components/schemas/AuthorizationGroupResponse'}}}}
     AuthorizationGroupCollection: {description: Authorization group collection., content: {application/json: {schema: {$ref: '#/components/schemas/AuthorizationGroupCollection'}}}}
+    SecurityUserCollection: {description: Authorized Shield user collection for the Security Users screen., content: {application/json: {schema: {$ref: '#/components/schemas/SecurityUserCollection'}}}}
     ResourceResponse: {description: Resource response., content: {application/json: {schema: {$ref: '#/components/schemas/ResourceResponse'}}}}
     ResourceCollection: {description: Resource collection., content: {application/json: {schema: {$ref: '#/components/schemas/ResourceCollection'}}}}
     NumberingSeriesResponse: {description: Numbering series response., content: {application/json: {schema: {$ref: '#/components/schemas/NumberingSeriesResponse'}}}}
@@ -1943,6 +1950,9 @@ components:
     EmployeeAssignmentCollection: {allOf: [{$ref: '#/components/schemas/CollectionResponse'}], properties: {data: {type: array, items: {$ref: '#/components/schemas/EmployeeAssignment'}}}}
     Api030State: {type: object, required: [status], properties: {status: {type: string, enum: [ACTIVE, INACTIVE]}}}
     AuthorizationGroup: {type: object, required: [id, code, name, status], properties: {id: {$ref: '#/components/schemas/BigInt'}, code: {type: string}, name: {type: string}, description: {type: [string, 'null']}, status: {type: string, enum: [ACTIVE, INACTIVE]}}}
+    SecurityUserGroup: {type: object, required: [id, code, name, status], properties: {id: {$ref: '#/components/schemas/NullableBigInt'}, code: {type: string}, name: {type: [string, 'null']}, status: {type: [string, 'null']}}}
+    SecurityUser: {type: object, required: [id, username, email, active, status, created_at, groups, direct_permission_count, employee_id, employee_code, employee_name], properties: {id: {$ref: '#/components/schemas/BigInt'}, username: {type: string}, email: {type: [string, 'null']}, active: {type: boolean}, status: {type: [string, 'null']}, created_at: {type: [string, 'null'], format: date-time}, groups: {type: array, items: {$ref: '#/components/schemas/SecurityUserGroup'}}, direct_permission_count: {type: integer, minimum: 0}, employee_id: {$ref: '#/components/schemas/NullableBigInt'}, employee_code: {type: [string, 'null']}, employee_name: {type: [string, 'null']}}}
+    SecurityUserCollection: {allOf: [{$ref: '#/components/schemas/CollectionResponse'}], properties: {data: {type: array, items: {$ref: '#/components/schemas/SecurityUser'}}}}
     AuthorizationGroupCreate: {type: object, required: [code, name], properties: {code: {type: string}, name: {type: string}, description: {type: string}, status: {type: string, enum: [ACTIVE, INACTIVE]}}}
     AuthorizationGroupPatch: {type: object, properties: {code: {type: string}, name: {type: string}, description: {type: [string, 'null']}, status: {type: string, enum: [ACTIVE, INACTIVE]}}}
     AuthorizationGroupMembers: {type: object, required: [user_ids], properties: {user_ids: {type: array, items: {$ref: '#/components/schemas/BigInt'}}}}

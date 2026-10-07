@@ -444,6 +444,7 @@ export const messages = {
         'Shield User create/edit/state và direct-permission mutation chưa có trong API hiện hành; màn hình này chỉ hiển thị dữ liệu đọc được.',
       userGroups: 'Authorization Groups',
       directPermissions: 'Direct Permissions',
+      directPermissionCount: 'Số direct permission',
       directPermissionsUnavailable:
         'API hiện hành chưa cung cấp danh sách hoặc mutation Direct Permissions cho User; không có control giả lập.',
       noGroups: 'User chưa có Authorization Group được trả về.',
@@ -899,6 +900,7 @@ export const messages = {
         'Shield User create/edit/state and direct-permission mutations are not exposed by the current API; this screen is read-only.',
       userGroups: 'Authorization Groups',
       directPermissions: 'Direct Permissions',
+      directPermissionCount: 'Direct permission count',
       directPermissionsUnavailable:
         'The current API does not expose User Direct Permission listing or mutation; no fabricated controls are shown.',
       noGroups: 'No Authorization Groups were returned for this User.',

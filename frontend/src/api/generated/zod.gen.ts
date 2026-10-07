@@ -900,6 +900,31 @@ export const zAuthorizationGroup = z.object({
     status: z.enum(['ACTIVE', 'INACTIVE'])
 });
 
+export const zSecurityUserGroup = z.object({
+    id: zNullableBigInt,
+    code: z.string(),
+    name: z.string().nullable(),
+    status: z.string().nullable()
+});
+
+export const zSecurityUser = z.object({
+    id: zBigInt,
+    username: z.string(),
+    email: z.string().nullable(),
+    active: z.boolean(),
+    status: z.string().nullable(),
+    created_at: z.iso.datetime().nullable(),
+    groups: z.array(zSecurityUserGroup),
+    direct_permission_count: z.int().gte(0),
+    employee_id: zNullableBigInt,
+    employee_code: z.string().nullable(),
+    employee_name: z.string().nullable()
+});
+
+export const zSecurityUserCollection = zCollectionResponse.and(z.object({
+    data: z.array(zSecurityUser).optional()
+}));
+
 export const zAuthorizationGroupCreate = z.object({
     code: z.string(),
     name: z.string(),
@@ -1916,6 +1941,27 @@ export const zSetEmployeeAssignmentStatePath = z.object({
  * Authorized employee assignment resource.
  */
 export const zSetEmployeeAssignmentStateResponse = zEmployeeAssignmentResponse;
+
+export const zListSecurityUsersHeaders = z.object({
+    'Accept-Language': z.enum(['vi', 'en']).optional().default('vi'),
+    'X-Request-ID': zRequestId.optional()
+});
+
+export const zListSecurityUsersQuery = z.object({
+    q: z.string().optional(),
+    page: z.int().gte(1).optional().default(1),
+    page_size: z.int().gte(1).lte(200).optional().default(50),
+    sort: z.string().optional(),
+    filter: z.record(z.string(), z.union([
+        z.string(),
+        z.array(z.string())
+    ])).optional()
+});
+
+/**
+ * Authorized Shield user collection for the Security Users screen.
+ */
+export const zListSecurityUsersResponse = zSecurityUserCollection;
 
 export const zListAuthorizationGroupsHeaders = z.object({
     'Accept-Language': z.enum(['vi', 'en']).optional().default('vi'),

@@ -13,7 +13,7 @@ import {
 import type { TableDetailField } from '@/components/lists/TableDetailModal.vue'
 import type { ListColumn, ListQuery } from '@/components/lists/listTypes'
 import { useListState } from '@/composables/useListState'
-import { getSecurityUserById, listSecurityUserPage } from '@/services/security'
+import { listSecurityUserPage } from '@/services/security'
 import { reportApiError } from '@/services/errorBoundary'
 import type { ManagedUser } from '@/services/admin'
 
@@ -43,6 +43,11 @@ const detailFields = computed<readonly TableDetailField[]>(() => {
     { key: 'email', label: t('users.email'), value: user.email ?? t('list.noValue') },
     { key: 'status', label: t('users.status'), status: user.active },
     {
+      key: 'directPermissionCount',
+      label: t('security.directPermissionCount'),
+      value: String(user.direct_permission_count ?? 0),
+    },
+    {
       key: 'groups',
       label: t('users.groups'),
       value: user.groups.join(', ') || t('list.noValue'),
@@ -70,18 +75,9 @@ async function load(): Promise<void> {
     reportApiError(caught)
   }
 }
-async function openDetails(row: ManagedUser): Promise<void> {
-  busy.value = true
-  error.value = null
-  try {
-    selected.value = await getSecurityUserById(String(row.id))
-    detailOpen.value = true
-  } catch (caught: unknown) {
-    error.value = caught
-    reportApiError(caught)
-  } finally {
-    busy.value = false
-  }
+function openDetails(row: ManagedUser): void {
+  selected.value = row
+  detailOpen.value = true
 }
 function groupLabel(user: ManagedUser): string {
   return user.groups.join(', ') || t('list.noValue')

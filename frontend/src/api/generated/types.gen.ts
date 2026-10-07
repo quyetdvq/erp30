@@ -788,6 +788,31 @@ export type AuthorizationGroup = {
     status: 'ACTIVE' | 'INACTIVE';
 };
 
+export type SecurityUserGroup = {
+    id: NullableBigInt;
+    code: string;
+    name: string | null;
+    status: string | null;
+};
+
+export type SecurityUser = {
+    id: BigInt;
+    username: string;
+    email: string | null;
+    active: boolean;
+    status: string | null;
+    created_at: string | null;
+    groups: Array<SecurityUserGroup>;
+    direct_permission_count: number;
+    employee_id: NullableBigInt;
+    employee_code: string | null;
+    employee_name: string | null;
+};
+
+export type SecurityUserCollection = CollectionResponse & {
+    data?: Array<SecurityUser>;
+};
+
 export type AuthorizationGroupCreate = {
     code: string;
     name: string;
@@ -3173,6 +3198,56 @@ export type SetEmployeeAssignmentStateResponses = {
 };
 
 export type SetEmployeeAssignmentStateResponse = SetEmployeeAssignmentStateResponses[keyof SetEmployeeAssignmentStateResponses];
+
+export type ListSecurityUsersData = {
+    body?: never;
+    headers?: {
+        /**
+         * Supported request language. Unsupported values fall back to vi.
+         */
+        'Accept-Language'?: 'vi' | 'en';
+        /**
+         * Client request correlation identifier; invalid or missing values are replaced by a generated UUID.
+         */
+        'X-Request-ID'?: RequestId;
+    };
+    path?: never;
+    query?: {
+        q?: string;
+        page?: number;
+        page_size?: number;
+        /**
+         * Allowlisted comma-separated sort terms; a final id ASC tie-breaker is applied.
+         */
+        sort?: string;
+        filter?: {
+            [key: string]: string | Array<string>;
+        };
+    };
+    url: '/api/v1/security/users';
+};
+
+export type ListSecurityUsersErrors = {
+    /**
+     * Unauthenticated or invalid authentication.
+     */
+    401: ErrorResponse;
+    /**
+     * Visible target but action denied.
+     */
+    403: ErrorResponse;
+};
+
+export type ListSecurityUsersError = ListSecurityUsersErrors[keyof ListSecurityUsersErrors];
+
+export type ListSecurityUsersResponses = {
+    /**
+     * Authorized Shield user collection for the Security Users screen.
+     */
+    200: SecurityUserCollection;
+};
+
+export type ListSecurityUsersResponse = ListSecurityUsersResponses[keyof ListSecurityUsersResponses];
 
 export type ListAuthorizationGroupsData = {
     body?: never;

@@ -20,6 +20,7 @@ use App\Repositories\AuthorizationLogRepository;
 use App\Repositories\LifecycleRepository;
 use App\Repositories\PolicyRepository;
 use App\Repositories\ResourceCatalogRepository;
+use App\Repositories\ShieldSecurityUserRepository;
 use CodeIgniter\Database\ConnectionInterface;
 use CodeIgniter\Exceptions\PageNotFoundException;
 use CodeIgniter\Shield\Entities\User;
@@ -45,6 +46,7 @@ final class Api030AuthorizationWorkflowService
         private readonly ?PolicyRepository $policyRepository = null,
         private readonly ?LifecycleRepository $lifecycleRepository = null,
         private readonly ?ResourceCatalogRepository $resourceRepository = null,
+        private readonly ?ShieldSecurityUserRepository $securityUserRepository = null,
         ?ConnectionInterface $db = null,
         private readonly ?MutationContext $mutationContext = null,
     ) {
@@ -73,6 +75,30 @@ final class Api030AuthorizationWorkflowService
         return ($this->queryAdapter ?? new CommonListQueryAdapter())->paginate(
             $query,
             $this->allowlist($resource),
+            new AuthorizedArrayListSource($rows),
+        );
+    }
+
+    /** @param array<string, mixed> $query */
+    public function securityUsers(array $query): CommonListResult
+    {
+        $operation = $this->operation();
+        $rows = [];
+        foreach ($this->securityUserRepository()->findAll() as $row) {
+            try {
+                $this->authorize('user', 'view', $row, [], $operation);
+                $rows[] = $row;
+            } catch (DomainException $exception) {
+                if ($this->isVisibilityDenial($exception)) {
+                    continue;
+                }
+                throw $exception;
+            }
+        }
+
+        return ($this->queryAdapter ?? new CommonListQueryAdapter())->paginate(
+            $query,
+            $this->allowlist('security_user'),
             new AuthorizedArrayListSource($rows),
         );
     }
@@ -528,6 +554,7 @@ final class Api030AuthorizationWorkflowService
             'resource' => new CommonListQueryAllowlist(['type', 'name'], ['domain'], ['type', 'name', 'domain']),
             'policy' => new CommonListQueryAllowlist([], ['organization_id', 'resource_id', 'state_id', 'participant_type', 'participant_ref_id'], ['id', 'organization_id', 'resource_id']),
             'authorization_log' => new CommonListQueryAllowlist(['action', 'decision', 'reason', 'resource_type'], ['user_id', 'resource_type', 'resource_id', 'action', 'decision', 'organization_id', 'request_id', 'created_from', 'created_to'], ['id', 'created_at']),
+            'security_user' => new CommonListQueryAllowlist(['username', 'email', 'employee_code', 'employee_name'], ['status', 'active'], ['id', 'username', 'email', 'status', 'created_at']),
             'workflow_state' => new CommonListQueryAllowlist(['code', 'name'], ['status'], ['code', 'name', 'status']),
             'lifecycle' => new CommonListQueryAllowlist(['code', 'name'], ['status'], ['code', 'name', 'status']),
             default => throw new \InvalidArgumentException('Unknown API-030 list resource.'),
@@ -647,6 +674,11 @@ final class Api030AuthorizationWorkflowService
     private function resourceRepository(): ResourceCatalogRepository
     {
         return $this->resourceRepository ?? new ResourceCatalogRepository($this->connection);
+    }
+
+    private function securityUserRepository(): ShieldSecurityUserRepository
+    {
+        return $this->securityUserRepository ?? new ShieldSecurityUserRepository($this->connection);
     }
 
     private function groupService(OperationContext $operation): AuthorizationGroupService

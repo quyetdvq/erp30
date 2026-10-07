@@ -25,6 +25,50 @@ async function mockSession(page: Page): Promise<void> {
 test.describe('P1-FE-030 security surfaces', () => {
   test.beforeEach(async ({ page }) => {
     await mockSession(page)
+    await page.route('**/api/v1/security/users*', async (route) =>
+      route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({
+          data: [
+            {
+              id: '7',
+              username: 'quyetdv',
+              email: 'quyetdv@example.test',
+              active: true,
+              status: 'ACTIVE',
+              created_at: null,
+              groups: [
+                {
+                  id: '1',
+                  code: 'SECURITY_ADMIN',
+                  name: 'Security administrators',
+                  status: 'ACTIVE',
+                },
+              ],
+              direct_permission_count: 0,
+              employee_id: null,
+              employee_code: null,
+              employee_name: null,
+            },
+            {
+              id: '8',
+              username: 'linhpt',
+              email: 'linhpt@example.test',
+              active: true,
+              status: 'ACTIVE',
+              created_at: null,
+              groups: [],
+              direct_permission_count: 0,
+              employee_id: null,
+              employee_code: null,
+              employee_name: null,
+            },
+          ],
+          meta: { page: 1, page_size: 25, total: 2, request_id: 'test-security-users' },
+        }),
+      }),
+    )
     await page.route('**/api/v1/authorization-groups*', async (route) =>
       route.fulfill({
         status: 200,
@@ -172,7 +216,15 @@ test.describe('P1-FE-030 security surfaces', () => {
     )
   })
 
-  test('users is a complete read-only table with modal details', async ({ page }) => {
+  test('users is a complete read-only table with modal details and one aggregate request', async ({
+    page,
+  }) => {
+    let memberRequests = 0
+    let securityUserRequests = 0
+    page.on('request', (request) => {
+      if (request.url().includes('/api/v1/authorization-groups/1/members')) memberRequests += 1
+      if (request.url().includes('/api/v1/security/users')) securityUserRequests += 1
+    })
     await page.goto('/security/users')
     await expect(page.getByRole('heading', { name: 'Người dùng' })).toBeVisible()
     await expect(page.getByRole('cell', { name: 'quyetdv', exact: true })).toBeVisible()
@@ -189,6 +241,8 @@ test.describe('P1-FE-030 security surfaces', () => {
     await expect(
       page.getByRole('dialog', { name: /Chi tiết người dùng/ }).getByText('quyetdv@example.test'),
     ).toBeVisible()
+    expect(memberRequests).toBe(0)
+    expect(securityUserRequests).toBe(1)
   })
 
   test('authorization groups show all members and resource/action permissions in a modal', async ({
