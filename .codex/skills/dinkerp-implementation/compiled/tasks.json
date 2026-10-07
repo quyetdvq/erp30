@@ -1,6 +1,6 @@
 {
   "format": "META-CODEX-003",
-  "source": "Implementation Plan v1.8 plus gate registries",
+  "source": "Implementation Plan v1.9 plus gate registries",
   "task_count": 107,
   "tasks": [
     {
@@ -1188,9 +1188,9 @@
       "direct_source_verification": [
         "UR-PRD-007",
         "FRS-P1-UOM-001 Product Group hierarchy",
-        "DBD v1.13 product_groups adjacency-list",
-        "Implementation Contract v1.8 product-group-tree",
-        "Implementation Plan v1.8 P1-PRD-001"
+        "DBD v1.14 product_groups adjacency-list",
+        "Implementation Contract v1.9 product-group-tree",
+        "Implementation Plan v1.9 P1-PRD-001"
       ],
       "expected_output": "product-group hierarchy repository/service",
       "forbidden_scope": [
@@ -2115,8 +2115,8 @@
       ],
       "approved_decision_ids": ["CHANGE-DISPLAY-SETTING-001"],
       "direct_source_verification": [
-        "API Design v1.6 §6A",
-        "Implementation Contract v1.8 §§3.6,4,6",
+        "API Design v1.7 §6A",
+        "Implementation Contract v1.9 §§3.6,4,6",
         "IMP Plan §14A P1-DSP-004"
       ],
       "expected_output": "Display Settings API/OpenAPI/generated client",
@@ -2141,7 +2141,7 @@
       ],
       "approved_decision_ids": ["CHANGE-DISPLAY-SETTING-001"],
       "direct_source_verification": [
-        "UI Design v1.7 §4B.1–4B.4",
+        "UI Design v1.8 §4B.1–4B.4",
         "IMP Plan §14A P1-DSP-005"
       ],
       "expected_output": "Display Settings runtime/formatter foundation",
@@ -2167,7 +2167,7 @@
       ],
       "approved_decision_ids": ["CHANGE-DISPLAY-SETTING-001"],
       "direct_source_verification": [
-        "UI Design v1.7 §4B.5–4B.8",
+        "UI Design v1.8 §4B.5–4B.8",
         "IMP Plan §15 P1-DSP-006"
       ],
       "expected_output": "Display Settings UI checkpoint",
@@ -2194,8 +2194,8 @@
       ],
       "approved_decision_ids": ["CHANGE-DISPLAY-SETTING-001"],
       "direct_source_verification": [
-        "API Design v1.6 §6A",
-        "UI Design v1.7 §4B.9",
+        "API Design v1.7 §6A",
+        "UI Design v1.8 §4B.9",
         "IMP Plan §15 Early Gate 8 Display Settings checkpoint"
       ],
       "expected_output": "Display Settings regression/E2E closure evidence",

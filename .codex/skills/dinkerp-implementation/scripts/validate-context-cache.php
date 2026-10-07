@@ -164,7 +164,7 @@ foreach ($moduleMappings as $taskId => $mapping) {
 }
 
 // Parse the authoritative Plan task tables (Task ID, title, depends, output).
-$planPath = $root . DIRECTORY_SEPARATOR . 'docs' . DIRECTORY_SEPARATOR . 'architecture' . DIRECTORY_SEPARATOR . '04_P1_Implementation_Plan_v1.8.md';
+$planPath = $root . DIRECTORY_SEPARATOR . 'docs' . DIRECTORY_SEPARATOR . 'architecture' . DIRECTORY_SEPARATOR . '04_P1_Implementation_Plan_v1.9.md';
 $planRows = [];
 foreach (file($planPath, FILE_IGNORE_NEW_LINES) ?: [] as $line) {
     if (preg_match('/^\|\s*(P1-[A-Z]+-[0-9]+)\s*\|\s*(.*?)\s*\|\s*(.*?)\s*\|\s*(.*?)\s*\|/', $line, $match)) {

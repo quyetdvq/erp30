@@ -108,7 +108,7 @@
       "rules": [
         "Display Settings are presentation-only and never business, authorization, workflow, pricing, effective-date, numbering, import, or calculation authority",
         "server scopes are SYSTEM and ORGANIZATION only; no server USER or COMPANY pseudo-scope",
-        "reuse CodeIgniter Settings persistence and an approved existing audit sink; do not invent a generic settings or audit table",
+          "reuse CodeIgniter Settings persistence and the approved configuration_audit_events sink; do not invent a generic settings table",
         "display_setting is an ORGANIZATION Resource with view/edit actions through canonical AuthorizationService/PBAC",
         "Gate 7A foundation is P1-DSP-001..005; P1-DSP-006 and P1-DSP-090 execute as the early Gate 8 checkpoint",
         "P1-FE-003 and feature UI P1-FE-010..080 remain blocked until P1-DSP-090 is DONE"

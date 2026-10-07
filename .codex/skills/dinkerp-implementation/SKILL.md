@@ -104,7 +104,7 @@ forward-only.
 - `references/validation-profiles.md` — scoped and batch validation.
 - `references/tasks-gate0.md` through `references/tasks-gate9.md` — task
   navigation pointers only; authoritative requirements stay in `docs/`.
-- `docs/architecture/07_CHANGE_DISPLAY_SETTING_001_v1.1.md` — approved
+- `docs/architecture/07_CHANGE_DISPLAY_SETTING_001_v1.2.md` — approved
   Display Settings change-control boundary and Gate 7A/early Gate 8 placement.
 - `references/project-invariants.md` — compact architecture/domain guardrails.
 - `references/review-checklists.md` — final self-review, including Gate 7 API.
