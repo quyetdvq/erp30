@@ -20,7 +20,10 @@ async function mockSession(page: Page): Promise<void> {
 
 async function mockOrganizationApi(
   page: Page,
-  options: { treeStatus?: number } = {},
+  options: {
+    treeStatus?: number
+    contactUpdateBody?: { value: Record<string, unknown> | null }
+  } = {},
 ): Promise<void> {
   const tree = [
     {
@@ -78,8 +81,30 @@ async function mockOrganizationApi(
     }
     return route.fulfill({ status: 200, contentType: 'application/json', body: collection(tree) })
   })
-  await page.route('**/api/v1/contacts**', (route) =>
-    route.fulfill({
+  await page.route('**/api/v1/contacts**', async (route) => {
+    if (route.request().method() === 'PATCH') {
+      if (options.contactUpdateBody) {
+        options.contactUpdateBody.value = route.request().postDataJSON() as Record<string, unknown>
+      }
+      return route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({
+          data: {
+            id: '7001',
+            contact_type: 'ORGANIZATION',
+            contact_ref_id: companyId,
+            name: 'Alice Updated',
+            email: 'alice@test',
+            phone: '0900',
+            mobile: null,
+            status: 'ACTIVE',
+          },
+          meta: { request_id: 'fe010-contact-update' },
+        }),
+      })
+    }
+    return route.fulfill({
       status: 200,
       contentType: 'application/json',
       body: collection([
@@ -94,13 +119,14 @@ async function mockOrganizationApi(
           status: 'ACTIVE',
         },
       ]),
-    }),
-  )
+    })
+  })
 }
 
 test('Organization tree, parent matrix, contacts history, and accessibility', async ({ page }) => {
   await mockSession(page)
-  await mockOrganizationApi(page)
+  const contactUpdateBody: { value: Record<string, unknown> | null } = { value: null }
+  await mockOrganizationApi(page, { contactUpdateBody })
   await page.goto('/organizations')
 
   await expect(page.getByRole('button', { name: /G-01/ })).toBeVisible()
@@ -128,6 +154,13 @@ test('Organization tree, parent matrix, contacts history, and accessibility', as
     .evaluate((element) => (element as HTMLElement).click())
   await expect(page.getByRole('cell', { name: 'Alice', exact: true })).toBeVisible()
   const contactRegion = page.getByRole('region', { name: 'Liên hệ' })
+  await contactRegion.getByRole('button', { name: 'Sửa liên hệ' }).click()
+  await page.locator('.modal-card input').first().fill('Alice Updated')
+  await page.getByRole('button', { name: 'Lưu' }).click()
+  await expect.poll(() => contactUpdateBody.value).not.toBeNull()
+  expect(contactUpdateBody.value).not.toHaveProperty('contact_type')
+  expect(contactUpdateBody.value).not.toHaveProperty('contact_ref_id')
+  expect(contactUpdateBody.value).toMatchObject({ name: 'Alice Updated', status: 'ACTIVE' })
   await contactRegion
     .getByRole('tab', { name: 'Lịch sử' })
     .evaluate((element) => (element as HTMLElement).click())

@@ -24,6 +24,7 @@ import {
 import type {
   Contact,
   ContactCreate,
+  ContactPatch,
   Organization,
   OrganizationCreate,
   Province,
@@ -35,6 +36,9 @@ import type {
 import { withTypedClient } from '@/api/client'
 import { i18n } from '@/i18n'
 import type { ListQuery, ListResponse } from '@/components/lists/listTypes'
+
+/** Contact ownership is immutable after creation; PATCH only carries editable fields. */
+export type ContactUpdate = Omit<ContactCreate, 'contact_type' | 'contact_ref_id'>
 
 function headers() {
   return { 'Accept-Language': i18n.global.locale.value as 'vi' | 'en' }
@@ -219,17 +223,27 @@ export async function getContactById(id: string): Promise<Contact> {
   return resource(response)
 }
 
-export async function saveContact(payload: ContactCreate, id?: string): Promise<Contact> {
+export async function saveContact(
+  payload: ContactCreate | ContactUpdate,
+  id?: string,
+): Promise<Contact> {
   const response = await withTypedClient((client) =>
     id
       ? updateContact({
           client,
           headers: headers(),
           path: { id },
-          body: payload,
+          // The generated OpenAPI alias still includes create-only owner fields.
+          // API-010 rejects those fields on update, so keep the runtime PATCH narrow.
+          body: payload as ContactPatch,
           throwOnError: true,
         })
-      : createContact({ client, headers: headers(), body: payload, throwOnError: true }),
+      : createContact({
+          client,
+          headers: headers(),
+          body: payload as ContactCreate,
+          throwOnError: true,
+        }),
   )
   return resource(response)
 }

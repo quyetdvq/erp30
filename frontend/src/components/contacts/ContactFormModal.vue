@@ -3,6 +3,7 @@ import { computed, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 
 import type { Contact, ContactCreate, Province, Ward } from '@/api/generated/types.gen'
+import type { ContactUpdate } from '@/services/foundation'
 
 const props = withDefaults(
   defineProps<{
@@ -19,7 +20,7 @@ const props = withDefaults(
 
 const emit = defineEmits<{
   close: []
-  save: [payload: ContactCreate]
+  save: [payload: ContactCreate | ContactUpdate]
   'province-change': [provinceId: string]
 }>()
 
@@ -64,9 +65,7 @@ function onProvinceChange(value: string): void {
 }
 
 function save(): void {
-  const payload: ContactCreate = {
-    contact_type: props.ownerType,
-    contact_ref_id: props.ownerId,
+  const editablePayload: ContactUpdate = {
     status: draft.value.status,
     ...(draft.value.name ? { name: draft.value.name } : {}),
     ...(draft.value.email ? { email: draft.value.email } : {}),
@@ -77,7 +76,16 @@ function save(): void {
     ...(draft.value.province_id ? { province_id: draft.value.province_id } : {}),
     ...(draft.value.ward_id ? { ward_id: draft.value.ward_id } : {}),
   }
-  emit('save', payload)
+  if (props.contact) {
+    // Contact ownership is immutable; the API derives it from the existing row.
+    emit('save', editablePayload)
+    return
+  }
+  emit('save', {
+    contact_type: props.ownerType,
+    contact_ref_id: props.ownerId,
+    ...editablePayload,
+  })
 }
 </script>
 
