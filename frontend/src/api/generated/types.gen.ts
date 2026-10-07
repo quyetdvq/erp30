@@ -14,6 +14,8 @@ export type RequestId = string;
  */
 export type BigInt = string;
 
+export type NullableBigInt = BigInt | null;
+
 /**
  * Exact decimal, money, and quantity values are serialized as JSON strings.
  */
@@ -285,6 +287,52 @@ export type ComboItemInput = {
 
 export type ComboItemsRequest = Array<ComboItemInput> | {
     items: Array<ComboItemInput>;
+};
+
+export type ProductImportStart = {
+    file: Blob | File;
+    mode: 'CREATE_ONLY' | 'UPDATE_ONLY' | 'UPSERT';
+};
+
+export type ImportJob = {
+    id: BigInt;
+    entity_type: 'PRODUCT';
+    mode: 'CREATE_ONLY' | 'UPDATE_ONLY' | 'UPSERT';
+    source_format: 'CSV' | 'XLSX';
+    source_file_name?: string | null;
+    source_file_hash?: string | null;
+    status: 'PENDING' | 'PROCESSING' | 'COMPLETED' | 'COMPLETED_WITH_ERRORS' | 'FAILED';
+    total_rows: number;
+    success_rows: number;
+    error_rows: number;
+    created_by?: NullableBigInt;
+    updated_by?: NullableBigInt;
+    started_at?: string | null;
+    completed_at?: string | null;
+    created_at: string;
+    updated_at?: string | null;
+};
+
+export type ImportJobRow = {
+    row_number: number;
+    row_status: 'SUCCESS' | 'ERROR' | 'SKIPPED';
+    entity_key: string | null;
+    target_ref_id: NullableBigInt;
+    error_code: string | null;
+    error_message: string | null;
+    created_at: string;
+};
+
+export type ImportJobResponse = SuccessResponse & {
+    data?: ImportJob;
+};
+
+export type ImportJobCollection = CollectionResponse & {
+    data?: Array<ImportJob>;
+};
+
+export type ImportJobRowsCollection = CollectionResponse & {
+    data?: Array<ImportJobRow>;
 };
 
 export type ProductGroupResponse = SuccessResponse & {
@@ -1051,6 +1099,8 @@ export type ProductUomConversions = ProductUomConversionsRequest;
 export type PriceListItems = PriceListItemsRequest;
 
 export type ComboItems = ComboItemsRequest;
+
+export type ProductImportStart2 = ProductImportStart;
 
 export type GetHealthData = {
     body?: never;
@@ -5278,6 +5328,206 @@ export type ReplaceComboItemsResponses = {
 };
 
 export type ReplaceComboItemsResponse = ReplaceComboItemsResponses[keyof ReplaceComboItemsResponses];
+
+export type StartProductImportData = {
+    body: ProductImportStart2;
+    headers?: {
+        /**
+         * Supported request language. Unsupported values fall back to vi.
+         */
+        'Accept-Language'?: 'vi' | 'en';
+        /**
+         * Client request correlation identifier; invalid or missing values are replaced by a generated UUID.
+         */
+        'X-Request-ID'?: RequestId;
+    };
+    path?: never;
+    query?: never;
+    url: '/api/v1/products/import-jobs';
+};
+
+export type StartProductImportErrors = {
+    /**
+     * Malformed request or query.
+     */
+    400: ErrorResponse;
+    /**
+     * Unauthenticated or invalid authentication.
+     */
+    401: ErrorResponse;
+    /**
+     * Visible target but action denied.
+     */
+    403: ErrorResponse;
+    /**
+     * Conflict, concurrency, uniqueness, or current-state failure.
+     */
+    409: ErrorResponse;
+    /**
+     * Semantically invalid request.
+     */
+    422: ErrorResponse;
+};
+
+export type StartProductImportError = StartProductImportErrors[keyof StartProductImportErrors];
+
+export type StartProductImportResponses = {
+    /**
+     * Product import job response.
+     */
+    201: ImportJobResponse;
+};
+
+export type StartProductImportResponse = StartProductImportResponses[keyof StartProductImportResponses];
+
+export type ListImportJobsData = {
+    body?: never;
+    headers?: {
+        /**
+         * Supported request language. Unsupported values fall back to vi.
+         */
+        'Accept-Language'?: 'vi' | 'en';
+        /**
+         * Client request correlation identifier; invalid or missing values are replaced by a generated UUID.
+         */
+        'X-Request-ID'?: RequestId;
+    };
+    path?: never;
+    query?: {
+        q?: string;
+        page?: number;
+        page_size?: number;
+        /**
+         * Allowlisted comma-separated sort terms; a final id ASC tie-breaker is applied.
+         */
+        sort?: string;
+        filter?: {
+            [key: string]: string | Array<string>;
+        };
+    };
+    url: '/api/v1/import-jobs';
+};
+
+export type ListImportJobsErrors = {
+    /**
+     * Malformed request or query.
+     */
+    400: ErrorResponse;
+    /**
+     * Unauthenticated or invalid authentication.
+     */
+    401: ErrorResponse;
+    /**
+     * Visible target but action denied.
+     */
+    403: ErrorResponse;
+};
+
+export type ListImportJobsError = ListImportJobsErrors[keyof ListImportJobsErrors];
+
+export type ListImportJobsResponses = {
+    /**
+     * Authorized Product import job collection.
+     */
+    200: ImportJobCollection;
+};
+
+export type ListImportJobsResponse = ListImportJobsResponses[keyof ListImportJobsResponses];
+
+export type GetImportJobData = {
+    body?: never;
+    path: {
+        id: BigInt;
+    };
+    query?: never;
+    url: '/api/v1/import-jobs/{id}';
+};
+
+export type GetImportJobErrors = {
+    /**
+     * Unauthenticated or invalid authentication.
+     */
+    401: ErrorResponse;
+    /**
+     * Visible target but action denied.
+     */
+    403: ErrorResponse;
+    /**
+     * Target not found or not visible.
+     */
+    404: ErrorResponse;
+};
+
+export type GetImportJobError = GetImportJobErrors[keyof GetImportJobErrors];
+
+export type GetImportJobResponses = {
+    /**
+     * Product import job response.
+     */
+    200: ImportJobResponse;
+};
+
+export type GetImportJobResponse = GetImportJobResponses[keyof GetImportJobResponses];
+
+export type ListImportJobRowsData = {
+    body?: never;
+    headers?: {
+        /**
+         * Supported request language. Unsupported values fall back to vi.
+         */
+        'Accept-Language'?: 'vi' | 'en';
+        /**
+         * Client request correlation identifier; invalid or missing values are replaced by a generated UUID.
+         */
+        'X-Request-ID'?: RequestId;
+    };
+    path: {
+        id: BigInt;
+    };
+    query?: {
+        q?: string;
+        page?: number;
+        page_size?: number;
+        /**
+         * Allowlisted comma-separated sort terms; a final id ASC tie-breaker is applied.
+         */
+        sort?: string;
+        filter?: {
+            [key: string]: string | Array<string>;
+        };
+    };
+    url: '/api/v1/import-jobs/{id}/rows';
+};
+
+export type ListImportJobRowsErrors = {
+    /**
+     * Malformed request or query.
+     */
+    400: ErrorResponse;
+    /**
+     * Unauthenticated or invalid authentication.
+     */
+    401: ErrorResponse;
+    /**
+     * Visible target but action denied.
+     */
+    403: ErrorResponse;
+    /**
+     * Target not found or not visible.
+     */
+    404: ErrorResponse;
+};
+
+export type ListImportJobRowsError = ListImportJobRowsErrors[keyof ListImportJobRowsErrors];
+
+export type ListImportJobRowsResponses = {
+    /**
+     * Persisted import row result collection.
+     */
+    200: ImportJobRowsCollection;
+};
+
+export type ListImportJobRowsResponse = ListImportJobRowsResponses[keyof ListImportJobRowsResponses];
 
 export type ListPriceListsData = {
     body?: never;

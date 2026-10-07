@@ -63,6 +63,24 @@ final class ImportJobRepository
         return $this->findById($id);
     }
 
+    /** @return list<array<string, mixed>> */
+    public function findAll(): array
+    {
+        try {
+            $result = $this->db->table('import_jobs')->orderBy('id', 'ASC')->get();
+        } catch (\Throwable $exception) {
+            throw new PersistenceException(self::ERROR_PERSISTENCE_FAILED, 'findAll', $exception);
+        }
+        if ($result === false) {
+            throw new PersistenceException(self::ERROR_PERSISTENCE_FAILED, 'findAll');
+        }
+
+        /** @var list<array<string,mixed>> $rows */
+        $rows = $result->getResultArray();
+
+        return $rows;
+    }
+
     /** @return array<string, mixed>|null */
     public function findForUpdate(mixed $id): ?array
     {

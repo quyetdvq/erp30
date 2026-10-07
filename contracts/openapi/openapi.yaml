@@ -686,6 +686,33 @@ paths:
       requestBody: {$ref: '#/components/requestBodies/ComboItems'}
       responses: {'200': {$ref: '#/components/responses/ComboItemsResponse'}, '401': {$ref: '#/components/responses/Unauthorized'}, '403': {$ref: '#/components/responses/Forbidden'}, '404': {$ref: '#/components/responses/NotFound'}, '409': {$ref: '#/components/responses/Conflict'}, '422': {$ref: '#/components/responses/UnprocessableEntity'}}
 
+  /api/v1/products/import-jobs:
+    post:
+      operationId: startProductImport
+      summary: Start a Product import job
+      parameters: [{$ref: '#/components/parameters/AcceptLanguage'}, {$ref: '#/components/parameters/RequestId'}]
+      requestBody: {$ref: '#/components/requestBodies/ProductImportStart'}
+      responses: {'201': {$ref: '#/components/responses/ImportJobResponse'}, '400': {$ref: '#/components/responses/BadRequest'}, '401': {$ref: '#/components/responses/Unauthorized'}, '403': {$ref: '#/components/responses/Forbidden'}, '409': {$ref: '#/components/responses/Conflict'}, '422': {$ref: '#/components/responses/UnprocessableEntity'}}
+  /api/v1/import-jobs:
+    get:
+      operationId: listImportJobs
+      summary: List authorized Product import jobs
+      parameters: [{$ref: '#/components/parameters/AcceptLanguage'}, {$ref: '#/components/parameters/RequestId'}, {$ref: '#/components/parameters/Q'}, {$ref: '#/components/parameters/Page'}, {$ref: '#/components/parameters/PageSize'}, {$ref: '#/components/parameters/Sort'}, {$ref: '#/components/parameters/Filter'}]
+      responses: {'200': {$ref: '#/components/responses/ImportJobCollection'}, '400': {$ref: '#/components/responses/BadRequest'}, '401': {$ref: '#/components/responses/Unauthorized'}, '403': {$ref: '#/components/responses/Forbidden'}}
+  /api/v1/import-jobs/{id}:
+    parameters: [{$ref: '#/components/parameters/Id'}]
+    get:
+      operationId: getImportJob
+      summary: Get an authorized Product import job
+      responses: {'200': {$ref: '#/components/responses/ImportJobResponse'}, '401': {$ref: '#/components/responses/Unauthorized'}, '403': {$ref: '#/components/responses/Forbidden'}, '404': {$ref: '#/components/responses/NotFound'}}
+  /api/v1/import-jobs/{id}/rows:
+    parameters: [{$ref: '#/components/parameters/Id'}]
+    get:
+      operationId: listImportJobRows
+      summary: List persisted Product import row results
+      parameters: [{$ref: '#/components/parameters/AcceptLanguage'}, {$ref: '#/components/parameters/RequestId'}, {$ref: '#/components/parameters/Q'}, {$ref: '#/components/parameters/Page'}, {$ref: '#/components/parameters/PageSize'}, {$ref: '#/components/parameters/Sort'}, {$ref: '#/components/parameters/Filter'}]
+      responses: {'200': {$ref: '#/components/responses/ImportJobRowsCollection'}, '400': {$ref: '#/components/responses/BadRequest'}, '401': {$ref: '#/components/responses/Unauthorized'}, '403': {$ref: '#/components/responses/Forbidden'}, '404': {$ref: '#/components/responses/NotFound'}}
+
   /api/v1/price-lists:
     get:
       operationId: listPriceLists
@@ -845,6 +872,11 @@ components:
     ProductUomConversions: {required: true, content: {application/json: {schema: {$ref: '#/components/schemas/ProductUomConversionsRequest'}}}}
     PriceListItems: {required: true, content: {application/json: {schema: {$ref: '#/components/schemas/PriceListItemsRequest'}}}}
     ComboItems: {required: true, content: {application/json: {schema: {$ref: '#/components/schemas/ComboItemsRequest'}}}}
+    ProductImportStart:
+      required: true
+      content:
+        multipart/form-data:
+          schema: {$ref: '#/components/schemas/ProductImportStart'}
   securitySchemes:
     sessionAuth:
       type: http
@@ -900,6 +932,9 @@ components:
     ProductUomConversionsResponse: {description: Product UOM conversion collection response., content: {application/json: {schema: {$ref: '#/components/schemas/ProductUomConversionsResponse'}}}}
     PriceListItemsResponse: {description: Price list item collection response., content: {application/json: {schema: {$ref: '#/components/schemas/PriceListItemsResponse'}}}}
     ComboItemsResponse: {description: COMBO item collection response., content: {application/json: {schema: {$ref: '#/components/schemas/ComboItemsResponse'}}}}
+    ImportJobResponse: {description: Product import job response., content: {application/json: {schema: {$ref: '#/components/schemas/ImportJobResponse'}}}}
+    ImportJobCollection: {description: Authorized Product import job collection., content: {application/json: {schema: {$ref: '#/components/schemas/ImportJobCollection'}}}}
+    ImportJobRowsCollection: {description: Persisted import row result collection., content: {application/json: {schema: {$ref: '#/components/schemas/ImportJobRowsCollection'}}}}
     OrganizationResponse:
       description: Organization resource.
       content: {application/json: {schema: {$ref: '#/components/schemas/OrganizationResponse'}}}
@@ -1024,6 +1059,10 @@ components:
       type: string
       pattern: '^-?[0-9]+$'
       description: Database BIGINT values are serialized as JSON strings.
+    NullableBigInt:
+      oneOf:
+        - {$ref: '#/components/schemas/BigInt'}
+        - type: 'null'
     Decimal:
       type: string
       pattern: '^-?(0|[1-9][0-9]*)(\.[0-9]+)?$'
@@ -1379,6 +1418,46 @@ components:
           required: [items]
           properties:
             items: {type: array, items: {$ref: '#/components/schemas/ComboItemInput'}}
+    ProductImportStart:
+      type: object
+      required: [file, mode]
+      properties:
+        file: {type: string, format: binary}
+        mode: {type: string, enum: [CREATE_ONLY, UPDATE_ONLY, UPSERT]}
+    ImportJob:
+      type: object
+      required: [id, entity_type, mode, source_format, status, total_rows, success_rows, error_rows, created_at]
+      properties:
+        id: {$ref: '#/components/schemas/BigInt'}
+        entity_type: {type: string, enum: [PRODUCT]}
+        mode: {type: string, enum: [CREATE_ONLY, UPDATE_ONLY, UPSERT]}
+        source_format: {type: string, enum: [CSV, XLSX]}
+        source_file_name: {type: [string, 'null']}
+        source_file_hash: {type: [string, 'null']}
+        status: {type: string, enum: [PENDING, PROCESSING, COMPLETED, COMPLETED_WITH_ERRORS, FAILED]}
+        total_rows: {type: integer, minimum: 0}
+        success_rows: {type: integer, minimum: 0}
+        error_rows: {type: integer, minimum: 0}
+        created_by: {$ref: '#/components/schemas/NullableBigInt'}
+        updated_by: {$ref: '#/components/schemas/NullableBigInt'}
+        started_at: {type: [string, 'null'], format: date-time}
+        completed_at: {type: [string, 'null'], format: date-time}
+        created_at: {type: string, format: date-time}
+        updated_at: {type: [string, 'null'], format: date-time}
+    ImportJobRow:
+      type: object
+      required: [row_number, row_status, entity_key, target_ref_id, error_code, error_message, created_at]
+      properties:
+        row_number: {type: integer, minimum: 1}
+        row_status: {type: string, enum: [SUCCESS, ERROR, SKIPPED]}
+        entity_key: {type: [string, 'null']}
+        target_ref_id: {$ref: '#/components/schemas/NullableBigInt'}
+        error_code: {type: [string, 'null']}
+        error_message: {type: [string, 'null']}
+        created_at: {type: string, format: date-time}
+    ImportJobResponse: {allOf: [{$ref: '#/components/schemas/SuccessResponse'}], properties: {data: {$ref: '#/components/schemas/ImportJob'}}}
+    ImportJobCollection: {allOf: [{$ref: '#/components/schemas/CollectionResponse'}], properties: {data: {type: array, items: {$ref: '#/components/schemas/ImportJob'}}}}
+    ImportJobRowsCollection: {allOf: [{$ref: '#/components/schemas/CollectionResponse'}], properties: {data: {type: array, items: {$ref: '#/components/schemas/ImportJobRow'}}}}
     ProductGroupResponse: {allOf: [{$ref: '#/components/schemas/SuccessResponse'}], properties: {data: {$ref: '#/components/schemas/ProductGroup'}}}
     ProductGroupCollection: {allOf: [{$ref: '#/components/schemas/CollectionResponse'}], properties: {data: {type: array, items: {$ref: '#/components/schemas/ProductGroup'}}}}
     ProductUomResponse: {allOf: [{$ref: '#/components/schemas/SuccessResponse'}], properties: {data: {$ref: '#/components/schemas/ProductUom'}}}

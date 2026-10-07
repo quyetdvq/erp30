@@ -12,6 +12,8 @@ export const zRequestId = z.string().min(1).max(128).regex(/^[0-9A-Za-z][0-9A-Za
  */
 export const zBigInt = z.string().regex(/^-?[0-9]+$/);
 
+export const zNullableBigInt = zBigInt.nullable();
+
 /**
  * Exact decimal, money, and quantity values are serialized as JSON strings.
  */
@@ -303,6 +305,70 @@ export const zComboItemsRequest = z.union([
         items: z.array(zComboItemInput)
     })
 ]);
+
+export const zProductImportStart = z.object({
+    file: z.string(),
+    mode: z.enum([
+        'CREATE_ONLY',
+        'UPDATE_ONLY',
+        'UPSERT'
+    ])
+});
+
+export const zImportJob = z.object({
+    id: zBigInt,
+    entity_type: z.enum(['PRODUCT']),
+    mode: z.enum([
+        'CREATE_ONLY',
+        'UPDATE_ONLY',
+        'UPSERT'
+    ]),
+    source_format: z.enum(['CSV', 'XLSX']),
+    source_file_name: z.string().nullish(),
+    source_file_hash: z.string().nullish(),
+    status: z.enum([
+        'PENDING',
+        'PROCESSING',
+        'COMPLETED',
+        'COMPLETED_WITH_ERRORS',
+        'FAILED'
+    ]),
+    total_rows: z.int().gte(0),
+    success_rows: z.int().gte(0),
+    error_rows: z.int().gte(0),
+    created_by: zNullableBigInt.optional(),
+    updated_by: zNullableBigInt.optional(),
+    started_at: z.iso.datetime().nullish(),
+    completed_at: z.iso.datetime().nullish(),
+    created_at: z.iso.datetime(),
+    updated_at: z.iso.datetime().nullish()
+});
+
+export const zImportJobRow = z.object({
+    row_number: z.int().gte(1),
+    row_status: z.enum([
+        'SUCCESS',
+        'ERROR',
+        'SKIPPED'
+    ]),
+    entity_key: z.string().nullable(),
+    target_ref_id: zNullableBigInt,
+    error_code: z.string().nullable(),
+    error_message: z.string().nullable(),
+    created_at: z.iso.datetime()
+});
+
+export const zImportJobResponse = zSuccessResponse.and(z.object({
+    data: zImportJob.optional()
+}));
+
+export const zImportJobCollection = zCollectionResponse.and(z.object({
+    data: z.array(zImportJob).optional()
+}));
+
+export const zImportJobRowsCollection = zCollectionResponse.and(z.object({
+    data: z.array(zImportJobRow).optional()
+}));
 
 export const zProductGroupResponse = zSuccessResponse.and(z.object({
     data: zProductGroup.optional()
@@ -1172,6 +1238,8 @@ export const zProductUomConversions = zProductUomConversionsRequest;
 export const zPriceListItems = zPriceListItemsRequest;
 
 export const zComboItems = zComboItemsRequest;
+
+export const zProductImportStart2 = zProductImportStart;
 
 export const zGetHealthHeaders = z.object({
     'Accept-Language': z.enum(['vi', 'en']).optional().default('vi'),
@@ -2405,6 +2473,73 @@ export const zReplaceComboItemsPath = z.object({
  * COMBO item collection response.
  */
 export const zReplaceComboItemsResponse = zComboItemsResponse;
+
+export const zStartProductImportBody = zProductImportStart2;
+
+export const zStartProductImportHeaders = z.object({
+    'Accept-Language': z.enum(['vi', 'en']).optional().default('vi'),
+    'X-Request-ID': zRequestId.optional()
+});
+
+/**
+ * Product import job response.
+ */
+export const zStartProductImportResponse = zImportJobResponse;
+
+export const zListImportJobsHeaders = z.object({
+    'Accept-Language': z.enum(['vi', 'en']).optional().default('vi'),
+    'X-Request-ID': zRequestId.optional()
+});
+
+export const zListImportJobsQuery = z.object({
+    q: z.string().optional(),
+    page: z.int().gte(1).optional().default(1),
+    page_size: z.int().gte(1).lte(200).optional().default(50),
+    sort: z.string().optional(),
+    filter: z.record(z.string(), z.union([
+        z.string(),
+        z.array(z.string())
+    ])).optional()
+});
+
+/**
+ * Authorized Product import job collection.
+ */
+export const zListImportJobsResponse = zImportJobCollection;
+
+export const zGetImportJobPath = z.object({
+    id: zBigInt
+});
+
+/**
+ * Product import job response.
+ */
+export const zGetImportJobResponse = zImportJobResponse;
+
+export const zListImportJobRowsHeaders = z.object({
+    'Accept-Language': z.enum(['vi', 'en']).optional().default('vi'),
+    'X-Request-ID': zRequestId.optional()
+});
+
+export const zListImportJobRowsPath = z.object({
+    id: zBigInt
+});
+
+export const zListImportJobRowsQuery = z.object({
+    q: z.string().optional(),
+    page: z.int().gte(1).optional().default(1),
+    page_size: z.int().gte(1).lte(200).optional().default(50),
+    sort: z.string().optional(),
+    filter: z.record(z.string(), z.union([
+        z.string(),
+        z.array(z.string())
+    ])).optional()
+});
+
+/**
+ * Persisted import row result collection.
+ */
+export const zListImportJobRowsResponse = zImportJobRowsCollection;
 
 export const zListPriceListsHeaders = z.object({
     'Accept-Language': z.enum(['vi', 'en']).optional().default('vi'),

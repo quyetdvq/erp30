@@ -93,6 +93,11 @@ $routes->group('api/v1', ['filter' => 'cors'], static function (RouteCollection 
     $routes->get('products/(:num)/combo-items', 'Api\\ProductCatalog::listComboItems/$1');
     $routes->put('products/(:num)/combo-items', 'Api\\ProductCatalog::replaceComboItems/$1');
 
+    $routes->post('products/import-jobs', 'Api\\ProductImport::start');
+    $routes->get('import-jobs', 'Api\\ProductImport::list');
+    $routes->get('import-jobs/(:num)', 'Api\\ProductImport::show/$1');
+    $routes->get('import-jobs/(:num)/rows', 'Api\\ProductImport::rows/$1');
+
     $routes->get('price-lists', 'Api\\ProductCatalog::listPriceLists');
     $routes->post('price-lists', 'Api\\ProductCatalog::createPriceList');
     $routes->get('price-lists/(:num)', 'Api\\ProductCatalog::showPriceList/$1');
