@@ -4,39 +4,39 @@
   "source_of_truth": "architecture_documents",
   "authorities": [
     {
-      "path": "docs/architecture/00_User_Requirements_v1.0.14.md",
-      "identity": "UR v1.0.14",
-      "sha256": "E6935571FC1BAF34C5CB132BEF14510D3931339E2F547E14FE7DE68DFF05EE86"
+      "path": "docs/architecture/00_User_Requirements_v1.0.15.md",
+      "identity": "UR v1.0.15",
+      "sha256": "97894E35DBF6C5F641F56574AF947CAFBC45122A87B9FB189EE7426503448144"
     },
     {
-      "path": "docs/architecture/01_P1_Functional_Requirements_Specification_v1.11.md",
-      "identity": "FRS v1.11",
-      "sha256": "1E0EB5D18EB6E592E0572143CD6FD506E8DE5AA38EA1C115A476D7819D367DC4"
+      "path": "docs/architecture/01_P1_Functional_Requirements_Specification_v1.12.md",
+      "identity": "FRS v1.12",
+      "sha256": "4AAA9E31030EE5347397E0497411E6EDA03B158D20B6D0C610EEB1DE591372B4"
     },
     {
-      "path": "docs/architecture/02_P1_Database_Design_v1.14.md",
-      "identity": "DBD v1.14",
-      "sha256": "BA218C5893EC82DB7151AFDBB8104033F15C44CE5FFFAC6822D3584E1E8E6F10"
+      "path": "docs/architecture/02_P1_Database_Design_v1.15.md",
+      "identity": "DBD v1.15",
+      "sha256": "0557186A8BF87A5F41570C08C99226BDDDC95F18810DE5720CA00D83D5D2D6EB"
     },
     {
-      "path": "docs/architecture/03_P1_Implementation_Contract_v1.9.md",
-      "identity": "Implementation Contract v1.9",
-      "sha256": "B9CE38C087016E66A2D85F2A56F60E48494DE53467FF7E972BB0E19496778A87"
+      "path": "docs/architecture/03_P1_Implementation_Contract_v1.10.md",
+      "identity": "Implementation Contract v1.10",
+      "sha256": "5E2DDF5BF80083DE18F43F0E467D8FFE9888C9798CD3201C6C5055AB401A906D"
     },
     {
-      "path": "docs/architecture/04_P1_Implementation_Plan_v1.9.md",
-      "identity": "Implementation Plan v1.9",
-      "sha256": "C4FA50A24783BC31038F858F673254D1C9D62937B56AF7D0B93D80E15FE110B1"
+      "path": "docs/architecture/04_P1_Implementation_Plan_v1.10.md",
+      "identity": "Implementation Plan v1.10",
+      "sha256": "492485B8F2504D7A18FD03700A81E7D1FBB4CE27DFD7E1C59E13D92797CD4EF8"
     },
     {
-      "path": "docs/architecture/05_P1_API_Design_v1.7.md",
-      "identity": "API Design v1.7",
-      "sha256": "06CDFD4A04F759ED3565057095848D75C8D56023455B072FA71C109DB7E5DF17"
+      "path": "docs/architecture/05_P1_API_Design_v1.8.md",
+      "identity": "API Design v1.8",
+      "sha256": "359E0071FBE09E08519BF7FA4C761F6FD602E33E2129FAD6028025D8E9A99EA3"
     },
     {
-      "path": "docs/architecture/06_P1_UI_Design_v1.8.md",
-      "identity": "UI Design v1.8",
-      "sha256": "14C61EA6DD9FDB1B8EA1BFE366F2BC75C7B4D277C394817DB3167F151BC468B0"
+      "path": "docs/architecture/06_P1_UI_Design_v1.9.md",
+      "identity": "UI Design v1.9",
+      "sha256": "D267F57197B1EBBE9D77C468F8829361DE1A844003B2F54F3EA16A627CA91C09"
     },
     {
       "path": "docs/architecture/07_CHANGE_DISPLAY_SETTING_001_v1.2.md",
@@ -47,6 +47,16 @@
       "path": "docs/architecture/08_CHANGE_PERMISSION_AWARE_UI_001_v1.0.md",
       "identity": "CHANGE-PERMISSION-AWARE-UI-001 v1.0",
       "sha256": "C956F8CDA38A85535785761BF40EF31179882EC72211F4E1339407AD4379058D"
+    },
+    {
+      "path": "docs/architecture/09_CHANGE_POLICY_SCOPE_UNIQUENESS_001_v1.0.md",
+      "identity": "CHANGE-POLICY-SCOPE-UNIQUENESS-001 v1.0",
+      "sha256": "C8518F49B62D4A5E565617BC493EE9DB96D7F65ED997AFF1D1497445B6CB536B"
+    },
+    {
+      "path": "docs/architecture/10_CHANGE_USER_IDENTITY_MUTATION_001_v1.0.md",
+      "identity": "CHANGE-USER-IDENTITY-MUTATION-001 v1.0",
+      "sha256": "907E0166FF7ADDC4532381F6791F79A889965AD07C5291BD742B15E590F1ECB6"
     }
   ]
 }

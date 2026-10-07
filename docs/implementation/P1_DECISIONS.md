@@ -85,3 +85,17 @@ Implementation Contract, Implementation Plan, API Design, or UI Design.
   belongs to Product. Import remains separate.
 - This is a physical relocation only: no schema, API, UI, or business semantic
   change. The completed P1-PRD-001 implementation is moved, not reimplemented.
+
+## DEC-CHG-POLICY-001 — One Policy per normalized scope
+
+- `policies` scope identity is `organization_id + resource_id + normalized_state + participant_type + participant_ref_id`.
+- `normalized_state` uses positive `state_id` or sentinel `0` for `ALL_STATES` in a stored generated column; MariaDB 10.4.32 enforces one unique key over the five dimensions.
+- Duplicate POST/PATCH is `409 POLICY_SCOPE_ALREADY_EXISTS`. Complete Policy Action/Effect replacement is atomic.
+- Legacy reconciliation retains the lowest Policy ID and unions actions using `ABSOLUTE_DENY > ALLOW > DENY`; inability to prove equivalence blocks migration without discarding rows.
+
+## DEC-CHG-IAM-001 — Shield User mutation boundary
+
+- Shield tables/configuration remain the only identity/password authority; no local User/password persistence is introduced.
+- User create/edit/state, group membership, direct permission, and administrator reset-password are distinct operations. Password reset requires the dedicated `user.reset_password` action because no approved equivalent exists in the current catalog.
+- State vocabulary is `ACTIVE`, `INACTIVE`, `LOCKED`, `SUSPENDED`, `BANNED`, `DISABLED`; group labels never substitute for canonical membership or PBAC.
+- Existing `/users/{id}/permissions` GET/PUT remains the direct ALLOW-only retrofit through `user.assign_permission`; PBAC and `ABSOLUTE_DENY` remain authoritative.
