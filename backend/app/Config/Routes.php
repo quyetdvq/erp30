@@ -6,6 +6,9 @@ use CodeIgniter\Router\RouteCollection;
 $routes->get('/', 'Home::index');
 
 $routes->group('api/v1', ['filter' => 'cors'], static function (RouteCollection $routes): void {
+    // Browsers preflight every API request carrying the canonical locale/request-id headers.
+    // Keep OPTIONS routeable even when the target resource itself is protected.
+    $routes->options('(:any)', 'Api\\Cors::options');
     $routes->get('health', 'Api\\Health::index');
     $routes->options('health', 'Api\\Health::options');
     $routes->get('display-settings/runtime', 'Api\\DisplaySettings::runtime');
