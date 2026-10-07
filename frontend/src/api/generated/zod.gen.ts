@@ -510,6 +510,85 @@ export const zResourceActionPatch = z.object({
     description: z.string().nullish()
 });
 
+export const zNumberingSeries = z.object({
+    id: zBigInt,
+    resource_id: zBigInt,
+    series_code: z.string(),
+    name: z.string(),
+    scope_type: z.enum([
+        'GROUP',
+        'COMPANY',
+        'ORGANIZATION'
+    ]),
+    pattern: z.string(),
+    reset_policy: z.enum([
+        'NEVER',
+        'YEARLY',
+        'MONTHLY',
+        'DAILY'
+    ]),
+    generation_mode: z.enum(['AUTO_REQUIRED', 'AUTO_IF_EMPTY']),
+    start_number: zBigInt,
+    increment_by: z.int().gte(1),
+    is_default: z.boolean(),
+    status: z.enum(['ACTIVE', 'INACTIVE'])
+});
+
+export const zNumberingSeriesCreate = z.object({
+    series_code: z.string(),
+    name: z.string(),
+    scope_type: z.enum([
+        'GROUP',
+        'COMPANY',
+        'ORGANIZATION'
+    ]),
+    pattern: z.string(),
+    reset_policy: z.enum([
+        'NEVER',
+        'YEARLY',
+        'MONTHLY',
+        'DAILY'
+    ]),
+    generation_mode: z.enum(['AUTO_REQUIRED', 'AUTO_IF_EMPTY']),
+    start_number: zBigInt,
+    increment_by: z.int().gte(1),
+    is_default: z.boolean(),
+    status: z.enum(['ACTIVE', 'INACTIVE'])
+});
+
+export const zNumberingSeriesPatch = z.object({
+    resource_id: zBigInt.optional(),
+    series_code: z.string().optional(),
+    name: z.string().optional(),
+    scope_type: z.enum([
+        'GROUP',
+        'COMPANY',
+        'ORGANIZATION'
+    ]).optional(),
+    pattern: z.string().optional(),
+    reset_policy: z.enum([
+        'NEVER',
+        'YEARLY',
+        'MONTHLY',
+        'DAILY'
+    ]).optional(),
+    generation_mode: z.enum(['AUTO_REQUIRED', 'AUTO_IF_EMPTY']).optional(),
+    start_number: zBigInt.optional(),
+    increment_by: z.int().gte(1).optional(),
+    is_default: z.boolean().optional(),
+    status: z.enum(['ACTIVE', 'INACTIVE']).optional()
+});
+
+export const zNumberingSeriesState = z.object({
+    status: z.enum(['ACTIVE', 'INACTIVE'])
+});
+
+export const zNumberingSeriesValidation = z.object({
+    valid: z.boolean(),
+    normalized_pattern: z.string(),
+    validation_messages: z.array(z.string())
+});
+
 export const zPolicyAction = z.object({
     resource_action_id: zBigInt,
     effect: z.enum([
@@ -638,6 +717,18 @@ export const zResourceCollection = zCollectionResponse.and(z.object({
     data: z.array(zResource).optional()
 }));
 
+export const zNumberingSeriesResponse = zSuccessResponse.and(z.object({
+    data: zNumberingSeries.optional()
+}));
+
+export const zNumberingSeriesCollection = zCollectionResponse.and(z.object({
+    data: z.array(zNumberingSeries).optional()
+}));
+
+export const zNumberingSeriesValidationResponse = zSuccessResponse.and(z.object({
+    data: zNumberingSeriesValidation.optional()
+}));
+
 export const zPolicyResponse = zSuccessResponse.and(z.object({
     data: zPolicy.optional()
 }));
@@ -757,6 +848,12 @@ export const zResourcePatch2 = zResourcePatch;
 export const zResourceActionCreate2 = zResourceActionCreate;
 
 export const zResourceActionPatch2 = zResourceActionPatch;
+
+export const zNumberingSeriesCreate2 = zNumberingSeriesCreate;
+
+export const zNumberingSeriesPatch2 = zNumberingSeriesPatch;
+
+export const zNumberingSeriesState2 = zNumberingSeriesState;
 
 export const zPolicyCreate2 = zPolicyCreate;
 
@@ -1472,6 +1569,76 @@ export const zUpdateResourceActionPath = z.object({
  * Successful API response.
  */
 export const zUpdateResourceActionResponse = zSuccessResponse;
+
+export const zListNumberingSeriesHeaders = z.object({
+    'Accept-Language': z.enum(['vi', 'en']).optional().default('vi'),
+    'X-Request-ID': zRequestId.optional()
+});
+
+export const zListNumberingSeriesPath = z.object({
+    resource_id: zBigInt
+});
+
+/**
+ * Numbering series collection.
+ */
+export const zListNumberingSeriesResponse = zNumberingSeriesCollection;
+
+export const zCreateNumberingSeriesBody = zNumberingSeriesCreate2;
+
+export const zCreateNumberingSeriesPath = z.object({
+    resource_id: zBigInt
+});
+
+/**
+ * Numbering series response.
+ */
+export const zCreateNumberingSeriesResponse = zNumberingSeriesResponse;
+
+export const zGetNumberingSeriesPath = z.object({
+    resource_id: zBigInt,
+    series_id: zBigInt
+});
+
+/**
+ * Numbering series response.
+ */
+export const zGetNumberingSeriesResponse = zNumberingSeriesResponse;
+
+export const zUpdateNumberingSeriesBody = zNumberingSeriesPatch2;
+
+export const zUpdateNumberingSeriesPath = z.object({
+    resource_id: zBigInt,
+    series_id: zBigInt
+});
+
+/**
+ * Numbering series response.
+ */
+export const zUpdateNumberingSeriesResponse = zNumberingSeriesResponse;
+
+export const zSetNumberingSeriesStateBody = zNumberingSeriesState2;
+
+export const zSetNumberingSeriesStatePath = z.object({
+    resource_id: zBigInt,
+    series_id: zBigInt
+});
+
+/**
+ * Numbering series response.
+ */
+export const zSetNumberingSeriesStateResponse = zNumberingSeriesResponse;
+
+export const zValidateNumberingSeriesConfigBody = zNumberingSeriesCreate2;
+
+export const zValidateNumberingSeriesConfigPath = z.object({
+    resource_id: zBigInt
+});
+
+/**
+ * Non-consuming numbering configuration validation response.
+ */
+export const zValidateNumberingSeriesConfigResponse = zNumberingSeriesValidationResponse;
 
 export const zListPoliciesHeaders = z.object({
     'Accept-Language': z.enum(['vi', 'en']).optional().default('vi'),

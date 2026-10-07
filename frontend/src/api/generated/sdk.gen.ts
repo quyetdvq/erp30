@@ -2,7 +2,7 @@
 
 import type { Client, ClientMeta, Options as Options2, RequestResult, TDataShape } from './client';
 import { client } from './client.gen';
-import type { ConfigureLifecycleStatesData, ConfigureLifecycleStatesErrors, ConfigureLifecycleStatesResponses, ConfigureLifecycleTransitionsData, ConfigureLifecycleTransitionsErrors, ConfigureLifecycleTransitionsResponses, CreateAuthorizationGroupData, CreateAuthorizationGroupErrors, CreateAuthorizationGroupResponses, CreateContactData, CreateContactErrors, CreateContactResponses, CreateDepartmentData, CreateDepartmentErrors, CreateDepartmentResponses, CreateEmployeeAssignmentData, CreateEmployeeAssignmentErrors, CreateEmployeeAssignmentResponses, CreateEmployeeData, CreateEmployeeErrors, CreateEmployeeResponses, CreateLifecycleData, CreateLifecycleErrors, CreateLifecycleResponses, CreateOrganizationData, CreateOrganizationErrors, CreateOrganizationResponses, CreatePolicyData, CreatePolicyErrors, CreatePolicyResponses, CreatePositionData, CreatePositionErrors, CreatePositionResponses, CreateProvinceData, CreateProvinceErrors, CreateProvinceResponses, CreateResourceActionData, CreateResourceActionErrors, CreateResourceActionResponses, CreateResourceData, CreateResourceErrors, CreateResourceResponses, CreateWardData, CreateWardErrors, CreateWardResponses, CreateWorkflowStateData, CreateWorkflowStateErrors, CreateWorkflowStateResponses, DeletePolicyData, DeletePolicyErrors, DeletePolicyResponses, DeleteResourceActionData, DeleteResourceActionErrors, DeleteResourceActionResponses, DeleteResourceData, DeleteResourceErrors, DeleteResourceResponses, GetAuthorizationGroupData, GetAuthorizationGroupErrors, GetAuthorizationGroupResponses, GetAuthorizationLogData, GetAuthorizationLogErrors, GetAuthorizationLogResponses, GetContactData, GetContactErrors, GetContactResponses, GetDepartmentData, GetDepartmentErrors, GetDepartmentResponses, GetEmployeeAssignmentData, GetEmployeeAssignmentErrors, GetEmployeeAssignmentResponses, GetEmployeeData, GetEmployeeErrors, GetEmployeeResponses, GetHealthData, GetHealthErrors, GetHealthResponses, GetLifecycleData, GetLifecycleErrors, GetLifecycleResponses, GetOrganizationData, GetOrganizationErrors, GetOrganizationResponses, GetOrganizationTreeData, GetOrganizationTreeErrors, GetOrganizationTreeResponses, GetPolicyData, GetPolicyErrors, GetPolicyResponses, GetPositionData, GetPositionErrors, GetPositionResponses, GetProvinceData, GetProvinceErrors, GetProvinceResponses, GetResourceData, GetResourceErrors, GetResourceResponses, GetWardData, GetWardErrors, GetWardResponses, GetWorkflowStateData, GetWorkflowStateErrors, GetWorkflowStateResponses, ListAuthorizationGroupMembersData, ListAuthorizationGroupMembersErrors, ListAuthorizationGroupMembersResponses, ListAuthorizationGroupPermissionsData, ListAuthorizationGroupPermissionsErrors, ListAuthorizationGroupPermissionsResponses, ListAuthorizationGroupsData, ListAuthorizationGroupsErrors, ListAuthorizationGroupsResponses, ListAuthorizationLogsData, ListAuthorizationLogsErrors, ListAuthorizationLogsResponses, ListContactsData, ListContactsErrors, ListContactsResponses, ListDepartmentsData, ListDepartmentsErrors, ListDepartmentsResponses, ListEmployeeAssignmentsData, ListEmployeeAssignmentsErrors, ListEmployeeAssignmentsResponses, ListEmployeesData, ListEmployeesErrors, ListEmployeesResponses, ListLifecyclesData, ListLifecyclesErrors, ListLifecyclesResponses, ListLifecycleStatesData, ListLifecycleStatesErrors, ListLifecycleStatesResponses, ListLifecycleTransitionsData, ListLifecycleTransitionsErrors, ListLifecycleTransitionsResponses, ListOrganizationsData, ListOrganizationsErrors, ListOrganizationsResponses, ListPoliciesData, ListPoliciesErrors, ListPoliciesResponses, ListPositionsData, ListPositionsErrors, ListPositionsResponses, ListProvincesData, ListProvincesErrors, ListProvincesResponses, ListResourceActionsData, ListResourceActionsErrors, ListResourceActionsResponses, ListResourcesData, ListResourcesErrors, ListResourcesResponses, ListWardsData, ListWardsErrors, ListWardsResponses, ListWorkflowStatesData, ListWorkflowStatesErrors, ListWorkflowStatesResponses, ReplaceAuthorizationGroupMembersData, ReplaceAuthorizationGroupMembersErrors, ReplaceAuthorizationGroupMembersResponses, ReplaceAuthorizationGroupPermissionsData, ReplaceAuthorizationGroupPermissionsErrors, ReplaceAuthorizationGroupPermissionsResponses, SetAuthorizationGroupStateData, SetAuthorizationGroupStateErrors, SetAuthorizationGroupStateResponses, SetContactStateData, SetContactStateErrors, SetContactStateResponses, SetDepartmentStateData, SetDepartmentStateErrors, SetDepartmentStateResponses, SetEmployeeAssignmentStateData, SetEmployeeAssignmentStateErrors, SetEmployeeAssignmentStateResponses, SetEmployeeStateData, SetEmployeeStateErrors, SetEmployeeStateResponses, SetLifecycleStateData, SetLifecycleStateErrors, SetLifecycleStateResponses, SetOrganizationStateData, SetOrganizationStateErrors, SetOrganizationStateResponses, SetPositionStateData, SetPositionStateErrors, SetPositionStateResponses, SetProvinceStateData, SetProvinceStateErrors, SetProvinceStateResponses, SetWardStateData, SetWardStateErrors, SetWardStateResponses, SetWorkflowStateStateData, SetWorkflowStateStateErrors, SetWorkflowStateStateResponses, UpdateAuthorizationGroupData, UpdateAuthorizationGroupErrors, UpdateAuthorizationGroupResponses, UpdateContactData, UpdateContactErrors, UpdateContactResponses, UpdateDepartmentData, UpdateDepartmentErrors, UpdateDepartmentResponses, UpdateEmployeeAssignmentData, UpdateEmployeeAssignmentErrors, UpdateEmployeeAssignmentResponses, UpdateEmployeeData, UpdateEmployeeErrors, UpdateEmployeeResponses, UpdateLifecycleData, UpdateLifecycleErrors, UpdateLifecycleResponses, UpdateOrganizationData, UpdateOrganizationErrors, UpdateOrganizationResponses, UpdatePolicyData, UpdatePolicyErrors, UpdatePolicyResponses, UpdatePositionData, UpdatePositionErrors, UpdatePositionResponses, UpdateProvinceData, UpdateProvinceErrors, UpdateProvinceResponses, UpdateResourceActionData, UpdateResourceActionErrors, UpdateResourceActionResponses, UpdateResourceData, UpdateResourceErrors, UpdateResourceResponses, UpdateWardData, UpdateWardErrors, UpdateWardResponses, UpdateWorkflowStateData, UpdateWorkflowStateErrors, UpdateWorkflowStateResponses } from './types.gen';
+import type { ConfigureLifecycleStatesData, ConfigureLifecycleStatesErrors, ConfigureLifecycleStatesResponses, ConfigureLifecycleTransitionsData, ConfigureLifecycleTransitionsErrors, ConfigureLifecycleTransitionsResponses, CreateAuthorizationGroupData, CreateAuthorizationGroupErrors, CreateAuthorizationGroupResponses, CreateContactData, CreateContactErrors, CreateContactResponses, CreateDepartmentData, CreateDepartmentErrors, CreateDepartmentResponses, CreateEmployeeAssignmentData, CreateEmployeeAssignmentErrors, CreateEmployeeAssignmentResponses, CreateEmployeeData, CreateEmployeeErrors, CreateEmployeeResponses, CreateLifecycleData, CreateLifecycleErrors, CreateLifecycleResponses, CreateNumberingSeriesData, CreateNumberingSeriesErrors, CreateNumberingSeriesResponses, CreateOrganizationData, CreateOrganizationErrors, CreateOrganizationResponses, CreatePolicyData, CreatePolicyErrors, CreatePolicyResponses, CreatePositionData, CreatePositionErrors, CreatePositionResponses, CreateProvinceData, CreateProvinceErrors, CreateProvinceResponses, CreateResourceActionData, CreateResourceActionErrors, CreateResourceActionResponses, CreateResourceData, CreateResourceErrors, CreateResourceResponses, CreateWardData, CreateWardErrors, CreateWardResponses, CreateWorkflowStateData, CreateWorkflowStateErrors, CreateWorkflowStateResponses, DeletePolicyData, DeletePolicyErrors, DeletePolicyResponses, DeleteResourceActionData, DeleteResourceActionErrors, DeleteResourceActionResponses, DeleteResourceData, DeleteResourceErrors, DeleteResourceResponses, GetAuthorizationGroupData, GetAuthorizationGroupErrors, GetAuthorizationGroupResponses, GetAuthorizationLogData, GetAuthorizationLogErrors, GetAuthorizationLogResponses, GetContactData, GetContactErrors, GetContactResponses, GetDepartmentData, GetDepartmentErrors, GetDepartmentResponses, GetEmployeeAssignmentData, GetEmployeeAssignmentErrors, GetEmployeeAssignmentResponses, GetEmployeeData, GetEmployeeErrors, GetEmployeeResponses, GetHealthData, GetHealthErrors, GetHealthResponses, GetLifecycleData, GetLifecycleErrors, GetLifecycleResponses, GetNumberingSeriesData, GetNumberingSeriesErrors, GetNumberingSeriesResponses, GetOrganizationData, GetOrganizationErrors, GetOrganizationResponses, GetOrganizationTreeData, GetOrganizationTreeErrors, GetOrganizationTreeResponses, GetPolicyData, GetPolicyErrors, GetPolicyResponses, GetPositionData, GetPositionErrors, GetPositionResponses, GetProvinceData, GetProvinceErrors, GetProvinceResponses, GetResourceData, GetResourceErrors, GetResourceResponses, GetWardData, GetWardErrors, GetWardResponses, GetWorkflowStateData, GetWorkflowStateErrors, GetWorkflowStateResponses, ListAuthorizationGroupMembersData, ListAuthorizationGroupMembersErrors, ListAuthorizationGroupMembersResponses, ListAuthorizationGroupPermissionsData, ListAuthorizationGroupPermissionsErrors, ListAuthorizationGroupPermissionsResponses, ListAuthorizationGroupsData, ListAuthorizationGroupsErrors, ListAuthorizationGroupsResponses, ListAuthorizationLogsData, ListAuthorizationLogsErrors, ListAuthorizationLogsResponses, ListContactsData, ListContactsErrors, ListContactsResponses, ListDepartmentsData, ListDepartmentsErrors, ListDepartmentsResponses, ListEmployeeAssignmentsData, ListEmployeeAssignmentsErrors, ListEmployeeAssignmentsResponses, ListEmployeesData, ListEmployeesErrors, ListEmployeesResponses, ListLifecyclesData, ListLifecyclesErrors, ListLifecyclesResponses, ListLifecycleStatesData, ListLifecycleStatesErrors, ListLifecycleStatesResponses, ListLifecycleTransitionsData, ListLifecycleTransitionsErrors, ListLifecycleTransitionsResponses, ListNumberingSeriesData, ListNumberingSeriesErrors, ListNumberingSeriesResponses, ListOrganizationsData, ListOrganizationsErrors, ListOrganizationsResponses, ListPoliciesData, ListPoliciesErrors, ListPoliciesResponses, ListPositionsData, ListPositionsErrors, ListPositionsResponses, ListProvincesData, ListProvincesErrors, ListProvincesResponses, ListResourceActionsData, ListResourceActionsErrors, ListResourceActionsResponses, ListResourcesData, ListResourcesErrors, ListResourcesResponses, ListWardsData, ListWardsErrors, ListWardsResponses, ListWorkflowStatesData, ListWorkflowStatesErrors, ListWorkflowStatesResponses, ReplaceAuthorizationGroupMembersData, ReplaceAuthorizationGroupMembersErrors, ReplaceAuthorizationGroupMembersResponses, ReplaceAuthorizationGroupPermissionsData, ReplaceAuthorizationGroupPermissionsErrors, ReplaceAuthorizationGroupPermissionsResponses, SetAuthorizationGroupStateData, SetAuthorizationGroupStateErrors, SetAuthorizationGroupStateResponses, SetContactStateData, SetContactStateErrors, SetContactStateResponses, SetDepartmentStateData, SetDepartmentStateErrors, SetDepartmentStateResponses, SetEmployeeAssignmentStateData, SetEmployeeAssignmentStateErrors, SetEmployeeAssignmentStateResponses, SetEmployeeStateData, SetEmployeeStateErrors, SetEmployeeStateResponses, SetLifecycleStateData, SetLifecycleStateErrors, SetLifecycleStateResponses, SetNumberingSeriesStateData, SetNumberingSeriesStateErrors, SetNumberingSeriesStateResponses, SetOrganizationStateData, SetOrganizationStateErrors, SetOrganizationStateResponses, SetPositionStateData, SetPositionStateErrors, SetPositionStateResponses, SetProvinceStateData, SetProvinceStateErrors, SetProvinceStateResponses, SetWardStateData, SetWardStateErrors, SetWardStateResponses, SetWorkflowStateStateData, SetWorkflowStateStateErrors, SetWorkflowStateStateResponses, UpdateAuthorizationGroupData, UpdateAuthorizationGroupErrors, UpdateAuthorizationGroupResponses, UpdateContactData, UpdateContactErrors, UpdateContactResponses, UpdateDepartmentData, UpdateDepartmentErrors, UpdateDepartmentResponses, UpdateEmployeeAssignmentData, UpdateEmployeeAssignmentErrors, UpdateEmployeeAssignmentResponses, UpdateEmployeeData, UpdateEmployeeErrors, UpdateEmployeeResponses, UpdateLifecycleData, UpdateLifecycleErrors, UpdateLifecycleResponses, UpdateNumberingSeriesData, UpdateNumberingSeriesErrors, UpdateNumberingSeriesResponses, UpdateOrganizationData, UpdateOrganizationErrors, UpdateOrganizationResponses, UpdatePolicyData, UpdatePolicyErrors, UpdatePolicyResponses, UpdatePositionData, UpdatePositionErrors, UpdatePositionResponses, UpdateProvinceData, UpdateProvinceErrors, UpdateProvinceResponses, UpdateResourceActionData, UpdateResourceActionErrors, UpdateResourceActionResponses, UpdateResourceData, UpdateResourceErrors, UpdateResourceResponses, UpdateWardData, UpdateWardErrors, UpdateWardResponses, UpdateWorkflowStateData, UpdateWorkflowStateErrors, UpdateWorkflowStateResponses, ValidateNumberingSeriesConfigData, ValidateNumberingSeriesConfigErrors, ValidateNumberingSeriesConfigResponses } from './types.gen';
 
 export type Options<TData extends TDataShape = TDataShape, ThrowOnError extends boolean = boolean, TResponse = unknown> = Options2<TData, ThrowOnError, TResponse> & {
     /**
@@ -740,6 +740,82 @@ export const updateResourceAction = <ThrowOnError extends boolean = false>(optio
     responseType: 'json',
     security: [{ scheme: 'bearer', type: 'http' }],
     url: '/api/v1/resources/{id}/actions/{action_id}',
+    ...options,
+    headers: {
+        'Content-Type': 'application/json',
+        ...options.headers
+    }
+});
+
+/**
+ * List Resource numbering series
+ */
+export const listNumberingSeries = <ThrowOnError extends boolean = false>(options: Options<ListNumberingSeriesData, ThrowOnError>): RequestResult<ListNumberingSeriesResponses, ListNumberingSeriesErrors, ThrowOnError> => (options.client ?? client).get<ListNumberingSeriesResponses, ListNumberingSeriesErrors, ThrowOnError>({
+    responseType: 'json',
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/api/v1/resources/{resource_id}/numbering-series',
+    ...options
+});
+
+/**
+ * Create a Resource numbering series
+ */
+export const createNumberingSeries = <ThrowOnError extends boolean = false>(options: Options<CreateNumberingSeriesData, ThrowOnError>): RequestResult<CreateNumberingSeriesResponses, CreateNumberingSeriesErrors, ThrowOnError> => (options.client ?? client).post<CreateNumberingSeriesResponses, CreateNumberingSeriesErrors, ThrowOnError>({
+    responseType: 'json',
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/api/v1/resources/{resource_id}/numbering-series',
+    ...options,
+    headers: {
+        'Content-Type': 'application/json',
+        ...options.headers
+    }
+});
+
+/**
+ * Get a Resource numbering series
+ */
+export const getNumberingSeries = <ThrowOnError extends boolean = false>(options: Options<GetNumberingSeriesData, ThrowOnError>): RequestResult<GetNumberingSeriesResponses, GetNumberingSeriesErrors, ThrowOnError> => (options.client ?? client).get<GetNumberingSeriesResponses, GetNumberingSeriesErrors, ThrowOnError>({
+    responseType: 'json',
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/api/v1/resources/{resource_id}/numbering-series/{series_id}',
+    ...options
+});
+
+/**
+ * Update a Resource numbering series
+ */
+export const updateNumberingSeries = <ThrowOnError extends boolean = false>(options: Options<UpdateNumberingSeriesData, ThrowOnError>): RequestResult<UpdateNumberingSeriesResponses, UpdateNumberingSeriesErrors, ThrowOnError> => (options.client ?? client).patch<UpdateNumberingSeriesResponses, UpdateNumberingSeriesErrors, ThrowOnError>({
+    responseType: 'json',
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/api/v1/resources/{resource_id}/numbering-series/{series_id}',
+    ...options,
+    headers: {
+        'Content-Type': 'application/json',
+        ...options.headers
+    }
+});
+
+/**
+ * Set numbering series state
+ */
+export const setNumberingSeriesState = <ThrowOnError extends boolean = false>(options: Options<SetNumberingSeriesStateData, ThrowOnError>): RequestResult<SetNumberingSeriesStateResponses, SetNumberingSeriesStateErrors, ThrowOnError> => (options.client ?? client).post<SetNumberingSeriesStateResponses, SetNumberingSeriesStateErrors, ThrowOnError>({
+    responseType: 'json',
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/api/v1/resources/{resource_id}/numbering-series/{series_id}/actions/set-state',
+    ...options,
+    headers: {
+        'Content-Type': 'application/json',
+        ...options.headers
+    }
+});
+
+/**
+ * Validate numbering series configuration without consuming a counter
+ */
+export const validateNumberingSeriesConfig = <ThrowOnError extends boolean = false>(options: Options<ValidateNumberingSeriesConfigData, ThrowOnError>): RequestResult<ValidateNumberingSeriesConfigResponses, ValidateNumberingSeriesConfigErrors, ThrowOnError> => (options.client ?? client).post<ValidateNumberingSeriesConfigResponses, ValidateNumberingSeriesConfigErrors, ThrowOnError>({
+    responseType: 'json',
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/api/v1/resources/{resource_id}/numbering-series/actions/validate-config',
     ...options,
     headers: {
         'Content-Type': 'application/json',

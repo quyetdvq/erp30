@@ -394,6 +394,67 @@ paths:
       operationId: deleteResourceAction
       summary: Delete resource action
       responses: {'204': {$ref: '#/components/responses/NoContent'}, '401': {$ref: '#/components/responses/Unauthorized'}, '403': {$ref: '#/components/responses/Forbidden'}, '404': {$ref: '#/components/responses/NotFound'}}
+  /api/v1/resources/{resource_id}/numbering-series:
+    parameters:
+      - name: resource_id
+        in: path
+        required: true
+        schema: {$ref: '#/components/schemas/BigInt'}
+    get:
+      operationId: listNumberingSeries
+      summary: List Resource numbering series
+      parameters: [{$ref: '#/components/parameters/AcceptLanguage'}, {$ref: '#/components/parameters/RequestId'}]
+      responses: {'200': {$ref: '#/components/responses/NumberingSeriesCollection'}, '401': {$ref: '#/components/responses/Unauthorized'}, '403': {$ref: '#/components/responses/Forbidden'}, '404': {$ref: '#/components/responses/NotFound'}}
+    post:
+      operationId: createNumberingSeries
+      summary: Create a Resource numbering series
+      requestBody: {$ref: '#/components/requestBodies/NumberingSeriesCreate'}
+      responses: {'201': {$ref: '#/components/responses/NumberingSeriesResponse'}, '401': {$ref: '#/components/responses/Unauthorized'}, '403': {$ref: '#/components/responses/Forbidden'}, '404': {$ref: '#/components/responses/NotFound'}, '409': {$ref: '#/components/responses/Conflict'}, '422': {$ref: '#/components/responses/UnprocessableEntity'}}
+  /api/v1/resources/{resource_id}/numbering-series/{series_id}:
+    parameters:
+      - name: resource_id
+        in: path
+        required: true
+        schema: {$ref: '#/components/schemas/BigInt'}
+      - name: series_id
+        in: path
+        required: true
+        schema: {$ref: '#/components/schemas/BigInt'}
+    get:
+      operationId: getNumberingSeries
+      summary: Get a Resource numbering series
+      responses: {'200': {$ref: '#/components/responses/NumberingSeriesResponse'}, '401': {$ref: '#/components/responses/Unauthorized'}, '403': {$ref: '#/components/responses/Forbidden'}, '404': {$ref: '#/components/responses/NotFound'}}
+    patch:
+      operationId: updateNumberingSeries
+      summary: Update a Resource numbering series
+      requestBody: {$ref: '#/components/requestBodies/NumberingSeriesPatch'}
+      responses: {'200': {$ref: '#/components/responses/NumberingSeriesResponse'}, '401': {$ref: '#/components/responses/Unauthorized'}, '403': {$ref: '#/components/responses/Forbidden'}, '404': {$ref: '#/components/responses/NotFound'}, '409': {$ref: '#/components/responses/Conflict'}, '422': {$ref: '#/components/responses/UnprocessableEntity'}}
+  /api/v1/resources/{resource_id}/numbering-series/{series_id}/actions/set-state:
+    parameters:
+      - name: resource_id
+        in: path
+        required: true
+        schema: {$ref: '#/components/schemas/BigInt'}
+      - name: series_id
+        in: path
+        required: true
+        schema: {$ref: '#/components/schemas/BigInt'}
+    post:
+      operationId: setNumberingSeriesState
+      summary: Set numbering series state
+      requestBody: {$ref: '#/components/requestBodies/NumberingSeriesState'}
+      responses: {'200': {$ref: '#/components/responses/NumberingSeriesResponse'}, '401': {$ref: '#/components/responses/Unauthorized'}, '403': {$ref: '#/components/responses/Forbidden'}, '404': {$ref: '#/components/responses/NotFound'}, '409': {$ref: '#/components/responses/Conflict'}, '422': {$ref: '#/components/responses/UnprocessableEntity'}}
+  /api/v1/resources/{resource_id}/numbering-series/actions/validate-config:
+    parameters:
+      - name: resource_id
+        in: path
+        required: true
+        schema: {$ref: '#/components/schemas/BigInt'}
+    post:
+      operationId: validateNumberingSeriesConfig
+      summary: Validate numbering series configuration without consuming a counter
+      requestBody: {$ref: '#/components/requestBodies/NumberingSeriesCreate'}
+      responses: {'200': {$ref: '#/components/responses/NumberingSeriesValidationResponse'}, '401': {$ref: '#/components/responses/Unauthorized'}, '403': {$ref: '#/components/responses/Forbidden'}, '404': {$ref: '#/components/responses/NotFound'}, '422': {$ref: '#/components/responses/UnprocessableEntity'}}
   /api/v1/policies:
     get:
       operationId: listPolicies
@@ -610,6 +671,9 @@ components:
     ResourcePatch: {required: true, content: {application/json: {schema: {$ref: '#/components/schemas/ResourcePatch'}}}}
     ResourceActionCreate: {required: true, content: {application/json: {schema: {$ref: '#/components/schemas/ResourceActionCreate'}}}}
     ResourceActionPatch: {required: true, content: {application/json: {schema: {$ref: '#/components/schemas/ResourceActionPatch'}}}}
+    NumberingSeriesCreate: {required: true, content: {application/json: {schema: {$ref: '#/components/schemas/NumberingSeriesCreate'}}}}
+    NumberingSeriesPatch: {required: true, content: {application/json: {schema: {$ref: '#/components/schemas/NumberingSeriesPatch'}}}}
+    NumberingSeriesState: {required: true, content: {application/json: {schema: {$ref: '#/components/schemas/NumberingSeriesState'}}}}
     PolicyCreate: {required: true, content: {application/json: {schema: {$ref: '#/components/schemas/PolicyCreate'}}}}
     PolicyPatch: {required: true, content: {application/json: {schema: {$ref: '#/components/schemas/PolicyPatch'}}}}
     WorkflowStateCreate: {required: true, content: {application/json: {schema: {$ref: '#/components/schemas/WorkflowStateCreate'}}}}
@@ -638,6 +702,9 @@ components:
     AuthorizationGroupCollection: {description: Authorization group collection., content: {application/json: {schema: {$ref: '#/components/schemas/AuthorizationGroupCollection'}}}}
     ResourceResponse: {description: Resource response., content: {application/json: {schema: {$ref: '#/components/schemas/ResourceResponse'}}}}
     ResourceCollection: {description: Resource collection., content: {application/json: {schema: {$ref: '#/components/schemas/ResourceCollection'}}}}
+    NumberingSeriesResponse: {description: Numbering series response., content: {application/json: {schema: {$ref: '#/components/schemas/NumberingSeriesResponse'}}}}
+    NumberingSeriesCollection: {description: Numbering series collection., content: {application/json: {schema: {$ref: '#/components/schemas/NumberingSeriesCollection'}}}}
+    NumberingSeriesValidationResponse: {description: Non-consuming numbering configuration validation response., content: {application/json: {schema: {$ref: '#/components/schemas/NumberingSeriesValidationResponse'}}}}
     PolicyResponse: {description: Policy response., content: {application/json: {schema: {$ref: '#/components/schemas/PolicyResponse'}}}}
     PolicyCollection: {description: Policy collection., content: {application/json: {schema: {$ref: '#/components/schemas/PolicyCollection'}}}}
     AuthorizationLogResponse: {description: Authorization log response., content: {application/json: {schema: {$ref: '#/components/schemas/AuthorizationLogResponse'}}}}
@@ -1198,6 +1265,11 @@ components:
     ResourcePatch: {type: object, properties: {name: {type: string}, lifecycle_id: {$ref: '#/components/schemas/BigInt'}}}
     ResourceActionCreate: {type: object, required: [code], properties: {code: {type: string}, description: {type: string}}}
     ResourceActionPatch: {type: object, properties: {description: {type: [string, 'null']}}}
+    NumberingSeries: {type: object, required: [id, resource_id, series_code, name, scope_type, pattern, reset_policy, generation_mode, start_number, increment_by, is_default, status], properties: {id: {$ref: '#/components/schemas/BigInt'}, resource_id: {$ref: '#/components/schemas/BigInt'}, series_code: {type: string}, name: {type: string}, scope_type: {type: string, enum: [GROUP, COMPANY, ORGANIZATION]}, pattern: {type: string}, reset_policy: {type: string, enum: [NEVER, YEARLY, MONTHLY, DAILY]}, generation_mode: {type: string, enum: [AUTO_REQUIRED, AUTO_IF_EMPTY]}, start_number: {$ref: '#/components/schemas/BigInt'}, increment_by: {type: integer, minimum: 1}, is_default: {type: boolean}, status: {type: string, enum: [ACTIVE, INACTIVE]}}}
+    NumberingSeriesCreate: {type: object, required: [series_code, name, scope_type, pattern, reset_policy, generation_mode, start_number, increment_by, is_default, status], properties: {series_code: {type: string}, name: {type: string}, scope_type: {type: string, enum: [GROUP, COMPANY, ORGANIZATION]}, pattern: {type: string}, reset_policy: {type: string, enum: [NEVER, YEARLY, MONTHLY, DAILY]}, generation_mode: {type: string, enum: [AUTO_REQUIRED, AUTO_IF_EMPTY]}, start_number: {$ref: '#/components/schemas/BigInt'}, increment_by: {type: integer, minimum: 1}, is_default: {type: boolean}, status: {type: string, enum: [ACTIVE, INACTIVE]}}}
+    NumberingSeriesPatch: {type: object, properties: {resource_id: {$ref: '#/components/schemas/BigInt'}, series_code: {type: string}, name: {type: string}, scope_type: {type: string, enum: [GROUP, COMPANY, ORGANIZATION]}, pattern: {type: string}, reset_policy: {type: string, enum: [NEVER, YEARLY, MONTHLY, DAILY]}, generation_mode: {type: string, enum: [AUTO_REQUIRED, AUTO_IF_EMPTY]}, start_number: {$ref: '#/components/schemas/BigInt'}, increment_by: {type: integer, minimum: 1}, is_default: {type: boolean}, status: {type: string, enum: [ACTIVE, INACTIVE]}}}
+    NumberingSeriesState: {type: object, required: [status], properties: {status: {type: string, enum: [ACTIVE, INACTIVE]}}}
+    NumberingSeriesValidation: {type: object, required: [valid, normalized_pattern, validation_messages], properties: {valid: {type: boolean}, normalized_pattern: {type: string}, validation_messages: {type: array, items: {type: string}}}}
     PolicyAction: {type: object, required: [resource_action_id, effect], properties: {resource_action_id: {$ref: '#/components/schemas/BigInt'}, effect: {type: string, enum: [ALLOW, DENY, ABSOLUTE_DENY]}}}
     Policy: {type: object, required: [id, organization_id, resource_id, participant_type, participant_ref_id, actions], properties: {id: {$ref: '#/components/schemas/BigInt'}, organization_id: {$ref: '#/components/schemas/BigInt'}, resource_id: {$ref: '#/components/schemas/BigInt'}, state_id: {$ref: '#/components/schemas/BigInt'}, participant_type: {type: string, enum: [USER, GROUP, POSITION, DEPARTMENT, ORGANIZATION]}, participant_ref_id: {$ref: '#/components/schemas/BigInt'}, actions: {type: array, items: {$ref: '#/components/schemas/PolicyAction'}}}}
     PolicyCreate: {type: object, required: [organization_id, resource_id, participant_type, participant_ref_id, actions], properties: {organization_id: {$ref: '#/components/schemas/BigInt'}, resource_id: {$ref: '#/components/schemas/BigInt'}, state_id: {$ref: '#/components/schemas/BigInt'}, participant_type: {type: string, enum: [USER, GROUP, POSITION, DEPARTMENT, ORGANIZATION]}, participant_ref_id: {$ref: '#/components/schemas/BigInt'}, actions: {type: array, items: {$ref: '#/components/schemas/PolicyAction'}}}}
@@ -1214,6 +1286,9 @@ components:
     AuthorizationGroupCollection: {allOf: [{$ref: '#/components/schemas/CollectionResponse'}], properties: {data: {type: array, items: {$ref: '#/components/schemas/AuthorizationGroup'}}}}
     ResourceResponse: {allOf: [{$ref: '#/components/schemas/SuccessResponse'}], properties: {data: {$ref: '#/components/schemas/Resource'}}}
     ResourceCollection: {allOf: [{$ref: '#/components/schemas/CollectionResponse'}], properties: {data: {type: array, items: {$ref: '#/components/schemas/Resource'}}}}
+    NumberingSeriesResponse: {allOf: [{$ref: '#/components/schemas/SuccessResponse'}], properties: {data: {$ref: '#/components/schemas/NumberingSeries'}}}
+    NumberingSeriesCollection: {allOf: [{$ref: '#/components/schemas/CollectionResponse'}], properties: {data: {type: array, items: {$ref: '#/components/schemas/NumberingSeries'}}}}
+    NumberingSeriesValidationResponse: {allOf: [{$ref: '#/components/schemas/SuccessResponse'}], properties: {data: {$ref: '#/components/schemas/NumberingSeriesValidation'}}}
     PolicyResponse: {allOf: [{$ref: '#/components/schemas/SuccessResponse'}], properties: {data: {$ref: '#/components/schemas/Policy'}}}
     PolicyCollection: {allOf: [{$ref: '#/components/schemas/CollectionResponse'}], properties: {data: {type: array, items: {$ref: '#/components/schemas/Policy'}}}}
     AuthorizationLogResponse: {allOf: [{$ref: '#/components/schemas/SuccessResponse'}], properties: {data: {$ref: '#/components/schemas/AuthorizationLog'}}}

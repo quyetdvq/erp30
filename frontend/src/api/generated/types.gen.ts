@@ -451,6 +451,58 @@ export type ResourceActionPatch = {
     description?: string | null;
 };
 
+export type NumberingSeries = {
+    id: BigInt;
+    resource_id: BigInt;
+    series_code: string;
+    name: string;
+    scope_type: 'GROUP' | 'COMPANY' | 'ORGANIZATION';
+    pattern: string;
+    reset_policy: 'NEVER' | 'YEARLY' | 'MONTHLY' | 'DAILY';
+    generation_mode: 'AUTO_REQUIRED' | 'AUTO_IF_EMPTY';
+    start_number: BigInt;
+    increment_by: number;
+    is_default: boolean;
+    status: 'ACTIVE' | 'INACTIVE';
+};
+
+export type NumberingSeriesCreate = {
+    series_code: string;
+    name: string;
+    scope_type: 'GROUP' | 'COMPANY' | 'ORGANIZATION';
+    pattern: string;
+    reset_policy: 'NEVER' | 'YEARLY' | 'MONTHLY' | 'DAILY';
+    generation_mode: 'AUTO_REQUIRED' | 'AUTO_IF_EMPTY';
+    start_number: BigInt;
+    increment_by: number;
+    is_default: boolean;
+    status: 'ACTIVE' | 'INACTIVE';
+};
+
+export type NumberingSeriesPatch = {
+    resource_id?: BigInt;
+    series_code?: string;
+    name?: string;
+    scope_type?: 'GROUP' | 'COMPANY' | 'ORGANIZATION';
+    pattern?: string;
+    reset_policy?: 'NEVER' | 'YEARLY' | 'MONTHLY' | 'DAILY';
+    generation_mode?: 'AUTO_REQUIRED' | 'AUTO_IF_EMPTY';
+    start_number?: BigInt;
+    increment_by?: number;
+    is_default?: boolean;
+    status?: 'ACTIVE' | 'INACTIVE';
+};
+
+export type NumberingSeriesState = {
+    status: 'ACTIVE' | 'INACTIVE';
+};
+
+export type NumberingSeriesValidation = {
+    valid: boolean;
+    normalized_pattern: string;
+    validation_messages: Array<string>;
+};
+
 export type PolicyAction = {
     resource_action_id: BigInt;
     effect: 'ALLOW' | 'DENY' | 'ABSOLUTE_DENY';
@@ -565,6 +617,18 @@ export type ResourceResponse = SuccessResponse & {
 
 export type ResourceCollection = CollectionResponse & {
     data?: Array<Resource>;
+};
+
+export type NumberingSeriesResponse = SuccessResponse & {
+    data?: NumberingSeries;
+};
+
+export type NumberingSeriesCollection = CollectionResponse & {
+    data?: Array<NumberingSeries>;
+};
+
+export type NumberingSeriesValidationResponse = SuccessResponse & {
+    data?: NumberingSeriesValidation;
 };
 
 export type PolicyResponse = SuccessResponse & {
@@ -685,6 +749,12 @@ export type ResourcePatch2 = ResourcePatch;
 export type ResourceActionCreate2 = ResourceActionCreate;
 
 export type ResourceActionPatch2 = ResourceActionPatch;
+
+export type NumberingSeriesCreate2 = NumberingSeriesCreate;
+
+export type NumberingSeriesPatch2 = NumberingSeriesPatch;
+
+export type NumberingSeriesState2 = NumberingSeriesState;
 
 export type PolicyCreate2 = PolicyCreate;
 
@@ -3118,6 +3188,257 @@ export type UpdateResourceActionResponses = {
 };
 
 export type UpdateResourceActionResponse = UpdateResourceActionResponses[keyof UpdateResourceActionResponses];
+
+export type ListNumberingSeriesData = {
+    body?: never;
+    headers?: {
+        /**
+         * Supported request language. Unsupported values fall back to vi.
+         */
+        'Accept-Language'?: 'vi' | 'en';
+        /**
+         * Client request correlation identifier; invalid or missing values are replaced by a generated UUID.
+         */
+        'X-Request-ID'?: RequestId;
+    };
+    path: {
+        resource_id: BigInt;
+    };
+    query?: never;
+    url: '/api/v1/resources/{resource_id}/numbering-series';
+};
+
+export type ListNumberingSeriesErrors = {
+    /**
+     * Unauthenticated or invalid authentication.
+     */
+    401: ErrorResponse;
+    /**
+     * Visible target but action denied.
+     */
+    403: ErrorResponse;
+    /**
+     * Target not found or not visible.
+     */
+    404: ErrorResponse;
+};
+
+export type ListNumberingSeriesError = ListNumberingSeriesErrors[keyof ListNumberingSeriesErrors];
+
+export type ListNumberingSeriesResponses = {
+    /**
+     * Numbering series collection.
+     */
+    200: NumberingSeriesCollection;
+};
+
+export type ListNumberingSeriesResponse = ListNumberingSeriesResponses[keyof ListNumberingSeriesResponses];
+
+export type CreateNumberingSeriesData = {
+    body: NumberingSeriesCreate2;
+    path: {
+        resource_id: BigInt;
+    };
+    query?: never;
+    url: '/api/v1/resources/{resource_id}/numbering-series';
+};
+
+export type CreateNumberingSeriesErrors = {
+    /**
+     * Unauthenticated or invalid authentication.
+     */
+    401: ErrorResponse;
+    /**
+     * Visible target but action denied.
+     */
+    403: ErrorResponse;
+    /**
+     * Target not found or not visible.
+     */
+    404: ErrorResponse;
+    /**
+     * Conflict, concurrency, uniqueness, or current-state failure.
+     */
+    409: ErrorResponse;
+    /**
+     * Semantically invalid request.
+     */
+    422: ErrorResponse;
+};
+
+export type CreateNumberingSeriesError = CreateNumberingSeriesErrors[keyof CreateNumberingSeriesErrors];
+
+export type CreateNumberingSeriesResponses = {
+    /**
+     * Numbering series response.
+     */
+    201: NumberingSeriesResponse;
+};
+
+export type CreateNumberingSeriesResponse = CreateNumberingSeriesResponses[keyof CreateNumberingSeriesResponses];
+
+export type GetNumberingSeriesData = {
+    body?: never;
+    path: {
+        resource_id: BigInt;
+        series_id: BigInt;
+    };
+    query?: never;
+    url: '/api/v1/resources/{resource_id}/numbering-series/{series_id}';
+};
+
+export type GetNumberingSeriesErrors = {
+    /**
+     * Unauthenticated or invalid authentication.
+     */
+    401: ErrorResponse;
+    /**
+     * Visible target but action denied.
+     */
+    403: ErrorResponse;
+    /**
+     * Target not found or not visible.
+     */
+    404: ErrorResponse;
+};
+
+export type GetNumberingSeriesError = GetNumberingSeriesErrors[keyof GetNumberingSeriesErrors];
+
+export type GetNumberingSeriesResponses = {
+    /**
+     * Numbering series response.
+     */
+    200: NumberingSeriesResponse;
+};
+
+export type GetNumberingSeriesResponse = GetNumberingSeriesResponses[keyof GetNumberingSeriesResponses];
+
+export type UpdateNumberingSeriesData = {
+    body: NumberingSeriesPatch2;
+    path: {
+        resource_id: BigInt;
+        series_id: BigInt;
+    };
+    query?: never;
+    url: '/api/v1/resources/{resource_id}/numbering-series/{series_id}';
+};
+
+export type UpdateNumberingSeriesErrors = {
+    /**
+     * Unauthenticated or invalid authentication.
+     */
+    401: ErrorResponse;
+    /**
+     * Visible target but action denied.
+     */
+    403: ErrorResponse;
+    /**
+     * Target not found or not visible.
+     */
+    404: ErrorResponse;
+    /**
+     * Conflict, concurrency, uniqueness, or current-state failure.
+     */
+    409: ErrorResponse;
+    /**
+     * Semantically invalid request.
+     */
+    422: ErrorResponse;
+};
+
+export type UpdateNumberingSeriesError = UpdateNumberingSeriesErrors[keyof UpdateNumberingSeriesErrors];
+
+export type UpdateNumberingSeriesResponses = {
+    /**
+     * Numbering series response.
+     */
+    200: NumberingSeriesResponse;
+};
+
+export type UpdateNumberingSeriesResponse = UpdateNumberingSeriesResponses[keyof UpdateNumberingSeriesResponses];
+
+export type SetNumberingSeriesStateData = {
+    body: NumberingSeriesState2;
+    path: {
+        resource_id: BigInt;
+        series_id: BigInt;
+    };
+    query?: never;
+    url: '/api/v1/resources/{resource_id}/numbering-series/{series_id}/actions/set-state';
+};
+
+export type SetNumberingSeriesStateErrors = {
+    /**
+     * Unauthenticated or invalid authentication.
+     */
+    401: ErrorResponse;
+    /**
+     * Visible target but action denied.
+     */
+    403: ErrorResponse;
+    /**
+     * Target not found or not visible.
+     */
+    404: ErrorResponse;
+    /**
+     * Conflict, concurrency, uniqueness, or current-state failure.
+     */
+    409: ErrorResponse;
+    /**
+     * Semantically invalid request.
+     */
+    422: ErrorResponse;
+};
+
+export type SetNumberingSeriesStateError = SetNumberingSeriesStateErrors[keyof SetNumberingSeriesStateErrors];
+
+export type SetNumberingSeriesStateResponses = {
+    /**
+     * Numbering series response.
+     */
+    200: NumberingSeriesResponse;
+};
+
+export type SetNumberingSeriesStateResponse = SetNumberingSeriesStateResponses[keyof SetNumberingSeriesStateResponses];
+
+export type ValidateNumberingSeriesConfigData = {
+    body: NumberingSeriesCreate2;
+    path: {
+        resource_id: BigInt;
+    };
+    query?: never;
+    url: '/api/v1/resources/{resource_id}/numbering-series/actions/validate-config';
+};
+
+export type ValidateNumberingSeriesConfigErrors = {
+    /**
+     * Unauthenticated or invalid authentication.
+     */
+    401: ErrorResponse;
+    /**
+     * Visible target but action denied.
+     */
+    403: ErrorResponse;
+    /**
+     * Target not found or not visible.
+     */
+    404: ErrorResponse;
+    /**
+     * Semantically invalid request.
+     */
+    422: ErrorResponse;
+};
+
+export type ValidateNumberingSeriesConfigError = ValidateNumberingSeriesConfigErrors[keyof ValidateNumberingSeriesConfigErrors];
+
+export type ValidateNumberingSeriesConfigResponses = {
+    /**
+     * Non-consuming numbering configuration validation response.
+     */
+    200: NumberingSeriesValidationResponse;
+};
+
+export type ValidateNumberingSeriesConfigResponse = ValidateNumberingSeriesConfigResponses[keyof ValidateNumberingSeriesConfigResponses];
 
 export type ListPoliciesData = {
     body?: never;

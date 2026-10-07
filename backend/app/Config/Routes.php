@@ -52,6 +52,12 @@ $routes->group('api/v1', ['filter' => 'cors'], static function (RouteCollection 
         }
     }
     $routes->delete('resources/(:num)', 'Api\\AuthorizationWorkflow::deleteResource/$1');
+    $routes->get('resources/(:num)/numbering-series', 'Api\\AutoNumbering::list/$1');
+    $routes->post('resources/(:num)/numbering-series', 'Api\\AutoNumbering::create/$1');
+    $routes->get('resources/(:num)/numbering-series/(:num)', 'Api\\AutoNumbering::show/$1/$2');
+    $routes->patch('resources/(:num)/numbering-series/(:num)', 'Api\\AutoNumbering::update/$1/$2');
+    $routes->post('resources/(:num)/numbering-series/(:num)/actions/set-state', 'Api\\AutoNumbering::setState/$1/$2');
+    $routes->post('resources/(:num)/numbering-series/actions/validate-config', 'Api\\AutoNumbering::validateConfig/$1');
     $routes->get('authorization-groups/(:num)/members', 'Api\\AuthorizationWorkflow::members/$1');
     $routes->put('authorization-groups/(:num)/members', 'Api\\AuthorizationWorkflow::replaceMembers/$1');
     $routes->get('authorization-groups/(:num)/permissions', 'Api\\AuthorizationWorkflow::permissions/$1');

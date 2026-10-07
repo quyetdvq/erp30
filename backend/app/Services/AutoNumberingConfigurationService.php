@@ -67,6 +67,47 @@ final class AutoNumberingConfigurationService
         return $this->repo()->findByResource($resourceId);
     }
 
+    /**
+     * Assert the canonical configuration permission for an API operation.
+     *
+     * @param array<string, mixed>|null $target
+     */
+    public function assertAuthorized(OperationContext $operation, ?array $target = null): void
+    {
+        $this->authorize($operation, $target);
+    }
+
+    /**
+     * Validate a prospective series without persisting or allocating a counter.
+     *
+     * @param array<string, mixed> $data
+     * @return array{valid: bool, normalized_pattern: string, validation_messages: list<string>}
+     */
+    public function validateConfig(mixed $resourceId, array $data, ?OperationContext $operation = null): array
+    {
+        $resourceId = PositiveId::normalize($resourceId, 'resource_id', self::ERROR_INVALID_CONFIGURATION);
+        if ($this->repo()->findResource($resourceId) === null) {
+            throw new DomainException(self::ERROR_RESOURCE_NOT_FOUND, ['resource_id' => $resourceId]);
+        }
+        $operation ??= $this->operation();
+        $this->authorize($operation);
+        $data['resource_id'] = $resourceId;
+        $payload = $this->normalizeCreate($data);
+        $this->assertPatternIfActive($payload);
+        $this->assertPatternSetIfSupported($resourceId, $payload);
+        $this->assertActiveDefaultAvailable(
+            $resourceId,
+            (string) $payload['status'] === 'ACTIVE' && $this->flag($payload['is_default']),
+            null,
+        );
+
+        return [
+            'valid' => true,
+            'normalized_pattern' => (string) $payload['pattern'],
+            'validation_messages' => [],
+        ];
+    }
+
     /** @param array<string, mixed> $data */
     public function create(array $data, ?OperationContext $operation = null): int
     {
