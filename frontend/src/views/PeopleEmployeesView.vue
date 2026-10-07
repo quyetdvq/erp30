@@ -683,9 +683,33 @@ onMounted(async () => {
         :owner-id="String(selected?.id ?? '')"
         owner-type="EMPLOYEE"
       />
-      <div v-else class="audit-placeholder">
-        <h3>{{ t('people.audit') }}</h3>
+      <div v-else class="audit-panel">
+        <header class="audit-panel__header">
+          <div>
+            <span class="eyebrow">{{ selected.employee_code }}</span>
+            <h3>{{ t('people.audit') }}</h3>
+          </div>
+          <span class="status-pill" :class="{ 'status-pill--off': selected.status !== 'ACTIVE' }">
+            {{ t(`status.${selected.status.toLowerCase()}`) }}
+          </span>
+        </header>
         <p>{{ t('people.auditDescription') }}</p>
+        <dl class="audit-panel__summary">
+          <dt>{{ t('people.employeeCode') }}</dt>
+          <dd>{{ selected.employee_code }}</dd>
+          <dt>{{ t('people.status') }}</dt>
+          <dd>{{ t(`status.${selected.status.toLowerCase()}`) }}</dd>
+          <dt>{{ t('people.hireDate') }}</dt>
+          <dd>{{ displayDate(selected.hire_date) }}</dd>
+          <dt>{{ t('people.manager') }}</dt>
+          <dd>
+            {{
+              state.rows.value.find(
+                (row) => String(row.id) === String(selected.manager_employee_id),
+              )?.employee_name ?? '—'
+            }}
+          </dd>
+        </dl>
       </div>
     </section>
   </div>
@@ -982,9 +1006,47 @@ onMounted(async () => {
 .empty-state {
   padding: 22px;
 }
-.audit-placeholder {
-  padding: 18px 0;
-  color: #61768a;
+.audit-panel {
+  display: grid;
+  gap: 12px;
+  padding: 24px 22px 28px;
+}
+.audit-panel__header {
+  display: flex;
+  align-items: start;
+  justify-content: space-between;
+  gap: 14px;
+}
+.audit-panel__header h3 {
+  margin: 8px 0 0;
+  color: #183b57;
+  font-size: 18px;
+}
+.audit-panel > p {
+  margin: 0;
+  color: #536b7b;
+}
+.audit-panel__summary {
+  display: grid;
+  grid-template-columns: 160px minmax(0, 1fr);
+  gap: 0;
+  margin: 0;
+}
+.audit-panel__summary dt,
+.audit-panel__summary dd {
+  margin: 0;
+  padding: 10px 0;
+  border-bottom: 1px solid #edf2f4;
+}
+.audit-panel__summary dt {
+  color: #536b7b;
+  font-size: 12px;
+  font-weight: 700;
+}
+.audit-panel__summary dd {
+  min-width: 0;
+  color: #183b57;
+  overflow-wrap: anywhere;
 }
 .checkbox-row {
   display: flex !important;
@@ -1066,6 +1128,16 @@ onMounted(async () => {
   }
   .detail-grid__wide {
     grid-column: auto;
+  }
+  .audit-panel__summary {
+    grid-template-columns: 1fr;
+  }
+  .audit-panel__summary dt {
+    border-bottom: 0;
+    padding-bottom: 3px;
+  }
+  .audit-panel__summary dd {
+    padding-top: 3px;
   }
   .data-table {
     min-width: 820px;

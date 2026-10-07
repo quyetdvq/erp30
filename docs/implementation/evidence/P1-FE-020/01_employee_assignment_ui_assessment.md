@@ -23,6 +23,12 @@ opens as a large responsive modal matching the supplied visual direction.
 - Employee detail opens from the list action in a large modal with an explicit
   accessible close action; nested Employee/Assignment forms remain operable
   above the detail modal.
+- Contacts tab reuses FE-010 `ContactList` so active/history, search, page
+  size, refresh, create/edit/state actions, and contact detail stay aligned
+  with the Locations/Wards list surface.
+- Audit tab now uses the same detail-surface spacing and summary treatment as
+  the existing master detail views, while retaining the authorized-audit-API
+  availability message and avoiding fabricated audit entries.
 - Assignments: active/history views, Organization/Department/Position,
   Primary/Secondary, effective dates, status, create/edit/state actions, and
   Primary overlap hint. Assignment calls remain Organization-authorized API
