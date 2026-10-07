@@ -77,6 +77,8 @@ class Cors extends BaseConfig
          */
         'allowedHeaders' => [
             'Content-Type',
+            'Accept-Language',
+            'X-Request-ID',
             'X-CSRF-TOKEN',
             'X-Correlation-ID',
             'Idempotency-Key',
@@ -95,6 +97,7 @@ class Cors extends BaseConfig
          */
         'exposedHeaders' => [
             'ETag',
+            'X-Request-ID',
             'X-Correlation-ID',
             'Idempotency-Replayed',
             'Retry-After',

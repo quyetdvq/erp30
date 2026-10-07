@@ -71,11 +71,7 @@ function handleLanguageTrigger(event: MouseEvent): void {
     <section class="auth-layout" aria-labelledby="login-title">
       <aside class="auth-spotlight">
         <div class="spotlight-brand">
-          <span class="spotlight-mark">D</span>
-          <span class="spotlight-brand-copy">
-            <strong>Dinktech</strong>
-            <small>{{ t('common.brandSubtitle') }}</small>
-          </span>
+          <img class="brand-logo brand-logo--dark" src="/logo-dinktech.svg" alt="Dinktech" />
         </div>
 
         <div class="spotlight-content">
@@ -133,11 +129,7 @@ function handleLanguageTrigger(event: MouseEvent): void {
 
         <div class="auth-form-wrap">
           <div class="mobile-brand" aria-hidden="true">
-            <span class="spotlight-mark">D</span>
-            <span class="spotlight-brand-copy">
-              <strong>Dinktech</strong>
-              <small>{{ t('common.brandSubtitle') }}</small>
-            </span>
+            <img class="brand-logo brand-logo--light" src="/logo-dinktech.svg" alt="" />
           </div>
           <p class="auth-eyebrow">{{ t('auth.formEyebrow') }}</p>
           <h1 id="login-title">{{ t('auth.title') }}</h1>
@@ -282,38 +274,19 @@ function handleLanguageTrigger(event: MouseEvent): void {
 .mobile-brand {
   display: flex;
   align-items: center;
-  gap: 12px;
+  min-height: 58px;
 }
 
-.spotlight-mark {
-  display: grid;
-  width: 40px;
-  height: 40px;
-  place-items: center;
-  border: 1px solid rgb(255 255 255 / 30%);
-  border-radius: 10px;
-  background: #0b75b9;
-  color: #fff;
-  font-size: 22px;
-  font-weight: 800;
-  box-shadow: 0 8px 18px rgb(4 25 41 / 24%);
+.brand-logo {
+  display: block;
+  width: 172px;
+  height: 74px;
+  object-fit: contain;
+  object-position: left center;
 }
 
-.spotlight-brand-copy {
-  display: grid;
-  gap: 3px;
-}
-
-.spotlight-brand-copy strong {
-  font-size: 17px;
-  letter-spacing: 0.01em;
-}
-
-.spotlight-brand-copy small {
-  color: #a9c4d4;
-  font-size: 10px;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
+.brand-logo--dark {
+  filter: drop-shadow(0 8px 18px rgb(4 25 41 / 24%));
 }
 
 .spotlight-content {
@@ -540,19 +513,9 @@ function handleLanguageTrigger(event: MouseEvent): void {
     margin-bottom: 38px;
   }
 
-  .mobile-brand .spotlight-mark {
-    width: 34px;
-    height: 34px;
-    border: 0;
-    font-size: 18px;
-  }
-
-  .mobile-brand .spotlight-brand-copy strong {
-    color: #112d45;
-  }
-
-  .mobile-brand .spotlight-brand-copy small {
-    color: #7890a0;
+  .mobile-brand .brand-logo {
+    width: 160px;
+    height: 62px;
   }
 
   .auth-footer {
