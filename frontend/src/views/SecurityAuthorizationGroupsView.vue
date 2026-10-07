@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed, onMounted, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
-import type { AuthorizationGroup } from '@/api/generated/types.gen'
+import type { AuthorizationGroup, Resource } from '@/api/generated/types.gen'
 import {
   ListPagination,
   ListQueryControls,
@@ -17,6 +17,7 @@ import {
   getGroupMembers,
   getGroupPermissions,
   getResourceActions,
+  listSecurityUserPage,
   listResourcePage,
   listAuthorizationGroupPage,
   saveAuthorizationGroup,
@@ -26,8 +27,8 @@ import {
   type SecurityMember,
   type SecurityPermission,
 } from '@/services/security'
-import { getCurrentUser, type AuthUser } from '@/services/auth'
 import { reportApiError } from '@/services/errorBoundary'
+import type { ManagedUser } from '@/services/admin'
 
 const { t } = useI18n()
 const state = useListState<AuthorizationGroup>((query) => listAuthorizationGroupPage(query), {
@@ -45,10 +46,12 @@ const error = ref<unknown | null>(null)
 const form = ref({ code: '', name: '', description: '', status: 'ACTIVE' as 'ACTIVE' | 'INACTIVE' })
 const members = ref<SecurityMember[]>([])
 const permissions = ref<SecurityPermission[]>([])
-const currentUser = ref<AuthUser | null>(null)
+const users = ref<ManagedUser[]>([])
 const allActions = ref<SecurityAction[]>([])
+const resources = ref<Resource[]>([])
 const memberDraft = ref<string[]>([])
 const permissionDraft = ref<string[]>([])
+const detailOpen = ref(false)
 
 const columns: readonly ListColumn<AuthorizationGroup>[] = [
   { key: 'code', labelKey: 'security.code', sortable: true },
@@ -65,6 +68,25 @@ const actionGroups = computed(() => {
     groups.set(action.resource_id, [...(groups.get(action.resource_id) ?? []), action])
   return [...groups.entries()].map(([resourceId, actions]) => ({ resourceId, actions }))
 })
+const permissionRows = computed(() =>
+  permissions.value.map((permission) => {
+    const action = allActions.value.find(
+      (candidate) => String(candidate.id) === String(permission.resource_action_id),
+    )
+    const resource = resources.value.find(
+      (candidate) => String(candidate.id) === String(action?.resource_id),
+    )
+    return {
+      ...permission,
+      resource_id: resource ? String(resource.id) : action?.resource_id,
+      resource_name: resource?.name,
+      resource_type: resource?.type,
+      action: action?.code,
+      effect: 'ALLOW' as const,
+      code: action?.code,
+    }
+  }),
+)
 
 function applyQuery(query: ListQuery): void {
   state.setSearch(query.q)
@@ -92,23 +114,35 @@ async function load(): Promise<void> {
 async function loadDetail(): Promise<void> {
   if (!selected.value) return
   try {
-    const [nextMembers, nextPermissions, resources, user] = await Promise.all([
+    const [nextMembers, nextPermissions, resourcePage] = await Promise.all([
       getGroupMembers(String(selected.value.id)),
       getGroupPermissions(String(selected.value.id)),
       listResourcePage({ q: '', page: 1, page_size: 200, sort: 'type', filter: {} }),
-      getCurrentUser(),
     ])
     const actions = await Promise.all(
-      resources.data.map((resource) => getResourceActions(String(resource.id))),
+      resourcePage.data.map((resource) => getResourceActions(String(resource.id))),
     )
     members.value = nextMembers
     permissions.value = nextPermissions
-    currentUser.value = user
+    resources.value = resourcePage.data
     allActions.value = actions.flat()
     memberDraft.value = nextMembers.map((member) => String(member.id))
     permissionDraft.value = nextPermissions.map((permission) =>
       String(permission.resource_action_id),
     )
+    try {
+      users.value = (
+        await listSecurityUserPage({
+          q: '',
+          page: 1,
+          page_size: 200,
+          sort: 'username',
+          filter: {},
+        })
+      ).data
+    } catch {
+      users.value = []
+    }
   } catch (caught: unknown) {
     error.value = caught
     reportApiError(caught)
@@ -117,6 +151,7 @@ async function loadDetail(): Promise<void> {
 function selectGroup(row: AuthorizationGroup): void {
   selectedId.value = String(row.id)
   tab.value = 'overview'
+  detailOpen.value = true
   void loadDetail()
 }
 function selectTab(nextTab: 'overview' | 'members' | 'permissions'): void {
@@ -306,74 +341,153 @@ onMounted(() => void load())
     </ListShell>
   </section>
 
-  <section v-if="selected" class="content-panel security-detail-panel">
-    <header class="security-detail-heading">
-      <div>
-        <h2>{{ selected.name }}</h2>
-        <small>{{ selected.code }} · {{ t('security.groupIdentityHint') }}</small>
-      </div>
-      <TableStatus :status="selected.status" />
-    </header>
-    <nav class="security-tabs" aria-label="Authorization Group detail tabs">
-      <button
-        v-for="item in ['overview', 'members', 'permissions'] as const"
-        :key="item"
-        type="button"
-        :class="{ active: tab === item }"
-        @click="selectTab(item)"
-      >
-        {{ t(`security.tabs.${item}`) }}
-      </button>
-    </nav>
-    <div v-if="tab === 'overview'" class="security-detail-copy">
-      <p>{{ selected.description || t('security.noDescription') }}</p>
-      <p class="security-note">{{ t('security.basePermissionNote') }}</p>
-    </div>
-    <div v-else-if="tab === 'members'" class="security-editor">
-      <p class="security-note">{{ t('security.memberSourceNote') }}</p>
-      <label v-if="currentUser" class="check-row"
-        ><input
-          type="checkbox"
-          :checked="memberDraft.includes(String(currentUser.id))"
-          @change="toggleMember(String(currentUser.id))"
-        />
-        <span>{{ currentUser.username }} (#{{ currentUser.id }})</span></label
-      >
-      <p v-else class="empty-state">{{ t('security.noCurrentUser') }}</p>
-      <button
-        type="button"
-        class="primary-button"
-        :disabled="busy || selected.status !== 'ACTIVE'"
-        @click="saveMembers"
-      >
-        {{ busy ? t('common.saving') : t('security.saveMembers') }}
-      </button>
-    </div>
-    <div v-else class="security-editor">
-      <p class="security-note">{{ t('security.permissionSourceNote') }}</p>
-      <div class="permission-grid">
-        <div v-for="group in actionGroups" :key="group.resourceId" class="permission-group">
-          <strong>{{ group.resourceId }}</strong
-          ><label v-for="action in group.actions" :key="action.id" class="check-row"
-            ><input
-              type="checkbox"
-              :checked="hasPermission(action.id)"
-              @change="togglePermission(action.id)"
-            />
-            {{ action.code }}</label
-          >
+  <div v-if="detailOpen && selected" class="modal-backdrop" @click.self="detailOpen = false">
+    <section
+      class="modal-card modal-card--wide"
+      role="dialog"
+      aria-modal="true"
+      :aria-label="`${t('security.authorizationGroup')}: ${selected.name}`"
+    >
+      <header class="security-detail-heading">
+        <div>
+          <h2>{{ selected.name }}</h2>
+          <small>{{ selected.code }} · {{ t('security.groupIdentityHint') }}</small>
         </div>
+        <div class="detail-heading-actions">
+          <TableStatus :status="selected.status" />
+          <button
+            type="button"
+            class="icon-button"
+            :aria-label="t('common.close')"
+            @click="detailOpen = false"
+          >
+            ×
+          </button>
+        </div>
+      </header>
+      <nav class="security-tabs" aria-label="Authorization Group detail tabs">
+        <button
+          v-for="item in ['overview', 'members', 'permissions'] as const"
+          :key="item"
+          type="button"
+          :class="{ active: tab === item }"
+          @click="selectTab(item)"
+        >
+          {{ t(`security.tabs.${item}`) }}
+        </button>
+      </nav>
+      <div v-if="tab === 'overview'" class="security-detail-copy">
+        <p>{{ selected.description || t('security.noDescription') }}</p>
+        <p class="security-note">{{ t('security.basePermissionNote') }}</p>
       </div>
-      <button
-        type="button"
-        class="primary-button"
-        :disabled="busy || selected.status !== 'ACTIVE'"
-        @click="savePermissions"
-      >
-        {{ busy ? t('common.saving') : t('security.savePermissions') }}
-      </button>
-    </div>
-  </section>
+      <div v-else-if="tab === 'members'" class="security-editor">
+        <p class="security-note">{{ t('security.memberSourceNote') }}</p>
+        <div v-if="members.length" class="detail-table-wrap">
+          <table class="detail-table">
+            <caption class="sr-only">
+              {{
+                t('security.memberList')
+              }}
+            </caption>
+            <thead>
+              <tr>
+                <th scope="col">{{ t('users.id') }}</th>
+                <th scope="col">{{ t('users.username') }}</th>
+                <th scope="col">{{ t('users.status') }}</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr v-for="member in members" :key="member.id">
+                <td>{{ member.id }}</td>
+                <td>{{ member.username }}</td>
+                <td><TableStatus :status="member.status || member.active" /></td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+        <p v-else class="empty-state">{{ t('security.noMembers') }}</p>
+        <div v-if="users.length" class="member-picker">
+          <p class="security-note">{{ t('security.memberPickerNote') }}</p>
+          <label v-for="user in users" :key="user.id" class="check-row">
+            <input
+              type="checkbox"
+              :checked="memberDraft.includes(String(user.id))"
+              @change="toggleMember(String(user.id))"
+            />
+            <span>{{ user.username || t('list.noValue') }} (#{{ user.id }})</span>
+          </label>
+        </div>
+        <p v-else class="empty-state">{{ t('security.noUsersForMembers') }}</p>
+        <button
+          type="button"
+          class="primary-button"
+          :disabled="busy || selected.status !== 'ACTIVE'"
+          @click="saveMembers"
+        >
+          {{ busy ? t('common.saving') : t('security.saveMembers') }}
+        </button>
+      </div>
+      <div v-else class="security-editor">
+        <p class="security-note">{{ t('security.permissionSourceNote') }}</p>
+        <div v-if="permissionRows.length" class="detail-table-wrap">
+          <table class="detail-table">
+            <caption class="sr-only">
+              {{
+                t('security.permissionList')
+              }}
+            </caption>
+            <thead>
+              <tr>
+                <th scope="col">{{ t('security.resource') }}</th>
+                <th scope="col">{{ t('security.action') }}</th>
+                <th scope="col">{{ t('security.effect') }}</th>
+                <th scope="col">{{ t('security.permissionId') }}</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr v-for="permission in permissionRows" :key="permission.resource_action_id">
+                <td>
+                  {{ permission.resource_name || permission.resource_type || t('list.noValue') }}
+                </td>
+                <td>
+                  <code>{{ permission.action || permission.code || t('list.noValue') }}</code>
+                </td>
+                <td><span class="effect effect--allow">ALLOW</span></td>
+                <td>
+                  <code>{{ permission.resource_action_id }}</code>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+        <p v-else class="empty-state">{{ t('security.noPermissions') }}</p>
+        <div class="permission-grid">
+          <div v-for="group in actionGroups" :key="group.resourceId" class="permission-group">
+            <strong>{{
+              resources.find((resource) => String(resource.id) === group.resourceId)?.name ||
+              group.resourceId
+            }}</strong>
+            <label v-for="action in group.actions" :key="action.id" class="check-row">
+              <input
+                type="checkbox"
+                :checked="hasPermission(action.id)"
+                @change="togglePermission(action.id)"
+              />
+              {{ action.code }}
+            </label>
+          </div>
+        </div>
+        <button
+          type="button"
+          class="primary-button"
+          :disabled="busy || selected.status !== 'ACTIVE'"
+          @click="savePermissions"
+        >
+          {{ busy ? t('common.saving') : t('security.savePermissions') }}
+        </button>
+      </div>
+    </section>
+  </div>
 
   <div v-if="modalOpen" class="modal-backdrop" @click.self="modalOpen = false">
     <section
@@ -449,6 +563,11 @@ onMounted(() => void load())
   align-items: start;
   gap: 12px;
 }
+.detail-heading-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
 .security-detail-heading h2 {
   margin: 0;
   color: #153956;
@@ -513,6 +632,42 @@ onMounted(() => void load())
   font-family: ui-monospace, monospace;
   font-size: 12px;
 }
+.detail-table-wrap {
+  overflow-x: auto;
+  border: 1px solid #dbe5ea;
+  border-radius: 6px;
+}
+.detail-table {
+  width: 100%;
+  min-width: 560px;
+  border-collapse: collapse;
+  color: #183b57;
+  font-size: 12px;
+}
+.detail-table th,
+.detail-table td {
+  padding: 9px 10px;
+  border-bottom: 1px solid #e8eef1;
+  text-align: start;
+}
+.detail-table th {
+  background: #f7fafb;
+  color: #536b7b;
+  font-size: 11px;
+}
+.detail-table tbody tr:last-child td {
+  border-bottom: 0;
+}
+.effect {
+  display: inline-flex;
+  padding: 3px 7px;
+  border: 1px solid #b8dfcc;
+  background: #effbf4;
+  color: #1c8a62;
+  font-family: ui-monospace, monospace;
+  font-size: 10px;
+  font-weight: 700;
+}
 .inline-error {
   margin: 0 0 12px;
   color: #b64444;
@@ -534,6 +689,9 @@ onMounted(() => void load())
   border-radius: 7px;
   background: #fff;
   box-shadow: 0 20px 60px rgb(18 42 62 / 24%);
+}
+.modal-card--wide {
+  width: min(100%, 900px);
 }
 .modal-card__header,
 .modal-card__footer {
@@ -571,6 +729,17 @@ onMounted(() => void load())
   background: transparent;
   color: #536b7b;
   font-size: 22px;
+}
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
 }
 @media (max-width: 700px) {
   .permission-grid {

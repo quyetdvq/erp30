@@ -48,6 +48,7 @@ import type {
 import { withTypedClient } from '@/api/client'
 import { i18n } from '@/i18n'
 import type { ListQuery, ListResponse } from '@/components/lists/listTypes'
+import { getUsers, type ManagedUser } from '@/services/admin'
 import { getCurrentUser, type AuthUser } from '@/services/auth'
 
 export type SecurityAction = {
@@ -66,8 +67,11 @@ export type SecurityMember = {
 
 export type SecurityPermission = {
   resource_action_id: string
+  resource_id?: string
+  resource_name?: string
   resource_type?: string
   action?: string
+  effect?: 'ALLOW' | 'DENY' | 'ABSOLUTE_DENY'
   code?: string
 }
 
@@ -116,6 +120,33 @@ export function listAuthorizationGroupPage(
       throwOnError: true,
     }).then(collection),
   )
+}
+
+export async function listSecurityUserPage(query: ListQuery): Promise<ListResponse<ManagedUser>> {
+  const users = await getUsers()
+  const search = query.q.trim().toLowerCase()
+  const filtered = users
+    .filter((user) =>
+      search.length === 0
+        ? true
+        : `${user.username} ${user.email ?? ''}`.toLowerCase().includes(search),
+    )
+    .sort((left, right) => {
+      const direction = query.sort.startsWith('-') ? -1 : 1
+      const field = query.sort.replace(/^-/, '') as 'id' | 'username' | 'email' | 'status'
+      return String(left[field] ?? '').localeCompare(String(right[field] ?? '')) * direction
+    })
+  const start = (query.page - 1) * query.page_size
+  return {
+    data: filtered.slice(start, start + query.page_size),
+    meta: { page: query.page, page_size: query.page_size, total: filtered.length },
+  }
+}
+
+export async function getSecurityUserById(id: string): Promise<ManagedUser> {
+  const user = (await getUsers()).find((candidate) => String(candidate.id) === id)
+  if (!user) throw new Error('User not found.')
+  return user
 }
 
 export async function saveAuthorizationGroup(

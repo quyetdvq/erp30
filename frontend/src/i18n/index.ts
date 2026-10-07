@@ -365,6 +365,7 @@ export const messages = {
       logsTitle: 'Nhật ký phân quyền',
       logsDescription: 'Đọc các quyết định Authorization Log đã được backend giới hạn phạm vi.',
       authorizationGroup: 'Nhóm phân quyền',
+      viewDetails: 'Xem chi tiết',
       resource: 'Resource',
       action: 'Action',
       actions: 'Thao tác',
@@ -401,12 +402,13 @@ export const messages = {
       basePermissionNote:
         'Base Permission đến từ Group/direct addition; Policy và ABSOLUTE_DENY vẫn được backend áp dụng.',
       memberSourceNote:
-        'API hiện hành chỉ cung cấp danh tính phiên hiện tại cho lựa chọn thành viên; không suy đoán User khác.',
+        'Danh sách Members lấy từ API của Authorization Group; việc cập nhật chỉ gửi các User được API trả về.',
+      memberPickerNote: 'Chọn toàn bộ User cần thuộc nhóm; backend vẫn là nơi kiểm tra quyền.',
       permissionSourceNote:
         'Chỉ gán Resource Action canonical. Frontend không tự đánh giá PBAC hoặc effect.',
       saveMembers: 'Lưu Members',
       savePermissions: 'Lưu Permissions',
-      noCurrentUser: 'Không có danh tính phiên hiện tại.',
+      noUsersForMembers: 'Không tải được danh sách User để chỉnh sửa Members.',
       domainImmutable: 'Domain của Resource canonical hiện hữu là read-only.',
       domainCreateNote: 'Chỉ SYSTEM, MASTER hoặc ORGANIZATION; COMPANY không phải Domain hợp lệ.',
       resourceDomainNote:
@@ -818,6 +820,7 @@ export const messages = {
       logsTitle: 'Authorization Logs',
       logsDescription: 'Read backend-scoped authorization decisions.',
       authorizationGroup: 'Authorization Group',
+      viewDetails: 'View details',
       resource: 'Resource',
       action: 'Action',
       actions: 'Actions',
@@ -854,12 +857,14 @@ export const messages = {
       basePermissionNote:
         'Base Permission comes from groups/direct additions; Policy and ABSOLUTE_DENY still apply on the backend.',
       memberSourceNote:
-        'The current API exposes only the current session identity for member selection; other users are not inferred.',
+        'Members come from the Authorization Group API; updates submit only users returned by the API.',
+      memberPickerNote:
+        'Select every User who should belong to the group; the backend remains authoritative.',
       permissionSourceNote:
         'Only canonical Resource Actions are assigned. The frontend never evaluates PBAC or effects.',
       saveMembers: 'Save Members',
       savePermissions: 'Save Permissions',
-      noCurrentUser: 'No current session identity.',
+      noUsersForMembers: 'The User list could not be loaded for member editing.',
       domainImmutable: 'The Domain of an existing canonical Resource is read-only.',
       domainCreateNote: 'Only SYSTEM, MASTER, or ORGANIZATION; COMPANY is not a valid Domain.',
       resourceDomainNote:

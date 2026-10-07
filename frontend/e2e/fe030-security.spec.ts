@@ -20,6 +20,60 @@ async function mockSession(page: Page): Promise<void> {
       }),
     }),
   )
+  await page.route('**/api/v1/admin/users*', async (route) => {
+    const isDetail = new URL(route.request().url()).pathname.endsWith('/7')
+    await route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify(
+        isDetail
+          ? {
+              data: {
+                id: '7',
+                username: 'quyetdv',
+                email: 'quyetdv@example.test',
+                active: true,
+                status: 'ACTIVE',
+                groups: ['orgadmin'],
+                direct_permission_count: 1,
+                employee_id: '11',
+                employee_code: 'EMP-001',
+                employee_name: 'Quyet Do',
+              },
+              meta: { request_id: 'test-user-detail' },
+            }
+          : {
+              data: [
+                {
+                  id: '7',
+                  username: 'quyetdv',
+                  email: 'quyetdv@example.test',
+                  active: true,
+                  status: 'ACTIVE',
+                  groups: ['orgadmin'],
+                  direct_permission_count: 1,
+                  employee_id: '11',
+                  employee_code: 'EMP-001',
+                  employee_name: 'Quyet Do',
+                },
+                {
+                  id: '8',
+                  username: 'linhpt',
+                  email: 'linhpt@example.test',
+                  active: true,
+                  status: 'ACTIVE',
+                  groups: [],
+                  direct_permission_count: 0,
+                  employee_id: null,
+                  employee_code: null,
+                  employee_name: null,
+                },
+              ],
+              meta: { page: 1, page_size: 200, total: 2, request_id: 'test-users' },
+            },
+      ),
+    })
+  })
 }
 
 test.describe('P1-FE-030 security surfaces', () => {
@@ -34,6 +88,29 @@ test.describe('P1-FE-030 security surfaces', () => {
             { id: '1', code: 'SECURITY_ADMIN', name: 'Security administrators', status: 'ACTIVE' },
           ],
           meta: { page: 1, page_size: 25, total: 1, request_id: 'test-group' },
+        }),
+      }),
+    )
+    await page.route('**/api/v1/authorization-groups/1/members', async (route) =>
+      route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({
+          data: [
+            { id: '7', username: 'quyetdv', active: true, status: 'ACTIVE' },
+            { id: '8', username: 'linhpt', active: true, status: 'ACTIVE' },
+          ],
+          meta: { request_id: 'test-members' },
+        }),
+      }),
+    )
+    await page.route('**/api/v1/authorization-groups/1/permissions', async (route) =>
+      route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({
+          data: [{ resource_action_id: '20' }],
+          meta: { request_id: 'test-group-permissions' },
         }),
       }),
     )
@@ -149,11 +226,38 @@ test.describe('P1-FE-030 security surfaces', () => {
     )
   })
 
-  test('users is read-only and does not offer invented Shield writes', async ({ page }) => {
+  test('users is a complete read-only table with modal details', async ({ page }) => {
     await page.goto('/security/users')
     await expect(page.getByRole('heading', { name: 'Người dùng' })).toBeVisible()
-    await expect(page.getByText('Shield User create/edit/state')).toBeVisible()
+    await expect(page.getByRole('cell', { name: 'quyetdv', exact: true })).toBeVisible()
+    await expect(page.getByRole('cell', { name: 'linhpt', exact: true })).toBeVisible()
     await expect(page.getByRole('button', { name: /Tạo|Create|Sửa|Edit/ })).toHaveCount(0)
+    await page
+      .getByRole('row', { name: /7 quyetdv/ })
+      .getByRole('button', { name: 'Xem chi tiết' })
+      .click()
+    await expect(page.getByRole('dialog', { name: /Chi tiết người dùng/ })).toBeVisible()
+    await expect(
+      page.getByRole('dialog', { name: /Chi tiết người dùng/ }).getByText('quyetdv@example.test'),
+    ).toBeVisible()
+  })
+
+  test('authorization groups show all members and resource/action permissions in a modal', async ({
+    page,
+  }) => {
+    await page.goto('/security/authorization-groups')
+    await expect(page.getByRole('heading', { name: 'Nhóm phân quyền' })).toBeVisible()
+    await page.getByRole('button', { name: 'Xem chi tiết' }).click()
+    const dialog = page.getByRole('dialog', { name: /Nhóm phân quyền/ })
+    await expect(dialog).toBeVisible()
+    await dialog.getByRole('button', { name: 'Members' }).click()
+    await expect(dialog.getByRole('cell', { name: 'quyetdv' })).toBeVisible()
+    await expect(dialog.getByRole('cell', { name: 'linhpt' })).toBeVisible()
+    await expect(dialog.getByText('linhpt (#8)')).toBeVisible()
+    await dialog.getByRole('button', { name: 'Permissions' }).click()
+    await expect(dialog.getByRole('cell', { name: 'Policy' })).toBeVisible()
+    await expect(dialog.getByRole('cell', { name: 'view' })).toBeVisible()
+    await expect(dialog.getByText('ALLOW')).toBeVisible()
   })
 
   test('resources expose canonical Domain values and policies expose exact PBAC vocabularies', async ({
