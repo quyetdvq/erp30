@@ -4,9 +4,9 @@ This ledger is lightweight operational evidence. It is not architecture
 authority and does not replace UR, FRS, DBD, the Implementation Contract, the
 Implementation Plan, API Design, or UI Design.
 
-The registry contains exactly 100 P1 tasks. Current ledger state records 76
+The registry contains exactly 100 P1 tasks. Current ledger state records 77
 completed tasks: Gate 0 is 10/10, Gate 1 is 14/14, Gate 2 is 8/8, Gate 3 is
-10/10, Gate 4 is 7/7, Gate 5 is 11/11, Gate 6 is 9/9, and Gate 7 is 7/10.
+10/10, Gate 4 is 7/7, Gate 5 is 11/11, Gate 6 is 9/9, and Gate 7 is 8/10.
 These summaries are derived from the task rows below and the canonical Gate
 registry.
 
@@ -14,7 +14,7 @@ registry.
 
 | Measure | Progress |
 |---|---:|
-| P1 tasks DONE | 76/100 |
+| P1 tasks DONE | 77/100 |
 | Gate 0 | 10/10 DONE |
 | Gate 1 | 14/14 DONE |
 | Gate 2 | 8/8 DONE |
@@ -22,7 +22,7 @@ registry.
 | Gate 4 | 7/7 DONE |
 | Gate 5 | 11/11 DONE |
 | Gate 6 | 9/9 DONE |
-| Gate 7 | 7/10 DONE |
+| Gate 7 | 8/10 DONE |
 | Gate 8 | 0/12 DONE |
 | Gate 9 | 0/9 DONE |
 
@@ -106,7 +106,7 @@ registry.
 | P1-API-020 | DONE | 0000000 | high-risk | Employee Structure API: 20 CRUD/state endpoints, catalog-driven MASTER/GROUP and ORGANIZATION authorization, allowlisted effective Assignment filters, Department hierarchy/Employee manager invariants, historical Assignment correction, OpenAPI/codegen, and full regression evidence. |
 | P1-API-030 | DONE | 8267f31 | high-risk | Resource/Authorization Group/Policy/Authorization Log/Workflow State/Lifecycle CONTRACT_READY API surface, generated client, and validation evidence. Evidence: `docs/implementation/evidence/P1-API-030/01_authorization_workflow_api_assessment.md`. |
 | P1-API-040 | DONE | bb2a3c7 | api | Auto Numbering API: six Resource numbering-series operations, configure-numbering authorization, non-consuming validation, concurrency-safe default invariant, and generated client. Evidence: `docs/implementation/evidence/P1-API-040/01_auto_numbering_api_assessment.md`. |
-| P1-API-050 | IN_PROGRESS | — | high-risk | Product/UOM/Pricing/COMBO API implementation and OpenAPI evidence recorded in `docs/implementation/evidence/P1-API-050/01_product_uom_pricing_combo_api_assessment.md`; authenticated DB-backed acceptance remains blocked by inconsistent `erp_test` migration state. |
+| P1-API-050 | DONE | 1f0d578 | high-risk | Product/UOM/Pricing/COMBO API implementation, authenticated 26-operation acceptance, canonical `erp_test` rebuild, OpenAPI/codegen, regression, concurrency, and full-suite evidence in `docs/implementation/evidence/P1-API-050/01_product_uom_pricing_combo_api_assessment.md`. |
 | P1-API-060 | NOT_STARTED | — | high-risk | No accepted implementation evidence. |
 | P1-API-090 | NOT_STARTED | — | high-risk | No accepted implementation evidence. |
 | P1-FE-001 | NOT_STARTED | — | service-standard | No accepted implementation evidence. |

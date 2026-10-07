@@ -2,18 +2,18 @@
 
 ## Outcome
 
-Status: `NEEDS_VERIFY`.
+Status: `DONE`.
 
-The `P1-API-050` CONTRACT_READY surface is implemented in the existing
-Product/Pricing/COMBO service boundaries. It exposes exactly 26 operations,
-keeps export, price-resolution, COMBO-preview, and import surfaces out of
-scope, and updates the canonical OpenAPI source plus generated frontend
-artifacts. Runtime acceptance remains open because the repository's isolated
-`erp_test` database cannot bootstrap its migration set.
+The `P1-API-050` CONTRACT_READY surface is implemented and verified from the
+existing Product/Pricing/COMBO service boundaries. It exposes exactly 26
+runtime/OpenAPI operations, keeps export, price-resolution, COMBO-preview, and
+import surfaces out of scope, and uses the canonical OpenAPI source plus
+generated frontend artifacts. The implementation commit is
+`1f0d578c3d4a55971108acdad9ab5eac1d0b551`.
 
 ## Implemented
 
-- Added the Product Group, Product UOM master, Product, Product UOM conversion,
+- Added Product Group, Product UOM master, Product, Product UOM conversion,
   Price List, Price List item, and COMBO item routes under `/api/v1`.
 - Added the thin `ProductCatalog` controller and application-level
   `Api050ProductCatalogService` boundary.
@@ -31,37 +31,44 @@ artifacts. Runtime acceptance remains open because the repository's isolated
 
 | Check | Result |
 |---|---|
-| `php .codex/skills/dinkerp-implementation/scripts/task-context.php P1-API-050` | PASS; `AUTHORITY_CACHE: VALID`, HIGH/api-contract, Gate 5 dependency |
-| PHP syntax checks for all changed PHP files | PASS |
-| `vendor/bin/phpstan analyse --level=8 --no-progress` | PASS; no errors |
-| Focused PHPUnit `tests/unit/P1Api050ProductCatalogTest.php --testdox` | PASS; 3 tests, 51 assertions |
+| `task-context.php P1-API-050` | PASS; `AUTHORITY_CACHE: VALID`, HIGH/api-contract, Gate 5 dependency |
+| Git implementation verification | PASS; `1f0d578c3d4a55971108acdad9ab5eac1d0b551` exists at `HEAD` and contains the API-050 implementation |
+| `test-db-harness.php rebuild --yes` | PASS twice; guarded `CI_ENVIRONMENT=testing`, database `erp_test`; framework/package and application migrations completed through `2026-10-05-000010_NormalizeResourceDomains` |
+| `test-db-harness.php inventory` | PASS; `erp_test`, testing environment, prefix `dinktech_`, 15 migration rows, isolation guard PASS |
+| Authenticated API-050 HTTP journey | PASS; all 26 runtime operations exercised with a password-backed Shield `SYSTEM_ADMIN` user |
+| Authorization/context journey | PASS; `MASTER -> GROUP`, persisted/request Price List Organization scope, and GROUP-scoped Auto Number Product create (`API050-500`) |
+| Visibility/status journey | PASS; visible target without action returned `403`; unavailable/invisible ID returned `404` |
+| Transport journey | PASS; vi/en request locale, `Content-Language`, request ID, envelopes, BIGINT IDs and DECIMAL values serialized as strings |
+| Product/atomic journey | PASS; SIMPLE/PARENT/CHILD/COMBO role rules, Product Auto Number, UOM conversion replacement, Price List item replacement, and COMBO graph replacement/cycle boundary |
+| Focused PHPUnit `tests/unit/P1Api050ProductCatalogTest.php --no-coverage` | PASS; **3 tests, 53 assertions** |
+| Product/UOM/Pricing/COMBO + API-040 regressions and concurrency | PASS; 78 tests, 649 assertions |
+| `test-db-harness.php full-tests` | PASS; 395 tests, 3567 assertions |
+| PHPStan level 8 | PASS; no errors |
 | `pnpm run openapi:lint` | PASS |
-| `pnpm run openapi:generate:check` | PASS; 17 generated files verified |
-| `validate-context-cache.php` | PASS; 100 tasks, 37 rules |
-| `architecture-guard.php` | PASS; 43 application files checked |
-| `validate-ledger.php` | PASS; 100 tasks, 76 DONE, Gate 7 7/10 |
-| `git diff --check` | PASS; only CRLF normalization warnings |
-| `vendor/bin/phpunit --no-coverage` | BLOCKED; 395 tests, 343 errors during DB bootstrap: `Unknown table 'erp_test.dinktech_settings'` |
-| `php tools/test-db-harness.php inventory` from `backend` | PASS; `erp_test`, testing environment, prefix `dinktech_`, 12 migration rows, isolation guard PASS |
+| `pnpm run openapi:generate:check` | PASS; 17 generated API TypeScript files verified |
+| Frontend type/lint/format/unit/build checks | PASS; `vue-tsc`, Oxlint/ESLint, Prettier, 2 Vitest files/2 tests, production build |
+| Context/architecture/ledger guards | PASS before closure; cache valid, 43 application files checked, ledger 76/100 and Gate 7 7/10 |
+| `git diff --check` | PASS |
 
 ## Contract impact
 
-- DB/schema: no changes; forward-only migration rules preserved.
+- DB/schema: no changes; the isolated test database was rebuilt only through
+  the canonical harness. No manual settings table or migration-ledger change
+  was made, and no production `erp` data was touched.
 - Authorization: existing Product/Pricing/COMBO services remain authoritative;
   no System Admin bypass or new Resource/Action was introduced.
 - API/OpenAPI: 26 routes and operation IDs are synchronized; generated client
   files were regenerated by `@hey-api/openapi-ts`.
 - UI/i18n: no UI behavior or locale catalog changes; generated API types only.
 
-## Remaining blocker
+## Evidence reconciliation
 
-The test bootstrap attempts to rerun the CodeIgniter settings migration while
-`dinktech_settings` is absent from `erp_test`, producing the same failure
-across the full backend suite. Repairing or resetting that database requires a
-separate authorized migration/bootstrap action and was deliberately not done
-in this task. `P1-API-050` must not be marked `DONE` until authenticated API
-journeys, visibility/403/404 behavior, serialization/locale checks, and the
-required mutation/concurrency coverage run successfully on a consistent test
-schema.
+- Previous focused count: `3 tests / 51 assertions`; actual final rerun:
+  `3 tests / 53 assertions`.
+- Previous assessment commit: `NOT CREATED`; Git-authoritative implementation
+  commit: `1f0d578c3d4a55971108acdad9ab5eac1d0b551`.
+- The prior `dinktech_settings` bootstrap blocker is resolved by the guarded
+  canonical `erp_test` rebuild and the passing full suite.
 
-Commit: `NOT CREATED` (task remains `IN_PROGRESS`/`NEEDS_VERIFY`).
+Commit: implementation `1f0d578c3d4a55971108acdad9ab5eac1d0b551`; evidence and
+ledger closure committed separately after this assessment update.
