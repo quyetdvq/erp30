@@ -4,6 +4,7 @@ import { useI18n } from 'vue-i18n'
 
 import type { Organization, OrganizationCreate, State } from '@/api/generated/types.gen'
 import ContactList from '@/components/contacts/ContactList.vue'
+import OrganizationTreeSelect from '@/components/organizations/OrganizationTreeSelect.vue'
 import { ListPagination, ListQueryControls, ListShell } from '@/components/lists'
 import { useListState } from '@/composables/useListState'
 import type { ListQuery } from '@/components/lists/listTypes'
@@ -425,15 +426,15 @@ onMounted(() => void load())
         </button>
       </header>
       <form @submit.prevent="save">
-        <label
-          ><span>{{ t('organization.parent') }}</span
-          ><select v-model="form.parent_id">
-            <option value="">{{ t('organization.root') }}</option>
-            <option v-for="item in parentOptions" :key="item.id" :value="item.id">
-              {{ item.code }} - {{ item.name }}
-            </option>
-          </select></label
-        >
+        <label>
+          <span>{{ t('organization.parent') }}</span>
+          <OrganizationTreeSelect
+            v-model="form.parent_id"
+            :organizations="parentOptions"
+            :placeholder="t('organization.root')"
+            :clearable="true"
+          />
+        </label>
         <label
           ><span>{{ t('organization.type') }}</span
           ><select v-model="form.type" required>
