@@ -885,7 +885,7 @@ Status: `PLANNED`
 Resource: `user`
 Resource Domain: `SYSTEM`; Evaluation Organization = `GROUP`.
 
-Baseline locks Resource/Action behavior but does not define canonical Shield User create/edit field set.
+`CHANGE-USER-IDENTITY-MUTATION-001` locks the canonical Shield User create/edit/state/password and direct-permission contract; runtime implementation remains a later scoped change task.
 
 ```text
 GET /users
@@ -897,9 +897,9 @@ Read contract can become `CONTRACT_READY` after `P1-ENV-001` confirms Shield ada
 Write API remains:
 
 ```text
-POST  /users                           CONTRACT_PENDING
-PATCH /users/{id}                      CONTRACT_PENDING
-POST  /users/{id}/actions/set-state    CONTRACT_PENDING
+POST  /users                           CONTRACT_READY
+PATCH /users/{id}                      CONTRACT_READY
+POST  /users/{id}/actions/set-state    CONTRACT_READY
 ```
 
 Direct permissions:
