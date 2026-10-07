@@ -9,6 +9,7 @@ import {
   updateProfile,
   type AuthUser,
 } from '@/services/auth'
+import { useDisplaySettingsStore } from '@/stores/displaySettings'
 
 export const useAuthStore = defineStore('auth', () => {
   const user = ref<AuthUser | null>(null)
@@ -26,10 +27,12 @@ export const useAuthStore = defineStore('auth', () => {
     hydrated.value = true
     try {
       user.value = await getCurrentUser()
+      useDisplaySettingsStore().activateUser(user.value.id)
     } catch (requestError: unknown) {
       if (!axios.isAxiosError(requestError) || requestError.response?.status !== 401)
         error.value = 'Không thể tải phiên đăng nhập.'
       user.value = null
+      useDisplaySettingsStore().clearSession()
     }
   }
 
@@ -39,6 +42,7 @@ export const useAuthStore = defineStore('auth', () => {
     try {
       user.value = await loginRequest({ email, password, remember })
       hydrated.value = true
+      useDisplaySettingsStore().activateUser(user.value.id)
     } catch (requestError: unknown) {
       error.value = axios.isAxiosError(requestError)
         ? (requestError.response?.data?.message ?? 'Đăng nhập không thành công.')
@@ -52,6 +56,7 @@ export const useAuthStore = defineStore('auth', () => {
   async function logout(): Promise<void> {
     await logoutRequest()
     user.value = null
+    useDisplaySettingsStore().clearSession()
   }
 
   async function saveProfile(payload: {
