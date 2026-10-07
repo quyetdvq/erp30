@@ -505,6 +505,7 @@ onMounted(() => void load())
   display: grid;
   grid-template-columns: minmax(300px, 0.9fr) minmax(0, 1.6fr);
   gap: 20px;
+  padding: 18px 20px 20px;
 }
 .organization-tree {
   min-width: 0;
@@ -745,6 +746,7 @@ onMounted(() => void load())
 @media (max-width: 900px) {
   .organization-layout {
     grid-template-columns: 1fr;
+    padding: 16px;
   }
   .organization-tree {
     border-right: 0;

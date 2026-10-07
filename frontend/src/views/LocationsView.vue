@@ -399,6 +399,7 @@ onMounted(async () => {
 .location-panel {
   display: grid;
   gap: 14px;
+  padding: 18px 20px 20px;
 }
 .location-toolbar {
   display: flex;

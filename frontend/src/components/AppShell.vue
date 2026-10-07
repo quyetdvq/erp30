@@ -597,6 +597,7 @@ onBeforeUnmount(() => resizeEnd?.())
 .shell-body {
   height: calc(100vh - 62px);
   min-height: 0;
+  overflow: hidden;
   background: #f5f7fa;
 }
 .shell-header {
@@ -715,6 +716,7 @@ onBeforeUnmount(() => resizeEnd?.())
 .workspace-layout {
   min-height: 100%;
   min-width: 0;
+  overflow: hidden;
   background: #f5f7fa;
 }
 .workspace-tabs-wrap {
@@ -746,8 +748,19 @@ onBeforeUnmount(() => resizeEnd?.())
   color: #728095;
 }
 .workspace-content {
+  overflow-x: hidden;
+  overflow-y: auto;
   min-width: 0;
-  padding: 22px 28px 48px;
+  padding: 26px clamp(18px, 2.2vw, 36px) 48px;
+}
+.workspace-content > :deep(.breadcrumbs),
+.workspace-content > :deep(.page-heading),
+.workspace-content > :deep(.content-panel),
+.workspace-content > :deep(.metric-grid),
+.workspace-content > :deep(.dashboard-blank),
+.workspace-content > :deep(.profile-layout) {
+  width: min(100%, 1680px);
+  margin-inline: auto;
 }
 .command-modal {
   width: min(620px, calc(100vw - 32px));
@@ -968,7 +981,7 @@ onBeforeUnmount(() => resizeEnd?.())
     transform: translateX(0);
   }
   .workspace-content {
-    padding-inline: 14px;
+    padding: 18px 14px 36px;
   }
 }
 </style>
