@@ -1,0 +1,1017 @@
+<script setup lang="ts">
+import { computed, onMounted, ref, watch } from 'vue'
+import { useI18n } from 'vue-i18n'
+import type {
+  Department,
+  Employee,
+  EmployeeAssignment,
+  EmployeeAssignmentCreate,
+  EmployeeAssignmentPatch,
+  EmployeeCreate,
+  Organization,
+  Position,
+} from '@/api/generated/types.gen'
+import ContactList from '@/components/contacts/ContactList.vue'
+import { ListPagination, ListQueryControls, ListShell, TableRowActions } from '@/components/lists'
+import {
+  createListQuery,
+  type ListFilterDefinition,
+  type ListQuery,
+} from '@/components/lists/listTypes'
+import { useListState } from '@/composables/useListState'
+import { listOrganizationPage } from '@/services/foundation'
+import {
+  changeAssignmentState,
+  changeEmployeeState,
+  listAssignmentPage,
+  listDepartmentPage,
+  listEmployeePage,
+  listPositionPage,
+  saveAssignment,
+  saveEmployee,
+} from '@/services/employeeStructure'
+import { reportApiError } from '@/services/errorBoundary'
+import { hasPrimaryOverlap, wouldCreateManagerCycle } from '@/modules/employeeRules'
+
+type Gender = 'MALE' | 'FEMALE' | 'OTHER' | null
+type Tab = 'overview' | 'assignments' | 'contacts' | 'audit'
+const { t, locale } = useI18n()
+const today = () => new Date().toISOString().slice(0, 10)
+
+const state = useListState<Employee>((query) => listEmployeePage(query), { sort: 'employee_name' })
+const organizations = ref<Organization[]>([])
+const departments = ref<Department[]>([])
+const positions = ref<Position[]>([])
+const assignments = ref<EmployeeAssignment[]>([])
+const selectedEmployeeAssignments = ref<EmployeeAssignment[]>([])
+const selectedId = ref<string | null>(null)
+const activeTab = ref<Tab>('overview')
+const employeeModal = ref(false)
+const assignmentModal = ref(false)
+const editingEmployeeId = ref<string | undefined>()
+const editingAssignmentId = ref<string | undefined>()
+const busy = ref(false)
+const error = ref<unknown | null>(null)
+const assignmentMode = ref<'active' | 'history'>('active')
+const employeeForm = ref({
+  employee_code: '',
+  employee_name: '',
+  user_id: '',
+  gender: null as Gender,
+  date_of_birth: '',
+  place_of_origin: '',
+  hire_date: '',
+  manager_employee_id: '',
+  status: 'ACTIVE' as 'ACTIVE' | 'INACTIVE',
+  description: '',
+})
+const assignmentForm = ref({
+  organization_id: '',
+  department_id: '',
+  position_id: '',
+  is_primary: false,
+  effective_from: today(),
+  effective_to: '',
+  status: 'ACTIVE' as 'ACTIVE' | 'INACTIVE',
+  description: '',
+})
+
+const selected = computed<Employee>(
+  () => state.rows.value.find((row) => String(row.id) === selectedId.value) as Employee,
+)
+const activeEmployees = computed(() => state.rows.value.filter((row) => row.status === 'ACTIVE'))
+const managerOptions = computed(() =>
+  activeEmployees.value.filter(
+    (row) =>
+      String(row.id) !== selectedId.value ||
+      String(row.id) === employeeForm.value.manager_employee_id,
+  ),
+)
+const activeOrganizations = computed(() =>
+  organizations.value.filter((row) => row.status === 'ACTIVE'),
+)
+const activeDepartments = computed(() => departments.value.filter((row) => row.status === 'ACTIVE'))
+const activePositions = computed(() => positions.value.filter((row) => row.status === 'ACTIVE'))
+const selectedAssignments = computed(() =>
+  selectedEmployeeAssignments.value.filter((row) =>
+    assignmentMode.value === 'active' ? row.status === 'ACTIVE' : row.status !== 'ACTIVE',
+  ),
+)
+const currentPrimary = (employeeId: string | number | bigint): EmployeeAssignment | undefined =>
+  assignments.value.find(
+    (row) =>
+      row.status === 'ACTIVE' &&
+      row.is_primary &&
+      row.effective_from <= today() &&
+      (!row.effective_to || row.effective_to >= today()) &&
+      String(row.employee_id) === String(employeeId),
+  )
+const organizationName = (id?: string | number | bigint) =>
+  organizations.value.find((row) => String(row.id) === String(id))?.name ?? '—'
+const departmentName = (id?: string | number | bigint) =>
+  departments.value.find((row) => String(row.id) === String(id))?.name ?? '—'
+const positionName = (id?: string | number | bigint) =>
+  positions.value.find((row) => String(row.id) === String(id))?.name ?? '—'
+const genderLabel = (value: Gender): string =>
+  value === 'MALE'
+    ? t('people.genderMale')
+    : value === 'FEMALE'
+      ? t('people.genderFemale')
+      : value === 'OTHER'
+        ? t('people.genderOther')
+        : t('people.genderUnspecified')
+const filters = computed<ListFilterDefinition[]>(() => [
+  {
+    key: 'status',
+    labelKey: 'people.status',
+    type: 'select',
+    options: [
+      { value: 'ACTIVE', labelKey: 'status.active' },
+      { value: 'INACTIVE', labelKey: 'status.inactive' },
+    ],
+  },
+  {
+    key: 'organization_id',
+    labelKey: 'people.organization',
+    type: 'select',
+    options: organizations.value.map((row) => ({
+      value: String(row.id),
+      labelKey: row.name,
+      label: `${row.code} - ${row.name}`,
+    })),
+  },
+  {
+    key: 'department_id',
+    labelKey: 'people.department',
+    type: 'select',
+    options: departments.value.map((row) => ({
+      value: String(row.id),
+      labelKey: row.name,
+      label: `${row.code} - ${row.name}`,
+    })),
+  },
+  {
+    key: 'position_id',
+    labelKey: 'people.position',
+    type: 'select',
+    options: positions.value.map((row) => ({
+      value: String(row.id),
+      labelKey: row.name,
+      label: `${row.code} - ${row.name}`,
+    })),
+  },
+])
+
+async function loadLookups(): Promise<void> {
+  try {
+    const [orgs, deps, poss] = await Promise.all([
+      listOrganizationPage(createListQuery({ page_size: 200 })),
+      listDepartmentPage(createListQuery({ page_size: 200 })),
+      listPositionPage(createListQuery({ page_size: 200 })),
+    ])
+    organizations.value = orgs.data
+    departments.value = deps.data
+    positions.value = poss.data
+  } catch (caught: unknown) {
+    reportApiError(caught)
+  }
+}
+async function load(): Promise<void> {
+  error.value = null
+  try {
+    await state.apply()
+    if (!selectedId.value && state.rows.value[0]) selectedId.value = String(state.rows.value[0].id)
+    if (selectedId.value && !selected.value)
+      selectedId.value = state.rows.value[0] ? String(state.rows.value[0].id) : null
+  } catch (caught: unknown) {
+    error.value = caught
+    reportApiError(caught)
+  }
+}
+async function loadAssignments(): Promise<void> {
+  if (!selectedId.value) {
+    selectedEmployeeAssignments.value = []
+    return
+  }
+  try {
+    selectedEmployeeAssignments.value = (
+      await listAssignmentPage(
+        createListQuery({ page_size: 200, filter: { employee_id: selectedId.value } }),
+      )
+    ).data
+  } catch (caught: unknown) {
+    selectedEmployeeAssignments.value = []
+    reportApiError(caught)
+  }
+}
+async function loadAllAssignments(): Promise<void> {
+  try {
+    assignments.value = (await listAssignmentPage(createListQuery({ page_size: 200 }))).data
+  } catch (caught: unknown) {
+    assignments.value = []
+    reportApiError(caught)
+  }
+}
+function applyQuery(query: ListQuery): void {
+  state.setSearch(query.q)
+  state.setFilters(query.filter)
+  state.setSort(query.sort)
+  state.setPageSize(query.page_size)
+  void load()
+}
+function resetQuery(): void {
+  state.reset()
+  void load()
+}
+function openCreate(): void {
+  editingEmployeeId.value = undefined
+  employeeForm.value = {
+    employee_code: '',
+    employee_name: '',
+    user_id: '',
+    gender: null,
+    date_of_birth: '',
+    place_of_origin: '',
+    hire_date: '',
+    manager_employee_id: '',
+    status: 'ACTIVE',
+    description: '',
+  }
+  employeeModal.value = true
+}
+function openEdit(row: Employee | null): void {
+  if (!row) return
+  editingEmployeeId.value = String(row.id)
+  employeeForm.value = {
+    employee_code: row.employee_code,
+    employee_name: row.employee_name,
+    user_id: row.user_id ? String(row.user_id) : '',
+    gender: row.gender ?? null,
+    date_of_birth: row.date_of_birth ?? '',
+    place_of_origin: row.place_of_origin ?? '',
+    hire_date: row.hire_date ?? '',
+    manager_employee_id: row.manager_employee_id ? String(row.manager_employee_id) : '',
+    status: row.status,
+    description: row.description ?? '',
+  }
+  employeeModal.value = true
+}
+function managerWouldCycle(candidate: string): boolean {
+  return wouldCreateManagerCycle(state.rows.value, editingEmployeeId.value ?? '', candidate)
+}
+function managerError(): string | null {
+  if (employeeForm.value.manager_employee_id === editingEmployeeId.value)
+    return t('people.managerSelfError')
+  if (managerWouldCycle(employeeForm.value.manager_employee_id))
+    return t('people.managerCycleError')
+  const selectedManager = state.rows.value.find(
+    (row) => String(row.id) === employeeForm.value.manager_employee_id,
+  )
+  if (selectedManager && selectedManager.status !== 'ACTIVE')
+    return t('people.managerInactiveError')
+  return null
+}
+async function saveEmployeeForm(): Promise<void> {
+  const managerIssue = managerError()
+  if (managerIssue) {
+    error.value = new Error(managerIssue)
+    return
+  }
+  busy.value = true
+  error.value = null
+  try {
+    const payload = {
+      employee_code: employeeForm.value.employee_code,
+      employee_name: employeeForm.value.employee_name,
+      gender: employeeForm.value.gender,
+      status: employeeForm.value.status,
+      ...(employeeForm.value.user_id ? { user_id: employeeForm.value.user_id } : {}),
+      ...(employeeForm.value.date_of_birth
+        ? { date_of_birth: employeeForm.value.date_of_birth }
+        : { date_of_birth: null }),
+      ...(employeeForm.value.place_of_origin
+        ? { place_of_origin: employeeForm.value.place_of_origin }
+        : { place_of_origin: null }),
+      ...(employeeForm.value.hire_date
+        ? { hire_date: employeeForm.value.hire_date }
+        : { hire_date: null }),
+      ...(employeeForm.value.manager_employee_id
+        ? { manager_employee_id: employeeForm.value.manager_employee_id }
+        : { manager_employee_id: null }),
+      ...(employeeForm.value.description
+        ? { description: employeeForm.value.description }
+        : { description: null }),
+    }
+    await saveEmployee(payload as unknown as EmployeeCreate, editingEmployeeId.value)
+    employeeModal.value = false
+    await load()
+  } catch (caught: unknown) {
+    error.value = caught
+    reportApiError(caught)
+  } finally {
+    busy.value = false
+  }
+}
+async function toggleEmployee(row: Employee): Promise<void> {
+  busy.value = true
+  error.value = null
+  try {
+    await changeEmployeeState(String(row.id), row.status === 'ACTIVE' ? 'INACTIVE' : 'ACTIVE')
+    await load()
+  } catch (caught: unknown) {
+    error.value = caught
+    reportApiError(caught)
+  } finally {
+    busy.value = false
+  }
+}
+function openAssignmentCreate(): void {
+  editingAssignmentId.value = undefined
+  assignmentForm.value = {
+    organization_id: '',
+    department_id: '',
+    position_id: '',
+    is_primary: false,
+    effective_from: today(),
+    effective_to: '',
+    status: 'ACTIVE',
+    description: '',
+  }
+  assignmentModal.value = true
+}
+function openAssignmentEdit(row: EmployeeAssignment): void {
+  editingAssignmentId.value = String(row.id)
+  assignmentForm.value = {
+    organization_id: String(row.organization_id),
+    department_id: row.department_id ? String(row.department_id) : '',
+    position_id: row.position_id ? String(row.position_id) : '',
+    is_primary: row.is_primary,
+    effective_from: row.effective_from,
+    effective_to: row.effective_to ?? '',
+    status: row.status,
+    description: row.description ?? '',
+  }
+  assignmentModal.value = true
+}
+const assignmentOverlap = computed(() =>
+  hasPrimaryOverlap(
+    selectedEmployeeAssignments.value,
+    assignmentForm.value,
+    editingAssignmentId.value,
+  ),
+)
+async function saveAssignmentForm(): Promise<void> {
+  if (assignmentOverlap.value) {
+    error.value = new Error(t('people.primaryOverlap'))
+    return
+  }
+  if (!selectedId.value) return
+  busy.value = true
+  error.value = null
+  try {
+    const base = {
+      organization_id: assignmentForm.value.organization_id,
+      ...(assignmentForm.value.department_id
+        ? { department_id: assignmentForm.value.department_id }
+        : {}),
+      ...(assignmentForm.value.position_id
+        ? { position_id: assignmentForm.value.position_id }
+        : {}),
+      is_primary: assignmentForm.value.is_primary,
+      effective_from: assignmentForm.value.effective_from,
+      effective_to: assignmentForm.value.effective_to || null,
+      status: assignmentForm.value.status,
+      ...(assignmentForm.value.description
+        ? { description: assignmentForm.value.description }
+        : { description: null }),
+    }
+    const payload = editingAssignmentId.value
+      ? (base as EmployeeAssignmentPatch)
+      : ({ ...base, employee_id: selectedId.value } as EmployeeAssignmentCreate)
+    await saveAssignment(payload, editingAssignmentId.value)
+    assignmentModal.value = false
+    await Promise.all([loadAssignments(), loadAllAssignments()])
+    await load()
+  } catch (caught: unknown) {
+    error.value = caught
+    reportApiError(caught)
+  } finally {
+    busy.value = false
+  }
+}
+async function toggleAssignment(row: EmployeeAssignment): Promise<void> {
+  busy.value = true
+  error.value = null
+  try {
+    await changeAssignmentState(String(row.id), row.status === 'ACTIVE' ? 'INACTIVE' : 'ACTIVE')
+    await Promise.all([loadAssignments(), loadAllAssignments()])
+  } catch (caught: unknown) {
+    error.value = caught
+    reportApiError(caught)
+  } finally {
+    busy.value = false
+  }
+}
+function displayDate(value: string | null | undefined): string {
+  if (!value) return '—'
+  return new Intl.DateTimeFormat(locale.value, {
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+  }).format(new Date(`${value}T00:00:00`))
+}
+watch(selectedId, async () => {
+  activeTab.value = 'overview'
+  await loadAssignments()
+})
+onMounted(async () => {
+  await Promise.all([loadLookups(), load(), loadAllAssignments()])
+})
+</script>
+
+<template>
+  <div class="page-heading">
+    <div>
+      <h1>{{ t('people.employeesTitle') }}</h1>
+      <p>{{ t('people.employeesDescription') }}</p>
+    </div>
+    <button type="button" class="primary-button" @click="openCreate">
+      ＋ {{ t('common.create') }}
+    </button>
+  </div>
+  <section class="content-panel people-layout">
+    <div class="toolbar">
+      <ListQueryControls
+        :model-value="state.query"
+        :filters="filters"
+        @apply="applyQuery"
+        @reset="resetQuery"
+      /><button type="button" class="secondary-button" @click="void load">
+        ↻ {{ t('common.refresh') }}
+      </button>
+    </div>
+    <p v-if="error" class="inline-error" role="alert">
+      {{ t('people.requestError') }} <span v-if="error instanceof Error">{{ error.message }}</span>
+    </p>
+    <ListShell
+      :initial-loading="state.isInitialLoading.value"
+      :refreshing="state.isBackgroundRefreshing.value"
+      :has-data="state.queryState.hasData.value"
+      :empty-dataset="state.isEmptyDataset.value"
+      :empty-filtered-result="state.isEmptyFilteredResult.value"
+      :error="state.queryState.error.value"
+      ><table class="data-table">
+        <thead>
+          <tr>
+            <th>{{ t('people.employeeCode') }}</th>
+            <th>{{ t('people.name') }}</th>
+            <th>{{ t('people.organization') }}</th>
+            <th>{{ t('people.department') }}</th>
+            <th>{{ t('people.position') }}</th>
+            <th>{{ t('people.manager') }}</th>
+            <th>{{ t('people.status') }}</th>
+            <th>{{ t('people.actions') }}</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr
+            v-for="row in state.rows.value"
+            :key="row.id"
+            :class="{ 'row-selected': selectedId === String(row.id) }"
+            @click="selectedId = String(row.id)"
+          >
+            <td>
+              <strong>{{ row.employee_code }}</strong>
+            </td>
+            <td>{{ row.employee_name }}</td>
+            <td>{{ organizationName(currentPrimary(String(row.id))?.organization_id) }}</td>
+            <td>{{ departmentName(currentPrimary(String(row.id))?.department_id) }}</td>
+            <td>{{ positionName(currentPrimary(String(row.id))?.position_id) }}</td>
+            <td>
+              {{
+                state.rows.value.find(
+                  (manager) => String(manager.id) === String(row.manager_employee_id),
+                )?.employee_name ?? '—'
+              }}
+            </td>
+            <td>
+              <span class="status-pill" :class="{ 'status-pill--off': row.status !== 'ACTIVE' }">{{
+                t(`status.${row.status.toLowerCase()}`)
+              }}</span>
+            </td>
+            <td>
+              <TableRowActions
+                :active="row.status === 'ACTIVE'"
+                :busy="busy"
+                :show-view="true"
+                :show-edit="true"
+                :show-toggle="true"
+                :view-label="t('common.view')"
+                :edit-label="t('common.edit')"
+                :activate-label="t('common.activate')"
+                :deactivate-label="t('common.deactivate')"
+                @view="selectedId = String(row.id)"
+                @edit="openEdit(row)"
+                @toggle="toggleEmployee(row)"
+              />
+            </td>
+          </tr>
+        </tbody>
+      </table>
+      <ListPagination
+        :page="state.query.page"
+        :page-size="state.query.page_size"
+        :total="state.total.value"
+        @update:page="
+          (page) => {
+            state.setPage(page)
+            void load()
+          }
+        "
+        @update:page-size="
+          (size) => {
+            state.setPageSize(size)
+            void load()
+          }
+        "
+    /></ListShell>
+  </section>
+  <section v-if="selected" class="content-panel employee-detail">
+    <header class="detail-header">
+      <div>
+        <span class="eyebrow">{{ selected.employee_code }}</span>
+        <h2>{{ selected.employee_name }}</h2>
+        <p>
+          {{ t(`status.${selected.status.toLowerCase()}`) }} ·
+          {{ selected.user_id ? t('people.userLinked') : t('people.userNotLinked') }}
+        </p>
+      </div>
+      <button type="button" class="secondary-button" @click="openEdit(selected)">
+        {{ t('common.edit') }}
+      </button>
+    </header>
+    <div class="detail-tabs" role="tablist">
+      <button
+        v-for="tab in ['overview', 'assignments', 'contacts', 'audit'] as Tab[]"
+        :key="tab"
+        type="button"
+        role="tab"
+        :aria-selected="activeTab === tab"
+        @click="activeTab = tab"
+      >
+        {{ t(`people.tabs.${tab}`) }}
+      </button>
+    </div>
+    <div v-if="activeTab === 'overview'" class="detail-grid">
+      <div>
+        <span>{{ t('people.gender') }}</span
+        ><strong>{{ genderLabel(selected.gender ?? null) }}</strong>
+      </div>
+      <div>
+        <span>{{ t('people.dateOfBirth') }}</span
+        ><strong>{{ displayDate(selected.date_of_birth) }}</strong>
+      </div>
+      <div>
+        <span>{{ t('people.hireDate') }}</span
+        ><strong>{{ displayDate(selected.hire_date) }}</strong>
+      </div>
+      <div>
+        <span>{{ t('people.manager') }}</span
+        ><strong>{{
+          state.rows.value.find((row) => String(row.id) === String(selected.manager_employee_id))
+            ?.employee_name ?? '—'
+        }}</strong>
+      </div>
+      <div class="detail-grid__wide">
+        <span>{{ t('people.placeOfOrigin') }}</span
+        ><strong>{{ selected.place_of_origin || '—' }}</strong>
+      </div>
+      <div class="detail-grid__wide">
+        <span>{{ t('people.description') }}</span
+        ><strong>{{ selected.description || '—' }}</strong>
+      </div>
+    </div>
+    <div v-else-if="activeTab === 'assignments'" class="assignment-panel">
+      <header>
+        <div class="detail-tabs__sub" role="tablist">
+          <button
+            type="button"
+            :aria-selected="assignmentMode === 'active'"
+            @click="assignmentMode = 'active'"
+          >
+            {{ t('people.activeAssignments') }}</button
+          ><button
+            type="button"
+            :aria-selected="assignmentMode === 'history'"
+            @click="assignmentMode = 'history'"
+          >
+            {{ t('people.assignmentHistory') }}
+          </button>
+        </div>
+        <button type="button" class="primary-button" @click="openAssignmentCreate">
+          ＋ {{ t('people.addAssignment') }}
+        </button>
+      </header>
+      <p v-if="assignmentOverlap" class="hint">{{ t('people.primaryOverlap') }}</p>
+      <table class="data-table">
+        <thead>
+          <tr>
+            <th>{{ t('people.organization') }}</th>
+            <th>{{ t('people.department') }}</th>
+            <th>{{ t('people.position') }}</th>
+            <th>{{ t('people.primary') }}</th>
+            <th>{{ t('people.effectiveFrom') }}</th>
+            <th>{{ t('people.effectiveTo') }}</th>
+            <th>{{ t('people.status') }}</th>
+            <th>{{ t('people.actions') }}</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr v-for="row in selectedAssignments" :key="row.id">
+            <td>{{ organizationName(row.organization_id) }}</td>
+            <td>{{ departmentName(row.department_id) }}</td>
+            <td>{{ positionName(row.position_id) }}</td>
+            <td>{{ row.is_primary ? t('people.primary') : t('people.secondary') }}</td>
+            <td>{{ displayDate(row.effective_from) }}</td>
+            <td>{{ displayDate(row.effective_to) }}</td>
+            <td>{{ t(`status.${row.status.toLowerCase()}`) }}</td>
+            <td>
+              <TableRowActions
+                :active="row.status === 'ACTIVE'"
+                :busy="busy"
+                :show-edit="true"
+                :show-toggle="true"
+                :edit-label="t('common.edit')"
+                :activate-label="t('common.activate')"
+                :deactivate-label="t('common.deactivate')"
+                @edit="openAssignmentEdit(row)"
+                @toggle="toggleAssignment(row)"
+              />
+            </td>
+          </tr>
+        </tbody>
+      </table>
+      <p v-if="selectedAssignments.length === 0" class="empty-state">
+        {{ t('people.noAssignments') }}
+      </p>
+    </div>
+    <ContactList
+      v-else-if="activeTab === 'contacts'"
+      :owner-id="String(selected?.id ?? '')"
+      owner-type="EMPLOYEE"
+    />
+    <div v-else class="audit-placeholder">
+      <h3>{{ t('people.audit') }}</h3>
+      <p>{{ t('people.auditDescription') }}</p>
+    </div>
+  </section>
+  <div v-if="employeeModal" class="modal-backdrop" @click.self="employeeModal = false">
+    <section
+      class="modal-card"
+      role="dialog"
+      aria-modal="true"
+      :aria-label="t('people.employeeForm')"
+    >
+      <header class="modal-card__header">
+        <h2>
+          {{ editingEmployeeId ? t('common.edit') : t('common.create') }} {{ t('people.employee') }}
+        </h2>
+        <button
+          type="button"
+          class="icon-button"
+          :aria-label="t('common.close')"
+          @click="employeeModal = false"
+        >
+          ×
+        </button>
+      </header>
+      <form class="modal-card__body" @submit.prevent="saveEmployeeForm">
+        <div class="form-grid">
+          <label
+            ><span>{{ t('people.employeeCode') }}</span
+            ><input v-model="employeeForm.employee_code" required /></label
+          ><label
+            ><span>{{ t('people.name') }}</span
+            ><input v-model="employeeForm.employee_name" required
+          /></label>
+        </div>
+        <div class="form-grid">
+          <label
+            ><span>{{ t('people.userId') }}</span
+            ><input v-model="employeeForm.user_id" inputmode="numeric" /></label
+          ><label
+            ><span>{{ t('people.gender') }}</span
+            ><select v-model="employeeForm.gender">
+              <option :value="null">{{ t('people.genderUnspecified') }}</option>
+              <option value="MALE">{{ t('people.genderMale') }}</option>
+              <option value="FEMALE">{{ t('people.genderFemale') }}</option>
+              <option value="OTHER">{{ t('people.genderOther') }}</option>
+            </select></label
+          >
+        </div>
+        <div class="form-grid">
+          <label
+            ><span>{{ t('people.dateOfBirth') }}</span
+            ><input v-model="employeeForm.date_of_birth" type="date" /></label
+          ><label
+            ><span>{{ t('people.hireDate') }}</span
+            ><input v-model="employeeForm.hire_date" type="date"
+          /></label>
+        </div>
+        <label
+          ><span>{{ t('people.placeOfOrigin') }}</span
+          ><input v-model="employeeForm.place_of_origin" /></label
+        ><label
+          ><span>{{ t('people.manager') }}</span
+          ><select v-model="employeeForm.manager_employee_id">
+            <option value="">{{ t('people.noManager') }}</option>
+            <option v-for="row in managerOptions" :key="row.id" :value="row.id">
+              {{ row.employee_code }} - {{ row.employee_name }}
+            </option></select
+          ><small v-if="managerError()" class="field-error">{{ managerError() }}</small></label
+        ><label
+          ><span>{{ t('people.status') }}</span
+          ><select v-model="employeeForm.status">
+            <option value="ACTIVE">{{ t('status.active') }}</option>
+            <option value="INACTIVE">{{ t('status.inactive') }}</option>
+          </select></label
+        ><label
+          ><span>{{ t('people.description') }}</span
+          ><textarea v-model="employeeForm.description" rows="3" />
+        </label>
+        <footer class="modal-card__footer">
+          <button type="button" class="secondary-button" @click="employeeModal = false">
+            {{ t('common.cancel') }}</button
+          ><button type="submit" class="primary-button" :disabled="busy || !!managerError()">
+            {{ busy ? t('common.saving') : t('common.save') }}
+          </button>
+        </footer>
+      </form>
+    </section>
+  </div>
+  <div v-if="assignmentModal" class="modal-backdrop" @click.self="assignmentModal = false">
+    <section
+      class="modal-card"
+      role="dialog"
+      aria-modal="true"
+      :aria-label="t('people.assignmentForm')"
+    >
+      <header class="modal-card__header">
+        <h2>
+          {{ editingAssignmentId ? t('common.edit') : t('common.create') }}
+          {{ t('people.assignment') }}
+        </h2>
+        <button
+          type="button"
+          class="icon-button"
+          :aria-label="t('common.close')"
+          @click="assignmentModal = false"
+        >
+          ×
+        </button>
+      </header>
+      <form class="modal-card__body" @submit.prevent="saveAssignmentForm">
+        <label
+          ><span>{{ t('people.organization') }}</span
+          ><select v-model="assignmentForm.organization_id" required>
+            <option value="">{{ t('list.all') }}</option>
+            <option v-for="row in activeOrganizations" :key="row.id" :value="row.id">
+              {{ row.code }} - {{ row.name }}
+            </option>
+          </select></label
+        >
+        <div class="form-grid">
+          <label
+            ><span>{{ t('people.department') }}</span
+            ><select v-model="assignmentForm.department_id">
+              <option value="">{{ t('people.none') }}</option>
+              <option v-for="row in activeDepartments" :key="row.id" :value="row.id">
+                {{ row.code }} - {{ row.name }}
+              </option>
+            </select></label
+          ><label
+            ><span>{{ t('people.position') }}</span
+            ><select v-model="assignmentForm.position_id">
+              <option value="">{{ t('people.none') }}</option>
+              <option v-for="row in activePositions" :key="row.id" :value="row.id">
+                {{ row.code }} - {{ row.name }}
+              </option>
+            </select></label
+          >
+        </div>
+        <label class="checkbox-row"
+          ><input v-model="assignmentForm.is_primary" type="checkbox" />
+          <span>{{ t('people.primary') }}</span></label
+        >
+        <div class="form-grid">
+          <label
+            ><span>{{ t('people.effectiveFrom') }}</span
+            ><input v-model="assignmentForm.effective_from" type="date" required /></label
+          ><label
+            ><span>{{ t('people.effectiveTo') }}</span
+            ><input v-model="assignmentForm.effective_to" type="date"
+          /></label>
+        </div>
+        <p v-if="assignmentOverlap" class="field-error">{{ t('people.primaryOverlap') }}</p>
+        <label
+          ><span>{{ t('people.status') }}</span
+          ><select v-model="assignmentForm.status">
+            <option value="ACTIVE">{{ t('status.active') }}</option>
+            <option value="INACTIVE">{{ t('status.inactive') }}</option>
+          </select></label
+        ><label
+          ><span>{{ t('people.description') }}</span
+          ><textarea v-model="assignmentForm.description" rows="3" />
+        </label>
+        <footer class="modal-card__footer">
+          <button type="button" class="secondary-button" @click="assignmentModal = false">
+            {{ t('common.cancel') }}</button
+          ><button type="submit" class="primary-button" :disabled="busy || assignmentOverlap">
+            {{ busy ? t('common.saving') : t('common.save') }}
+          </button>
+        </footer>
+      </form>
+    </section>
+  </div>
+</template>
+
+<style scoped>
+.people-layout {
+  overflow: hidden;
+}
+.row-selected td {
+  background: #f0f8fb;
+}
+.employee-detail {
+  margin-top: 18px;
+  padding: 18px;
+}
+.detail-header,
+.assignment-panel > header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 14px;
+}
+.detail-header h2 {
+  margin: 4px 0;
+  color: #123653;
+}
+.detail-header p,
+.eyebrow {
+  margin: 0;
+  color: #536b7b;
+  font-size: 12px;
+}
+.detail-tabs {
+  display: flex;
+  gap: 4px;
+  margin: 18px -18px 16px;
+  padding: 0 18px;
+  border-bottom: 1px solid #e1e9ee;
+}
+.detail-tabs button,
+.detail-tabs__sub button {
+  border: 0;
+  border-bottom: 2px solid transparent;
+  padding: 10px 12px;
+  background: transparent;
+  color: #61768a;
+  cursor: pointer;
+}
+.detail-tabs button[aria-selected='true'],
+.detail-tabs__sub button[aria-selected='true'] {
+  border-bottom-color: #1674a6;
+  color: #1674a6;
+  font-weight: 700;
+}
+.detail-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 16px;
+}
+.detail-grid > div {
+  display: grid;
+  gap: 4px;
+  min-width: 0;
+}
+.detail-grid span {
+  color: #536b7b;
+  font-size: 11px;
+}
+.detail-grid strong {
+  color: #2c4a62;
+  font-size: 13px;
+  overflow-wrap: anywhere;
+}
+.detail-grid__wide {
+  grid-column: span 3;
+}
+.detail-tabs__sub {
+  display: flex;
+}
+.assignment-panel header {
+  align-items: center;
+}
+.hint,
+.field-error,
+.inline-error {
+  color: #b64444;
+  font-size: 12px;
+}
+.empty-state {
+  padding: 22px;
+}
+.audit-placeholder {
+  padding: 18px 0;
+  color: #61768a;
+}
+.checkbox-row {
+  display: flex !important;
+  grid-template-columns: auto 1fr;
+  align-items: center;
+}
+.modal-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 40;
+  display: grid;
+  place-items: center;
+  padding: 20px;
+  background: rgb(18 38 54 / 45%);
+}
+.modal-card {
+  width: min(100%, 760px);
+  max-height: calc(100vh - 40px);
+  overflow: auto;
+  border-radius: 7px;
+  background: #fff;
+  box-shadow: 0 20px 60px rgb(18 42 62 / 24%);
+}
+.modal-card__header,
+.modal-card__footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 15px 18px;
+  border-bottom: 1px solid #e4ebef;
+}
+.modal-card__body {
+  display: grid;
+  gap: 12px;
+  padding: 18px;
+}
+.modal-card__body label {
+  display: grid;
+  gap: 5px;
+  color: #536b7b;
+  font-size: 12px;
+  font-weight: 600;
+}
+.modal-card__body input,
+.modal-card__body select,
+.modal-card__body textarea {
+  min-height: 34px;
+  border: 1px solid #c7d6df;
+  border-radius: 4px;
+  padding: 7px 9px;
+  color: #183b57;
+  font: inherit;
+}
+.modal-card__footer {
+  justify-content: flex-end;
+  margin: 6px -18px -18px;
+  border-top: 1px solid #e4ebef;
+  border-bottom: 0;
+}
+.icon-button {
+  border: 0;
+  background: transparent;
+  color: #536b7b;
+  font-size: 22px;
+  cursor: pointer;
+}
+@media (max-width: 900px) {
+  .detail-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .detail-grid__wide {
+    grid-column: span 2;
+  }
+}
+@media (max-width: 640px) {
+  .detail-grid {
+    grid-template-columns: 1fr;
+  }
+  .detail-grid__wide {
+    grid-column: auto;
+  }
+  .data-table {
+    min-width: 820px;
+  }
+  .content-panel {
+    overflow-x: auto;
+  }
+}
+</style>

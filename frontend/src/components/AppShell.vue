@@ -89,6 +89,9 @@ const navItems: NavigationItem[] = [
   { labelKey: 'nav.organizations', to: '/organizations', icon: BusinessOutline },
   { labelKey: 'nav.locations', to: '/settings/locations/provinces', icon: BusinessOutline },
   { labelKey: 'nav.wards', to: '/settings/locations/wards', icon: BusinessOutline },
+  { labelKey: 'nav.departments', to: '/people/departments', icon: PeopleOutline },
+  { labelKey: 'nav.positions', to: '/people/positions', icon: PeopleOutline },
+  { labelKey: 'nav.employees', to: '/people/employees', icon: PersonCircleOutline },
   { labelKey: 'nav.groups', to: '/admin/groups', icon: PeopleOutline, group: 'orgadmin' },
   {
     labelKey: 'nav.displaySettings',

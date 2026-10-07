@@ -73,6 +73,24 @@ const router = createRouter({
           meta: { labelKey: 'nav.locations' },
         },
         {
+          path: 'people/departments',
+          name: 'people-departments',
+          component: () => import('@/views/PeopleDepartmentsView.vue'),
+          meta: { labelKey: 'nav.departments' },
+        },
+        {
+          path: 'people/positions',
+          name: 'people-positions',
+          component: () => import('@/views/PeoplePositionsView.vue'),
+          meta: { labelKey: 'nav.positions' },
+        },
+        {
+          path: 'people/employees',
+          name: 'people-employees',
+          component: () => import('@/views/PeopleEmployeesView.vue'),
+          meta: { labelKey: 'nav.employees' },
+        },
+        {
           path: 'approvals',
           name: 'approvals',
           component: () => import('@/views/PlaceholderView.vue'),
