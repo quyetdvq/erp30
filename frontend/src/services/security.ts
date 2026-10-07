@@ -133,7 +133,11 @@ async function loadSecurityUsers(): Promise<ManagedUser[]> {
     }),
     getCurrentUser(),
   ])
-  const userMap = new Map<number, ManagedUser>()
+  const userMap = new Map<string, ManagedUser>()
+  const findExisting = (id: number, username: string): [string, ManagedUser] | undefined =>
+    [...userMap.entries()].find(
+      ([, user]) => String(user.id) === String(id) || user.username === username,
+    )
   const memberships = await Promise.all(
     groupPage.data.map(async (group) => ({
       group,
@@ -143,8 +147,9 @@ async function loadSecurityUsers(): Promise<ManagedUser[]> {
   for (const { group, members } of memberships) {
     for (const member of members) {
       const id = Number(member.id)
-      const existing = userMap.get(id)
-      userMap.set(id, {
+      const existingEntry = findExisting(id, member.username)
+      const existing = existingEntry?.[1]
+      userMap.set(existingEntry?.[0] ?? `id:${String(id)}`, {
         id,
         username: member.username,
         email: existing?.email ?? (id === currentUser.id ? currentUser.email : null),
@@ -155,8 +160,15 @@ async function loadSecurityUsers(): Promise<ManagedUser[]> {
       })
     }
   }
-  if (!userMap.has(currentUser.id)) {
-    userMap.set(currentUser.id, {
+  const currentEntry = findExisting(currentUser.id, currentUser.username)
+  if (currentEntry) {
+    userMap.set(currentEntry[0], {
+      ...currentEntry[1],
+      email: currentEntry[1].email ?? currentUser.email,
+      groups: [...new Set([...currentEntry[1].groups, ...currentUser.groups])],
+    })
+  } else {
+    userMap.set(`id:${String(currentUser.id)}`, {
       ...currentUser,
       created_at: null,
     })

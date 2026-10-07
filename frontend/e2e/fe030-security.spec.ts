@@ -177,6 +177,9 @@ test.describe('P1-FE-030 security surfaces', () => {
     await expect(page.getByRole('heading', { name: 'Người dùng' })).toBeVisible()
     await expect(page.getByRole('cell', { name: 'quyetdv', exact: true })).toBeVisible()
     await expect(page.getByRole('cell', { name: 'linhpt', exact: true })).toBeVisible()
+    await expect(
+      page.getByRole('table', { name: 'Danh sách dữ liệu' }).getByRole('row'),
+    ).toHaveCount(3)
     await expect(page.getByRole('button', { name: /Tạo|Create|Sửa|Edit/ })).toHaveCount(0)
     await page
       .getByRole('row', { name: /7 quyetdv/ })
