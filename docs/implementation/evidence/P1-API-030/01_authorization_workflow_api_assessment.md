@@ -2,6 +2,8 @@
 
 ## Scope
 
+Implementation commit: `8267f31`
+
 Implemented the CONTRACT_READY API surface for Authorization Group and its
 members/permissions, Resource and Resource Actions, Policy, Authorization Log,
 Workflow State, and Lifecycle state/transition configuration. Shield User write
@@ -23,7 +25,7 @@ remain transactional through the existing services.
 | Check | Result |
 |---|---|
 | `php .codex/skills/dinkerp-implementation/scripts/task-context.php P1-API-030` | PASS; `AUTHORITY_CACHE: VALID` |
-| `vendor/bin/phpunit --testsuite App --filter "P1Auth|P1Wf|P1Api" --no-progress` | PASS; 56 tests, 291 assertions |
+| `php vendor/bin/phpunit --testsuite App --filter 'P1Auth|P1Wf|P1Api' --no-progress` | PASS; 77 tests, 387 assertions |
 | `vendor/bin/phpunit --testsuite App --no-progress` | PASS; 386 tests, 3,484 assertions |
 | `vendor/bin/phpstan analyse --level=8 --no-progress` | PASS; no errors |
 | `pnpm run openapi:lint` | PASS |
