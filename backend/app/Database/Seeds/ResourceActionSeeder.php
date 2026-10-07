@@ -18,7 +18,7 @@ final class ResourceActionSeeder extends Seeder
         'organization' => 'ORGANIZATION', 'contact' => 'ORGANIZATION',
         'employee_assignment' => 'ORGANIZATION', 'policy' => 'ORGANIZATION',
         'authorization_log' => 'ORGANIZATION', 'price_list' => 'ORGANIZATION',
-        'import_job' => 'ORGANIZATION',
+        'import_job' => 'ORGANIZATION', 'display_setting' => 'ORGANIZATION',
     ];
 
     /** @var array<string, list<string>> */
@@ -43,6 +43,7 @@ final class ResourceActionSeeder extends Seeder
         'product' => ['view', 'create', 'edit', 'setstate', 'import', 'export'],
         'price_list' => ['view', 'create', 'edit', 'setstate', 'export'],
         'import_job' => ['view', 'export'],
+        'display_setting' => ['view', 'edit'],
     ];
 
     public function run(): void

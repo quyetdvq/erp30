@@ -35,6 +35,7 @@ final class P1Seed001ResourceActionSeedTest extends CIUnitTestCase
         'product' => ['view', 'create', 'edit', 'setstate', 'import', 'export'],
         'price_list' => ['view', 'create', 'edit', 'setstate', 'export'],
         'import_job' => ['view', 'export'],
+        'display_setting' => ['view', 'edit'],
     ];
 
     /** @var array<string, string> */
@@ -46,6 +47,7 @@ final class P1Seed001ResourceActionSeedTest extends CIUnitTestCase
         'lifecycle' => 'SYSTEM', 'organization' => 'ORGANIZATION', 'contact' => 'ORGANIZATION',
         'employee_assignment' => 'ORGANIZATION', 'policy' => 'ORGANIZATION',
         'authorization_log' => 'ORGANIZATION', 'price_list' => 'ORGANIZATION', 'import_job' => 'ORGANIZATION',
+        'display_setting' => 'ORGANIZATION',
     ];
 
     public function testSeedTwiceProducesExactlyTheApprovedCatalog(): void
@@ -60,8 +62,8 @@ final class P1Seed001ResourceActionSeedTest extends CIUnitTestCase
         $this->assertSame($first, $second);
         $this->assertSame($this->normalizedMatrix(), $second);
         $this->assertSame($beforeSideEffects, $this->sideEffectCounts());
-        $this->assertSame(20, count($second));
-        $this->assertSame(92, array_sum(array_map('count', $second)));
+        $this->assertSame(21, count($second));
+        $this->assertSame(94, array_sum(array_map('count', $second)));
         $expectedDomains = self::DOMAINS;
         ksort($expectedDomains);
         $this->assertSame($expectedDomains, $this->domainSnapshot());

@@ -83,6 +83,7 @@ final class EvaluationOrganizationResolver
             'price_list' => new OrganizationIdResourceScopeResolver(),
             'authorization_log' => new AuthorizationLogScopeResolver($groupResolver),
             'import_job' => new ImportJobScopeResolver($groupResolver),
+            'display_setting' => new OrganizationIdResourceScopeResolver(),
         ]);
     }
 
