@@ -122,7 +122,7 @@ Validation run against `CI_ENVIRONMENT=testing` and `erp_test` where applicable:
 | PHPStan level 8 (`app` + focused test) | PASS; no errors |
 | Architecture guard | PASS; 44 application files checked |
 | Context cache/module-map/task registry validator | PASS; cache valid, 107 tasks, acyclic graph |
-| Ledger validator (pre-closure) | PASS; 79 DONE tasks |
+| Ledger validator (final closure) | PASS; 80 DONE tasks |
 | `git diff --check` | PASS |
 
 ## Commit and ledger closure
