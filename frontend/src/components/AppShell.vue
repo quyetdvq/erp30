@@ -169,6 +169,18 @@ const navItems: NavigationItem[] = [
     icon: TimeOutline,
     permission: 'authorization_log.view',
   },
+  {
+    labelKey: 'nav.workflowStates',
+    to: '/configuration/workflow-states',
+    icon: TimeOutline,
+    permission: 'workflow_state.view',
+  },
+  {
+    labelKey: 'nav.lifecycles',
+    to: '/configuration/lifecycles',
+    icon: TimeOutline,
+    permission: 'lifecycle.view',
+  },
 ]
 
 const localeOptions = [
@@ -230,6 +242,8 @@ const modeItems = computed(() => {
         '/security/resources',
         '/security/policies',
         '/security/authorization-logs',
+        '/configuration/workflow-states',
+        '/configuration/lifecycles',
       ].includes(item.to),
     )
   }

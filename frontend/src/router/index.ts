@@ -79,6 +79,18 @@ const router = createRouter({
           meta: { labelKey: 'nav.authorizationLogs' },
         },
         {
+          path: 'configuration/workflow-states',
+          name: 'configuration-workflow-states',
+          component: () => import('@/views/WorkflowStatesView.vue'),
+          meta: { labelKey: 'nav.workflowStates' },
+        },
+        {
+          path: 'configuration/lifecycles',
+          name: 'configuration-lifecycles',
+          component: () => import('@/views/LifecyclesView.vue'),
+          meta: { labelKey: 'nav.lifecycles' },
+        },
+        {
           path: 'admin/groups',
           name: 'groups',
           component: () => import('@/views/GroupsView.vue'),

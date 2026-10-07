@@ -4,10 +4,10 @@ This ledger is lightweight operational evidence. It is not architecture
 authority and does not replace UR, FRS, DBD, the Implementation Contract, the
 Implementation Plan, API Design, or UI Design.
 
-The registry contains exactly 107 P1 tasks. Current ledger state records 91
+The registry contains exactly 107 P1 tasks. Current ledger state records 93
 completed tasks: Gate 0 is 10/10, Gate 1 is 14/14, Gate 2 is 8/8, Gate 3 is
 10/10, Gate 4 is 7/7, Gate 5 is 11/11, Gate 6 is 9/9, Gate 7 is 15/15,
-Gate 8 is 8/14, and Gate 9 is 0/9.
+Gate 8 is 9/14, and Gate 9 is 0/9.
 
 The Implementation Plan v1.8 retains a planning snapshot of `69/107`; the
 `80/107` value below is evidence-derived from the current Git/ledger history
@@ -20,7 +20,7 @@ registry.
 
 | Measure | Progress |
 |---|---:|
-| P1 tasks DONE | 92/107 |
+| P1 tasks DONE | 93/107 |
 | Gate 0 | 10/10 DONE |
 | Gate 1 | 14/14 DONE |
 | Gate 2 | 8/8 DONE |
@@ -29,7 +29,7 @@ registry.
 | Gate 5 | 11/11 DONE |
 | Gate 6 | 9/9 DONE |
 | Gate 7 | 15/15 DONE |
-| Gate 8 | 8/14 DONE |
+| Gate 8 | 9/14 DONE |
 | Gate 9 | 0/9 DONE |
 
 ## Task Ledger
@@ -128,7 +128,7 @@ registry.
 | P1-FE-010 | DONE | 0000000 | service-standard | Location/Organization/Contact Slice 1 UI; FE-003 list states, generated API-010 client boundary, canonical parent/type matrix, reusable Contact UI, critical Playwright and frontend/API validation. Evidence: `docs/implementation/evidence/P1-FE-010/01_slice1_ui_assessment.md`. |
 | P1-FE-020 | DONE | 0000000 | frontend | Employee/Assignment Slice 2 UI: Department hierarchy and Position master aligned to the Locations/Wards list pattern; Employee ListTable/detail/filter/form with constrained responsive modal; Contacts reused the FE-010 Wards-aligned list surface and resolves canonical Province/Ward IDs; Audit uses the matching detail summary without fabricated entries; canonical gender, manager guards, Assignment CRUD/history/Primary overlap handling, searchable large-option dropdowns with case-insensitive realtime filtering, accessibility and critical Playwright evidence. Evidence: `docs/implementation/evidence/P1-FE-020/01_employee_assignment_ui_assessment.md`. |
 | P1-FE-030 | DONE | 0447b80 | high-risk | Security/Authorization UI Table First/modal correction plus dedicated backend-aggregated `GET /api/v1/security/users` to remove per-group N+1 loading; complete group Members/Resource Action detail and validation evidence: `docs/implementation/evidence/P1-FE-030/01_security_authorization_ui_assessment.md`. Repository-wide Oxlint remains blocked by an untouched pre-existing `SearchableSelect.spec.ts` unused variable; scoped touched-file Oxlint passes. |
-| P1-FE-040 | NOT_STARTED | — | service-standard | No accepted implementation evidence. |
+| P1-FE-040 | DONE | 0000000 | service-standard | Workflow State and Lifecycle UI at `/configuration/workflow-states` and `/configuration/lifecycles`; permission-aware CRUD/status controls, Overview/States/Transitions tabs, atomic nested Lifecycle API saves, one-initial/membership/duplicate-transition UX, vi/en/accessibility/Playwright evidence. Evidence: `docs/implementation/evidence/P1-FE-040/01_workflow_lifecycle_ui_assessment.md`. |
 | P1-FE-050 | NOT_STARTED | — | high-risk | No accepted implementation evidence. |
 | P1-FE-060 | NOT_STARTED | — | high-risk | No accepted implementation evidence. |
 | P1-FE-070 | NOT_STARTED | — | high-risk | No accepted implementation evidence. |
