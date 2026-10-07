@@ -27,6 +27,7 @@ final class PolicyRepository
     public const ERROR_FIELD_REQUIRED = 'POLICY_FIELD_REQUIRED';
     public const ERROR_ACTION_FIELD_REQUIRED = 'POLICY_ACTION_FIELD_REQUIRED';
     public const ERROR_MUTATION_FAILED = 'POLICY_MUTATION_FAILED';
+    public const ERROR_SCOPE_ALREADY_EXISTS = 'POLICY_SCOPE_ALREADY_EXISTS';
 
     /** @var list<string> */
     private const POLICY_FIELDS = [
@@ -127,6 +128,21 @@ final class PolicyRepository
         return array_values($result->getResultArray());
     }
 
+    /**
+     * Assert that the canonical five-dimensional Policy scope is available.
+     * The optional lock is used inside the mutation transaction; the unique
+     * database key remains the final race guard.
+     *
+     * @param array<string, mixed> $scope
+     */
+    public function assertScopeAvailable(array $scope, ?int $excludePolicyId = null, bool $lock = false): void
+    {
+        $row = $this->findByScope($scope, $excludePolicyId, $lock);
+        if ($row !== null) {
+            throw new DomainException(self::ERROR_SCOPE_ALREADY_EXISTS, ['field' => 'scope']);
+        }
+    }
+
     /** @return list<array<string, mixed>> */
     public function findPolicyActions(int $policyId): array
     {
@@ -193,6 +209,7 @@ final class PolicyRepository
     /** @param array<string, mixed> $data */
     public function insert(array $data, ?OperationContext $operation = null): int
     {
+        $this->assertScopeAvailable($data);
         $payload = $this->policyPayload($data, ['organization_id', 'resource_id', 'participant_type', 'participant_ref_id']);
         $payload = array_merge($payload, $this->trustedCreateAudit($operation));
 
@@ -207,6 +224,7 @@ final class PolicyRepository
         } catch (PersistenceException $exception) {
             throw $exception;
         } catch (\Throwable $exception) {
+            $this->throwScopeConflictIfNeeded($exception);
             throw new PersistenceException(self::ERROR_PERSISTENCE_FAILED, 'insert', $exception);
         }
         if ($id < 1) {
@@ -226,13 +244,16 @@ final class PolicyRepository
         }
 
         return $this->transactional(function () use ($id, $payload, $operation): bool {
-            if ($this->findForUpdate($id) === null) {
+            $current = $this->findForUpdate($id);
+            if ($current === null) {
                 return false;
             }
+            $this->assertScopeAvailable(array_merge($current, $payload), $id, true);
             $payload = array_merge($payload, $this->trustedUpdateAudit($operation));
             try {
                 $updated = $this->db->table('policies')->where('id', $id)->update($payload);
             } catch (\Throwable $exception) {
+                $this->throwScopeConflictIfNeeded($exception);
                 throw new PersistenceException(self::ERROR_PERSISTENCE_FAILED, 'update', $exception);
             }
             if ($updated === false) {
@@ -312,6 +333,7 @@ final class PolicyRepository
     public function insertWithActions(array $policy, array $actions, ?OperationContext $operation = null): int
     {
         return $this->transactional(function () use ($policy, $actions, $operation): int {
+            $this->assertScopeAvailable($policy, null, true);
             $policyId = $this->insert($policy, $operation);
             foreach ($actions as $action) {
                 $this->insertPolicyAction(array_merge($action, ['policy_id' => $policyId]), $operation);
@@ -337,9 +359,11 @@ final class PolicyRepository
         }
 
         return $this->transactional(function () use ($policyId, $payload, $actions, $operation): bool {
-            if ($this->findForUpdate($policyId) === null) {
+            $current = $this->findForUpdate($policyId);
+            if ($current === null) {
                 return false;
             }
+            $this->assertScopeAvailable(array_merge($current, $payload), $policyId, true);
             $changes = array_merge($payload, $this->trustedUpdateAudit($operation));
             try {
                 if (! $this->db->table('policies')->where('id', $policyId)->update($changes)) {
@@ -351,6 +375,7 @@ final class PolicyRepository
             } catch (PersistenceException $exception) {
                 throw $exception;
             } catch (\Throwable $exception) {
+                $this->throwScopeConflictIfNeeded($exception);
                 throw new PersistenceException(self::ERROR_PERSISTENCE_FAILED, 'replaceWithActions', $exception);
             }
             foreach ($actions as $action) {
@@ -470,5 +495,48 @@ final class PolicyRepository
     private function trustedUpdateAudit(?OperationContext $operation): array
     {
         return ($operation ?? MutationContext::system(service('clock'))->begin())->updatedAudit();
+    }
+
+    /** @param array<string, mixed> $scope
+     *  @return array<string, mixed>|null
+     */
+    private function findByScope(array $scope, ?int $excludePolicyId, bool $lock): ?array
+    {
+        $builder = $this->db->table('policies')
+            ->where('organization_id', $scope['organization_id'] ?? null)
+            ->where('resource_id', $scope['resource_id'] ?? null)
+            ->where('participant_type', $scope['participant_type'] ?? null)
+            ->where('participant_ref_id', $scope['participant_ref_id'] ?? null);
+        if (($scope['state_id'] ?? null) === null) {
+            $builder->where('state_id IS NULL', null, false);
+        } else {
+            $builder->where('state_id', $scope['state_id']);
+        }
+        if ($excludePolicyId !== null) {
+            $builder->where('id !=', $excludePolicyId);
+        }
+
+        try {
+            $result = $lock && $this->db instanceof BaseConnection
+                ? $this->db->query($builder->getCompiledSelect() . ' FOR UPDATE')
+                : $builder->get();
+        } catch (\Throwable $exception) {
+            throw new PersistenceException(self::ERROR_PERSISTENCE_FAILED, 'findByScope', $exception);
+        }
+        if (! $result instanceof BaseResult) {
+            throw new PersistenceException(self::ERROR_PERSISTENCE_FAILED, 'findByScope');
+        }
+
+        $row = $result->getRowArray();
+
+        return $row === null ? null : $row;
+    }
+
+    private function throwScopeConflictIfNeeded(\Throwable $exception): void
+    {
+        $message = strtolower($exception->getMessage());
+        if (str_contains($message, 'uq_policies_scope') || (str_contains($message, 'duplicate entry') && str_contains($message, 'normalized_state_id'))) {
+            throw new DomainException(self::ERROR_SCOPE_ALREADY_EXISTS, ['field' => 'scope'], $exception);
+        }
     }
 }

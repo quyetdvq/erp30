@@ -162,11 +162,13 @@ final class P1Num001AutoNumberingTest extends CIUnitTestCase
             $this->assertSame(AutoNumberingConfigurationService::ERROR_AUTHORIZATION_DENIED, $exception->getErrorCode());
         }
 
-        $this->db->table('policy_actions')->where('resource_action_id', $actionId)->delete();
-        $repository->insertWithActions([
+        $policyId = (int) $this->db->table('policies')->where([
             'organization_id' => $rootId, 'resource_id' => $resourceCatalogId,
-            'participant_type' => 'GROUP', 'participant_ref_id' => $groupId,
-        ], [['resource_action_id' => $actionId, 'effect' => 'ABSOLUTE_DENY']]);
+            'state_id' => null, 'participant_type' => 'GROUP', 'participant_ref_id' => $groupId,
+        ])->get()->getRowArray()['id'];
+        $this->db->table('policy_actions')->where([
+            'policy_id' => $policyId, 'resource_action_id' => $actionId,
+        ])->update(['effect' => 'ABSOLUTE_DENY']);
         try {
             (new AutoNumberingConfigurationService(db: $this->db))->create($this->series($resourceId, 'ABSOLUTE-DENY'), $this->operation($userId));
             $this->fail('Expected absolute denial.');

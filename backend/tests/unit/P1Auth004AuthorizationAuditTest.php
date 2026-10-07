@@ -67,8 +67,8 @@ final class P1Auth004AuthorizationAuditTest extends CIUnitTestCase
     {
         $this->seedCatalog();
         $organizationId = $this->insertOrganization();
-        $first = $this->insertPolicy($organizationId);
-        $second = $this->insertPolicy($organizationId);
+        $first = $this->insertPolicy($organizationId, 'USER');
+        $second = $this->insertPolicy($organizationId, 'GROUP');
         $service = new AuthorizationAuditService(db: $this->db);
 
         $multipleId = $service->recordIfRequired($this->decision('delete', 'DENY', 55, $organizationId, null, [$second, $first]));
@@ -172,11 +172,11 @@ final class P1Auth004AuthorizationAuditTest extends CIUnitTestCase
         return (int) $this->db->insertID();
     }
 
-    private function insertPolicy(int $organizationId): int
+    private function insertPolicy(int $organizationId, string $participantType = 'USER'): int
     {
         $this->db->table('policies')->insert([
             'organization_id' => $organizationId, 'resource_id' => $this->resourceId('product'),
-            'state_id' => null, 'participant_type' => 'USER', 'participant_ref_id' => 55,
+            'state_id' => null, 'participant_type' => $participantType, 'participant_ref_id' => 55,
             'created_at' => '2026-10-05 00:00:00',
         ]);
 

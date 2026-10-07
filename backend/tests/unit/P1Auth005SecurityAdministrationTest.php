@@ -354,9 +354,26 @@ final class P1Auth005SecurityAdministrationTest extends CIUnitTestCase
     private function denyCapability(int $rootId, int $groupId, string $resource, string $action, string $effect): void
     {
         $repository = new PolicyRepository($this->db);
+        $policy = $this->policy($rootId, 'GROUP', $groupId, $resource);
+        $existing = $this->db->table('policies')->where($policy)->get()->getRowArray();
+        $resourceActionId = $this->resourceActionId($resource, $action);
+        if ($existing !== null) {
+            $actionRow = $this->db->table('policy_actions')->where([
+                'policy_id' => (int) $existing['id'], 'resource_action_id' => $resourceActionId,
+            ])->get()->getRowArray();
+            if ($actionRow === null) {
+                $this->db->table('policy_actions')->insert([
+                    'policy_id' => (int) $existing['id'], 'resource_action_id' => $resourceActionId,
+                    'effect' => $effect, 'created_at' => '2026-10-05 00:00:00',
+                ]);
+            } else {
+                $this->db->table('policy_actions')->where('id', (int) $actionRow['id'])->update(['effect' => $effect]);
+            }
+            return;
+        }
         $repository->insertWithActions(
-            $this->policy($rootId, 'GROUP', $groupId, $resource),
-            [['resource_action_id' => $this->resourceActionId($resource, $action), 'effect' => $effect]],
+            $policy,
+            [['resource_action_id' => $resourceActionId, 'effect' => $effect]],
             $this->operation($this->actorForGroup($groupId)),
         );
     }

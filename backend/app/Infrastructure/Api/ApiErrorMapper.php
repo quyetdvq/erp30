@@ -46,7 +46,7 @@ final class ApiErrorMapper
                 str_contains($code, 'NOT_FOUND') || str_contains($code, 'NOTFOUND') => 404,
                 str_contains($code, 'UNAUTHENTICATED') || str_contains($code, 'INVALID_CREDENTIAL') => 401,
                 str_contains($code, 'DENIED') || str_contains($code, 'FORBIDDEN') => 403,
-                str_contains($code, 'CONCURRENT') || str_contains($code, 'CONFLICT') || str_contains($code, 'DUPLICATE') || str_contains($code, 'IMMUTABLE') => 409,
+                str_contains($code, 'CONCURRENT') || str_contains($code, 'CONFLICT') || str_contains($code, 'DUPLICATE') || str_contains($code, 'IMMUTABLE') || $code === 'POLICY_SCOPE_ALREADY_EXISTS' => 409,
                 str_contains($code, 'CONNECTION') || str_contains($code, 'PERSISTENCE') || str_contains($code, 'TRANSACTION') || str_contains($code, 'LOCK_FAILED') => 500,
                 default => 422,
             };

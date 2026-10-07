@@ -51,6 +51,7 @@ final class PolicyAdministrationService
         $this->authorize($operation, 'create', null, $policy);
         $validatedPolicy = $this->validator()->validatePolicy($policy);
         $validatedActions = $this->validator()->validateActions($actions, (int) $validatedPolicy['resource_id']);
+        $this->repo()->assertScopeAvailable($validatedPolicy);
 
         return $this->repo()->insertWithActions($validatedPolicy, $validatedActions, $operation);
     }
@@ -72,6 +73,7 @@ final class PolicyAdministrationService
         if ($validatedActions !== null && $validatedActions === []) {
             throw new DomainException(self::ERROR_ACTIONS_REQUIRED);
         }
+        $this->repo()->assertScopeAvailable($validatedPolicy, $id);
         if ($validatedActions === null) {
             return $this->repo()->update($id, $validatedPolicy, $operation);
         }

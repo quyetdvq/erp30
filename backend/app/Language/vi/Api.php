@@ -12,4 +12,5 @@ return [
     'serverError' => 'Đã xảy ra lỗi máy chủ. Vui lòng thử lại sau.',
     'invalidCredentials' => 'Thông tin đăng nhập không hợp lệ.',
     'profileUpdateFailed' => 'Không thể cập nhật hồ sơ.',
+    'policyScopeAlreadyExists' => 'Đã tồn tại Policy cho phạm vi Organization, Resource, State và participant này.',
 ];

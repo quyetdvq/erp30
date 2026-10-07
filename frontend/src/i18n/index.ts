@@ -366,6 +366,9 @@ export const messages = {
       resourcesDescription: 'Quản lý catalog bảo vệ và các Action canonical.',
       policiesTitle: 'Policy PBAC',
       policiesDescription: 'Quản lý Policy theo Organization scope, participant và effect.',
+      policyScopeAlreadyExists:
+        'Đã tồn tại Policy cho cùng Organization, Resource, State và participant. Bản nháp vẫn được giữ nguyên.',
+      reloadPolicyScope: 'Tải lại Policy hiện có',
       logsTitle: 'Nhật ký phân quyền',
       logsDescription: 'Đọc các quyết định Authorization Log đã được backend giới hạn phạm vi.',
       authorizationGroup: 'Nhóm phân quyền',
@@ -868,6 +871,9 @@ export const messages = {
       resourcesDescription: 'Manage the protected resource catalog and canonical actions.',
       policiesTitle: 'PBAC Policies',
       policiesDescription: 'Manage Policy organization scope, participant, and effect rows.',
+      policyScopeAlreadyExists:
+        'A Policy already exists for this Organization, Resource, State, and participant scope. Your draft is preserved.',
+      reloadPolicyScope: 'Reload existing Policy',
       logsTitle: 'Authorization Logs',
       logsDescription: 'Read backend-scoped authorization decisions.',
       authorizationGroup: 'Authorization Group',

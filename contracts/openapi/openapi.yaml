@@ -580,7 +580,7 @@ paths:
       operationId: updatePolicy
       summary: Update policy
       requestBody: {$ref: '#/components/requestBodies/PolicyPatch'}
-      responses: {'200': {$ref: '#/components/responses/PolicyResponse'}, '401': {$ref: '#/components/responses/Unauthorized'}, '403': {$ref: '#/components/responses/Forbidden'}, '404': {$ref: '#/components/responses/NotFound'}, '422': {$ref: '#/components/responses/UnprocessableEntity'}}
+      responses: {'200': {$ref: '#/components/responses/PolicyResponse'}, '401': {$ref: '#/components/responses/Unauthorized'}, '403': {$ref: '#/components/responses/Forbidden'}, '404': {$ref: '#/components/responses/NotFound'}, '409': {$ref: '#/components/responses/Conflict'}, '422': {$ref: '#/components/responses/UnprocessableEntity'}}
     delete:
       operationId: deletePolicy
       summary: Delete policy
@@ -1152,6 +1152,15 @@ components:
         application/json:
           schema:
             $ref: '#/components/schemas/ErrorResponse'
+          examples:
+            policyScopeAlreadyExists:
+              summary: Duplicate Policy scope
+              value:
+                error:
+                  code: POLICY_SCOPE_ALREADY_EXISTS
+                  message: A Policy already exists for this scope.
+                  details: [{field: scope, code: POLICY_SCOPE_ALREADY_EXISTS, message: A Policy already exists for this scope.}]
+                meta: {request_id: 00000000-0000-4000-8000-000000000000}
     UnprocessableEntity:
       description: Semantically invalid request.
       headers:
@@ -2040,9 +2049,9 @@ components:
     NumberingSeriesState: {type: object, required: [status], properties: {status: {type: string, enum: [ACTIVE, INACTIVE]}}}
     NumberingSeriesValidation: {type: object, required: [valid, normalized_pattern, validation_messages], properties: {valid: {type: boolean}, normalized_pattern: {type: string}, validation_messages: {type: array, items: {type: string}}}}
     PolicyAction: {type: object, required: [resource_action_id, effect], properties: {resource_action_id: {$ref: '#/components/schemas/BigInt'}, effect: {type: string, enum: [ALLOW, DENY, ABSOLUTE_DENY]}}}
-    Policy: {type: object, required: [id, organization_id, resource_id, participant_type, participant_ref_id, actions], properties: {id: {$ref: '#/components/schemas/BigInt'}, organization_id: {$ref: '#/components/schemas/BigInt'}, resource_id: {$ref: '#/components/schemas/BigInt'}, state_id: {$ref: '#/components/schemas/BigInt'}, participant_type: {type: string, enum: [USER, GROUP, POSITION, DEPARTMENT, ORGANIZATION]}, participant_ref_id: {$ref: '#/components/schemas/BigInt'}, actions: {type: array, items: {$ref: '#/components/schemas/PolicyAction'}}}}
-    PolicyCreate: {type: object, required: [organization_id, resource_id, participant_type, participant_ref_id, actions], properties: {organization_id: {$ref: '#/components/schemas/BigInt'}, resource_id: {$ref: '#/components/schemas/BigInt'}, state_id: {$ref: '#/components/schemas/BigInt'}, participant_type: {type: string, enum: [USER, GROUP, POSITION, DEPARTMENT, ORGANIZATION]}, participant_ref_id: {$ref: '#/components/schemas/BigInt'}, actions: {type: array, items: {$ref: '#/components/schemas/PolicyAction'}}}}
-    PolicyPatch: {type: object, properties: {organization_id: {$ref: '#/components/schemas/BigInt'}, resource_id: {$ref: '#/components/schemas/BigInt'}, state_id: {$ref: '#/components/schemas/BigInt'}, participant_type: {type: string}, participant_ref_id: {$ref: '#/components/schemas/BigInt'}, actions: {type: array, items: {$ref: '#/components/schemas/PolicyAction'}}}}
+    Policy: {type: object, required: [id, organization_id, resource_id, participant_type, participant_ref_id, actions], properties: {id: {$ref: '#/components/schemas/BigInt'}, organization_id: {$ref: '#/components/schemas/BigInt'}, resource_id: {$ref: '#/components/schemas/BigInt'}, state_id: {allOf: [{$ref: '#/components/schemas/NullableBigInt'}], description: "NULL represents the ALL_STATES scope."}, participant_type: {type: string, enum: [USER, GROUP, POSITION, DEPARTMENT, ORGANIZATION]}, participant_ref_id: {$ref: '#/components/schemas/BigInt'}, actions: {type: array, items: {$ref: '#/components/schemas/PolicyAction'}}}}
+    PolicyCreate: {type: object, required: [organization_id, resource_id, participant_type, participant_ref_id, actions], properties: {organization_id: {$ref: '#/components/schemas/BigInt'}, resource_id: {$ref: '#/components/schemas/BigInt'}, state_id: {allOf: [{$ref: '#/components/schemas/NullableBigInt'}], description: "NULL represents the ALL_STATES scope."}, participant_type: {type: string, enum: [USER, GROUP, POSITION, DEPARTMENT, ORGANIZATION]}, participant_ref_id: {$ref: '#/components/schemas/BigInt'}, actions: {type: array, items: {$ref: '#/components/schemas/PolicyAction'}}}}
+    PolicyPatch: {type: object, properties: {organization_id: {$ref: '#/components/schemas/BigInt'}, resource_id: {$ref: '#/components/schemas/BigInt'}, state_id: {allOf: [{$ref: '#/components/schemas/NullableBigInt'}], description: "NULL represents the ALL_STATES scope."}, participant_type: {type: string, enum: [USER, GROUP, POSITION, DEPARTMENT, ORGANIZATION]}, participant_ref_id: {$ref: '#/components/schemas/BigInt'}, actions: {type: array, items: {$ref: '#/components/schemas/PolicyAction'}}}}
     AuthorizationLog: {type: object, required: [id, user_id, resource_id, action, decision, created_at], properties: {id: {$ref: '#/components/schemas/BigInt'}, user_id: {$ref: '#/components/schemas/BigInt'}, organization_id: {$ref: '#/components/schemas/BigInt'}, resource_id: {$ref: '#/components/schemas/BigInt'}, action: {type: string}, state_id: {$ref: '#/components/schemas/BigInt'}, decision: {type: string, enum: [ALLOW, DENY]}, matched_policy_id: {$ref: '#/components/schemas/BigInt'}, reason: {type: [string, 'null']}, request_id: {type: [string, 'null']}, created_at: {type: string, format: date-time}}}
     WorkflowState: {type: object, required: [id, code, name, status], properties: {id: {$ref: '#/components/schemas/BigInt'}, code: {type: string}, name: {type: string}, description: {type: [string, 'null']}, status: {type: string, enum: [ACTIVE, INACTIVE]}}}
     WorkflowStateCreate: {type: object, required: [code, name], properties: {code: {type: string}, name: {type: string}, description: {type: string}, status: {type: string, enum: [ACTIVE, INACTIVE]}}}

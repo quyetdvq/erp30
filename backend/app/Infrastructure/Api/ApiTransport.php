@@ -107,6 +107,7 @@ final class ApiTransport
         $key = match ($code) {
             'INVALID_CREDENTIALS' => 'invalidCredentials',
             'PROFILE_UPDATE_FAILED' => 'profileUpdateFailed',
+            'POLICY_SCOPE_ALREADY_EXISTS' => 'policyScopeAlreadyExists',
             default => match ($status) {
                 400 => 'invalidRequest',
                 401 => 'unauthenticated',

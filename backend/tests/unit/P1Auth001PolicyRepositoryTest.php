@@ -133,6 +133,42 @@ final class P1Auth001PolicyRepositoryTest extends CIUnitTestCase
         ]);
     }
 
+    public function testCanonicalScopeRejectsDuplicateNullStateAndAllowsConcreteState(): void
+    {
+        $this->seedCatalog();
+        $refs = $this->insertReferences();
+        $repository = new PolicyRepository($this->db);
+        $resourceId = $this->resourceId('product');
+        $actionId = $this->resourceActionId('product', 'view');
+        $payload = [
+            'organization_id' => $refs['ORGANIZATION'], 'resource_id' => $resourceId,
+            'state_id' => null, 'participant_type' => 'GROUP', 'participant_ref_id' => $refs['GROUP'],
+        ];
+        $repository->insertWithActions($payload, [['resource_action_id' => $actionId, 'effect' => 'ALLOW']]);
+
+        try {
+            $repository->insertWithActions($payload, [['resource_action_id' => $actionId, 'effect' => 'ALLOW']]);
+            $this->fail('Expected duplicate Policy scope.');
+        } catch (DomainException $exception) {
+            $this->assertSame(PolicyRepository::ERROR_SCOPE_ALREADY_EXISTS, $exception->getErrorCode());
+        }
+
+        $this->db->table('workflow_states')->insert([
+            'id' => 990002, 'code' => 'AUTH_SCOPE_' . uniqid(), 'name' => 'Concrete state',
+            'status' => 'ACTIVE', 'created_at' => '2026-10-08 00:00:00',
+        ]);
+        $concrete = $payload;
+        $concrete['state_id'] = 990002;
+        $concreteId = $repository->insertWithActions($concrete, [['resource_action_id' => $actionId, 'effect' => 'ALLOW']]);
+        $this->assertGreaterThan(0, $concreteId);
+        try {
+            $repository->update($concreteId, ['state_id' => null]);
+            $this->fail('Expected duplicate Policy scope on update.');
+        } catch (DomainException $exception) {
+            $this->assertSame(PolicyRepository::ERROR_SCOPE_ALREADY_EXISTS, $exception->getErrorCode());
+        }
+    }
+
     public function testCallerAuditFieldsAreIgnoredInFavorOfTrustedOperationContext(): void
     {
         $this->seedCatalog();

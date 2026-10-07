@@ -67,6 +67,7 @@ final class P1Api001TransportTest extends CIUnitTestCase
         $cases = [
             [new PageNotFoundException('private-target'), 404, 'RESOURCE_NOT_FOUND'],
             [new DomainException('AUTH_POLICY_DENIED'), 403, 'AUTH_POLICY_DENIED'],
+            [new DomainException('POLICY_SCOPE_ALREADY_EXISTS', ['field' => 'scope']), 409, 'POLICY_SCOPE_ALREADY_EXISTS'],
             [new ConcurrencyException('test'), 409, 'CONCURRENT_MODIFICATION'],
             [new DomainException('PRODUCT_INVALID_FIELD', ['field' => 'code']), 422, 'PRODUCT_INVALID_FIELD'],
             [new RuntimeException('SQL secret /internal/path'), 500, 'INTERNAL_SERVER_ERROR'],

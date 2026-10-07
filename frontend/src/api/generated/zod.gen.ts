@@ -1103,7 +1103,7 @@ export const zPolicy = z.object({
     id: zBigInt,
     organization_id: zBigInt,
     resource_id: zBigInt,
-    state_id: zBigInt.optional(),
+    state_id: zNullableBigInt.optional(),
     participant_type: z.enum([
         'USER',
         'GROUP',
@@ -1118,7 +1118,7 @@ export const zPolicy = z.object({
 export const zPolicyCreate = z.object({
     organization_id: zBigInt,
     resource_id: zBigInt,
-    state_id: zBigInt.optional(),
+    state_id: zNullableBigInt.optional(),
     participant_type: z.enum([
         'USER',
         'GROUP',
@@ -1133,8 +1133,14 @@ export const zPolicyCreate = z.object({
 export const zPolicyPatch = z.object({
     organization_id: zBigInt.optional(),
     resource_id: zBigInt.optional(),
-    state_id: zBigInt.optional(),
-    participant_type: z.string().optional(),
+    state_id: zNullableBigInt.optional(),
+    participant_type: z.enum([
+        'USER',
+        'GROUP',
+        'POSITION',
+        'DEPARTMENT',
+        'ORGANIZATION'
+    ]).optional(),
     participant_ref_id: zBigInt.optional(),
     actions: z.array(zPolicyAction).optional()
 });

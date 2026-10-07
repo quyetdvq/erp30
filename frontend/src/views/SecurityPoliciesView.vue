@@ -38,7 +38,7 @@ import type {
   AuthorizationGroup,
 } from '@/api/generated/types.gen'
 import { i18n } from '@/i18n'
-import { reportApiError } from '@/services/errorBoundary'
+import { normalizeApiError, reportApiError } from '@/services/errorBoundary'
 import { useBasePermission } from '@/composables/useBasePermission'
 import { getLifecycleStates, type LifecycleStateMembership } from '@/services/workflow'
 
@@ -61,6 +61,7 @@ const modalOpen = ref(false)
 const editingId = ref<string | undefined>()
 const busy = ref(false)
 const error = ref<unknown | null>(null)
+const duplicateScopeConflict = ref(false)
 const organizations = ref<Organization[]>([])
 const resources = ref<Resource[]>([])
 const groups = ref<AuthorizationGroup[]>([])
@@ -104,6 +105,15 @@ const workflowStateOptions = computed(() =>
 )
 const participantSelectOptions = computed(() =>
   participantOptions.value.map((option) => ({ value: option.id, label: option.label })),
+)
+const duplicateScopeSummary = computed(() =>
+  [
+    form.value.organization_id,
+    form.value.resource_id,
+    form.value.state_id || 'ALL_STATES',
+    form.value.participant_type,
+    form.value.participant_ref_id,
+  ].join(' / '),
 )
 const isRemoteParticipant = computed(() => form.value.participant_type !== 'GROUP')
 function labelForOrganization(id: string): string {
@@ -373,6 +383,7 @@ function removeAction(index: number): void {
 async function save(): Promise<void> {
   busy.value = true
   error.value = null
+  duplicateScopeConflict.value = false
   try {
     const payload = {
       organization_id: form.value.organization_id,
@@ -387,10 +398,15 @@ async function save(): Promise<void> {
     await load()
   } catch (caught: unknown) {
     error.value = caught
-    reportApiError(caught)
+    const notice = reportApiError(caught) ?? normalizeApiError(caught)
+    duplicateScopeConflict.value = notice?.code === 'POLICY_SCOPE_ALREADY_EXISTS'
   } finally {
     busy.value = false
   }
+}
+async function reloadAfterDuplicate(): Promise<void> {
+  duplicateScopeConflict.value = false
+  await load()
 }
 onMounted(async () => {
   await Promise.all([load(), loadReferences()])
@@ -415,7 +431,9 @@ onBeforeUnmount(() => {
       ＋ {{ t('common.create') }}
     </button>
   </div>
-  <p v-if="error" class="inline-error" role="alert">{{ t('security.requestError') }}</p>
+  <p v-if="error && !duplicateScopeConflict" class="inline-error" role="alert">
+    {{ t('security.requestError') }}
+  </p>
   <section class="content-panel security-list-panel">
     <div class="security-toolbar">
       <ListQueryControls
@@ -507,6 +525,15 @@ onBeforeUnmount(() => {
         </button>
       </header>
       <form class="modal-card__body" @submit.prevent="save">
+        <div v-if="duplicateScopeConflict" class="duplicate-scope-notice" role="alert">
+          <p>
+            {{ t('security.policyScopeAlreadyExists') }}
+            <code>{{ duplicateScopeSummary }}</code>
+          </p>
+          <button type="button" class="secondary-button" @click="void reloadAfterDuplicate">
+            {{ t('security.reloadPolicyScope') }}
+          </button>
+        </div>
         <label
           ><span>{{ t('security.organizationScope') }}</span
           ><OrganizationTreeSelect
@@ -661,6 +688,21 @@ onBeforeUnmount(() => {
   margin: 0 0 12px;
   color: #b64444;
   font-size: 12px;
+}
+.duplicate-scope-notice {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 10px 12px;
+  border: 1px solid #e7b6b6;
+  border-radius: 5px;
+  background: #fff5f5;
+  color: #8f3030;
+  font-size: 12px;
+}
+.duplicate-scope-notice p {
+  margin: 0;
 }
 .modal-backdrop {
   position: fixed;

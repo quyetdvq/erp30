@@ -957,7 +957,10 @@ export type Policy = {
     id: BigInt;
     organization_id: BigInt;
     resource_id: BigInt;
-    state_id?: BigInt;
+    /**
+     * NULL represents the ALL_STATES scope.
+     */
+    state_id?: NullableBigInt;
     participant_type: 'USER' | 'GROUP' | 'POSITION' | 'DEPARTMENT' | 'ORGANIZATION';
     participant_ref_id: BigInt;
     actions: Array<PolicyAction>;
@@ -966,7 +969,10 @@ export type Policy = {
 export type PolicyCreate = {
     organization_id: BigInt;
     resource_id: BigInt;
-    state_id?: BigInt;
+    /**
+     * NULL represents the ALL_STATES scope.
+     */
+    state_id?: NullableBigInt;
     participant_type: 'USER' | 'GROUP' | 'POSITION' | 'DEPARTMENT' | 'ORGANIZATION';
     participant_ref_id: BigInt;
     actions: Array<PolicyAction>;
@@ -975,8 +981,11 @@ export type PolicyCreate = {
 export type PolicyPatch = {
     organization_id?: BigInt;
     resource_id?: BigInt;
-    state_id?: BigInt;
-    participant_type?: string;
+    /**
+     * NULL represents the ALL_STATES scope.
+     */
+    state_id?: NullableBigInt;
+    participant_type?: 'USER' | 'GROUP' | 'POSITION' | 'DEPARTMENT' | 'ORGANIZATION';
     participant_ref_id?: BigInt;
     actions?: Array<PolicyAction>;
 };
@@ -4518,6 +4527,10 @@ export type UpdatePolicyErrors = {
      * Target not found or not visible.
      */
     404: ErrorResponse;
+    /**
+     * Conflict, concurrency, uniqueness, or current-state failure.
+     */
+    409: ErrorResponse;
     /**
      * Semantically invalid request.
      */
