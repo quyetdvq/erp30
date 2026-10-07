@@ -12,10 +12,17 @@ import type {
   Position,
 } from '@/api/generated/types.gen'
 import ContactList from '@/components/contacts/ContactList.vue'
-import { ListPagination, ListQueryControls, ListShell, TableRowActions } from '@/components/lists'
+import {
+  ListPagination,
+  ListQueryControls,
+  ListShell,
+  ListTable,
+  TableRowActions,
+} from '@/components/lists'
 import {
   createListQuery,
   type ListFilterDefinition,
+  type ListColumn,
   type ListQuery,
 } from '@/components/lists/listTypes'
 import { useListState } from '@/composables/useListState'
@@ -162,6 +169,34 @@ const filters = computed<ListFilterDefinition[]>(() => [
     })),
   },
 ])
+const columns: readonly ListColumn<Employee>[] = [
+  { key: 'employee_code', labelKey: 'people.employeeCode' },
+  { key: 'employee_name', labelKey: 'people.name', sortable: true, sortField: 'employee_name' },
+  {
+    key: 'organization',
+    labelKey: 'people.organization',
+    value: (row) => organizationName(currentPrimary(row.id)?.organization_id),
+  },
+  {
+    key: 'department',
+    labelKey: 'people.department',
+    value: (row) => departmentName(currentPrimary(row.id)?.department_id),
+  },
+  {
+    key: 'position',
+    labelKey: 'people.position',
+    value: (row) => positionName(currentPrimary(row.id)?.position_id),
+  },
+  {
+    key: 'manager',
+    labelKey: 'people.manager',
+    value: (row) =>
+      state.rows.value.find((manager) => String(manager.id) === String(row.manager_employee_id))
+        ?.employee_name ?? '—',
+  },
+  { key: 'status', labelKey: 'people.status' },
+  { key: 'actions', labelKey: 'people.actions' },
+]
 
 async function loadLookups(): Promise<void> {
   try {
@@ -444,14 +479,14 @@ onMounted(async () => {
       ＋ {{ t('common.create') }}
     </button>
   </div>
-  <section class="content-panel people-layout">
-    <div class="toolbar">
+  <section class="content-panel location-panel">
+    <div class="location-toolbar">
       <ListQueryControls
         :model-value="state.query"
         :filters="filters"
         @apply="applyQuery"
         @reset="resetQuery"
-      /><button type="button" class="secondary-button" @click="void load">
+      /><button type="button" class="secondary-button" @click="void load()">
         ↻ {{ t('common.refresh') }}
       </button>
     </div>
@@ -465,64 +500,38 @@ onMounted(async () => {
       :empty-dataset="state.isEmptyDataset.value"
       :empty-filtered-result="state.isEmptyFilteredResult.value"
       :error="state.queryState.error.value"
-      ><table class="data-table">
-        <thead>
-          <tr>
-            <th>{{ t('people.employeeCode') }}</th>
-            <th>{{ t('people.name') }}</th>
-            <th>{{ t('people.organization') }}</th>
-            <th>{{ t('people.department') }}</th>
-            <th>{{ t('people.position') }}</th>
-            <th>{{ t('people.manager') }}</th>
-            <th>{{ t('people.status') }}</th>
-            <th>{{ t('people.actions') }}</th>
-          </tr>
-        </thead>
-        <tbody>
-          <tr
-            v-for="row in state.rows.value"
-            :key="row.id"
-            :class="{ 'row-selected': selectedId === String(row.id) }"
-            @click="selectedId = String(row.id)"
-          >
-            <td>
-              <strong>{{ row.employee_code }}</strong>
-            </td>
-            <td>{{ row.employee_name }}</td>
-            <td>{{ organizationName(currentPrimary(String(row.id))?.organization_id) }}</td>
-            <td>{{ departmentName(currentPrimary(String(row.id))?.department_id) }}</td>
-            <td>{{ positionName(currentPrimary(String(row.id))?.position_id) }}</td>
-            <td>
-              {{
-                state.rows.value.find(
-                  (manager) => String(manager.id) === String(row.manager_employee_id),
-                )?.employee_name ?? '—'
-              }}
-            </td>
-            <td>
-              <span class="status-pill" :class="{ 'status-pill--off': row.status !== 'ACTIVE' }">{{
-                t(`status.${row.status.toLowerCase()}`)
-              }}</span>
-            </td>
-            <td>
-              <TableRowActions
-                :active="row.status === 'ACTIVE'"
-                :busy="busy"
-                :show-view="true"
-                :show-edit="true"
-                :show-toggle="true"
-                :view-label="t('common.view')"
-                :edit-label="t('common.edit')"
-                :activate-label="t('common.activate')"
-                :deactivate-label="t('common.deactivate')"
-                @view="openEmployeeDetail(row)"
-                @edit="openEdit(row)"
-                @toggle="toggleEmployee(row)"
-              />
-            </td>
-          </tr>
-        </tbody>
-      </table>
+    >
+      <ListTable
+        :rows="state.rows.value"
+        :columns="columns"
+        :sort="state.query.sort"
+        @sort-change="
+          (sort) => {
+            state.setSort(sort)
+            void load()
+          }
+        "
+      >
+        <template #cell-employee_code="{ row }">
+          <strong>{{ row.employee_code }}</strong>
+        </template>
+        <template #cell-actions="{ row }">
+          <TableRowActions
+            :active="row.status === 'ACTIVE'"
+            :busy="busy"
+            :show-view="true"
+            :show-edit="true"
+            :show-toggle="true"
+            :view-label="t('common.view')"
+            :edit-label="t('common.edit')"
+            :activate-label="t('common.activate')"
+            :deactivate-label="t('common.deactivate')"
+            @view="openEmployeeDetail(row)"
+            @edit="openEdit(row)"
+            @toggle="toggleEmployee(row)"
+          />
+        </template>
+      </ListTable>
       <ListPagination
         :page="state.query.page"
         :page-size="state.query.page_size"
@@ -539,7 +548,8 @@ onMounted(async () => {
             void load()
           }
         "
-    /></ListShell>
+      />
+    </ListShell>
   </section>
   <div
     v-if="employeeDetailOpen && selected"
@@ -890,6 +900,20 @@ onMounted(async () => {
 .row-selected td {
   background: #f0f8fb;
 }
+.location-panel {
+  display: grid;
+  gap: 14px;
+  min-width: 0;
+  padding: 18px 20px 20px;
+}
+.location-toolbar {
+  display: flex;
+  align-items: end;
+  justify-content: space-between;
+  gap: 10px;
+  min-width: 0;
+  flex-wrap: wrap;
+}
 .employee-detail-backdrop {
   position: fixed;
   inset: 0;
@@ -900,9 +924,11 @@ onMounted(async () => {
   background: rgb(18 38 54 / 45%);
 }
 .employee-detail-modal {
-  width: min(1440px, calc(100vw - 40px));
+  width: min(1800px, calc(100vw - 32px));
+  min-width: 0;
   max-height: calc(100vh - 40px);
-  overflow: auto;
+  overflow-x: hidden;
+  overflow-y: auto;
   border: 1px solid #d5e1e8;
   border-radius: 7px;
   background: #fff;
@@ -914,6 +940,7 @@ onMounted(async () => {
   align-items: flex-start;
   justify-content: space-between;
   gap: 14px;
+  flex-wrap: wrap;
 }
 .detail-header h2 {
   margin: 8px 0;
@@ -932,6 +959,8 @@ onMounted(async () => {
   margin: 22px 0 0;
   padding: 0 22px;
   border-bottom: 1px solid #e1e9ee;
+  min-width: 0;
+  overflow-x: auto;
 }
 .detail-tabs button,
 .detail-tabs__sub button {
@@ -996,6 +1025,15 @@ onMounted(async () => {
 .assignment-panel > .hint {
   margin-left: 0;
   margin-right: 0;
+}
+.employee-detail-modal :deep(.contact-list) {
+  width: 100%;
+  min-width: 0;
+  padding: 0 22px 24px;
+}
+.employee-detail-modal :deep(.contact-list__header),
+.employee-detail-modal :deep(.contact-list__toolbar) {
+  min-width: 0;
 }
 .hint,
 .field-error,

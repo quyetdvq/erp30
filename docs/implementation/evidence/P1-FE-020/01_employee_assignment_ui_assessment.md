@@ -26,6 +26,11 @@ opens as a large responsive modal matching the supplied visual direction.
 - Contacts tab reuses FE-010 `ContactList` so active/history, search, page
   size, refresh, create/edit/state actions, and contact detail stay aligned
   with the Locations/Wards list surface.
+- Employee list now uses the Wards-style `ListTable`/scroll wrapper and the
+  detail modal/contact surface constrains intrinsic widths to prevent viewport
+  margin overflow.
+- Contact detail resolves Province/Ward labels from canonical IDs through the
+  existing Province/Ward lookups when persisted display-name fields are null.
 - Audit tab now uses the same detail-surface spacing and summary treatment as
   the existing master detail views, while retaining the authorized-audit-API
   availability message and avoiding fabricated audit entries.
@@ -63,6 +68,20 @@ opens as a large responsive modal matching the supplied visual direction.
 | `vendor/bin/phpunit --no-coverage tests/unit/P1Api020EmployeeStructureTest.php tests/unit/P1Emp003EmployeeAssignmentServiceTest.php tests/unit/P1AuthorizationMandatoryRegressionTest.php` | PASS; 18 tests / 108 assertions |
 | `pnpm exec playwright test e2e/fe001-shell.spec.ts e2e/fe010-slice1.spec.ts e2e/dsp006-display-settings.spec.ts e2e/fe020-employee.spec.ts --project=chromium` | PASS; 11 tests |
 | `pnpm exec vitest run src/modules/__tests__/employeeRules.spec.ts` | PASS; 2 tests |
+| `git diff --check` | PASS |
+
+### Contact/overflow revalidation
+
+| Command/check | Result |
+|---|---|
+| `pnpm exec playwright test e2e/fe020-employee.spec.ts --project=chromium` | PASS; 2 tests including Employee ListTable, Contact detail Province/Ward labels, Contacts/Audit tabs |
+| `pnpm exec playwright test e2e/fe001-shell.spec.ts e2e/fe010-slice1.spec.ts e2e/dsp006-display-settings.spec.ts e2e/fe020-employee.spec.ts --project=chromium` | PASS; 11 tests |
+| `pnpm run build` | PASS |
+| `pnpm run format:check` | PASS |
+| `pnpm run lint:eslint -- --no-cache` | PASS |
+| `pnpm run test:unit -- --run` | PASS; 11 files / 24 tests |
+| `pnpm run openapi:generate:check` | PASS; generated artifacts unchanged |
+| `php vendor/bin/phpunit --no-coverage tests/unit/P1Api020EmployeeStructureTest.php tests/unit/P1Emp003EmployeeAssignmentServiceTest.php tests/unit/P1AuthorizationMandatoryRegressionTest.php` (from `backend/`) | PASS; 18 tests / 108 assertions |
 | `git diff --check` | PASS |
 
 ### Visual-refinement revalidation

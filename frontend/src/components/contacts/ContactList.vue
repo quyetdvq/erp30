@@ -81,12 +81,22 @@ const detailFields = computed<readonly TableDetailField[]>(() => {
     { key: 'phone', label: t('contact.phone'), value: contact.phone },
     { key: 'mobile', label: t('contact.mobile'), value: contact.mobile },
     { key: 'address', label: t('contact.address'), value: contact.address },
-    { key: 'province', label: t('contact.province'), value: contact.province_name },
-    { key: 'ward', label: t('contact.ward'), value: contact.ward_name },
+    { key: 'province', label: t('contact.province'), value: provinceLabel(contact) },
+    { key: 'ward', label: t('contact.ward'), value: wardLabel(contact) },
     { key: 'description', label: t('contact.description'), value: contact.description },
     { key: 'status', label: t('contact.status'), status: contact.status },
   ]
 })
+
+function provinceLabel(contact: Contact): string | null {
+  const province = provinces.value.find((item) => String(item.id) === String(contact.province_id))
+  return province?.name ?? contact.province_name ?? null
+}
+
+function wardLabel(contact: Contact): string | null {
+  const ward = wards.value.find((item) => String(item.id) === String(contact.ward_id))
+  return ward?.name_full || ward?.name || contact.ward_name || null
+}
 
 async function load(): Promise<void> {
   error.value = null
@@ -136,6 +146,7 @@ function openEdit(contact: Contact): void {
 function openView(contact: Contact): void {
   detailContact.value = contact
   detailOpen.value = true
+  void loadWards(contact.province_id ? String(contact.province_id) : '')
 }
 
 async function save(payload: Parameters<typeof saveContact>[0]): Promise<void> {
@@ -315,6 +326,8 @@ onMounted(async () => {
 .contact-list {
   display: grid;
   gap: 12px;
+  min-width: 0;
+  width: 100%;
 }
 .contact-list__header,
 .contact-list__toolbar {

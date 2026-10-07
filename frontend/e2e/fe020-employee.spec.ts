@@ -60,6 +60,22 @@ async function mockBase(page: Page, status = 200): Promise<void> {
       status: 'ACTIVE',
     },
   ]
+  const contacts = [
+    {
+      id: '61',
+      contact_type: 'EMPLOYEE',
+      contact_ref_id: '41',
+      name: 'Quyết',
+      email: 'quyet@gmail.com',
+      mobile: '0955757572',
+      address: 'Hà Nội',
+      province_id: '71',
+      ward_id: '81',
+      province_name: null,
+      ward_name: null,
+      status: 'ACTIVE',
+    },
+  ]
   await page.route('**/api/v1/departments**', (route) =>
     route.fulfill({
       status,
@@ -87,13 +103,30 @@ async function mockBase(page: Page, status = 200): Promise<void> {
     route.fulfill({ status: 200, contentType: 'application/json', body: collection(assignments) }),
   )
   await page.route('**/api/v1/contacts**', (route) =>
-    route.fulfill({ status: 200, contentType: 'application/json', body: collection([]) }),
+    route.fulfill({ status: 200, contentType: 'application/json', body: collection(contacts) }),
   )
   await page.route('**/api/v1/provinces**', (route) =>
-    route.fulfill({ status: 200, contentType: 'application/json', body: collection([]) }),
+    route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: collection([{ id: '71', code: 'HN', name: 'Hà Nội', status: 'ACTIVE' }]),
+    }),
   )
   await page.route('**/api/v1/wards**', (route) =>
-    route.fulfill({ status: 200, contentType: 'application/json', body: collection([]) }),
+    route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: collection([
+        {
+          id: '81',
+          province_id: '71',
+          code: 'P-01',
+          name: 'Phường Ba Đình',
+          name_full: 'Phường Ba Đình, Hà Nội',
+          status: 'ACTIVE',
+        },
+      ]),
+    }),
   )
 }
 
@@ -123,6 +156,14 @@ test('Employee structure routes expose hierarchy, canonical gender, tabs, and as
   await page.getByRole('tab', { name: 'Liên hệ' }).click()
   await expect(page.getByRole('button', { name: 'Thêm liên hệ' })).toBeVisible()
   await expect(page.getByRole('tab', { name: 'Đang hoạt động' })).toBeVisible()
+  await page
+    .getByRole('region', { name: 'Liên hệ' })
+    .getByRole('button', { name: 'Xem chi tiết' })
+    .click()
+  const contactDetail = page.getByRole('dialog', { name: 'Xem chi tiết - Liên hệ' })
+  await expect(contactDetail.locator('dl dd').nth(5)).toHaveText('Hà Nội')
+  await expect(contactDetail.locator('dl dd').nth(6)).toHaveText('Phường Ba Đình, Hà Nội')
+  await contactDetail.getByRole('button', { name: 'Đóng' }).click()
   await page.getByRole('tab', { name: 'Audit' }).click()
   const employeeDetail = page.getByRole('dialog', { name: 'Nguyen Van A' })
   await expect(employeeDetail.getByRole('heading', { name: 'Audit' })).toBeVisible()
