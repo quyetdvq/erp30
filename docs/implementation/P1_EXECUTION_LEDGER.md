@@ -4,9 +4,10 @@ This ledger is lightweight operational evidence. It is not architecture
 authority and does not replace UR, FRS, DBD, the Implementation Contract, the
 Implementation Plan, API Design, or UI Design.
 
-The registry contains exactly 100 P1 tasks. Current ledger state records 79
+The registry contains exactly 107 P1 tasks. Current ledger state records 79
 completed tasks: Gate 0 is 10/10, Gate 1 is 14/14, Gate 2 is 8/8, Gate 3 is
-10/10, Gate 4 is 7/7, Gate 5 is 11/11, Gate 6 is 9/9, and Gate 7 is 10/10.
+10/10, Gate 4 is 7/7, Gate 5 is 11/11, Gate 6 is 9/9, Gate 7 is 10/15,
+Gate 8 is 0/14, and Gate 9 is 0/9.
 These summaries are derived from the task rows below and the canonical Gate
 registry.
 
@@ -14,7 +15,7 @@ registry.
 
 | Measure | Progress |
 |---|---:|
-| P1 tasks DONE | 79/100 |
+| P1 tasks DONE | 79/107 |
 | Gate 0 | 10/10 DONE |
 | Gate 1 | 14/14 DONE |
 | Gate 2 | 8/8 DONE |
@@ -22,8 +23,8 @@ registry.
 | Gate 4 | 7/7 DONE |
 | Gate 5 | 11/11 DONE |
 | Gate 6 | 9/9 DONE |
-| Gate 7 | 10/10 DONE |
-| Gate 8 | 0/12 DONE |
+| Gate 7 | 10/15 DONE |
+| Gate 8 | 0/14 DONE |
 | Gate 9 | 0/9 DONE |
 
 ## Task Ledger
@@ -109,8 +110,15 @@ registry.
 | P1-API-050 | DONE | 1f0d578 | high-risk | Product/UOM/Pricing/COMBO API implementation, authenticated 26-operation acceptance, canonical `erp_test` rebuild, OpenAPI/codegen, regression, concurrency, and full-suite evidence in `docs/implementation/evidence/P1-API-050/01_product_uom_pricing_combo_api_assessment.md`. |
 | P1-API-060 | DONE | cce76c0 | high-risk | Product Import API: authenticated four-operation runtime/OpenAPI surface, two-gate authorization, Product-only modes, row atomicity/reconciliation, canonical `erp_test` rebuild, OpenAPI/codegen, regression, and full-suite evidence in `docs/implementation/evidence/P1-API-060/01_product_import_api_assessment.md`. |
 | P1-API-090 | DONE | e9d5ee2 | high-risk | Gate 7 API contract regression suite: dynamic 117-operation runtime/OpenAPI parity, transport/auth/query/error/locale/serialization guards, CONTRACT_PENDING absence, slice regressions, OpenAPI/codegen/frontend/full-suite evidence in `docs/implementation/evidence/P1-API-090/01_api_contract_regression_assessment.md`. |
+| P1-DSP-001 | NOT_STARTED | — | service-standard | No accepted implementation evidence. |
+| P1-DSP-002 | NOT_STARTED | — | high-risk | No accepted implementation evidence. |
+| P1-DSP-003 | NOT_STARTED | — | high-risk | No accepted implementation evidence. |
+| P1-DSP-004 | NOT_STARTED | — | api | No accepted implementation evidence. |
+| P1-DSP-005 | NOT_STARTED | — | high-risk | No accepted implementation evidence. |
 | P1-FE-001 | NOT_STARTED | — | service-standard | No accepted implementation evidence. |
 | P1-FE-002 | NOT_STARTED | — | service-standard | No accepted implementation evidence. |
+| P1-DSP-006 | NOT_STARTED | — | high-risk | No accepted implementation evidence. |
+| P1-DSP-090 | NOT_STARTED | — | high-risk | No accepted implementation evidence. |
 | P1-FE-003 | NOT_STARTED | — | service-standard | No accepted implementation evidence. |
 | P1-FE-010 | NOT_STARTED | — | service-standard | No accepted implementation evidence. |
 | P1-FE-020 | NOT_STARTED | — | high-risk | No accepted implementation evidence. |
@@ -133,7 +141,7 @@ registry.
 
 ## Corrective / Operational Work
 
-Corrective tasks in this section are not part of the 100-task P1 registry and
+Corrective tasks in this section are not part of the 107-task P1 registry and
 do not change the `29/100` completion count.
 
 | Corrective ID | Status | Commit | Profile | Note |

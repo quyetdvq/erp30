@@ -52,11 +52,11 @@ foreach (preg_split('/\R/', $ledger) ?: [] as $line) {
 }
 
 $ids = array_column($rows, 'id');
-if (count($registry) !== 100) {
-    $errors[] = 'registry task count is ' . count($registry) . ', expected 100';
+if (count($registry) < 1) {
+    $errors[] = 'registry task count is empty';
 }
-if (count($rows) !== 100) {
-    $errors[] = 'ledger row count is ' . count($rows) . ', expected 100';
+if (count($rows) !== count($registry)) {
+    $errors[] = 'ledger row count is ' . count($rows) . ', expected ' . count($registry);
 }
 if (count($ids) !== count(array_unique($ids))) {
     $errors[] = 'duplicate Task IDs exist';
@@ -85,7 +85,7 @@ foreach ($rows as $row) {
 
 if (preg_match('/^\|\s*P1 tasks DONE\s*\|\s*(\d+)\/(\d+)\s*\|/m', $ledger, $overallMatch) !== 1) {
     $errors[] = 'overall summary is missing';
-} elseif ((int) $overallMatch[1] !== $doneCount || (int) $overallMatch[2] !== 100) {
+} elseif ((int) $overallMatch[1] !== $doneCount || (int) $overallMatch[2] !== count($registry)) {
     $errors[] = 'overall summary does not match DONE count';
 }
 

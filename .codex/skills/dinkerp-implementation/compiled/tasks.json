@@ -1,7 +1,7 @@
 {
   "format": "META-CODEX-003",
-  "source": "Implementation Plan v1.6 plus gate registries",
-  "task_count": 100,
+  "source": "Implementation Plan v1.8 plus gate registries",
+  "task_count": 107,
   "tasks": [
     {
       "id": "P1-ENV-001",
@@ -1188,9 +1188,9 @@
       "direct_source_verification": [
         "UR-PRD-007",
         "FRS-P1-UOM-001 Product Group hierarchy",
-        "DBD v1.12 product_groups adjacency-list",
-        "Implementation Contract v1.7 product-group-tree",
-        "Implementation Plan v1.6 P1-PRD-001"
+        "DBD v1.13 product_groups adjacency-list",
+        "Implementation Contract v1.8 product-group-tree",
+        "Implementation Plan v1.8 P1-PRD-001"
       ],
       "expected_output": "product-group hierarchy repository/service",
       "forbidden_scope": [
@@ -2020,9 +2020,195 @@
       ]
     },
     {
+      "id": "P1-DSP-001",
+      "title": "Settings infrastructure inventory + canonical registry/context adapter",
+      "dependencies": "P1-ENV-001, P1-ORG-002",
+      "risk": "MEDIUM",
+      "impact": "backend-domain",
+      "validation_profile": "service-standard",
+      "required_rule_ids": [
+        "CTRL.AUTHORITY_ORDER",
+        "CTRL.BOUNDED_SCOPE",
+        "DSP.PRESENTATION_BOUNDARY"
+      ],
+      "approved_decision_ids": ["CHANGE-DISPLAY-SETTING-001"],
+      "direct_source_verification": [],
+      "expected_output": "Display Settings registry/context foundation",
+      "forbidden_scope": [
+        "unrelated-changes",
+        "new-settings-table",
+        "server-user-scope",
+        "server-company-scope"
+      ],
+      "execution_notes": [
+        "Reuse the existing CodeIgniter Settings integration; keep locale and workspace preferences frontend-local"
+      ]
+    },
+    {
+      "id": "P1-DSP-002",
+      "title": "Organization-path effective DisplaySettingsResolver",
+      "dependencies": "P1-DSP-001, P1-CTX-001",
+      "risk": "HIGH",
+      "impact": "backend-security",
+      "validation_profile": "high-risk",
+      "required_rule_ids": [
+        "CTRL.AUTHORITY_ORDER",
+        "CTRL.BOUNDED_SCOPE",
+        "DSP.PRESENTATION_BOUNDARY",
+        "DSP.CONTEXT_RESOLUTION"
+      ],
+      "approved_decision_ids": ["CHANGE-DISPLAY-SETTING-001"],
+      "direct_source_verification": [
+        "FRS `FRS-P1-DSP-001..002`",
+        "Implementation Contract §3.6 Display Settings",
+        "IMP Plan §14A P1-DSP-002"
+      ],
+      "expected_output": "effective DisplaySettings resolver",
+      "forbidden_scope": [
+        "unrelated-changes",
+        "business-timezone-authority",
+        "client-supplied-ancestry"
+      ]
+    },
+    {
+      "id": "P1-DSP-003",
+      "title": "Display Settings mutation service + Authorization + audit integration",
+      "dependencies": "P1-DSP-002, P1-AUTH-002",
+      "risk": "HIGH",
+      "impact": "backend-security",
+      "validation_profile": "high-risk",
+      "required_rule_ids": [
+        "CTRL.AUTHORITY_ORDER",
+        "CTRL.BOUNDED_SCOPE",
+        "DB.ATOMIC_INVARIANTS",
+        "DSP.PRESENTATION_BOUNDARY",
+        "DSP.ADMIN_AUTH"
+      ],
+      "approved_decision_ids": ["CHANGE-DISPLAY-SETTING-001"],
+      "direct_source_verification": [
+        "FRS `FRS-P1-DSP-003`",
+        "Implementation Contract §3.6 and §10 Audit contract",
+        "IMP Plan §14A P1-DSP-003"
+      ],
+      "expected_output": "authorized atomic Display Settings mutation",
+      "forbidden_scope": [
+        "unrelated-changes",
+        "new-audit-table",
+        "shield-can-substitute-for-authorization-service"
+      ]
+    },
+    {
+      "id": "P1-DSP-004",
+      "title": "Display Settings API + OpenAPI + generated client",
+      "dependencies": "P1-DSP-003, P1-API-001, P1-API-002",
+      "risk": "HIGH",
+      "impact": "api-contract",
+      "validation_profile": "api",
+      "required_rule_ids": [
+        "CTRL.AUTHORITY_ORDER",
+        "CTRL.BOUNDED_SCOPE",
+        "API.TRANSPORT",
+        "API.CONTRACT_STATUS",
+        "API.OPENAPI_SYNC",
+        "DSP.PRESENTATION_BOUNDARY",
+        "DSP.ADMIN_AUTH"
+      ],
+      "approved_decision_ids": ["CHANGE-DISPLAY-SETTING-001"],
+      "direct_source_verification": [
+        "API Design v1.6 §6A",
+        "Implementation Contract v1.8 §§3.6,4,6",
+        "IMP Plan §14A P1-DSP-004"
+      ],
+      "expected_output": "Display Settings API/OpenAPI/generated client",
+      "forbidden_scope": [
+        "unrelated-changes",
+        "contract-pending-surfaces",
+        "hand-edited-generated-artifacts"
+      ]
+    },
+    {
+      "id": "P1-DSP-005",
+      "title": "Frontend display runtime store + formatter layer + local preference overlay",
+      "dependencies": "P1-DSP-004, P1-ENV-003",
+      "risk": "HIGH",
+      "impact": "frontend",
+      "validation_profile": "frontend",
+      "required_rule_ids": [
+        "CTRL.AUTHORITY_ORDER",
+        "CTRL.BOUNDED_SCOPE",
+        "UI.CANONICAL_LOCALE",
+        "DSP.PRESENTATION_BOUNDARY"
+      ],
+      "approved_decision_ids": ["CHANGE-DISPLAY-SETTING-001"],
+      "direct_source_verification": [
+        "UI Design v1.7 §4B.1–4B.4",
+        "IMP Plan §14A P1-DSP-005"
+      ],
+      "expected_output": "Display Settings runtime/formatter foundation",
+      "forbidden_scope": [
+        "unrelated-changes",
+        "business-value-formatting-as-input",
+        "parallel-formatter-stack"
+      ]
+    },
+    {
+      "id": "P1-DSP-006",
+      "title": "Display Settings administration + My Display Preferences UI",
+      "dependencies": "P1-DSP-004, P1-DSP-005, P1-FE-001, P1-FE-002",
+      "risk": "HIGH",
+      "impact": "frontend",
+      "validation_profile": "frontend",
+      "required_rule_ids": [
+        "CTRL.AUTHORITY_ORDER",
+        "CTRL.BOUNDED_SCOPE",
+        "UI.CANONICAL_LOCALE",
+        "DSP.PRESENTATION_BOUNDARY",
+        "DSP.ADMIN_AUTH"
+      ],
+      "approved_decision_ids": ["CHANGE-DISPLAY-SETTING-001"],
+      "direct_source_verification": [
+        "UI Design v1.7 §4B.5–4B.8",
+        "IMP Plan §15 P1-DSP-006"
+      ],
+      "expected_output": "Display Settings UI checkpoint",
+      "forbidden_scope": [
+        "unrelated-changes",
+        "parallel-api-client",
+        "server-user-persistence"
+      ]
+    },
+    {
+      "id": "P1-DSP-090",
+      "title": "Display Settings regression + Playwright/contract closure",
+      "dependencies": "P1-DSP-001..P1-DSP-006",
+      "risk": "HIGH",
+      "impact": "cross-layer",
+      "validation_profile": "cross-layer",
+      "required_rule_ids": [
+        "CTRL.AUTHORITY_ORDER",
+        "CTRL.BOUNDED_SCOPE",
+        "API.OPENAPI_SYNC",
+        "DSP.PRESENTATION_BOUNDARY",
+        "DSP.CONTEXT_RESOLUTION",
+        "DSP.ADMIN_AUTH"
+      ],
+      "approved_decision_ids": ["CHANGE-DISPLAY-SETTING-001"],
+      "direct_source_verification": [
+        "API Design v1.6 §6A",
+        "UI Design v1.7 §4B.9",
+        "IMP Plan §15 Early Gate 8 Display Settings checkpoint"
+      ],
+      "expected_output": "Display Settings regression/E2E closure evidence",
+      "forbidden_scope": [
+        "unrelated-changes",
+        "feature-ui-before-checkpoint",
+        "business-timezone-regression"
+      ]
+    },
+    {
       "id": "P1-FE-001",
       "title": "App shell/router/session/error boundary",
-      "dependencies": "P1-API-001, P1-API-002",
+      "dependencies": "P1-API-001, P1-API-002, Gate 7A",
       "risk": "MEDIUM",
       "impact": "frontend",
       "validation_profile": "frontend",
@@ -2042,7 +2228,7 @@
     {
       "id": "P1-FE-002",
       "title": "Typed API integration + common query state",
-      "dependencies": "P1-API-002",
+      "dependencies": "P1-API-002, Gate 7A",
       "risk": "MEDIUM",
       "impact": "frontend",
       "validation_profile": "frontend",
@@ -2062,7 +2248,7 @@
     {
       "id": "P1-FE-003",
       "title": "Common table/filter/pagination/export components",
-      "dependencies": "P1-FE-002, P1-API-003",
+      "dependencies": "P1-FE-002, P1-API-003, P1-DSP-090",
       "risk": "MEDIUM",
       "impact": "frontend",
       "validation_profile": "frontend",
@@ -2289,7 +2475,7 @@
     {
       "id": "P1-SYS-001",
       "title": "Full FRS Acceptance Test Catalog run",
-      "dependencies": "Gates 1-8",
+      "dependencies": "Gates 1-8 + Gate 7A",
       "risk": "HIGH",
       "impact": "release",
       "validation_profile": "release",
@@ -2311,7 +2497,7 @@
     {
       "id": "P1-SYS-002",
       "title": "Authorization/security regression run",
-      "dependencies": "Gate 3, Gate 7",
+      "dependencies": "Gate 3, Gate 7, Gate 7A, P1-DSP-090",
       "risk": "HIGH",
       "impact": "backend-security",
       "validation_profile": "high-risk",
@@ -2404,7 +2590,7 @@
     {
       "id": "P1-SYS-006",
       "title": "OpenAPI/frontend contract drift check",
-      "dependencies": "Gates 7-8",
+      "dependencies": "Gate 7, Gate 7A, Gate 8",
       "risk": "HIGH",
       "impact": "release",
       "validation_profile": "release",
@@ -2427,7 +2613,7 @@
     {
       "id": "P1-SYS-007",
       "title": "Production configuration review",
-      "dependencies": "Gates 0-8",
+      "dependencies": "Gates 0-8 + Gate 7A",
       "risk": "HIGH",
       "impact": "release",
       "validation_profile": "release",

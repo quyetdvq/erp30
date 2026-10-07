@@ -33,6 +33,9 @@ Use `references/compact-prompts.md` for the template.
    `--batch` for a declared batch). Do not read compiled catalogs directly.
 2. **Cache guard**: require `AUTHORITY_CACHE: VALID`. A stale hash, missing
    provenance/rule, or cache/repository conflict is a stop condition.
+   The derived cache follows the current seven architecture baselines plus any
+   approved change-control authority listed in `compiled/authority-manifest.json`;
+   the task catalog must match the current Implementation Plan registry.
 3. **Bounded authority**: LOW/MEDIUM tasks use valid compiled context without
    direct architecture reads unless context is insufficient or debugging needs
    it. HIGH tasks load context first, then verify only its exact critical source
@@ -101,6 +104,8 @@ forward-only.
 - `references/validation-profiles.md` — scoped and batch validation.
 - `references/tasks-gate0.md` through `references/tasks-gate9.md` — task
   navigation pointers only; authoritative requirements stay in `docs/`.
+- `docs/architecture/07_CHANGE_DISPLAY_SETTING_001_v1.1.md` — approved
+  Display Settings change-control boundary and Gate 7A/early Gate 8 placement.
 - `references/project-invariants.md` — compact architecture/domain guardrails.
 - `references/review-checklists.md` — final self-review, including Gate 7 API.
 - `references/compact-prompts.md` — short Codex prompt template; use only in prompt-handoff mode.

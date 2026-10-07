@@ -1,6 +1,6 @@
 {
   "format": "META-CODEX-003",
-  "source": "CHANGE-ARCH-001 Product/Pricing + DEC-IMP-ARCH-001 Product Import boundary",
+  "source": "CHANGE-ARCH-001, DEC-IMP-ARCH-001, and CHANGE-DISPLAY-SETTING-001 module boundaries",
   "shared_infrastructure": {
     "P1-IMP-001": "App\\Infrastructure\\Import",
     "P1-IMP-002": "App\\Infrastructure\\Import",
@@ -111,10 +111,46 @@
       "module": "Product",
       "path": "App\\Modules\\Product\\Import",
       "status": "PLANNED"
+    },
+    "P1-DSP-001": {
+      "module": "DisplaySettings",
+      "path": "existing Settings integration / registry adapter",
+      "status": "PLANNED"
+    },
+    "P1-DSP-002": {
+      "module": "DisplaySettings",
+      "path": "DisplaySettings effective resolver",
+      "status": "PLANNED"
+    },
+    "P1-DSP-003": {
+      "module": "DisplaySettings",
+      "path": "DisplaySettings mutation/authorization service",
+      "status": "PLANNED"
+    },
+    "P1-DSP-004": {
+      "module": "DisplaySettings",
+      "path": "DisplaySettings API/OpenAPI adapter",
+      "status": "PLANNED"
+    },
+    "P1-DSP-005": {
+      "module": "DisplaySettings",
+      "path": "frontend display runtime/formatter",
+      "status": "PLANNED"
+    },
+    "P1-DSP-006": {
+      "module": "DisplaySettings",
+      "path": "frontend Display Settings UI",
+      "status": "PLANNED"
+    },
+    "P1-DSP-090": {
+      "module": "CrossModule",
+      "path": "Display Settings regression/E2E closure",
+      "status": "PLANNED"
     }
   },
   "decision_ids": [
     "CHANGE-ARCH-001",
-    "DEC-IMP-ARCH-001"
+    "DEC-IMP-ARCH-001",
+    "CHANGE-DISPLAY-SETTING-001"
   ]
 }

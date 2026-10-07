@@ -78,8 +78,9 @@ foreach (($decisionsCatalog['decisions'] ?? []) as $decision) {
 }
 
 $tasks = $tasksCatalog['tasks'] ?? [];
-if ((int) ($tasksCatalog['task_count'] ?? 0) !== 100 || count($tasks) !== 100) {
-    failValidation('expected exactly 100 tasks');
+$expectedTaskCount = (int) ($tasksCatalog['task_count'] ?? 0);
+if ($expectedTaskCount < 1 || count($tasks) !== $expectedTaskCount) {
+    failValidation('task catalog count does not match task_count');
 }
 $moduleMappings = $moduleCatalog['mappings'] ?? [];
 $taskMap = [];
@@ -112,6 +113,9 @@ foreach ($tasks as $task) {
     if ($dependencyText !== '' && strtolower($dependencyText) !== 'none' && !str_starts_with($dependencyText, 'Gate')) {
         foreach (explode(',', $dependencyText) as $dependency) {
             $dependency = trim($dependency);
+            if (str_starts_with($dependency, 'Gate')) {
+                continue;
+            }
             if (preg_match('/^P1-[A-Z]+-[0-9]+$/', $dependency)) {
                 $edges[$id][] = $dependency;
             } elseif (preg_match('/^P1-[A-Z]+-[0-9]+\.\.P1-[A-Z]+-[0-9]+$/', $dependency)) {
@@ -160,7 +164,7 @@ foreach ($moduleMappings as $taskId => $mapping) {
 }
 
 // Parse the authoritative Plan task tables (Task ID, title, depends, output).
-$planPath = $root . DIRECTORY_SEPARATOR . 'docs' . DIRECTORY_SEPARATOR . 'architecture' . DIRECTORY_SEPARATOR . '04_P1_Implementation_Plan_v1.6.md';
+$planPath = $root . DIRECTORY_SEPARATOR . 'docs' . DIRECTORY_SEPARATOR . 'architecture' . DIRECTORY_SEPARATOR . '04_P1_Implementation_Plan_v1.8.md';
 $planRows = [];
 foreach (file($planPath, FILE_IGNORE_NEW_LINES) ?: [] as $line) {
     if (preg_match('/^\|\s*(P1-[A-Z]+-[0-9]+)\s*\|\s*(.*?)\s*\|\s*(.*?)\s*\|\s*(.*?)\s*\|/', $line, $match)) {
@@ -179,8 +183,8 @@ foreach (file($planPath, FILE_IGNORE_NEW_LINES) ?: [] as $line) {
         ];
     }
 }
-if (count($planRows) !== 100) {
-    failValidation('Implementation Plan task table does not contain 100 rows');
+if (count($planRows) !== $expectedTaskCount) {
+    failValidation('Implementation Plan task table count does not match task catalog');
 }
 foreach ($taskMap as $id => $task) {
     if (!isset($planRows[$id])) {
