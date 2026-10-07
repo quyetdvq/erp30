@@ -1,9 +1,17 @@
 <script setup lang="ts">
-import { onMounted, ref } from 'vue'
+import { computed, onMounted, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 import type { Position, PositionCreate, State } from '@/api/generated/types.gen'
-import { ListPagination, ListQueryControls, ListShell, TableRowActions } from '@/components/lists'
-import type { ListQuery } from '@/components/lists/listTypes'
+import {
+  ListPagination,
+  ListQueryControls,
+  ListShell,
+  ListTable,
+  TableDetailModal,
+  TableRowActions,
+} from '@/components/lists'
+import type { ListColumn, ListQuery } from '@/components/lists/listTypes'
+import type { TableDetailField } from '@/components/lists/TableDetailModal.vue'
 import { useListState } from '@/composables/useListState'
 import { changePositionState, listPositionPage, savePosition } from '@/services/employeeStructure'
 import { reportApiError } from '@/services/errorBoundary'
@@ -11,6 +19,8 @@ import { reportApiError } from '@/services/errorBoundary'
 const { t } = useI18n()
 const state = useListState<Position>((query) => listPositionPage(query), { sort: 'name' })
 const modalOpen = ref(false)
+const detailOpen = ref(false)
+const detailRow = ref<Position | null>(null)
 const editingId = ref<string | undefined>()
 const busy = ref(false)
 const error = ref<unknown | null>(null)
@@ -20,6 +30,24 @@ const form = ref({
   level: '',
   description: '',
   status: 'ACTIVE' as State['status'],
+})
+const columns: readonly ListColumn<Position>[] = [
+  { key: 'code', labelKey: 'people.code', sortable: true },
+  { key: 'name', labelKey: 'people.name', sortable: true },
+  { key: 'level', labelKey: 'people.level', sortable: true },
+  { key: 'status', labelKey: 'people.status', sortable: true },
+  { key: 'actions', labelKey: 'people.actions' },
+]
+const detailFields = computed<readonly TableDetailField[]>(() => {
+  const row = detailRow.value
+  if (!row) return []
+  return [
+    { key: 'code', label: t('people.code'), value: row.code },
+    { key: 'name', label: t('people.name'), value: row.name },
+    { key: 'level', label: t('people.level'), value: row.level == null ? null : String(row.level) },
+    { key: 'description', label: t('people.description'), value: row.description },
+    { key: 'status', label: t('people.status'), status: row.status },
+  ]
 })
 
 async function load(): Promise<void> {
@@ -57,6 +85,10 @@ function openEdit(row: Position): void {
     status: row.status,
   }
   modalOpen.value = true
+}
+function openView(row: Position): void {
+  detailRow.value = row
+  detailOpen.value = true
 }
 async function save(): Promise<void> {
   busy.value = true
@@ -105,13 +137,13 @@ onMounted(() => void load())
       ＋ {{ t('common.create') }}
     </button>
   </div>
-  <section class="content-panel">
-    <div class="toolbar">
+  <section class="content-panel location-panel">
+    <div class="location-toolbar">
       <ListQueryControls
         :model-value="state.query"
         @apply="applyQuery"
         @reset="resetQuery"
-      /><button type="button" class="secondary-button" @click="void load">
+      /><button type="button" class="secondary-button" @click="void load()">
         ↻ {{ t('common.refresh') }}
       </button>
     </div>
@@ -123,43 +155,35 @@ onMounted(() => void load())
       :empty-dataset="state.isEmptyDataset.value"
       :empty-filtered-result="state.isEmptyFilteredResult.value"
       :error="state.queryState.error.value"
-      ><table class="data-table">
-        <thead>
-          <tr>
-            <th>{{ t('people.code') }}</th>
-            <th>{{ t('people.name') }}</th>
-            <th>{{ t('people.level') }}</th>
-            <th>{{ t('people.status') }}</th>
-            <th>{{ t('people.actions') }}</th>
-          </tr>
-        </thead>
-        <tbody>
-          <tr v-for="row in state.rows.value" :key="row.id">
-            <td>{{ row.code }}</td>
-            <td>{{ row.name }}</td>
-            <td>{{ row.level ?? '—' }}</td>
-            <td>
-              <span class="status-pill" :class="{ 'status-pill--off': row.status !== 'ACTIVE' }">{{
-                t(`status.${row.status.toLowerCase()}`)
-              }}</span>
-            </td>
-            <td>
-              <TableRowActions
-                :active="row.status === 'ACTIVE'"
-                :busy="busy"
-                :show-view="false"
-                :show-edit="true"
-                :show-toggle="true"
-                :edit-label="t('common.edit')"
-                :activate-label="t('common.activate')"
-                :deactivate-label="t('common.deactivate')"
-                @edit="openEdit(row)"
-                @toggle="toggle(row)"
-              />
-            </td>
-          </tr>
-        </tbody>
-      </table>
+    >
+      <ListTable
+        :rows="state.rows.value"
+        :columns="columns"
+        :sort="state.query.sort"
+        @sort-change="
+          (sort) => {
+            state.setSort(sort)
+            void load()
+          }
+        "
+      >
+        <template #cell-actions="{ row }">
+          <TableRowActions
+            :active="row.status === 'ACTIVE'"
+            :busy="busy"
+            :show-view="true"
+            :show-edit="true"
+            :show-toggle="true"
+            :view-label="t('common.view')"
+            :edit-label="t('common.edit')"
+            :activate-label="t('common.activate')"
+            :deactivate-label="t('common.deactivate')"
+            @view="openView(row)"
+            @edit="openEdit(row)"
+            @toggle="toggle(row)"
+          />
+        </template>
+      </ListTable>
       <ListPagination
         :page="state.query.page"
         :page-size="state.query.page_size"
@@ -176,8 +200,15 @@ onMounted(() => void load())
             void load()
           }
         "
-    /></ListShell>
+      />
+    </ListShell>
   </section>
+  <TableDetailModal
+    :open="detailOpen"
+    :title="t('common.view') + ' - ' + t('people.position')"
+    :fields="detailFields"
+    @close="detailOpen = false"
+  />
   <div v-if="modalOpen" class="modal-backdrop" @click.self="modalOpen = false">
     <section
       class="modal-card"
@@ -233,8 +264,20 @@ onMounted(() => void load())
 </template>
 
 <style scoped>
+.location-panel {
+  display: grid;
+  gap: 14px;
+  padding: 18px 20px 20px;
+}
+.location-toolbar {
+  display: flex;
+  align-items: end;
+  justify-content: space-between;
+  gap: 10px;
+  flex-wrap: wrap;
+}
 .inline-error {
-  margin: 10px 14px 0;
+  margin: 0;
   color: #b64444;
   font-size: 12px;
 }

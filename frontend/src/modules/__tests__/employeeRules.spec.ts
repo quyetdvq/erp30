@@ -8,7 +8,7 @@ const employee = (id: string, manager_employee_id?: string): Employee => ({
   employee_code: `E-${id}`,
   employee_name: `Employee ${id}`,
   status: 'ACTIVE',
-    ...(manager_employee_id ? { manager_employee_id: manager_employee_id as unknown as string } : {}),
+  ...(manager_employee_id ? { manager_employee_id: manager_employee_id as unknown as string } : {}),
 })
 
 const assignment = (

@@ -115,6 +115,8 @@ test('Employee structure routes expose hierarchy, canonical gender, tabs, and as
 
   await page.goto('/people/employees')
   await expect(page.getByRole('cell', { name: 'Nguyen Van A' }).first()).toBeVisible()
+  await page.getByRole('button', { name: 'Xem chi tiết' }).first().click()
+  await expect(page.getByRole('dialog', { name: 'Nguyen Van A' })).toBeVisible()
   await page.getByRole('tab', { name: 'Assignments' }).click()
   await expect(page.getByRole('cell', { name: 'Primary', exact: true })).toBeVisible()
   await expect(page.getByRole('cell', { name: 'Secondary', exact: true })).toBeVisible()
@@ -128,8 +130,11 @@ test('Employee structure routes expose hierarchy, canonical gender, tabs, and as
     'Nữ / Female',
     'Khác / Other',
   ])
-  await page.getByRole('button', { name: 'Đóng' }).last().click()
-  const accessibility = await new AxeBuilder({ page }).include('.employee-detail').analyze()
+  await page
+    .getByRole('dialog', { name: 'Biểu mẫu nhân viên' })
+    .getByRole('button', { name: 'Đóng' })
+    .click()
+  const accessibility = await new AxeBuilder({ page }).include('.employee-detail-modal').analyze()
   expect(accessibility.violations).toEqual([])
 })
 

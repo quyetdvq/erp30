@@ -2,7 +2,16 @@
 import { computed, onMounted, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 import type { Department, DepartmentCreate, State } from '@/api/generated/types.gen'
-import { ListPagination, ListQueryControls, ListShell, TableRowActions } from '@/components/lists'
+import {
+  ListPagination,
+  ListQueryControls,
+  ListShell,
+  ListTable,
+  TableDetailModal,
+  TableRowActions,
+} from '@/components/lists'
+import type { ListColumn } from '@/components/lists/listTypes'
+import type { TableDetailField } from '@/components/lists/TableDetailModal.vue'
 import type { ListQuery } from '@/components/lists/listTypes'
 import { useListState } from '@/composables/useListState'
 import {
@@ -16,6 +25,8 @@ const { t } = useI18n()
 const state = useListState<Department>((query) => listDepartmentPage(query), { sort: 'name' })
 const selectedId = ref<string | null>(null)
 const modalOpen = ref(false)
+const detailOpen = ref(false)
+const detailRow = ref<Department | null>(null)
 const editingId = ref<string | undefined>()
 const busy = ref(false)
 const error = ref<unknown | null>(null)
@@ -38,15 +49,45 @@ const byParent = computed(() => {
   return groups
 })
 const treeRows = computed(() => {
-  const output: Array<{ item: Department; depth: number }> = []
+  const output: Array<Department & { depth: number }> = []
   function walk(parent: string, depth: number): void {
     for (const item of byParent.value.get(parent) ?? []) {
-      output.push({ item, depth })
+      output.push({ ...item, depth })
       walk(String(item.id), depth + 1)
     }
   }
   walk('ROOT', 0)
   return output
+})
+const columns: readonly ListColumn<Department & { depth: number }>[] = [
+  { key: 'code', labelKey: 'people.code', sortable: true },
+  { key: 'name', labelKey: 'people.name', sortable: true },
+  {
+    key: 'parent_id',
+    labelKey: 'people.parent',
+    value: (row) =>
+      state.rows.value.find((parent) => String(parent.id) === String(row.parent_id))?.name ??
+      t('people.root'),
+  },
+  { key: 'status', labelKey: 'people.status', sortable: true },
+  { key: 'actions', labelKey: 'people.actions' },
+]
+const detailFields = computed<readonly TableDetailField[]>(() => {
+  const row = detailRow.value
+  if (!row) return []
+  return [
+    { key: 'code', label: t('people.code'), value: row.code },
+    { key: 'name', label: t('people.name'), value: row.name },
+    {
+      key: 'parent',
+      label: t('people.parent'),
+      value:
+        state.rows.value.find((parent) => String(parent.id) === String(row.parent_id))?.name ??
+        t('people.root'),
+    },
+    { key: 'description', label: t('people.description'), value: row.description },
+    { key: 'status', label: t('people.status'), status: row.status },
+  ]
 })
 const selected = computed(
   () => state.rows.value.find((row) => String(row.id) === selectedId.value) ?? null,
@@ -100,6 +141,10 @@ function openEdit(row: Department): void {
   }
   modalOpen.value = true
 }
+function openView(row: Department): void {
+  detailRow.value = row
+  detailOpen.value = true
+}
 async function save(): Promise<void> {
   busy.value = true
   error.value = null
@@ -147,13 +192,13 @@ onMounted(() => void load())
       ＋ {{ t('common.create') }}
     </button>
   </div>
-  <section class="content-panel people-layout">
-    <div class="toolbar">
+  <section class="content-panel location-panel">
+    <div class="location-toolbar">
       <ListQueryControls
         :model-value="state.query"
         @apply="applyQuery"
         @reset="resetQuery"
-      /><button type="button" class="secondary-button" @click="void load">
+      /><button type="button" class="secondary-button" @click="void load()">
         ↻ {{ t('common.refresh') }}
       </button>
     </div>
@@ -166,57 +211,39 @@ onMounted(() => void load())
       :empty-filtered-result="state.isEmptyFilteredResult.value"
       :error="state.queryState.error.value"
     >
-      <table class="data-table">
-        <thead>
-          <tr>
-            <th>{{ t('people.code') }}</th>
-            <th>{{ t('people.name') }}</th>
-            <th>{{ t('people.parent') }}</th>
-            <th>{{ t('people.status') }}</th>
-            <th>{{ t('people.actions') }}</th>
-          </tr>
-        </thead>
-        <tbody>
-          <tr
-            v-for="node in treeRows"
-            :key="node.item.id"
-            :class="{ 'row-selected': selectedId === String(node.item.id) }"
-            @click="selectedId = String(node.item.id)"
+      <ListTable
+        :rows="treeRows"
+        :columns="columns"
+        :sort="state.query.sort"
+        @sort-change="
+          (sort) => {
+            state.setSort(sort)
+            void load()
+          }
+        "
+      >
+        <template #cell-code="{ row }">
+          <span :style="{ paddingLeft: `${row.depth * 22}px` }"
+            ><strong>{{ row.code }}</strong></span
           >
-            <td :style="{ paddingLeft: `${node.depth * 22 + 13}px` }">
-              <strong>{{ node.item.code }}</strong>
-            </td>
-            <td>{{ node.item.name }}</td>
-            <td>
-              {{
-                state.rows.value.find((parent) => String(parent.id) === String(node.item.parent_id))
-                  ?.name ?? t('people.root')
-              }}
-            </td>
-            <td>
-              <span
-                class="status-pill"
-                :class="{ 'status-pill--off': node.item.status !== 'ACTIVE' }"
-                >{{ t(`status.${node.item.status.toLowerCase()}`) }}</span
-              >
-            </td>
-            <td>
-              <TableRowActions
-                :active="node.item.status === 'ACTIVE'"
-                :busy="busy"
-                :show-view="false"
-                :show-edit="true"
-                :show-toggle="true"
-                :edit-label="t('common.edit')"
-                :activate-label="t('common.activate')"
-                :deactivate-label="t('common.deactivate')"
-                @edit="openEdit(node.item)"
-                @toggle="toggle(node.item)"
-              />
-            </td>
-          </tr>
-        </tbody>
-      </table>
+        </template>
+        <template #cell-actions="{ row }">
+          <TableRowActions
+            :active="row.status === 'ACTIVE'"
+            :busy="busy"
+            :show-view="true"
+            :show-edit="true"
+            :show-toggle="true"
+            :edit-label="t('common.edit')"
+            :activate-label="t('common.activate')"
+            :deactivate-label="t('common.deactivate')"
+            :view-label="t('common.view')"
+            @view="openView(row)"
+            @edit="openEdit(row)"
+            @toggle="toggle(row)"
+          />
+        </template>
+      </ListTable>
       <ListPagination
         :page="state.query.page"
         :page-size="state.query.page_size"
@@ -236,6 +263,12 @@ onMounted(() => void load())
       />
     </ListShell>
   </section>
+  <TableDetailModal
+    :open="detailOpen"
+    :title="t('common.view') + ' - ' + t('people.department')"
+    :fields="detailFields"
+    @close="detailOpen = false"
+  />
   <div v-if="modalOpen" class="modal-backdrop" @click.self="modalOpen = false">
     <section
       class="modal-card"
@@ -299,14 +332,20 @@ onMounted(() => void load())
 </template>
 
 <style scoped>
-.people-layout {
-  overflow: hidden;
+.location-panel {
+  display: grid;
+  gap: 14px;
+  padding: 18px 20px 20px;
 }
-.row-selected td {
-  background: #f0f8fb;
+.location-toolbar {
+  display: flex;
+  align-items: end;
+  justify-content: space-between;
+  gap: 10px;
+  flex-wrap: wrap;
 }
 .inline-error {
-  margin: 10px 14px 0;
+  margin: 0;
   color: #b64444;
   font-size: 12px;
 }

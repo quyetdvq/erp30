@@ -47,6 +47,7 @@ const selectedEmployeeAssignments = ref<EmployeeAssignment[]>([])
 const selectedId = ref<string | null>(null)
 const activeTab = ref<Tab>('overview')
 const employeeModal = ref(false)
+const employeeDetailOpen = ref(false)
 const assignmentModal = ref(false)
 const editingEmployeeId = ref<string | undefined>()
 const editingAssignmentId = ref<string | undefined>()
@@ -255,6 +256,10 @@ function openEdit(row: Employee | null): void {
     description: row.description ?? '',
   }
   employeeModal.value = true
+}
+function openEmployeeDetail(row: Employee): void {
+  selectedId.value = String(row.id)
+  employeeDetailOpen.value = true
 }
 function managerWouldCycle(candidate: string): boolean {
   return wouldCreateManagerCycle(state.rows.value, editingEmployeeId.value ?? '', candidate)
@@ -510,7 +515,7 @@ onMounted(async () => {
                 :edit-label="t('common.edit')"
                 :activate-label="t('common.activate')"
                 :deactivate-label="t('common.deactivate')"
-                @view="selectedId = String(row.id)"
+                @view="openEmployeeDetail(row)"
                 @edit="openEdit(row)"
                 @toggle="toggleEmployee(row)"
               />
@@ -536,135 +541,154 @@ onMounted(async () => {
         "
     /></ListShell>
   </section>
-  <section v-if="selected" class="content-panel employee-detail">
-    <header class="detail-header">
-      <div>
-        <span class="eyebrow">{{ selected.employee_code }}</span>
-        <h2>{{ selected.employee_name }}</h2>
-        <p>
-          {{ t(`status.${selected.status.toLowerCase()}`) }} ·
-          {{ selected.user_id ? t('people.userLinked') : t('people.userNotLinked') }}
-        </p>
-      </div>
-      <button type="button" class="secondary-button" @click="openEdit(selected)">
-        {{ t('common.edit') }}
-      </button>
-    </header>
-    <div class="detail-tabs" role="tablist">
-      <button
-        v-for="tab in ['overview', 'assignments', 'contacts', 'audit'] as Tab[]"
-        :key="tab"
-        type="button"
-        role="tab"
-        :aria-selected="activeTab === tab"
-        @click="activeTab = tab"
-      >
-        {{ t(`people.tabs.${tab}`) }}
-      </button>
-    </div>
-    <div v-if="activeTab === 'overview'" class="detail-grid">
-      <div>
-        <span>{{ t('people.gender') }}</span
-        ><strong>{{ genderLabel(selected.gender ?? null) }}</strong>
-      </div>
-      <div>
-        <span>{{ t('people.dateOfBirth') }}</span
-        ><strong>{{ displayDate(selected.date_of_birth) }}</strong>
-      </div>
-      <div>
-        <span>{{ t('people.hireDate') }}</span
-        ><strong>{{ displayDate(selected.hire_date) }}</strong>
-      </div>
-      <div>
-        <span>{{ t('people.manager') }}</span
-        ><strong>{{
-          state.rows.value.find((row) => String(row.id) === String(selected.manager_employee_id))
-            ?.employee_name ?? '—'
-        }}</strong>
-      </div>
-      <div class="detail-grid__wide">
-        <span>{{ t('people.placeOfOrigin') }}</span
-        ><strong>{{ selected.place_of_origin || '—' }}</strong>
-      </div>
-      <div class="detail-grid__wide">
-        <span>{{ t('people.description') }}</span
-        ><strong>{{ selected.description || '—' }}</strong>
-      </div>
-    </div>
-    <div v-else-if="activeTab === 'assignments'" class="assignment-panel">
-      <header>
-        <div class="detail-tabs__sub" role="tablist">
-          <button
-            type="button"
-            :aria-selected="assignmentMode === 'active'"
-            @click="assignmentMode = 'active'"
-          >
-            {{ t('people.activeAssignments') }}</button
-          ><button
-            type="button"
-            :aria-selected="assignmentMode === 'history'"
-            @click="assignmentMode = 'history'"
-          >
-            {{ t('people.assignmentHistory') }}
-          </button>
+  <div
+    v-if="employeeDetailOpen && selected"
+    class="employee-detail-backdrop"
+    @click.self="employeeDetailOpen = false"
+  >
+    <section
+      class="employee-detail-modal"
+      role="dialog"
+      aria-modal="true"
+      :aria-label="selected.employee_name"
+    >
+      <header class="detail-header">
+        <div>
+          <span class="eyebrow">{{ selected.employee_code }}</span>
+          <h2>{{ selected.employee_name }}</h2>
+          <p>
+            {{ t(`status.${selected.status.toLowerCase()}`) }} ·
+            {{ selected.user_id ? t('people.userLinked') : t('people.userNotLinked') }}
+          </p>
         </div>
-        <button type="button" class="primary-button" @click="openAssignmentCreate">
-          ＋ {{ t('people.addAssignment') }}
+        <button type="button" class="secondary-button" @click="openEdit(selected)">
+          {{ t('common.edit') }}
+        </button>
+        <button
+          type="button"
+          class="icon-button employee-detail-close"
+          :aria-label="t('common.close')"
+          @click="employeeDetailOpen = false"
+        >
+          ×
         </button>
       </header>
-      <p v-if="assignmentOverlap" class="hint">{{ t('people.primaryOverlap') }}</p>
-      <table class="data-table">
-        <thead>
-          <tr>
-            <th>{{ t('people.organization') }}</th>
-            <th>{{ t('people.department') }}</th>
-            <th>{{ t('people.position') }}</th>
-            <th>{{ t('people.primary') }}</th>
-            <th>{{ t('people.effectiveFrom') }}</th>
-            <th>{{ t('people.effectiveTo') }}</th>
-            <th>{{ t('people.status') }}</th>
-            <th>{{ t('people.actions') }}</th>
-          </tr>
-        </thead>
-        <tbody>
-          <tr v-for="row in selectedAssignments" :key="row.id">
-            <td>{{ organizationName(row.organization_id) }}</td>
-            <td>{{ departmentName(row.department_id) }}</td>
-            <td>{{ positionName(row.position_id) }}</td>
-            <td>{{ row.is_primary ? t('people.primary') : t('people.secondary') }}</td>
-            <td>{{ displayDate(row.effective_from) }}</td>
-            <td>{{ displayDate(row.effective_to) }}</td>
-            <td>{{ t(`status.${row.status.toLowerCase()}`) }}</td>
-            <td>
-              <TableRowActions
-                :active="row.status === 'ACTIVE'"
-                :busy="busy"
-                :show-edit="true"
-                :show-toggle="true"
-                :edit-label="t('common.edit')"
-                :activate-label="t('common.activate')"
-                :deactivate-label="t('common.deactivate')"
-                @edit="openAssignmentEdit(row)"
-                @toggle="toggleAssignment(row)"
-              />
-            </td>
-          </tr>
-        </tbody>
-      </table>
-      <p v-if="selectedAssignments.length === 0" class="empty-state">
-        {{ t('people.noAssignments') }}
-      </p>
-    </div>
-    <ContactList
-      v-else-if="activeTab === 'contacts'"
-      :owner-id="String(selected?.id ?? '')"
-      owner-type="EMPLOYEE"
-    />
-    <div v-else class="audit-placeholder">
-      <h3>{{ t('people.audit') }}</h3>
-      <p>{{ t('people.auditDescription') }}</p>
-    </div>
-  </section>
+      <div class="detail-tabs" role="tablist">
+        <button
+          v-for="tab in ['overview', 'assignments', 'contacts', 'audit'] as Tab[]"
+          :key="tab"
+          type="button"
+          role="tab"
+          :aria-selected="activeTab === tab"
+          @click="activeTab = tab"
+        >
+          {{ t(`people.tabs.${tab}`) }}
+        </button>
+      </div>
+      <div v-if="activeTab === 'overview'" class="detail-grid">
+        <div>
+          <span>{{ t('people.gender') }}</span
+          ><strong>{{ genderLabel(selected.gender ?? null) }}</strong>
+        </div>
+        <div>
+          <span>{{ t('people.dateOfBirth') }}</span
+          ><strong>{{ displayDate(selected.date_of_birth) }}</strong>
+        </div>
+        <div>
+          <span>{{ t('people.hireDate') }}</span
+          ><strong>{{ displayDate(selected.hire_date) }}</strong>
+        </div>
+        <div>
+          <span>{{ t('people.manager') }}</span
+          ><strong>{{
+            state.rows.value.find((row) => String(row.id) === String(selected.manager_employee_id))
+              ?.employee_name ?? '—'
+          }}</strong>
+        </div>
+        <div class="detail-grid__wide">
+          <span>{{ t('people.placeOfOrigin') }}</span
+          ><strong>{{ selected.place_of_origin || '—' }}</strong>
+        </div>
+        <div class="detail-grid__wide">
+          <span>{{ t('people.description') }}</span
+          ><strong>{{ selected.description || '—' }}</strong>
+        </div>
+      </div>
+      <div v-else-if="activeTab === 'assignments'" class="assignment-panel">
+        <header>
+          <div class="detail-tabs__sub" role="tablist">
+            <button
+              type="button"
+              :aria-selected="assignmentMode === 'active'"
+              @click="assignmentMode = 'active'"
+            >
+              {{ t('people.activeAssignments') }}</button
+            ><button
+              type="button"
+              :aria-selected="assignmentMode === 'history'"
+              @click="assignmentMode = 'history'"
+            >
+              {{ t('people.assignmentHistory') }}
+            </button>
+          </div>
+          <button type="button" class="primary-button" @click="openAssignmentCreate">
+            ＋ {{ t('people.addAssignment') }}
+          </button>
+        </header>
+        <p v-if="assignmentOverlap" class="hint">{{ t('people.primaryOverlap') }}</p>
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th>{{ t('people.organization') }}</th>
+              <th>{{ t('people.department') }}</th>
+              <th>{{ t('people.position') }}</th>
+              <th>{{ t('people.primary') }}</th>
+              <th>{{ t('people.effectiveFrom') }}</th>
+              <th>{{ t('people.effectiveTo') }}</th>
+              <th>{{ t('people.status') }}</th>
+              <th>{{ t('people.actions') }}</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr v-for="row in selectedAssignments" :key="row.id">
+              <td>{{ organizationName(row.organization_id) }}</td>
+              <td>{{ departmentName(row.department_id) }}</td>
+              <td>{{ positionName(row.position_id) }}</td>
+              <td>{{ row.is_primary ? t('people.primary') : t('people.secondary') }}</td>
+              <td>{{ displayDate(row.effective_from) }}</td>
+              <td>{{ displayDate(row.effective_to) }}</td>
+              <td>{{ t(`status.${row.status.toLowerCase()}`) }}</td>
+              <td>
+                <TableRowActions
+                  :active="row.status === 'ACTIVE'"
+                  :busy="busy"
+                  :show-edit="true"
+                  :show-toggle="true"
+                  :edit-label="t('common.edit')"
+                  :activate-label="t('common.activate')"
+                  :deactivate-label="t('common.deactivate')"
+                  @edit="openAssignmentEdit(row)"
+                  @toggle="toggleAssignment(row)"
+                />
+              </td>
+            </tr>
+          </tbody>
+        </table>
+        <p v-if="selectedAssignments.length === 0" class="empty-state">
+          {{ t('people.noAssignments') }}
+        </p>
+      </div>
+      <ContactList
+        v-else-if="activeTab === 'contacts'"
+        :owner-id="String(selected?.id ?? '')"
+        owner-type="EMPLOYEE"
+      />
+      <div v-else class="audit-placeholder">
+        <h3>{{ t('people.audit') }}</h3>
+        <p>{{ t('people.auditDescription') }}</p>
+      </div>
+    </section>
+  </div>
   <div v-if="employeeModal" class="modal-backdrop" @click.self="employeeModal = false">
     <section
       class="modal-card"
@@ -842,9 +866,23 @@ onMounted(async () => {
 .row-selected td {
   background: #f0f8fb;
 }
-.employee-detail {
-  margin-top: 18px;
-  padding: 18px;
+.employee-detail-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 50;
+  display: grid;
+  place-items: center;
+  padding: 20px;
+  background: rgb(18 38 54 / 45%);
+}
+.employee-detail-modal {
+  width: min(1440px, calc(100vw - 40px));
+  max-height: calc(100vh - 40px);
+  overflow: auto;
+  border: 1px solid #d5e1e8;
+  border-radius: 7px;
+  background: #fff;
+  box-shadow: 0 22px 70px rgb(18 42 62 / 25%);
 }
 .detail-header,
 .assignment-panel > header {
@@ -854,8 +892,9 @@ onMounted(async () => {
   gap: 14px;
 }
 .detail-header h2 {
-  margin: 4px 0;
+  margin: 8px 0;
   color: #123653;
+  font-size: 25px;
 }
 .detail-header p,
 .eyebrow {
@@ -866,8 +905,8 @@ onMounted(async () => {
 .detail-tabs {
   display: flex;
   gap: 4px;
-  margin: 18px -18px 16px;
-  padding: 0 18px;
+  margin: 22px 0 0;
+  padding: 0 22px;
   border-bottom: 1px solid #e1e9ee;
 }
 .detail-tabs button,
@@ -889,6 +928,7 @@ onMounted(async () => {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 16px;
+  padding: 24px 22px 28px;
 }
 .detail-grid > div {
   display: grid;
@@ -913,6 +953,26 @@ onMounted(async () => {
 .assignment-panel header {
   align-items: center;
 }
+.detail-header,
+.assignment-panel,
+.employee-detail-modal > .detail-header {
+  padding: 24px 22px 0;
+}
+.employee-detail-modal > .detail-header {
+  padding-bottom: 0;
+}
+.employee-detail-close {
+  align-self: start;
+}
+.assignment-panel {
+  padding-bottom: 24px;
+}
+.assignment-panel > .data-table,
+.assignment-panel > .empty-state,
+.assignment-panel > .hint {
+  margin-left: 0;
+  margin-right: 0;
+}
 .hint,
 .field-error,
 .inline-error {
@@ -934,7 +994,7 @@ onMounted(async () => {
 .modal-backdrop {
   position: fixed;
   inset: 0;
-  z-index: 40;
+  z-index: 60;
   display: grid;
   place-items: center;
   padding: 20px;
