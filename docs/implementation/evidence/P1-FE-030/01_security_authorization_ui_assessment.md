@@ -7,7 +7,7 @@ surfaces only. `P1-FE-040` and `P1-FE-050` were not started.
 
 Implemented routes:
 
-- `/security/users` — Table First read-only user list backed by the existing admin read endpoint, with View Details modal. No Shield User create/edit/state or Direct Permission writes are presented because the current API does not expose those operations.
+- `/security/users` — Table First read-only user list aggregated from existing Authorization Group/Members API responses, with the authenticated User merged for email/detail data. No Shield User create/edit/state or Direct Permission writes are presented because the current API does not expose those operations.
 - `/security/authorization-groups` — Table First Authorization Group CRUD/state, modal detail tabs, complete backend Members rendering and all-user member replacement, plus canonical Resource Action permission replacement with Resource/Action/ALLOW detail rows.
 - `/security/resources` — Resource CRUD and Resource Action CRUD. New Domain choices are exactly `SYSTEM`, `MASTER`, and `ORGANIZATION`; existing Domain is immutable/read-only and `COMPANY` is absent.
 - `/security/policies` — Organization scope, Resource, optional all-state selection, exact participant types `USER|GROUP|POSITION|DEPARTMENT|ORGANIZATION`, and `ALLOW|DENY|ABSOLUTE_DENY` action/effect rows. UI text states that Policy does not grant missing Base Permission.
@@ -16,8 +16,9 @@ Implemented routes:
 The frontend delegates all authorization, Evaluation Organization, visibility,
 403/404 handling, and effect semantics to the backend. It does not evaluate
 PBAC, infer ALLOW/DENY, widen Organization scope, or special-case System Admin.
-The generated client is used through the FE-002 typed transport adapter for API-030
-surfaces; the existing admin read service is reused for the read-only User list.
+The generated client is used through the FE-002 typed transport adapter for all
+API-030 surfaces. The User list uses existing Group/Members read contracts; no
+new `/api/v1/users` or `/api/v1/admin/users` endpoint was introduced.
 The existing `/admin/users` administration route remains on its pre-task
 component; the read-only contract surface is isolated at `/security/users`.
 
@@ -48,6 +49,6 @@ authorization regressions above provide the security regression evidence.
 
 - DB: none.
 - Authorization: frontend controls remain UX only; API-030 remains the authority.
-- API/OpenAPI: no contract change; generated client remains unchanged and existing admin read service is reused for users.
+- API/OpenAPI: no contract change; generated client remains unchanged and existing Group/Members read contracts are reused for users.
 - UI/i18n/accessibility: added vi/en key parity, Security navigation/routes,
   accessible labels, scoped Axe coverage, and shared delete row action support.
