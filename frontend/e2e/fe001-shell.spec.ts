@@ -35,3 +35,31 @@ test('authenticated shell exposes five modes, deduplicated tabs, locale, and 404
   await expect(page.getByRole('main').getByText('Không tìm thấy tài nguyên')).toBeVisible()
   await expect(page.getByRole('button', { name: 'Về workspace' })).toBeVisible()
 })
+
+test('shell keeps the header full width and uses the official logo', async ({ page }) => {
+  await mockAuthenticatedSession(page)
+  await page.goto('/organizations')
+
+  const geometry = await page.evaluate(() => {
+    const header = document.querySelector('.shell-header')?.getBoundingClientRect()
+    const sider = document.querySelector('.shell-sider')?.getBoundingClientRect()
+    const workspace = document.querySelector('.workspace-layout')?.getBoundingClientRect()
+    return {
+      viewportWidth: window.innerWidth,
+      headerWidth: header?.width || 0,
+      headerHeight: header?.height || 0,
+      siderLeft: sider?.left || 0,
+      workspaceLeft: workspace?.left || 0,
+    }
+  })
+
+  expect(geometry.headerWidth).toBe(geometry.viewportWidth)
+  expect(geometry.headerHeight).toBeGreaterThan(0)
+  expect(geometry.siderLeft).toBe(0)
+  expect(geometry.workspaceLeft).toBeGreaterThan(geometry.siderLeft)
+  const logo = page.locator('.shell-brand-logo')
+  await expect(logo).toHaveAttribute('alt', 'Dinktech')
+  expect(await logo.evaluate((image) => (image as HTMLImageElement).naturalWidth)).toBeGreaterThan(
+    0,
+  )
+})

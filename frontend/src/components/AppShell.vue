@@ -3,7 +3,6 @@ import { computed, h, onBeforeUnmount, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import {
   NAlert,
-  NAvatar,
   NBadge,
   NButton,
   NIcon,
@@ -249,7 +248,7 @@ onBeforeUnmount(() => resizeEnd?.())
 
 <template>
   <div class="erp-shell" :style="{ '--sidebar-width': `${sidebarWidth}px` }">
-    <NLayout has-sider class="shell-layout">
+    <NLayout class="shell-layout">
       <NLayoutHeader bordered class="shell-header">
         <NSpace align="center" :size="10" class="header-left">
           <NButton
@@ -263,10 +262,7 @@ onBeforeUnmount(() => resizeEnd?.())
             ></template>
           </NButton>
           <RouterLink class="brand" to="/">
-            <NAvatar color="#1769aa" :size="32">D</NAvatar>
-            <span class="brand-copy"
-              ><strong>Dinktech</strong><small>{{ t('common.brandSubtitle') }}</small></span
-            >
+            <img class="shell-brand-logo" src="/logo-dinktech.svg" alt="Dinktech" />
           </RouterLink>
           <NButton class="workspace-search" secondary @click="openCommandPalette">
             <template #icon
@@ -309,127 +305,129 @@ onBeforeUnmount(() => resizeEnd?.())
         </NSpace>
       </NLayoutHeader>
 
-      <NLayoutSider
-        bordered
-        :width="sidebarWidth"
-        :collapsed-width="72"
-        :collapsed="workspace.sidebarCollapsed"
-        collapse-mode="width"
-        class="shell-sider"
-        :class="{ 'sider-mobile-open': mobileMenuOpen }"
-      >
-        <div class="sider-content">
-          <NInput v-model:value="menuSearch" clearable :placeholder="t('shell.searchMenu')">
-            <template #prefix
-              ><NIcon><SearchOutline /></NIcon
-            ></template>
-          </NInput>
-          <div class="mode-switcher" role="group" :aria-label="t('shell.sidebarModes')">
-            <NButton
-              v-for="mode in sidebarModes"
-              :key="mode.key"
-              quaternary
-              :type="activeMode === mode.key ? 'primary' : 'default'"
-              :aria-label="t(mode.labelKey)"
-              :title="t(mode.labelKey)"
-              @click="selectMode(mode.key)"
+      <NLayout has-sider class="shell-body">
+        <NLayoutSider
+          bordered
+          :width="sidebarWidth"
+          :collapsed-width="72"
+          :collapsed="workspace.sidebarCollapsed"
+          collapse-mode="width"
+          class="shell-sider"
+          :class="{ 'sider-mobile-open': mobileMenuOpen }"
+        >
+          <div class="sider-content">
+            <NInput v-model:value="menuSearch" clearable :placeholder="t('shell.searchMenu')">
+              <template #prefix
+                ><NIcon><SearchOutline /></NIcon
+              ></template>
+            </NInput>
+            <div class="mode-switcher" role="group" :aria-label="t('shell.sidebarModes')">
+              <NButton
+                v-for="mode in sidebarModes"
+                :key="mode.key"
+                quaternary
+                :type="activeMode === mode.key ? 'primary' : 'default'"
+                :aria-label="t(mode.labelKey)"
+                :title="t(mode.labelKey)"
+                @click="selectMode(mode.key)"
+              >
+                <template #icon><NIcon :component="mode.icon" /></template>
+              </NButton>
+            </div>
+            <div v-if="!workspace.sidebarCollapsed && !mobileMenuOpen" class="sider-heading">
+              {{ activeModeLabel }}
+            </div>
+            <NMenu
+              :value="route.path"
+              :options="menuOptions"
+              :collapsed="workspace.sidebarCollapsed"
+              :collapsed-width="72"
+              :collapsed-icon-size="20"
+              @update:value="handleMenuSelect"
+            />
+            <div v-if="!workspace.sidebarCollapsed && !mobileMenuOpen" class="sider-footer">
+              <NIcon><InformationCircleOutline /></NIcon
+              ><span>{{ t('shell.filteredByPermission') }}</span>
+            </div>
+            <button
+              class="sider-collapse"
+              type="button"
+              :aria-label="
+                workspace.sidebarCollapsed ? t('shell.expandSidebar') : t('shell.collapseSidebar')
+              "
+              @click="toggleSidebar"
             >
-              <template #icon><NIcon :component="mode.icon" /></template>
+              <NIcon
+                ><ChevronForwardOutline v-if="workspace.sidebarCollapsed" /><ChevronBackOutline
+                  v-else
+              /></NIcon>
+            </button>
+            <div
+              v-if="!workspace.sidebarCollapsed"
+              class="sider-resize"
+              role="separator"
+              aria-orientation="vertical"
+              tabindex="0"
+              :aria-valuemin="workspace.MIN_SIDEBAR_WIDTH"
+              :aria-valuemax="workspace.MAX_SIDEBAR_WIDTH"
+              :aria-valuenow="workspace.sidebarWidth"
+              @pointerdown="startResize"
+              @keydown="handleResizeKey"
+            />
+          </div>
+        </NLayoutSider>
+
+        <NLayout class="workspace-layout">
+          <div class="workspace-tabs-wrap">
+            <NTabs
+              type="card"
+              size="small"
+              :value="currentTabKey"
+              closable
+              @update:value="handleTabChange"
+              @close="closeTab"
+            >
+              <NTabPane
+                v-for="tab in workspace.tabs"
+                :key="tab.key"
+                :name="tab.key"
+                :closable="tab.closable"
+              >
+                <template #tab>{{ t(tab.labelKey) }}</template>
+              </NTabPane>
+            </NTabs>
+            <NButton
+              quaternary
+              circle
+              :aria-label="t('shell.openNewTab')"
+              @click="openCommandPalette"
+            >
+              <template #icon
+                ><NIcon><AddOutline /></NIcon
+              ></template>
             </NButton>
           </div>
-          <div v-if="!workspace.sidebarCollapsed && !mobileMenuOpen" class="sider-heading">
-            {{ activeModeLabel }}
-          </div>
-          <NMenu
-            :value="route.path"
-            :options="menuOptions"
-            :collapsed="workspace.sidebarCollapsed"
-            :collapsed-width="72"
-            :collapsed-icon-size="20"
-            @update:value="handleMenuSelect"
-          />
-          <div v-if="!workspace.sidebarCollapsed && !mobileMenuOpen" class="sider-footer">
-            <NIcon><InformationCircleOutline /></NIcon
-            ><span>{{ t('shell.filteredByPermission') }}</span>
-          </div>
-          <button
-            class="sider-collapse"
-            type="button"
-            :aria-label="
-              workspace.sidebarCollapsed ? t('shell.expandSidebar') : t('shell.collapseSidebar')
-            "
-            @click="toggleSidebar"
-          >
-            <NIcon
-              ><ChevronForwardOutline v-if="workspace.sidebarCollapsed" /><ChevronBackOutline
-                v-else
-            /></NIcon>
-          </button>
-          <div
-            v-if="!workspace.sidebarCollapsed"
-            class="sider-resize"
-            role="separator"
-            aria-orientation="vertical"
-            tabindex="0"
-            :aria-valuemin="workspace.MIN_SIDEBAR_WIDTH"
-            :aria-valuemax="workspace.MAX_SIDEBAR_WIDTH"
-            :aria-valuenow="workspace.sidebarWidth"
-            @pointerdown="startResize"
-            @keydown="handleResizeKey"
-          />
-        </div>
-      </NLayoutSider>
-
-      <NLayout class="workspace-layout">
-        <div class="workspace-tabs-wrap">
-          <NTabs
-            type="card"
-            size="small"
-            :value="currentTabKey"
-            closable
-            @update:value="handleTabChange"
-            @close="closeTab"
-          >
-            <NTabPane
-              v-for="tab in workspace.tabs"
-              :key="tab.key"
-              :name="tab.key"
-              :closable="tab.closable"
+          <div class="error-stack" aria-live="polite">
+            <NAlert
+              v-for="notice in errorNotices"
+              :key="notice.id"
+              :type="notice.status === 401 || notice.status === 403 ? 'warning' : 'error'"
+              closable
+              @close="dismissError(notice.id)"
             >
-              <template #tab>{{ t(tab.labelKey) }}</template>
-            </NTabPane>
-          </NTabs>
-          <NButton
-            quaternary
-            circle
-            :aria-label="t('shell.openNewTab')"
-            @click="openCommandPalette"
-          >
-            <template #icon
-              ><NIcon><AddOutline /></NIcon
-            ></template>
-          </NButton>
-        </div>
-        <div class="error-stack" aria-live="polite">
-          <NAlert
-            v-for="notice in errorNotices"
-            :key="notice.id"
-            :type="notice.status === 401 || notice.status === 403 ? 'warning' : 'error'"
-            closable
-            @close="dismissError(notice.id)"
-          >
-            <template #icon
-              ><NIcon><AlertCircleOutline /></NIcon
-            ></template>
-            <strong>{{ t(`errors.status.${notice.status}`) }}</strong>
-            <span>{{ notice.message || t('errors.defaultMessage') }}</span>
-            <small v-if="notice.code || notice.requestId" class="error-meta"
-              >{{ notice.code || t('errors.unknownCode')
-              }}<span v-if="notice.requestId"> · {{ notice.requestId }}</span></small
-            >
-          </NAlert>
-        </div>
-        <main class="workspace-content"><RouterView /></main>
+              <template #icon
+                ><NIcon><AlertCircleOutline /></NIcon
+              ></template>
+              <strong>{{ t(`errors.status.${notice.status}`) }}</strong>
+              <span>{{ notice.message || t('errors.defaultMessage') }}</span>
+              <small v-if="notice.code || notice.requestId" class="error-meta"
+                >{{ notice.code || t('errors.unknownCode')
+                }}<span v-if="notice.requestId"> · {{ notice.requestId }}</span></small
+              >
+            </NAlert>
+          </div>
+          <main class="workspace-content"><RouterView /></main>
+        </NLayout>
       </NLayout>
     </NLayout>
 
@@ -466,6 +464,11 @@ onBeforeUnmount(() => resizeEnd?.())
   min-height: 100vh;
   background: #f5f7fa;
 }
+.shell-body {
+  height: calc(100vh - 62px);
+  min-height: 0;
+  background: #f5f7fa;
+}
 .shell-header {
   z-index: 20;
   display: flex;
@@ -482,21 +485,14 @@ onBeforeUnmount(() => resizeEnd?.())
 .brand {
   display: inline-flex;
   align-items: center;
-  gap: 9px;
-  min-width: 170px;
+  min-width: 150px;
 }
-.brand-copy {
-  display: grid;
-  line-height: 1.1;
-}
-.brand-copy strong {
-  color: #17324d;
-  font-size: 15px;
-}
-.brand-copy small {
-  margin-top: 3px;
-  color: #718298;
-  font-size: 10px;
+.shell-brand-logo {
+  display: block;
+  width: 132px;
+  height: 48px;
+  object-fit: contain;
+  object-position: left center;
 }
 .workspace-search {
   width: min(430px, 40vw);
@@ -576,6 +572,7 @@ onBeforeUnmount(() => resizeEnd?.())
   cursor: col-resize;
 }
 .workspace-layout {
+  min-height: 100%;
   min-width: 0;
   background: #f5f7fa;
 }
@@ -633,8 +630,9 @@ onBeforeUnmount(() => resizeEnd?.())
   .brand {
     min-width: auto;
   }
-  .brand-copy {
-    display: none;
+  .shell-brand-logo {
+    width: 112px;
+    height: 42px;
   }
   .workspace-search {
     width: min(260px, 44vw);
