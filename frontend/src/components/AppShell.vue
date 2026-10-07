@@ -88,6 +88,12 @@ const navItems: NavigationItem[] = [
   { labelKey: 'nav.approvals', to: '/approvals', icon: CheckmarkCircleOutline },
   { labelKey: 'nav.organizations', to: '/organizations', icon: BusinessOutline },
   { labelKey: 'nav.groups', to: '/admin/groups', icon: PeopleOutline, group: 'orgadmin' },
+  {
+    labelKey: 'nav.displaySettings',
+    to: '/system/display-settings',
+    icon: SettingsOutline,
+    group: 'orgadmin',
+  },
   { labelKey: 'nav.products', to: '/products', icon: CubeOutline },
   { labelKey: 'nav.sales', to: '/sales', icon: GridOutline },
   { labelKey: 'nav.users', to: '/admin/users', icon: SettingsOutline, group: 'orgadmin' },
@@ -100,6 +106,7 @@ const localeOptions = [
 
 const userOptions = computed(() => [
   { label: t('shell.profile'), key: 'profile', icon: icon(PersonCircleOutline) },
+  { label: t('shell.displayPreferences'), key: 'display-preferences', icon: icon(SettingsOutline) },
   { label: t('shell.signOut'), key: 'signOut', icon: icon(CloseOutline) },
 ])
 
@@ -142,7 +149,7 @@ const modeItems = computed(() => {
   }
   if (activeMode.value === 'system') {
     return allowedNavItems.value.filter((item) =>
-      ['/admin/users', '/admin/groups'].includes(item.to),
+      ['/admin/users', '/admin/groups', '/system/display-settings'].includes(item.to),
     )
   }
   if (activeMode.value === 'organization') {
@@ -266,6 +273,7 @@ function markNotificationsRead(): void {
 function handleUserAction(key: string): void {
   userMenuOpen.value = false
   if (key === 'profile') void router.push('/profile')
+  if (key === 'display-preferences') void router.push('/profile/display-preferences')
   if (key === 'signOut') void signOut()
 }
 

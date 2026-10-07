@@ -4,6 +4,8 @@ import AppShell from '@/components/AppShell.vue'
 import { i18n } from '@/i18n'
 import { useAuthStore } from '@/stores/auth'
 import DashboardView from '@/views/DashboardView.vue'
+import DisplayPreferencesView from '@/views/DisplayPreferencesView.vue'
+import DisplaySettingsView from '@/views/DisplaySettingsView.vue'
 import GroupsView from '@/views/GroupsView.vue'
 import LoginView from '@/views/LoginView.vue'
 import OrganizationsView from '@/views/OrganizationsView.vue'
@@ -37,6 +39,18 @@ const router = createRouter({
           name: 'profile',
           component: ProfileView,
           meta: { labelKey: 'shell.profile' },
+        },
+        {
+          path: 'profile/display-preferences',
+          name: 'display-preferences',
+          component: DisplayPreferencesView,
+          meta: { labelKey: 'shell.displayPreferences' },
+        },
+        {
+          path: 'system/display-settings',
+          name: 'display-settings',
+          component: DisplaySettingsView,
+          meta: { labelKey: 'nav.displaySettings' },
         },
         {
           path: 'admin/users',

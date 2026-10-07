@@ -4,10 +4,10 @@ This ledger is lightweight operational evidence. It is not architecture
 authority and does not replace UR, FRS, DBD, the Implementation Contract, the
 Implementation Plan, API Design, or UI Design.
 
-The registry contains exactly 107 P1 tasks. Current ledger state records 84
+The registry contains exactly 107 P1 tasks. Current ledger state records 87
 completed tasks: Gate 0 is 10/10, Gate 1 is 14/14, Gate 2 is 8/8, Gate 3 is
 10/10, Gate 4 is 7/7, Gate 5 is 11/11, Gate 6 is 9/9, Gate 7 is 15/15,
-Gate 8 is 0/14, and Gate 9 is 0/9.
+Gate 8 is 3/14, and Gate 9 is 0/9.
 
 The Implementation Plan v1.8 retains a planning snapshot of `69/107`; the
 `80/107` value below is evidence-derived from the current Git/ledger history
@@ -20,7 +20,7 @@ registry.
 
 | Measure | Progress |
 |---|---:|
-| P1 tasks DONE | 84/107 |
+| P1 tasks DONE | 87/107 |
 | Gate 0 | 10/10 DONE |
 | Gate 1 | 14/14 DONE |
 | Gate 2 | 8/8 DONE |
@@ -29,7 +29,7 @@ registry.
 | Gate 5 | 11/11 DONE |
 | Gate 6 | 9/9 DONE |
 | Gate 7 | 15/15 DONE |
-| Gate 8 | 0/14 DONE |
+| Gate 8 | 3/14 DONE |
 | Gate 9 | 0/9 DONE |
 
 ## Task Ledger
@@ -122,7 +122,7 @@ registry.
 | P1-DSP-005 | DONE | 0000000 | high-risk | Frontend runtime store, 15-key user-isolated local overlay, shared presentation formatter surface, canonical-value/timezone/locale boundaries, generated-client integration, and frontend/API regression evidence. Evidence: `docs/implementation/evidence/P1-DSP-005/01_display_runtime_formatter_assessment.md`. |
 | P1-FE-001 | DONE | 0000000 | service-standard | Naive UI app shell with exactly five sidebar modes, authenticated-user workspace preferences, protected router/session bootstrap, deduplicated/dirty-safe tabs, vi/en shell locale, common API error boundary with request correlation, accessibility/browser evidence. Evidence: `docs/implementation/evidence/P1-FE-001/01_app_shell_router_session_error_assessment.md`. |
 | P1-FE-002 | DONE | 0000000 | service-standard | Canonical generated-client adapter over FE-001 transport, request-id/locale/session/error propagation, reusable query/mutation state with refresh preservation and canonical string values, generated ownership and browser evidence. Evidence: `docs/implementation/evidence/P1-FE-002/01_typed_api_query_state_assessment.md`. |
-| P1-DSP-006 | NOT_STARTED | — | high-risk | No accepted implementation evidence. |
+| P1-DSP-006 | DONE | 0000000 | high-risk | Display Settings administration at `/system/display-settings`, SYSTEM/Organization context and inherited/source/override/reset rendering, formatter previews, and user-menu My Display Preferences with 15-key authenticated local overlay plus locale independence. Evidence: `docs/implementation/evidence/P1-DSP-006/01_display_settings_ui_assessment.md`. |
 | P1-DSP-090 | NOT_STARTED | — | high-risk | No accepted implementation evidence. |
 | P1-FE-003 | NOT_STARTED | — | service-standard | No accepted implementation evidence. |
 | P1-FE-010 | NOT_STARTED | — | service-standard | No accepted implementation evidence. |
