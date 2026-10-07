@@ -12,6 +12,26 @@ export default defineConfig({
     },
   },
 
+  build: {
+    rolldownOptions: {
+      output: {
+        codeSplitting: {
+          minSize: 10_000,
+          groups: [
+            {
+              name: 'naive-ui',
+              test: /[\\/]node_modules[\\/]naive-ui[\\/]/,
+              maxSize: 500 * 1024,
+            },
+            { name: 'vue-runtime', test: /[\\/]node_modules[\\/](?:vue|@vue|vue-router|pinia)[\\/]/ },
+            { name: 'icons', test: /[\\/]node_modules[\\/]@vicons[\\/]/ },
+            { name: 'vendor', test: /[\\/]node_modules[\\/]/ },
+          ],
+        },
+      },
+    },
+  },
+
   server: {
     host: '0.0.0.0',
     port: 5173,

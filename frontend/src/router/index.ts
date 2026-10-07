@@ -3,17 +3,6 @@ import { createRouter, createWebHistory } from 'vue-router'
 import AppShell from '@/components/AppShell.vue'
 import { i18n } from '@/i18n'
 import { useAuthStore } from '@/stores/auth'
-import DashboardView from '@/views/DashboardView.vue'
-import DisplayPreferencesView from '@/views/DisplayPreferencesView.vue'
-import DisplaySettingsView from '@/views/DisplaySettingsView.vue'
-import GroupsView from '@/views/GroupsView.vue'
-import LoginView from '@/views/LoginView.vue'
-import LocationsView from '@/views/LocationsView.vue'
-import OrganizationsView from '@/views/OrganizationsView.vue'
-import PlaceholderView from '@/views/PlaceholderView.vue'
-import ProfileView from '@/views/ProfileView.vue'
-import NotFoundView from '@/views/NotFoundView.vue'
-import UsersView from '@/views/UsersView.vue'
 import { useWorkspaceStore } from '@/stores/workspace'
 
 const router = createRouter({
@@ -22,7 +11,7 @@ const router = createRouter({
     {
       path: '/login',
       name: 'login',
-      component: LoginView,
+      component: () => import('@/views/LoginView.vue'),
       meta: { public: true, closable: false },
     },
     {
@@ -32,68 +21,68 @@ const router = createRouter({
         {
           path: '',
           name: 'dashboard',
-          component: DashboardView,
+          component: () => import('@/views/DashboardView.vue'),
           meta: { labelKey: 'nav.dashboard', closable: false },
         },
         {
           path: 'profile',
           name: 'profile',
-          component: ProfileView,
+          component: () => import('@/views/ProfileView.vue'),
           meta: { labelKey: 'shell.profile' },
         },
         {
           path: 'profile/display-preferences',
           name: 'display-preferences',
-          component: DisplayPreferencesView,
+          component: () => import('@/views/DisplayPreferencesView.vue'),
           meta: { labelKey: 'shell.displayPreferences' },
         },
         {
           path: 'system/display-settings',
           name: 'display-settings',
-          component: DisplaySettingsView,
+          component: () => import('@/views/DisplaySettingsView.vue'),
           meta: { labelKey: 'nav.displaySettings' },
         },
         {
           path: 'admin/users',
           name: 'users',
-          component: UsersView,
+          component: () => import('@/views/UsersView.vue'),
           meta: { labelKey: 'nav.users' },
         },
         {
           path: 'admin/groups',
           name: 'groups',
-          component: GroupsView,
+          component: () => import('@/views/GroupsView.vue'),
           meta: { labelKey: 'nav.groups' },
         },
         {
           path: 'organizations',
           name: 'organizations',
-          component: OrganizationsView,
+          component: () => import('@/views/OrganizationsView.vue'),
           meta: { labelKey: 'nav.organizations' },
         },
         {
           path: 'settings/locations/provinces',
           name: 'locations-provinces',
-          component: LocationsView,
+          component: () => import('@/views/LocationsView.vue'),
           meta: { labelKey: 'nav.locations' },
         },
         {
           path: 'settings/locations/wards',
           name: 'locations-wards',
-          component: LocationsView,
+          component: () => import('@/views/LocationsView.vue'),
           meta: { labelKey: 'nav.locations' },
         },
         {
           path: 'approvals',
           name: 'approvals',
-          component: PlaceholderView,
+          component: () => import('@/views/PlaceholderView.vue'),
           meta: { labelKey: 'nav.approvals' },
           props: { title: 'Phê duyệt của tôi', description: 'Các yêu cầu đang chờ bạn xử lý.' },
         },
         {
           path: 'products',
           name: 'products',
-          component: PlaceholderView,
+          component: () => import('@/views/PlaceholderView.vue'),
           props: {
             title: 'Sản phẩm và vòng đời',
             description: 'Danh mục sản phẩm và lifecycle của doanh nghiệp.',
@@ -103,7 +92,7 @@ const router = createRouter({
         {
           path: 'sales',
           name: 'sales',
-          component: PlaceholderView,
+          component: () => import('@/views/PlaceholderView.vue'),
           props: {
             title: 'Bán hàng và khách hàng',
             description: 'Không gian quản lý bán hàng và quan hệ khách hàng.',
@@ -113,7 +102,7 @@ const router = createRouter({
         {
           path: ':pathMatch(.*)*',
           name: 'not-found',
-          component: NotFoundView,
+          component: () => import('@/views/NotFoundView.vue'),
           meta: { labelKey: 'errors.status.404' },
         },
       ],
