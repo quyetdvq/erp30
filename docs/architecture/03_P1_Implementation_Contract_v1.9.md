@@ -1528,12 +1528,15 @@ Giá trị production của `import.max_file_bytes`, `import.max_rows`, retentio
 
 Các điểm sau vẫn mở theo upstream sources hoặc cần authority khác:
 
-1. Canonical value set của `employees.gender`.
-2. Direct Manager effective-dated history ngoài current pointer P1.
-3. CHILD display separator chính xác ở UI.
-4. Retention period của `authorization_logs` và `import_jobs`.
-5. P2 persistence để trace COMBO source tới transaction leaf.
-6. P2 rule nếu muốn aggregate direct standalone leaf với COMBO-generated leaf.
+1. Direct Manager effective-dated history ngoài current pointer P1.
+2. CHILD display separator chính xác ở UI.
+3. Retention period của `authorization_logs` và `import_jobs`.
+
+`employees.gender` đã được DEC-P1-001 khóa với canonical API/database values
+`MALE`, `FEMALE`, `OTHER`, hoặc `NULL`; localized labels không thuộc payload
+hay persistence.
+4. P2 persistence để trace COMBO source tới transaction leaf.
+5. P2 rule nếu muốn aggregate direct standalone leaf với COMBO-generated leaf.
 
 Các item này không được dev tự tạo schema/capability mới trong P1.
 

@@ -88,6 +88,17 @@
       ]
     },
     {
+      "id": "DEC-P1-001",
+      "title": "Canonical Employee gender catalog",
+      "approved_by": "Product Owner",
+      "rules": [
+        "employees.gender canonical stored/API values are MALE, FEMALE, OTHER, or NULL",
+        "NULL means not specified and UNSPECIFIED is not a valid code",
+        "localized labels are presentation-only: Nam / Male, Nữ / Female, Khác / Other, Chưa khai báo / Not specified",
+        "keep employees.gender VARCHAR(20); do not add a lookup table or migration"
+      ]
+    },
+    {
       "id": "CHANGE-AUTH-DOMAIN-001",
       "title": "Resource Domain authorization scope normalization",
       "approved_by": "P1 change control / authority package",

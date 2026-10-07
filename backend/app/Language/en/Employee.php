@@ -11,6 +11,7 @@ return [
     'EMPLOYEE_CODE_DUPLICATE'       => 'The Employee code is already in use.',
     'EMPLOYEE_USER_DUPLICATE'       => 'The User is already mapped to an Employee.',
     'EMPLOYEE_STATUS_INVALID'       => 'The Employee status is invalid.',
+    'EMPLOYEE_GENDER_INVALID'       => 'The Employee gender is invalid.',
     'EMP_PERSISTENCE_FAILED'        => 'The Employee could not be saved.',
     'EMP_CONNECTION_INVALID'        => 'The database connection cannot write Employees.',
     'EMP_UPDATE_EMPTY'              => 'The Employee update cannot be empty.',

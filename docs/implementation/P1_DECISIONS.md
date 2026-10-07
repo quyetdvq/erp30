@@ -49,6 +49,16 @@ Implementation Contract, Implementation Plan, API Design, or UI Design.
 - A conflicting GROUP root is a blocking condition.
 - No Company is seeded.
 
+## DEC-P1-001 — Canonical Employee gender catalog
+
+- Approved by the Product Owner for P1 Employee API/UI contract closure.
+- Canonical stored/API values are `MALE`, `FEMALE`, `OTHER`, and `NULL`.
+- `NULL` means not specified; `UNSPECIFIED` is not a valid code.
+- Presentation labels are `Nam / Male`, `Nữ / Female`, `Khác / Other`, and
+  `Chưa khai báo / Not specified`; labels are never persisted or sent as API
+  values.
+- Keep `employees.gender VARCHAR(20)`; do not add a lookup table or migration.
+
 ## DEC-PRD-001 — Multi-level Product Group hierarchy
 
 - Approved by the Product Owner before Gate 5; this is an approved decision, not an open assumption.

@@ -59,7 +59,7 @@ Consult the current project docs for complete wording. These are compact guardra
 - Employee Organization/Department/Position relationships exist only through Employee Assignment. Assignment-derived filters/projections never change Employee authorization scope.
 - Employee Assignment is `ORGANIZATION` scoped by `organization_id`; authorization/data-scope filtering occurs before list totals and pagination.
 - Primary Assignment overlap remains transaction/concurrency protected. Secondary Assignments remain valid authorization lanes when eligible.
-- Strict Employee `gender` enum and exact export media type remain source-open/`CONTRACT_PENDING`; do not invent them.
+- Employee `gender` is the DEC-P1-001 nullable canonical catalog `MALE`, `FEMALE`, `OTHER`; `NULL` means not specified. Exact export media type remains source-open/`CONTRACT_PENDING`.
 
 ## Database / transactions / boundaries
 
@@ -136,7 +136,7 @@ Consult the current project docs for complete wording. These are compact guardra
 - Every protected endpoint declares Resource/Action, authoritative Evaluation Organization source, and visibility rule.
 - Collection authorization/data-scope filtering happens before `meta.total`; query/search/filter/sort fields are allowlisted.
 - Public API changes update OpenAPI in the same task, Redocly lint must pass, and typed frontend artifacts are regenerated; generated files are not hand-edited.
-- Only implement `CONTRACT_READY` surfaces. Current source-open/`CONTRACT_PENDING` items must not be invented, including Shield User write/state payloads, public Price Resolution authorization, optional COMBO preview endpoints, exact export media type, and strict Employee gender enum.
+- Only implement `CONTRACT_READY` surfaces. Current source-open/`CONTRACT_PENDING` items must not be invented, including Shield User write/state payloads, public Price Resolution authorization, optional COMBO preview endpoints, and exact export media type.
 
 ## Localization
 

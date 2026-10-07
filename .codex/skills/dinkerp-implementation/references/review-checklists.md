@@ -59,7 +59,7 @@ Use only the sections relevant to the task.
 - Exact export media type is not invented while contract remains pending.
 - For P1-API-020, Department/Position/Employee stay MASTER/GROUP; Employee Assignment uses request/persisted row `organization_id` according to operation.
 - Employee Organization/Department/Position filters are data filters only; list scope decisions happen before total/pagination.
-- Strict Employee gender enum is not invented while DEC-P1-001 remains open.
+- Employee gender uses only the DEC-P1-001 nullable catalog `MALE`, `FEMALE`, `OTHER`, or `null`.
 
 ## UI
 

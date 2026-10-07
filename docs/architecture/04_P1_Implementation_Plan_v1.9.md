@@ -1537,18 +1537,24 @@ Sau khi schema tương ứng ổn định:
 
 ---
 
-# 20. Open decision register
+# 20. Decision register
 
 Các item này **không được Dev tự suy diễn**.
 
-| Decision ID | Item | Blocker for |
+| Decision ID | Item / status | Blocker for |
 |---|---|---|
-| DEC-P1-001 | Canonical `employees.gender` value catalog | Employee UI production sign-off |
+| DEC-P1-001 | **RESOLVED** — canonical `employees.gender` catalog: `MALE`, `FEMALE`, `OTHER`, `NULL` | None; P1-FE-020 unblocked |
 | DEC-P1-002 | Direct Manager effective-dated history | Not P1 blocker; current pointer remains baseline |
 | DEC-P1-003 | CHILD display separator | Resolved as `" - "` display-only; no Product UI blocker |
 | DEC-P1-004 | Retention `authorization_logs`/`import_jobs` | Production Operations sign-off |
 | DEC-P2-001 | COMBO transaction leaf trace persistence | P2 only |
 | DEC-P2-002 | Direct leaf + COMBO-generated leaf aggregation | P2 only |
+
+`DEC-P1-001` resolution (Product Owner): database/API persist and exchange
+only `MALE`, `FEMALE`, `OTHER`, or `null`; `null` means not specified; labels
+are presentation-only (`Nam / Male`, `Nữ / Female`, `Khác / Other`,
+`Chưa khai báo / Not specified`). The existing `employees.gender VARCHAR(20)`
+remains unchanged and no lookup table is introduced.
 
 Nếu một decision làm thay đổi baseline P1 semantics/schema thì phải đi qua change control trước code.
 

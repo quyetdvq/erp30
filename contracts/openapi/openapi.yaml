@@ -1838,7 +1838,7 @@ components:
         user_id: {$ref: '#/components/schemas/BigInt'}
         employee_code: {type: string}
         employee_name: {type: string}
-        gender: {type: [string, 'null']}
+        gender: {type: [string, 'null'], enum: [MALE, FEMALE, OTHER, null]}
         date_of_birth: {type: [string, 'null'], format: date}
         place_of_origin: {type: [string, 'null']}
         hire_date: {type: [string, 'null'], format: date}
@@ -1852,7 +1852,7 @@ components:
         user_id: {$ref: '#/components/schemas/BigInt'}
         employee_code: {type: string}
         employee_name: {type: string}
-        gender: {type: [string, 'null']}
+        gender: {type: [string, 'null'], enum: [MALE, FEMALE, OTHER, null]}
         date_of_birth: {type: [string, 'null'], format: date}
         place_of_origin: {type: [string, 'null']}
         hire_date: {type: [string, 'null'], format: date}
@@ -1865,7 +1865,7 @@ components:
         user_id: {$ref: '#/components/schemas/BigInt'}
         employee_code: {type: string}
         employee_name: {type: string}
-        gender: {type: [string, 'null']}
+        gender: {type: [string, 'null'], enum: [MALE, FEMALE, OTHER, null]}
         date_of_birth: {type: [string, 'null'], format: date}
         place_of_origin: {type: [string, 'null']}
         hire_date: {type: [string, 'null'], format: date}

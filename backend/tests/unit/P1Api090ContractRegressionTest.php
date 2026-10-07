@@ -123,7 +123,7 @@ final class P1Api090ContractRegressionTest extends CIUnitTestCase
         }
     }
 
-    public function testContractPendingSurfacesRemainAbsentFromRuntimeAndOpenApi(): void
+    public function testContractPendingSurfacesRemainAbsentAndResolvedGenderIsConstrained(): void
     {
         $routes = file_get_contents(__DIR__ . '/../../app/Config/Routes.php');
         $openapi = file_get_contents(__DIR__ . '/../../../contracts/openapi/openapi.yaml');
@@ -137,8 +137,7 @@ final class P1Api090ContractRegressionTest extends CIUnitTestCase
         $this->assertDoesNotMatchRegularExpression('#preview[-_]?combo|combo[-_]?preview#i', $routes . "\n" . $openapi);
         $this->assertDoesNotMatchRegularExpression('#/api/v1/[^\r\n:]*(?:selector|options)[^\r\n:]*:#i', $openapi);
         $this->assertDoesNotMatchRegularExpression('#\$routes->(?:get|post|put|patch|delete)\(\'api/v1/[^\']*(?:selector|options)[^\']*\'#i', $routes);
-        $this->assertStringContainsString("gender: {type: [string, 'null']}", $openapi);
-        $this->assertStringNotContainsString("gender: {type: [string, 'null'], enum:", $openapi);
+        $this->assertStringContainsString("gender: {type: [string, 'null'], enum: [MALE, FEMALE, OTHER, null]}", $openapi);
     }
 
     /** @return array<string, string> */

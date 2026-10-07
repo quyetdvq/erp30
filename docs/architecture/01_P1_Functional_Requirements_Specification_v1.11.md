@@ -752,6 +752,21 @@ Department là master độc lập với Organization.
 - Status.
 - Contacts dùng Shared Contact.
 
+**Canonical Gender catalog**
+
+`employees.gender` lưu và trao đổi bằng canonical code, không lưu label đã dịch:
+
+| Code | Ý nghĩa | UI tiếng Việt | UI English |
+|---|---|---|---|
+| `MALE` | Nam | Nam | Male |
+| `FEMALE` | Nữ | Nữ | Female |
+| `OTHER` | Khác | Khác | Other |
+| `NULL` | Chưa khai báo | Chưa khai báo | Not specified |
+
+`NULL` là giá trị chưa khai báo; không có code `UNSPECIFIED`. API chỉ nhận/trả
+`MALE`, `FEMALE`, `OTHER` hoặc `null`. Database giữ nguyên
+`employees.gender VARCHAR(20)` và không thêm lookup table.
+
 **Functional behavior**
 
 - Employee có thể tồn tại mà không có User.
@@ -2793,12 +2808,11 @@ FRS không được tự tạo:
 
 Các điểm này không được FRS tự suy diễn thành persistence mới:
 
-1. **Employee Gender value set:** canonical values chưa được source authority khóa. UI/application phải dùng value catalog được Product Owner phê duyệt trước production; FRS không tự đặt enum.
-2. **Direct Manager history:** P1 chỉ lưu current pointer. Nếu cần effective-dated manager history phải có additive design.
-3. **CHILD display separator:** data canonical là Parent Name + Child Name; exact UI separator chưa khóa và không persistence.
-4. **Authorization/Import retention:** retention period và quyền xem log/job cần Security/Operations decision.
-5. **P2 transaction trace của COMBO:** P2 phải quyết định persistence để trace leaf line về root/nested COMBO; P1 chỉ khóa algorithm và product schema.
-6. **Direct leaf line + COMBO-generated leaf aggregation:** Database baseline chỉ khóa weighted aggregation khi cùng leaf nhận allocation từ nhiều COMBO. Nếu P2 muốn gộp thêm direct standalone leaf line với COMBO-generated leaf line, P2 FRS phải định nghĩa rõ pricing/trace semantics trước khi persistence.
+1. **Direct Manager history:** P1 chỉ lưu current pointer. Nếu cần effective-dated manager history phải có additive design.
+2. **CHILD display separator:** data canonical là Parent Name + Child Name; exact UI separator chưa khóa và không persistence.
+3. **Authorization/Import retention:** retention period và quyền xem log/job cần Security/Operations decision.
+4. **P2 transaction trace của COMBO:** P2 phải quyết định persistence để trace leaf line về root/nested COMBO; P1 chỉ khóa algorithm và product schema.
+5. **Direct leaf line + COMBO-generated leaf aggregation:** Database baseline chỉ khóa weighted aggregation khi cùng leaf nhận allocation từ nhiều COMBO. Nếu P2 muốn gộp thêm direct standalone leaf line với COMBO-generated leaf line, P2 FRS phải định nghĩa rõ pricing/trace semantics trước khi persistence.
 
 ---
 

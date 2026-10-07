@@ -432,7 +432,7 @@
     },
     {
       "id": "EMP.API020_SCOPE",
-      "text": "P1-API-020 Slice 2 covers Department, Position, Employee, and Employee Assignment. Department/Position/Employee are MASTER at GROUP; Assignment is ORGANIZATION: create uses request organization_id, existing target uses persisted organization_id, list authorizes each persisted row before total/pagination. Employee Organization/Department/Position filters are data filters only. Strict gender enum and exact export media type remain CONTRACT_PENDING.",
+      "text": "P1-API-020 Slice 2 covers Department, Position, Employee, and Employee Assignment. Department/Position/Employee are MASTER at GROUP; Assignment is ORGANIZATION: create uses request organization_id, existing target uses persisted organization_id, list authorizes each persisted row before total/pagination. Employee Organization/Department/Position filters are data filters only. Employee gender uses the DEC-P1-001 nullable canonical catalog MALE, FEMALE, OTHER, or NULL; exact export media type remains CONTRACT_PENDING.",
       "provenance": [
         {
           "document": "docs/architecture/05_P1_API_Design_v1.7.md",

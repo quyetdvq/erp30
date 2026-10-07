@@ -25,6 +25,7 @@ final class EmployeeService
     public const ERROR_CODE_DUPLICATE = 'EMPLOYEE_CODE_DUPLICATE';
     public const ERROR_USER_DUPLICATE = 'EMPLOYEE_USER_DUPLICATE';
     public const ERROR_STATUS_INVALID = 'EMPLOYEE_STATUS_INVALID';
+    public const ERROR_GENDER_INVALID = 'EMPLOYEE_GENDER_INVALID';
 
     /** @var ConnectionInterface<mixed, mixed> */
     private ConnectionInterface $db;
@@ -150,6 +151,11 @@ final class EmployeeService
                 throw new DomainException(EmployeeRepository::ERROR_FIELD_REQUIRED, ['field' => 'employee_name']);
             }
             $data['employee_name'] = trim($data['employee_name']);
+        }
+        if (array_key_exists('gender', $data)
+            && $data['gender'] !== null
+            && (! is_string($data['gender']) || ! in_array($data['gender'], ['MALE', 'FEMALE', 'OTHER'], true))) {
+            throw new DomainException(self::ERROR_GENDER_INVALID, ['field' => 'gender']);
         }
         if (array_key_exists('status', $data)) {
             if (! is_string($data['status'])) {

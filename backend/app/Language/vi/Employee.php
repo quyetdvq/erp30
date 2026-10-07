@@ -11,6 +11,7 @@ return [
     'EMPLOYEE_CODE_DUPLICATE'       => 'Mã Employee đã được sử dụng.',
     'EMPLOYEE_USER_DUPLICATE'       => 'User đã được liên kết với một Employee khác.',
     'EMPLOYEE_STATUS_INVALID'       => 'Trạng thái Employee không hợp lệ.',
+    'EMPLOYEE_GENDER_INVALID'       => 'Gender của Employee không hợp lệ.',
     'EMP_PERSISTENCE_FAILED'        => 'Không thể lưu Employee.',
     'EMP_CONNECTION_INVALID'        => 'Kết nối cơ sở dữ liệu không hỗ trợ ghi Employee.',
     'EMP_UPDATE_EMPTY'              => 'Dữ liệu cập nhật Employee không được để trống.',

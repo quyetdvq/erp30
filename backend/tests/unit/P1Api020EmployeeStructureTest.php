@@ -37,7 +37,7 @@ final class P1Api020EmployeeStructureTest extends CIUnitTestCase
         $this->assertSame('Updated Child', (new DepartmentRepository($this->db))->find($child)['name']);
     }
 
-    public function testPositionAndEmployeeUniqueRulesPreserveNullableUserAndNoGenderEnum(): void
+    public function testPositionAndEmployeeUniqueRulesPreserveNullableUserAndCanonicalGender(): void
     {
         $position = new PositionService(null, $this->db);
         $code = 'API020-P-' . uniqid();
@@ -51,8 +51,16 @@ final class P1Api020EmployeeStructureTest extends CIUnitTestCase
 
         $employees = new EmployeeService(null, $this->db);
         $employeeCode = 'API020-E-' . uniqid();
-        $id = $employees->create(['employee_code' => $employeeCode, 'employee_name' => 'No User', 'gender' => 'source-open']);
-        $this->assertSame($id, (int) (new EmployeeRepository($this->db))->find($id)['id']);
+        $id = $employees->create(['employee_code' => $employeeCode, 'employee_name' => 'No User', 'gender' => 'MALE']);
+        $this->assertSame('MALE', (new EmployeeRepository($this->db))->find($id)['gender']);
+        $nullableId = $employees->create(['employee_code' => 'API020-E-' . uniqid(), 'employee_name' => 'Not Specified', 'gender' => null]);
+        $this->assertNull((new EmployeeRepository($this->db))->find($nullableId)['gender']);
+        try {
+            $employees->create(['employee_code' => 'API020-E-' . uniqid(), 'employee_name' => 'Invalid Gender', 'gender' => 'source-open']);
+            $this->fail('Expected invalid gender rejection.');
+        } catch (DomainException $exception) {
+            $this->assertSame(EmployeeService::ERROR_GENDER_INVALID, $exception->getErrorCode());
+        }
         try {
             $employees->create(['employee_code' => $employeeCode, 'employee_name' => 'Duplicate']);
             $this->fail('Expected duplicate employee code rejection.');

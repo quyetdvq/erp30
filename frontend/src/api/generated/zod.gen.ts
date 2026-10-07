@@ -725,7 +725,11 @@ export const zEmployee = z.object({
     user_id: zBigInt.optional(),
     employee_code: z.string(),
     employee_name: z.string(),
-    gender: z.string().nullish(),
+    gender: z.enum([
+        'MALE',
+        'FEMALE',
+        'OTHER'
+    ]).nullish(),
     date_of_birth: z.iso.date().nullish(),
     place_of_origin: z.string().nullish(),
     hire_date: z.iso.date().nullish(),
@@ -738,7 +742,11 @@ export const zEmployeeCreate = z.object({
     user_id: zBigInt.optional(),
     employee_code: z.string(),
     employee_name: z.string(),
-    gender: z.string().nullish(),
+    gender: z.enum([
+        'MALE',
+        'FEMALE',
+        'OTHER'
+    ]).nullish(),
     date_of_birth: z.iso.date().nullish(),
     place_of_origin: z.string().nullish(),
     hire_date: z.iso.date().nullish(),
@@ -751,7 +759,11 @@ export const zEmployeePatch = z.object({
     user_id: zBigInt.optional(),
     employee_code: z.string().optional(),
     employee_name: z.string().optional(),
-    gender: z.string().nullish(),
+    gender: z.enum([
+        'MALE',
+        'FEMALE',
+        'OTHER'
+    ]).nullish(),
     date_of_birth: z.iso.date().nullish(),
     place_of_origin: z.string().nullish(),
     hire_date: z.iso.date().nullish(),

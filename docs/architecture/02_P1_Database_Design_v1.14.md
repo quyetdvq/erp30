@@ -2310,7 +2310,10 @@ FRS P1 và mọi implementation downstream phải tuân các rule sau:
 
 Các điểm dưới đây không làm block schema P1 nhưng FRS phải định nghĩa cách dùng cụ thể:
 
-1. Canonical application values của `employees.gender`.
+1. Canonical application values của `employees.gender` đã được khóa bởi DEC-P1-001:
+   `MALE`, `FEMALE`, `OTHER`, hoặc `NULL` (chưa khai báo). Database vẫn giữ
+   `employees.gender VARCHAR(20)`; label song ngữ chỉ thuộc presentation và
+   không có lookup table.
 2. Direct manager hiện được persistence dạng current pointer `employees.manager_employee_id`; nếu business yêu cầu historical manager effective dating thì phải có additive design.
 3. Formatting separator khi render CHILD full name; canonical dữ liệu vẫn là `parent.product_name + product_child_name` và không lưu `full_name`.
 4. Retention period của `authorization_logs`/`import_jobs`. Visibility scope đã khóa: Authorization Log dùng persisted evaluated Organization (`NULL -> GROUP`); P1 Import Job target PRODUCT evaluate tại `GROUP`.

@@ -629,7 +629,7 @@ export type Employee = {
     user_id?: BigInt;
     employee_code: string;
     employee_name: string;
-    gender?: string | null;
+    gender?: 'MALE' | 'FEMALE' | 'OTHER' | null;
     date_of_birth?: string | null;
     place_of_origin?: string | null;
     hire_date?: string | null;
@@ -642,7 +642,7 @@ export type EmployeeCreate = {
     user_id?: BigInt;
     employee_code: string;
     employee_name: string;
-    gender?: string | null;
+    gender?: 'MALE' | 'FEMALE' | 'OTHER' | null;
     date_of_birth?: string | null;
     place_of_origin?: string | null;
     hire_date?: string | null;
@@ -655,7 +655,7 @@ export type EmployeePatch = {
     user_id?: BigInt;
     employee_code?: string;
     employee_name?: string;
-    gender?: string | null;
+    gender?: 'MALE' | 'FEMALE' | 'OTHER' | null;
     date_of_birth?: string | null;
     place_of_origin?: string | null;
     hire_date?: string | null;

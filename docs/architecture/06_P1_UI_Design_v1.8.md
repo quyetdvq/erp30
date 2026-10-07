@@ -1391,8 +1391,10 @@ Contacts
 `Gender` control:
 
 - UI control type: select;
-- options: `DESIGN_PENDING` until `DEC-P1-001`;
-- frontend must not hard-code an enum before decision.
+- canonical submitted values: `MALE`, `FEMALE`, `OTHER`, or `null`;
+- bilingual labels: `MALE` = `Nam / Male`, `FEMALE` = `Nữ / Female`,
+  `OTHER` = `Khác / Other`, `null` = `Chưa khai báo / Not specified`;
+- filters/forms submit canonical codes, never translated labels.
 
 ## UI-P1-EMP-004 Employee Detail
 
@@ -2436,7 +2438,6 @@ Failed row retains original row number
 
 | Item | UI behavior |
 |---|---|
-| Employee gender catalog | select exists but options pending `DEC-P1-001` |
 | Shield User create/edit fields | form blocked until API contract ready |
 | COMBO authoritative preview | blocked until preview endpoint approved if needed |
 | Export exact file format | action placement ready; format waits API |

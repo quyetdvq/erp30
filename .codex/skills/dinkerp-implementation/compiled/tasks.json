@@ -1825,7 +1825,8 @@
         "EMP.ASSIGNMENT_HISTORY"
       ],
       "approved_decision_ids": [
-        "CHANGE-AUTH-DOMAIN-001"
+        "CHANGE-AUTH-DOMAIN-001",
+        "DEC-P1-001"
       ],
       "direct_source_verification": [
         "API Design §8.1–8.4",
@@ -1841,7 +1842,7 @@
       "execution_notes": [
         "Slice includes Department and Position endpoints in API Design §8",
         "Do not implement export until exact media type is CONTRACT_READY",
-        "Do not invent strict employees.gender enum",
+        "Use the DEC-P1-001 canonical employees.gender catalog",
         "Employee filters through effective Assignment never change Employee MASTER/GROUP authorization scope"
       ]
     },
@@ -2297,7 +2298,7 @@
         "CTRL.BOUNDED_SCOPE",
         "UI.CANONICAL_LOCALE"
       ],
-      "approved_decision_ids": [],
+      "approved_decision_ids": ["DEC-P1-001"],
       "direct_source_verification": [
         "UI Design Employee/Assignment sections",
         "FRS `EMP-*`",

@@ -119,7 +119,7 @@ registry, dependency graph, Gate 7 count, or implementation status.
 | P1-API-002 | OpenAPI source, Redocly lint, and generated-client pipeline | P1-API-001, P1-ENV-003 | `CONTRACT_READY` | Generated artifacts remain tool-owned. |
 | P1-API-003 | Allowlisted query, sort, filter, pagination, and authorization-safe totals | P1-API-001 | `CONTRACT_READY` | Uses the common query contract in section 4. |
 | P1-API-010 | Foundation, Organization, and Contact routes/actions in section 7 | Gate 2 | `CONTRACT_READY` | Export media type remains pending where noted. |
-| P1-API-020 | Employee and Assignment routes/actions in section 8 | Gate 2 | `CONTRACT_READY` | `employees.gender` enum remains `CONTRACT_PENDING` and is excluded from any ready enum schema. Employee MASTER/GROUP scope and Assignment ORGANIZATION scope are now canonical under CHANGE-AUTH-DOMAIN-001. |
+| P1-API-020 | Employee and Assignment routes/actions in section 8 | Gate 2 | `CONTRACT_READY` | Employee `gender` uses the DEC-P1-001 nullable canonical catalog. Employee MASTER/GROUP scope and Assignment ORGANIZATION scope are now canonical under CHANGE-AUTH-DOMAIN-001. |
 | P1-API-030 | Resource, Authorization Group, Policy, Log, Workflow, and Lifecycle routes/actions in section 9 | Gate 3 | `CONTRACT_READY` | Shield User writes remain excluded and pending. |
 | P1-API-040 | Auto Numbering series and non-consuming validation routes in section 10 | Gate 4 | `CONTRACT_READY` | Uses `resource.configure_numbering`; no new Resource/Action. |
 | P1-API-050 | Product Group, UOM, Product, Price List, and COMBO composition routes in sections 11-12 | Gate 5 | `CONTRACT_READY` | Public Price Resolution and COMBO preview APIs are excluded and pending. |
@@ -786,7 +786,7 @@ Fields:
 user_id?
 employee_code
 employee_name
-gender?
+gender? (`MALE` | `FEMALE` | `OTHER` | `null`)
 date_of_birth?
 place_of_origin?
 hire_date?
@@ -795,7 +795,9 @@ description?
 status
 ```
 
-`gender` value set remains source-open; OpenAPI must not hard-code enum before `DEC-P1-001`.
+`gender` accepts and returns only the nullable canonical catalog `MALE`,
+`FEMALE`, `OTHER`, or `null`. `null` means not specified. Localized labels
+are presentation-only and are never sent in API payloads.
 
 Resource Domain: `MASTER`.
 Evaluation Organization: `GROUP` for list/view/create/edit/set-state/export.
@@ -1688,7 +1690,6 @@ A slice becomes `VERIFIED` when runtime contract tests and generated-client smok
 | Item | Reason | Blocking |
 |---|---|---|
 | Shield User create/edit payload | upstream does not define canonical identity fields | User write API |
-| `employees.gender` enum | source-open decision | strict OpenAPI enum |
 | exact export media type per Resource | baseline grants export but not exact file/media format | final export media type |
 | Price Resolution public API | internal calculation is implemented, but public authorization/action exposure is not baseline | public Price Resolution route |
 | COMBO preview endpoints | service exists; public API is not baseline-required | optional UI preview |
