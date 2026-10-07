@@ -7,7 +7,7 @@ surfaces only. `P1-FE-040` and `P1-FE-050` were not started.
 
 Implemented routes:
 
-- `/security/users` — Table First read-only user list aggregated from existing Authorization Group/Members API responses, with the authenticated User merged for email/detail data. No Shield User create/edit/state or Direct Permission writes are presented because the current API does not expose those operations.
+- `/security/users` — Table First read-only user list aggregated from existing Authorization Group/Members API responses, with the authenticated User merged into a matching Member by ID/username for email/detail data. No duplicate `me` row is appended. No Shield User create/edit/state or Direct Permission writes are presented because the current API does not expose those operations.
 - `/security/authorization-groups` — Table First Authorization Group CRUD/state, modal detail tabs, complete backend Members rendering and all-user member replacement, plus canonical Resource Action permission replacement with Resource/Action/ALLOW detail rows.
 - `/security/resources` — Resource CRUD and Resource Action CRUD. New Domain choices are exactly `SYSTEM`, `MASTER`, and `ORGANIZATION`; existing Domain is immutable/read-only and `COMPANY` is absent.
 - `/security/policies` — Organization scope, Resource, optional all-state selection, exact participant types `USER|GROUP|POSITION|DEPARTMENT|ORGANIZATION`, and `ALLOW|DENY|ABSOLUTE_DENY` action/effect rows. UI text states that Policy does not grant missing Base Permission.
