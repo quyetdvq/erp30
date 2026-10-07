@@ -224,20 +224,34 @@ foreach (array_keys($edges) as $id) {
 
 $architectureStatus = trim((string) shell_exec('git status --short -- docs/architecture'));
 if ($architectureStatus !== '') {
-    $allowedNewRevisions = [
-        'docs/architecture/00_User_Requirements_v1.0.13.md',
-        'docs/architecture/01_P1_Functional_Requirements_Specification_v1.9.md',
-        'docs/architecture/02_P1_Database_Design_v1.12.md',
-        'docs/architecture/03_P1_Implementation_Contract_v1.7.md',
-        'docs/architecture/04_P1_Implementation_Plan_v1.6.md',
-        'docs/architecture/05_P1_API_Design_v1.4.md',
-        'docs/architecture/06_P1_UI_Design_v1.5.md',
-    ];
-    foreach (preg_split('/\R/', $architectureStatus) ?: [] as $statusLine) {
-        $relative = trim(substr($statusLine, 3));
-        if ($statusLine === '' || $statusLine[0] !== 'A' || !in_array($relative, $allowedNewRevisions, true)) {
-            failValidation('architecture baseline files differ from the cached committed authority package');
+    /** @var array<string, true> $canonicalAuthorities */
+    $canonicalAuthorities = [];
+    foreach (($manifest['authorities'] ?? []) as $authority) {
+        $relative = strtolower(str_replace('\\', '/', trim((string) ($authority['path'] ?? ''))));
+        if ($relative !== '') {
+            $canonicalAuthorities[$relative] = true;
         }
+    }
+
+    $nonCanonical = [];
+    foreach (preg_split('/\R/', $architectureStatus) ?: [] as $statusLine) {
+        if ($statusLine === '') {
+            continue;
+        }
+        $relative = strtolower(str_replace('\\', '/', trim(substr($statusLine, 3))));
+        if ($relative === '') {
+            failValidation('unable to parse architecture status entry');
+        }
+        if (!isset($canonicalAuthorities[$relative])) {
+            $nonCanonical[] = $relative;
+            continue;
+        }
+
+        failValidation('canonical authority working-tree change: ' . $relative);
+    }
+
+    if ($nonCanonical !== []) {
+        echo 'non_canonical_architecture_files: ' . implode(', ', $nonCanonical) . "\n";
     }
 }
 
