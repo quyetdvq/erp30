@@ -35,7 +35,7 @@ the current canonical API source does not define an approved object shape.
 
 - 20 routes registered: 5 Department, 5 Position, 5 Employee, 5 Assignment;
   no export, nested Assignment, delete, or gender-enum route/schema was added.
-- `vendor/bin/phpunit --no-coverage` | PASS, 386 tests / 3,484 assertions.
+- `vendor/bin/phpunit --no-coverage` | PASS, 386 tests / 3,482 assertions.
 - Focused API/auth/domain suites | PASS, 37 tests / 170 assertions.
 - `vendor/bin/phpstan analyse --configuration=phpstan.neon --level=8 --no-progress --memory-limit=1G` | PASS.
 - `pnpm run openapi:lint` | PASS.
