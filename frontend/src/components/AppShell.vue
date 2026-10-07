@@ -285,6 +285,14 @@ function openCommandRoute(key: string | number): void {
   commandOpen.value = false
 }
 
+function handleCommandKeydown(event: KeyboardEvent): void {
+  if (event.key !== 'Enter') return
+  const firstCommand = commandOptions.value[0]
+  if (!firstCommand) return
+  event.preventDefault()
+  openCommandRoute(firstCommand.key)
+}
+
 function dismissError(id: string): void {
   dismissApiError(id)
 }
@@ -538,6 +546,7 @@ onBeforeUnmount(() => resizeEnd?.())
         clearable
         :placeholder="t('shell.searchCommand')"
         class="command-search-input"
+        @keydown="handleCommandKeydown"
       >
         <template #prefix
           ><NIcon><SearchOutline /></NIcon
