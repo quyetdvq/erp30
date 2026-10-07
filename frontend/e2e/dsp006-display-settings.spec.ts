@@ -130,11 +130,27 @@ async function mockAdminApi(page: Page): Promise<{ calls: string[] }> {
       body: JSON.stringify({
         data: [
           {
+            id: '1',
+            code: 'ROOT',
+            name: 'Dinktech Group',
+            type: 'GROUP',
+            status: 'ACTIVE',
+          },
+          {
             id: '11',
             code: 'ORG-11',
             name: 'North Organization',
             type: 'COMPANY',
             status: 'ACTIVE',
+            parent_id: '1',
+          },
+          {
+            id: '12',
+            code: 'BR-12',
+            name: 'North Branch',
+            type: 'BRANCH',
+            status: 'ACTIVE',
+            parent_id: '11',
           },
         ],
       }),
@@ -159,8 +175,15 @@ test('admin Display Settings switches context and uses set/reset APIs', async ({
   await expect.poll(() => calls.some((call) => call.startsWith('POST '))).toBe(true)
 
   await page.locator('#display-context').selectOption('ORGANIZATION')
-  await page.locator('#display-organization').selectOption('11')
-  await expect(page.locator('#display-organization')).toHaveValue('11')
+  await page.locator('#display-organization').click()
+  await page
+    .locator('.n-tree-node-content__text')
+    .getByText('North Branch (BR-12)', { exact: true })
+    .click()
+  await expect(page.locator('#display-organization')).toContainText(
+    'Dinktech Group (ROOT) / North Organization (ORG-11) / North Branch (BR-12)',
+  )
+  await expect.poll(() => calls.some((call) => call.includes('organization_id=12'))).toBe(true)
   await expect(page.getByText('Inherited').first()).toBeVisible()
 })
 

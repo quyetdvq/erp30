@@ -4,6 +4,7 @@ import { useI18n } from 'vue-i18n'
 import axios from 'axios'
 
 import type { DisplaySettingDefinition, DisplaySettingValue } from '@/api/generated/types.gen'
+import OrganizationTreeSelect from '@/components/organizations/OrganizationTreeSelect.vue'
 import { useQueryState } from '@/composables/useQueryState'
 import {
   getDisplaySettingDefinitions,
@@ -338,22 +339,14 @@ onMounted(async () => {
         <option value="SYSTEM">{{ t('displaySettings.system') }}</option>
         <option value="ORGANIZATION">{{ t('displaySettings.organization') }}</option>
       </select>
-      <select
+      <OrganizationTreeSelect
         v-if="contextType === 'ORGANIZATION'"
         id="display-organization"
         v-model="organizationId"
-        class="field-input context-select"
+        :organizations="organizations"
+        :placeholder="t('displaySettings.selectOrganization')"
         :disabled="organizationsQuery.isLoading.value"
-      >
-        <option value="" disabled>{{ t('displaySettings.selectOrganization') }}</option>
-        <option
-          v-for="organization in organizations"
-          :key="String(organization.id)"
-          :value="String(organization.id)"
-        >
-          {{ organization.name }} ({{ organization.code }})
-        </option>
-      </select>
+      />
     </div>
     <p v-if="pageError" class="inline-error" role="alert">{{ pageError }}</p>
     <div v-if="busy && values.length === 0" class="display-settings-skeleton" aria-busy="true">
