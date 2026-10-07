@@ -12,6 +12,7 @@ import type {
   Position,
 } from '@/api/generated/types.gen'
 import ContactList from '@/components/contacts/ContactList.vue'
+import SearchableSelect from '@/components/forms/SearchableSelect.vue'
 import {
   ListPagination,
   ListQueryControls,
@@ -95,11 +96,35 @@ const managerOptions = computed(() =>
       String(row.id) === employeeForm.value.manager_employee_id,
   ),
 )
+const managerSelectOptions = computed(() =>
+  managerOptions.value.map((row) => ({
+    value: String(row.id),
+    label: `${row.employee_code} - ${row.employee_name}`,
+  })),
+)
 const activeOrganizations = computed(() =>
   organizations.value.filter((row) => row.status === 'ACTIVE'),
 )
 const activeDepartments = computed(() => departments.value.filter((row) => row.status === 'ACTIVE'))
 const activePositions = computed(() => positions.value.filter((row) => row.status === 'ACTIVE'))
+const organizationSelectOptions = computed(() =>
+  activeOrganizations.value.map((row) => ({
+    value: String(row.id),
+    label: `${row.code} - ${row.name}`,
+  })),
+)
+const departmentSelectOptions = computed(() =>
+  activeDepartments.value.map((row) => ({
+    value: String(row.id),
+    label: `${row.code} - ${row.name}`,
+  })),
+)
+const positionSelectOptions = computed(() =>
+  activePositions.value.map((row) => ({
+    value: String(row.id),
+    label: `${row.code} - ${row.name}`,
+  })),
+)
 const selectedAssignments = computed(() =>
   selectedEmployeeAssignments.value.filter((row) =>
     assignmentMode.value === 'active' ? row.status === 'ACTIVE' : row.status !== 'ACTIVE',
@@ -142,6 +167,7 @@ const filters = computed<ListFilterDefinition[]>(() => [
     key: 'organization_id',
     labelKey: 'people.organization',
     type: 'select',
+    searchable: true,
     options: organizations.value.map((row) => ({
       value: String(row.id),
       labelKey: row.name,
@@ -152,6 +178,7 @@ const filters = computed<ListFilterDefinition[]>(() => [
     key: 'department_id',
     labelKey: 'people.department',
     type: 'select',
+    searchable: true,
     options: departments.value.map((row) => ({
       value: String(row.id),
       labelKey: row.name,
@@ -162,6 +189,7 @@ const filters = computed<ListFilterDefinition[]>(() => [
     key: 'position_id',
     labelKey: 'people.position',
     type: 'select',
+    searchable: true,
     options: positions.value.map((row) => ({
       value: String(row.id),
       labelKey: row.name,
@@ -403,6 +431,10 @@ const assignmentOverlap = computed(() =>
 async function saveAssignmentForm(): Promise<void> {
   if (assignmentOverlap.value) {
     error.value = new Error(t('people.primaryOverlap'))
+    return
+  }
+  if (!assignmentForm.value.organization_id) {
+    error.value = new Error(t('people.organizationRequired'))
     return
   }
   if (!selectedId.value) return
@@ -781,12 +813,15 @@ onMounted(async () => {
           ><input v-model="employeeForm.place_of_origin" /></label
         ><label
           ><span>{{ t('people.manager') }}</span
-          ><select v-model="employeeForm.manager_employee_id">
-            <option value="">{{ t('people.noManager') }}</option>
-            <option v-for="row in managerOptions" :key="row.id" :value="row.id">
-              {{ row.employee_code }} - {{ row.employee_name }}
-            </option></select
-          ><small v-if="managerError()" class="field-error">{{ managerError() }}</small></label
+          ><SearchableSelect
+            :model-value="employeeForm.manager_employee_id"
+            :options="managerSelectOptions"
+            :placeholder="t('people.noManager')"
+            :aria-label="t('people.manager')"
+            @update:model-value="
+              (value) => (employeeForm.manager_employee_id = typeof value === 'string' ? value : '')
+            "
+          /><small v-if="managerError()" class="field-error">{{ managerError() }}</small></label
         ><label
           ><span>{{ t('people.status') }}</span
           ><select v-model="employeeForm.status">
@@ -831,31 +866,37 @@ onMounted(async () => {
       <form class="modal-card__body" @submit.prevent="saveAssignmentForm">
         <label
           ><span>{{ t('people.organization') }}</span
-          ><select v-model="assignmentForm.organization_id" required>
-            <option value="">{{ t('list.all') }}</option>
-            <option v-for="row in activeOrganizations" :key="row.id" :value="row.id">
-              {{ row.code }} - {{ row.name }}
-            </option>
-          </select></label
-        >
+          ><SearchableSelect
+            :model-value="assignmentForm.organization_id"
+            :options="organizationSelectOptions"
+            :placeholder="t('people.organizationRequired')"
+            :aria-label="t('people.organization')"
+            @update:model-value="
+              (value) => (assignmentForm.organization_id = typeof value === 'string' ? value : '')
+            "
+        /></label>
         <div class="form-grid">
           <label
             ><span>{{ t('people.department') }}</span
-            ><select v-model="assignmentForm.department_id">
-              <option value="">{{ t('people.none') }}</option>
-              <option v-for="row in activeDepartments" :key="row.id" :value="row.id">
-                {{ row.code }} - {{ row.name }}
-              </option>
-            </select></label
+            ><SearchableSelect
+              :model-value="assignmentForm.department_id"
+              :options="departmentSelectOptions"
+              :placeholder="t('people.none')"
+              :aria-label="t('people.department')"
+              @update:model-value="
+                (value) => (assignmentForm.department_id = typeof value === 'string' ? value : '')
+              " /></label
           ><label
             ><span>{{ t('people.position') }}</span
-            ><select v-model="assignmentForm.position_id">
-              <option value="">{{ t('people.none') }}</option>
-              <option v-for="row in activePositions" :key="row.id" :value="row.id">
-                {{ row.code }} - {{ row.name }}
-              </option>
-            </select></label
-          >
+            ><SearchableSelect
+              :model-value="assignmentForm.position_id"
+              :options="positionSelectOptions"
+              :placeholder="t('people.none')"
+              :aria-label="t('people.position')"
+              @update:model-value="
+                (value) => (assignmentForm.position_id = typeof value === 'string' ? value : '')
+              "
+          /></label>
         </div>
         <label class="checkbox-row"
           ><input v-model="assignmentForm.is_primary" type="checkbox" />

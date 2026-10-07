@@ -34,6 +34,7 @@ export type ListFilterDefinition = {
   labelKey: string
   type?: 'text' | 'select'
   multiple?: boolean
+  searchable?: boolean
   options?: readonly ListFilterOption[]
 }
 

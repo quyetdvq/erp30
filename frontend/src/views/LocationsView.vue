@@ -14,6 +14,7 @@ import {
 } from '@/components/lists'
 import type { ListColumn, ListQuery } from '@/components/lists/listTypes'
 import type { TableDetailField } from '@/components/lists/TableDetailModal.vue'
+import SearchableSelect from '@/components/forms/SearchableSelect.vue'
 import { useListState } from '@/composables/useListState'
 import {
   changeProvinceState,
@@ -70,6 +71,7 @@ const wardFilters = computed(() => [
     key: 'province_id',
     labelKey: 'locations.province',
     type: 'select' as const,
+    searchable: true,
     options: provinces.value.map((province) => ({
       value: String(province.id),
       labelKey: 'locations.province',
@@ -88,6 +90,12 @@ const provinceOptions = computed(() =>
   provinces.value.filter(
     (province) => province.status === 'ACTIVE' || String(province.id) === form.value.province_id,
   ),
+)
+const provinceSelectOptions = computed(() =>
+  provinceOptions.value.map((province) => ({
+    value: String(province.id),
+    label: `${province.code} - ${province.name}`,
+  })),
 )
 const detailFields = computed<readonly TableDetailField[]>(() => {
   const row = detailRow.value
@@ -356,13 +364,15 @@ onMounted(async () => {
       <form @submit.prevent="save">
         <label v-if="isWards"
           ><span>{{ t('locations.province') }}</span
-          ><select v-model="form.province_id" required>
-            <option value="">{{ t('locations.selectProvince') }}</option>
-            <option v-for="province in provinceOptions" :key="province.id" :value="province.id">
-              {{ province.code }} - {{ province.name }}
-            </option>
-          </select></label
-        >
+          ><SearchableSelect
+            :model-value="form.province_id"
+            :options="provinceSelectOptions"
+            :placeholder="t('locations.selectProvince')"
+            :aria-label="t('locations.province')"
+            @update:model-value="
+              (value) => (form.province_id = typeof value === 'string' ? value : '')
+            "
+        /></label>
         <label
           ><span>{{ t('locations.code') }}</span
           ><input v-model="form.code" required

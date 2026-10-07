@@ -2,6 +2,7 @@
 import { ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 
+import SearchableSelect from '@/components/forms/SearchableSelect.vue'
 import type { ListFilterDefinition, ListQuery, ListSortOption } from './listTypes'
 
 const props = withDefaults(
@@ -48,6 +49,11 @@ function valueFor(key: string): string {
   return typeof value === 'string' ? value : String(value?.[0] ?? '')
 }
 
+function valuesFor(key: string): string[] {
+  const value = filters.value[key]
+  return Array.isArray(value) ? [...value] : typeof value === 'string' && value ? [value] : []
+}
+
 function selectedFor(key: string, value: string): boolean {
   const current = filters.value[key]
   return Array.isArray(current) ? current.includes(value) : current === value
@@ -61,6 +67,17 @@ function setFilter(key: string, value: string | readonly string[]): void {
     delete next[key]
     filters.value = next
   }
+}
+
+function optionLabel(option: { label?: string; labelKey: string }): string {
+  return option.label ?? t(option.labelKey)
+}
+
+function searchable(definition: ListFilterDefinition): boolean {
+  return (
+    (definition.type === 'select' || Boolean(definition.options)) &&
+    (definition.searchable ?? (definition.options?.length ?? 0) >= 8)
+  )
 }
 
 function buildQuery(): ListQuery {
@@ -105,8 +122,23 @@ function reset(): void {
       class="list-query-controls__field"
     >
       <span>{{ t(definition.labelKey) }}</span>
+      <SearchableSelect
+        v-if="searchable(definition)"
+        :model-value="definition.multiple ? valuesFor(definition.key) : valueFor(definition.key)"
+        :options="
+          (definition.options ?? []).map((option) => ({
+            value: option.value,
+            label: optionLabel(option),
+          }))
+        "
+        :multiple="definition.multiple"
+        :placeholder="t('list.all')"
+        :disabled="props.disabled"
+        :aria-label="t(definition.labelKey)"
+        @update:model-value="(value) => setFilter(definition.key, value)"
+      />
       <select
-        v-if="definition.type === 'select' || definition.options"
+        v-else-if="definition.type === 'select' || definition.options"
         :value="valueFor(definition.key)"
         :multiple="definition.multiple"
         :disabled="props.disabled"
@@ -128,7 +160,7 @@ function reset(): void {
           :value="option.value"
           :selected="definition.multiple && selectedFor(definition.key, option.value)"
         >
-          {{ option.label ?? t(option.labelKey) }}
+          {{ optionLabel(option) }}
         </option>
       </select>
       <input

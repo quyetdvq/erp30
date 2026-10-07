@@ -4,6 +4,7 @@ import { useI18n } from 'vue-i18n'
 
 import type { Contact, ContactCreate, Province, Ward } from '@/api/generated/types.gen'
 import type { ContactUpdate } from '@/services/foundation'
+import SearchableSelect from '@/components/forms/SearchableSelect.vue'
 
 const props = withDefaults(
   defineProps<{
@@ -38,6 +39,18 @@ const draft = ref({
 })
 
 const title = computed(() => (props.contact ? t('contact.edit') : t('contact.add')))
+const provinceOptions = computed(() =>
+  props.provinces.map((province) => ({
+    value: String(province.id),
+    label: `${province.code} - ${province.name}`,
+  })),
+)
+const wardOptions = computed(() =>
+  props.wards.map((ward) => ({
+    value: String(ward.id),
+    label: `${ward.code} - ${ward.name}`,
+  })),
+)
 
 watch(
   () => [props.open, props.contact] as const,
@@ -126,24 +139,28 @@ function save(): void {
           /></label>
           <label
             ><span>{{ t('contact.province') }}</span>
-            <select
-              :value="draft.province_id"
-              @change="onProvinceChange(($event.target as HTMLSelectElement).value)"
-            >
-              <option value="">{{ t('contact.selectProvince') }}</option>
-              <option v-for="province in props.provinces" :key="province.id" :value="province.id">
-                {{ province.code }} - {{ province.name }}
-              </option>
-            </select>
+            <SearchableSelect
+              :model-value="draft.province_id"
+              :options="provinceOptions"
+              :placeholder="t('contact.selectProvince')"
+              :aria-label="t('contact.province')"
+              @update:model-value="
+                (value) => onProvinceChange(typeof value === 'string' ? value : '')
+              "
+            />
           </label>
           <label
             ><span>{{ t('contact.ward') }}</span>
-            <select v-model="draft.ward_id" :disabled="!draft.province_id">
-              <option value="">{{ t('contact.selectWard') }}</option>
-              <option v-for="ward in props.wards" :key="ward.id" :value="ward.id">
-                {{ ward.code }} - {{ ward.name }}
-              </option>
-            </select>
+            <SearchableSelect
+              :model-value="draft.ward_id"
+              :options="wardOptions"
+              :placeholder="t('contact.selectWard')"
+              :disabled="!draft.province_id"
+              :aria-label="t('contact.ward')"
+              @update:model-value="
+                (value) => (draft.ward_id = typeof value === 'string' ? value : '')
+              "
+            />
           </label>
         </div>
         <label

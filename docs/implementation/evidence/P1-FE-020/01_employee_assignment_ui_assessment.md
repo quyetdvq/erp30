@@ -102,6 +102,34 @@ opens as a large responsive modal matching the supplied visual direction.
 | `pnpm run format:check` | PASS; normalized formatting in the FE-020 manager-invariant test |
 | `git diff --check` | PASS |
 
+### Searchable dropdown revalidation
+
+Large option selectors now use the shared `SearchableSelect` wrapper over the
+existing Naive UI select primitive. It filters immediately while typing with
+case-insensitive label matching and emits canonical string IDs. The shared
+list filter control enables it for explicitly marked Organization,
+Department, Position, and Province filters and automatically enables it for
+option sets with at least eight entries. Existing Organization tree search
+remains filterable. Small status/gender selectors remain native selects.
+
+The implementation covers Contact Province/Ward, Ward Province, Department
+parent, Employee manager, and Assignment Organization/Department/Position.
+The existing active-only lookup rules and Assignment Organization validation
+remain unchanged; no Customer/Supplier/Product selector screen exists in this
+task scope.
+
+| Command/check | Result |
+|---|---|
+| `php .codex/skills/dinkerp-implementation/scripts/task-context.php P1-FE-020` | PASS; `AUTHORITY_CACHE: VALID`, API-020/DSP-090 dependencies DONE, DEC-P1-001 resolved |
+| `pnpm --dir frontend exec vue-tsc --noEmit -p tsconfig.app.json` | PASS |
+| `pnpm --dir frontend run lint:eslint -- --no-cache` | PASS |
+| `pnpm --dir frontend run format:check` | PASS |
+| `pnpm --dir frontend run test:unit -- --run` | PASS; 12 files / 26 tests |
+| `pnpm --dir frontend run build` | PASS |
+| `pnpm --dir frontend run openapi:generate:check` | PASS; generated artifacts unchanged |
+| `pnpm --dir frontend exec playwright test e2e/fe010-slice1.spec.ts e2e/fe020-employee.spec.ts --project=chromium` | PASS; 5 tests, including case-insensitive Province search, active-only options, 403 state, employee tabs and accessibility |
+| `git diff --check` | PASS |
+
 ## Contract / scope notes
 
 - DB: no changes.

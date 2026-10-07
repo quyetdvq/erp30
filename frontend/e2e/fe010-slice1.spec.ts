@@ -183,6 +183,7 @@ test('Ward filtering and active Province-only create selection', async ({ page }
   await mockSession(page)
   const provinces = [
     { id: '11', code: 'P1', name: 'Active Province', status: 'ACTIVE' },
+    { id: '13', code: 'P3', name: 'North Province', status: 'ACTIVE' },
     { id: '12', code: 'P2', name: 'Inactive Province', status: 'INACTIVE' },
   ]
   await page.route('**/api/v1/provinces**', (route) =>
@@ -209,9 +210,12 @@ test('Ward filtering and active Province-only create selection', async ({ page }
   await page
     .getByRole('button', { name: /Tạo/ })
     .evaluate((element) => (element as HTMLElement).click())
-  const provinceSelect = page.locator('.modal-card select').first()
-  await expect(provinceSelect.locator('option', { hasText: 'Active Province' })).toHaveCount(1)
-  await expect(provinceSelect.locator('option', { hasText: 'Inactive Province' })).toHaveCount(0)
+  const provinceSearch = page.locator('.modal-card').getByRole('textbox').first()
+  await provinceSearch.click()
+  await provinceSearch.fill('NORTH')
+  const provinceMenu = page.locator('.n-base-select-menu').last()
+  await expect(provinceMenu.getByText('P3 - North Province', { exact: true })).toBeVisible()
+  await expect(provinceMenu.getByText('P2 - Inactive Province', { exact: true })).toHaveCount(0)
 })
 
 test('403 and 404 list responses remain visible as common error states', async ({ page }) => {

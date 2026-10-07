@@ -12,6 +12,7 @@ import {
 } from '@/components/lists'
 import type { ListColumn } from '@/components/lists/listTypes'
 import type { TableDetailField } from '@/components/lists/TableDetailModal.vue'
+import SearchableSelect from '@/components/forms/SearchableSelect.vue'
 import type { ListQuery } from '@/components/lists/listTypes'
 import { useListState } from '@/composables/useListState'
 import {
@@ -94,6 +95,12 @@ const selected = computed(
 )
 const parentOptions = computed(() =>
   state.rows.value.filter((row) => String(row.id) !== editingId.value && row.status === 'ACTIVE'),
+)
+const parentSelectOptions = computed(() =>
+  parentOptions.value.map((row) => ({
+    value: String(row.id),
+    label: `${row.code} - ${row.name}`,
+  })),
 )
 
 async function load(): Promise<void> {
@@ -292,13 +299,15 @@ onMounted(() => void load())
       <form class="modal-card__body" @submit.prevent="save">
         <label
           ><span>{{ t('people.parent') }}</span
-          ><select v-model="form.parent_id">
-            <option value="">{{ t('people.root') }}</option>
-            <option v-for="row in parentOptions" :key="row.id" :value="row.id">
-              {{ row.code }} - {{ row.name }}
-            </option>
-          </select></label
-        >
+          ><SearchableSelect
+            :model-value="form.parent_id"
+            :options="parentSelectOptions"
+            :placeholder="t('people.root')"
+            :aria-label="t('people.parent')"
+            @update:model-value="
+              (value) => (form.parent_id = typeof value === 'string' ? value : '')
+            "
+        /></label>
         <div class="form-grid">
           <label
             ><span>{{ t('people.code') }}</span
