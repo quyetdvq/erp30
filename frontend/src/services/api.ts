@@ -14,6 +14,13 @@ export const apiClient = axios.create({
 
 apiClient.interceptors.request.use((config) => {
   config.headers.set('Accept-Language', i18n.global.locale.value)
+  if (!config.headers.get('X-Request-ID')) {
+    const requestId =
+      typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function'
+        ? crypto.randomUUID()
+        : `fe-${Date.now()}-${Math.random().toString(16).slice(2)}`
+    config.headers.set('X-Request-ID', requestId)
+  }
   return config
 })
 

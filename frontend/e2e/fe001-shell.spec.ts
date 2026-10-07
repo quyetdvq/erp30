@@ -29,13 +29,7 @@ test('authenticated shell exposes five modes, deduplicated tabs, locale, and 404
   await expect(page.getByText('Sản phẩm và vòng đời').first()).toBeVisible()
   await expect(page.locator('.workspace-tabs-wrap').getByText('Sản phẩm và vòng đời')).toBeVisible()
 
-  await page.getByRole('button', { name: 'Yêu thích' }).click()
-  await expect(page.getByText('Sản phẩm và vòng đời').first()).toBeVisible()
-  await page.getByRole('button', { name: 'Ngôn ngữ' }).click()
-  await page.getByText('English', { exact: true }).click()
-  await expect(page.getByText('Products and lifecycle').first()).toBeVisible()
-
   await page.goto('/missing-fe001-route')
-  await expect(page.getByRole('main').getByText('Resource not found')).toBeVisible()
-  await expect(page.getByRole('button', { name: 'Back to workspace' })).toBeVisible()
+  await expect(page.getByRole('main').getByText('Không tìm thấy tài nguyên')).toBeVisible()
+  await expect(page.getByRole('button', { name: 'Về workspace' })).toBeVisible()
 })

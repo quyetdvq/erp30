@@ -1,8 +1,7 @@
 import { getDisplaySettingsRuntime } from '@/api/generated/sdk.gen'
-import { client } from '@/api/generated/client.gen'
+import { withTypedClient } from '@/api/client'
 import type { DisplaySettingsRuntime } from '@/api/generated/types.gen'
 import { i18n } from '@/i18n'
-import { apiClient } from '@/services/api'
 
 export const DISPLAY_SETTING_KEYS = [
   'Display.timezone',
@@ -46,13 +45,6 @@ export const DISPLAY_SETTING_DEFAULTS: DisplaySettingValues = {
 }
 
 export const DISPLAY_SETTINGS_STORAGE_PREFIX = 'ui.presentation.'
-
-client.setConfig({
-  axios: apiClient,
-  headers: {
-    Accept: 'application/json',
-  },
-})
 
 export function storageKey(userId: number | string): string {
   const normalized = String(userId).trim()
@@ -204,11 +196,13 @@ export function mergeRuntime(runtime: DisplaySettingsRuntime | undefined): Displ
 export async function fetchDisplaySettingsRuntime(
   organizationId?: number | string,
 ): Promise<DisplaySettingsRuntime> {
-  const response = await getDisplaySettingsRuntime({
-    client,
-    headers: { 'Accept-Language': i18n.global.locale.value as 'vi' | 'en' },
-    query: organizationId === undefined ? undefined : { organization_id: String(organizationId) },
-    throwOnError: true,
-  })
+  const response = await withTypedClient((client) =>
+    getDisplaySettingsRuntime({
+      client,
+      headers: { 'Accept-Language': i18n.global.locale.value as 'vi' | 'en' },
+      query: organizationId === undefined ? undefined : { organization_id: String(organizationId) },
+      throwOnError: true,
+    }),
+  )
   return mergeRuntime(response.data.data)
 }
