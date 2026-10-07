@@ -40,6 +40,21 @@ describe('shared list components', () => {
     expect(wrapper.find('table caption').text()).toContain('Danh sách')
   })
 
+  it('renders status columns as accessible state icons', () => {
+    const wrapper = mount(ListTable, {
+      props: {
+        rows: [{ id: '1', status: 'ACTIVE' }],
+        columns: [{ key: 'status', labelKey: 'locations.status' }],
+      },
+      global: { plugins: [i18n] },
+    })
+
+    const status = wrapper.get('[role="img"]')
+    expect(status.classes()).toContain('table-status--active')
+    expect(status.attributes('aria-label')).toBe('Đang hoạt động')
+    expect(status.find('.sr-only').text()).toBe('Đang hoạt động')
+  })
+
   it('uses backend total for pagination and emits page changes', async () => {
     const wrapper = mount(ListPagination, {
       props: { page: 2, pageSize: 50, total: 101 },

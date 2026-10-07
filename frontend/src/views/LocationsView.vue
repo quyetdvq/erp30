@@ -4,7 +4,13 @@ import { useI18n } from 'vue-i18n'
 import { useRoute } from 'vue-router'
 
 import type { Province, State, Ward } from '@/api/generated/types.gen'
-import { ListPagination, ListQueryControls, ListShell, ListTable } from '@/components/lists'
+import {
+  ListPagination,
+  ListQueryControls,
+  ListShell,
+  ListTable,
+  TableRowActions,
+} from '@/components/lists'
 import type { ListColumn, ListQuery } from '@/components/lists/listTypes'
 import { useListState } from '@/composables/useListState'
 import {
@@ -260,23 +266,19 @@ onMounted(async () => {
           }
         "
       >
-        <template #cell-status="{ row }"
-          ><span class="status-pill" :class="{ 'status-pill--off': row.status !== 'ACTIVE' }">{{
-            t(`status.${row.status.toLowerCase()}`)
-          }}</span></template
-        >
-        <template #cell-actions="{ row }"
-          ><button type="button" class="link-button" @click="openEdit(row)">
-            {{ t('common.edit') }}</button
-          ><button
-            type="button"
-            class="link-button"
-            :disabled="mutationBusy"
-            @click="toggleState(row)"
-          >
-            {{ row.status === 'ACTIVE' ? t('common.deactivate') : t('common.activate') }}
-          </button></template
-        >
+        <template #cell-actions="{ row }">
+          <TableRowActions
+            :active="row.status === 'ACTIVE'"
+            :busy="mutationBusy"
+            :show-edit="true"
+            :show-toggle="true"
+            :edit-label="t('common.edit')"
+            :activate-label="t('common.activate')"
+            :deactivate-label="t('common.deactivate')"
+            @edit="openEdit(row)"
+            @toggle="toggleState(row)"
+          />
+        </template>
       </ListTable>
       <ListPagination
         :page="state.query.page"
@@ -371,12 +373,6 @@ onMounted(async () => {
   margin: 0;
   color: #b64444;
   font-size: 12px;
-}
-.link-button {
-  border: 0;
-  background: transparent;
-  color: #1876a8;
-  cursor: pointer;
 }
 .modal-backdrop {
   position: fixed;

@@ -268,6 +268,7 @@ export const messages = {
       refresh: 'Làm mới',
       save: 'Lưu',
       saving: 'Đang lưu...',
+      view: 'Xem chi tiết',
     },
     errors: {
       defaultMessage: 'Đã xảy ra lỗi khi xử lý yêu cầu.',
@@ -544,6 +545,7 @@ export const messages = {
       refresh: 'Refresh',
       save: 'Save',
       saving: 'Saving...',
+      view: 'View details',
     },
     errors: {
       defaultMessage: 'An error occurred while processing the request.',

@@ -4,6 +4,7 @@ import { useI18n } from 'vue-i18n'
 
 import { useFormatters } from '@/composables/useFormatters'
 
+import TableStatus from './TableStatus.vue'
 import type { ListColumn } from './listTypes'
 
 const props = withDefaults(
@@ -52,6 +53,11 @@ function displayValue(row: TRow, column: ListColumn<TRow>): string {
     default:
       return value
   }
+}
+
+function statusValue(row: TRow, column: ListColumn<TRow>): string | boolean | null {
+  const raw = valueFor(row, column)
+  return typeof raw === 'string' || typeof raw === 'boolean' ? raw : null
 }
 
 function keyFor(row: TRow, index: number): string {
@@ -121,7 +127,11 @@ const ariaSort = computed(() => (column: ListColumn<TRow>) => {
             :style="{ textAlign: column.align ?? 'start' }"
           >
             <slot :name="`cell-${column.key}`" :row="row" :value="valueFor(row, column)">
-              {{ displayValue(row, column) }}
+              <TableStatus
+                v-if="column.key === 'status' && statusValue(row, column) !== null"
+                :status="statusValue(row, column)!"
+              />
+              <template v-else>{{ displayValue(row, column) }}</template>
             </slot>
           </td>
         </tr>

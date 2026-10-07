@@ -1,8 +1,11 @@
 <script setup lang="ts">
 import { computed, onMounted, ref } from 'vue'
+import { useI18n } from 'vue-i18n'
 
+import { TableRowActions, TableStatus } from '@/components/lists'
 import { getGroups, getUsers, saveUser, type Group, type ManagedUser } from '@/services/admin'
 
+const { t } = useI18n()
 const users = ref<ManagedUser[]>([])
 const groups = ref<Group[]>([])
 const search = ref('')
@@ -104,19 +107,14 @@ onMounted(load)
               <span v-for="group in user.groups" :key="group" class="tag">{{ group }}</span>
             </td>
             <td>
-              <span class="status-pill" :class="{ 'status-pill--off': !user.active }">{{
-                user.active ? 'ACTIVE' : 'INACTIVE'
-              }}</span>
+              <TableStatus :status="user.active" />
             </td>
             <td>
-              <button
-                class="row-action"
-                type="button"
-                aria-label="Sửa user"
-                @click="openEdit(user)"
-              >
-                ✎
-              </button>
+              <TableRowActions
+                :show-edit="true"
+                :edit-label="t('common.edit')"
+                @edit="openEdit(user)"
+              />
             </td>
           </tr>
           <tr v-if="filteredUsers.length === 0">
@@ -190,17 +188,6 @@ onMounted(load)
   padding: 10px 14px;
   color: #b64444;
   font-size: 12px;
-}
-.row-action {
-  width: 30px;
-  height: 28px;
-  border: 1px solid #dbe4ea;
-  border-radius: 4px;
-  background: #fff;
-  color: #567086;
-}
-.row-action:hover {
-  color: #0569ad;
 }
 .modal-backdrop {
   position: fixed;

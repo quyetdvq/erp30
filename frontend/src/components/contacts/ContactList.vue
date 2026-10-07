@@ -10,7 +10,13 @@ import {
   listWardPage,
   saveContact,
 } from '@/services/foundation'
-import { ListPagination, ListQueryControls, ListShell, ListTable } from '@/components/lists'
+import {
+  ListPagination,
+  ListQueryControls,
+  ListShell,
+  ListTable,
+  TableRowActions,
+} from '@/components/lists'
 import { createListQuery, type ListColumn, type ListQuery } from '@/components/lists/listTypes'
 import { useListState } from '@/composables/useListState'
 import { reportApiError } from '@/services/errorBoundary'
@@ -223,17 +229,17 @@ onMounted(async () => {
         "
       >
         <template #cell-actions="{ row }">
-          <button type="button" class="link-button" @click="openEdit(row)">
-            {{ t('contact.edit') }}
-          </button>
-          <button
-            type="button"
-            class="link-button"
-            :disabled="mutationBusy"
-            @click="toggleState(row)"
-          >
-            {{ row.status === 'ACTIVE' ? t('contact.deactivate') : t('contact.activate') }}
-          </button>
+          <TableRowActions
+            :active="row.status === 'ACTIVE'"
+            :busy="mutationBusy"
+            :show-edit="true"
+            :show-toggle="true"
+            :edit-label="t('contact.edit')"
+            :activate-label="t('contact.activate')"
+            :deactivate-label="t('contact.deactivate')"
+            @edit="openEdit(row)"
+            @toggle="toggleState(row)"
+          />
         </template>
       </ListTable>
       <ListPagination
@@ -321,11 +327,5 @@ onMounted(async () => {
   flex-wrap: wrap;
   color: #536b7b;
   font-size: 12px;
-}
-.link-button {
-  border: 0;
-  background: transparent;
-  color: #1876a8;
-  cursor: pointer;
 }
 </style>
