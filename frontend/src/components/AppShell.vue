@@ -12,6 +12,7 @@ import {
   NLayoutSider,
   NMenu,
   NModal,
+  NPopover,
   NSpace,
   NTabPane,
   NTabs,
@@ -39,6 +40,7 @@ import {
   SearchOutline,
   SettingsOutline,
   StarOutline,
+  SunnyOutline,
   TimeOutline,
 } from '@vicons/ionicons5'
 import { RouterLink, RouterView, useRoute, useRouter } from 'vue-router'
@@ -64,6 +66,10 @@ const commandOpen = ref(false)
 const menuSearch = ref('')
 const commandSearch = ref('')
 const userMenuOpen = ref(false)
+const notificationsOpen = ref(false)
+const notificationsRead = ref(false)
+const sidebarDragWidth = ref<number | null>(null)
+let resizeFrame: number | null = null
 
 const icon = (component: object) => () => h(NIcon, null, { default: () => h(component) })
 
@@ -99,8 +105,25 @@ const userOptions = computed(() => [
 
 const activeMode = computed(() => workspace.sidebarMode)
 const sidebarWidth = computed(() => (workspace.sidebarCollapsed ? 72 : workspace.sidebarWidth))
+const renderedSidebarWidth = computed(() => sidebarDragWidth.value ?? sidebarWidth.value)
 const currentTabKey = computed(() => String(route.name || route.path))
 const localeLabel = computed(() => (locale.value === 'vi' ? 'Tiếng Việt' : 'English'))
+const themeIcon = computed(() => (workspace.themeMode === 'dark' ? SunnyOutline : MoonOutline))
+const unreadNotifications = computed(() =>
+  notificationsRead.value ? 0 : notificationItems.value.length,
+)
+const notificationItems = computed(() => [
+  {
+    key: 'workspace',
+    title: t('shell.notificationWorkspace'),
+    detail: t('shell.notificationWorkspaceDetail'),
+  },
+  {
+    key: 'security',
+    title: t('shell.notificationSecurity'),
+    detail: t('shell.notificationSecurityDetail'),
+  },
+])
 const activeModeLabel = computed(() => {
   const mode = sidebarModes.find((item) => item.key === activeMode.value) || sidebarModes[0]
   return t(mode.labelKey)
@@ -179,10 +202,25 @@ function startResize(event: PointerEvent): void {
   if (workspace.sidebarCollapsed) return
   const startX = event.clientX
   const startWidth = workspace.sidebarWidth
-  resizeMove = (moveEvent) => workspace.setSidebarWidth(startWidth + moveEvent.clientX - startX)
+  sidebarDragWidth.value = startWidth
+  resizeMove = (moveEvent) => {
+    const nextWidth = startWidth + moveEvent.clientX - startX
+    if (resizeFrame !== null) cancelAnimationFrame(resizeFrame)
+    resizeFrame = requestAnimationFrame(() => {
+      sidebarDragWidth.value = Math.min(
+        workspace.MAX_SIDEBAR_WIDTH,
+        Math.max(workspace.MIN_SIDEBAR_WIDTH, nextWidth),
+      )
+      resizeFrame = null
+    })
+  }
   resizeEnd = () => {
     if (resizeMove) window.removeEventListener('pointermove', resizeMove)
     if (resizeEnd) window.removeEventListener('pointerup', resizeEnd)
+    if (resizeFrame !== null) cancelAnimationFrame(resizeFrame)
+    if (sidebarDragWidth.value !== null) workspace.setSidebarWidth(sidebarDragWidth.value)
+    sidebarDragWidth.value = null
+    resizeFrame = null
     resizeMove = null
     resizeEnd = null
   }
@@ -217,6 +255,14 @@ function handleLocale(value: string): void {
   if (value === 'vi' || value === 'en') setLocale(value as AppLocale)
 }
 
+function toggleTheme(): void {
+  workspace.setThemeMode(workspace.themeMode === 'dark' ? 'light' : 'dark')
+}
+
+function markNotificationsRead(): void {
+  notificationsRead.value = true
+}
+
 function handleUserAction(key: string): void {
   userMenuOpen.value = false
   if (key === 'profile') void router.push('/profile')
@@ -247,11 +293,19 @@ onBeforeUnmount(() => resizeEnd?.())
 </script>
 
 <template>
-  <div class="erp-shell" :style="{ '--sidebar-width': `${sidebarWidth}px` }">
+  <div
+    class="erp-shell"
+    :class="{ 'theme-dark': workspace.themeMode === 'dark' }"
+    :style="{ '--sidebar-width': `${renderedSidebarWidth}px` }"
+  >
     <NLayout class="shell-layout">
       <NLayoutHeader bordered class="shell-header">
         <NSpace align="center" :size="10" class="header-left">
+          <RouterLink class="brand" to="/">
+            <img class="shell-brand-logo" src="/logo-dinktech.svg" alt="Dinktech" />
+          </RouterLink>
           <NButton
+            class="mobile-menu-button"
             quaternary
             circle
             :aria-label="t('shell.openMenu')"
@@ -261,9 +315,6 @@ onBeforeUnmount(() => resizeEnd?.())
               ><NIcon><MenuOutline /></NIcon
             ></template>
           </NButton>
-          <RouterLink class="brand" to="/">
-            <img class="shell-brand-logo" src="/logo-dinktech.svg" alt="Dinktech" />
-          </RouterLink>
           <NButton class="workspace-search" secondary @click="openCommandPalette">
             <template #icon
               ><NIcon><SearchOutline /></NIcon
@@ -272,17 +323,45 @@ onBeforeUnmount(() => resizeEnd?.())
           </NButton>
         </NSpace>
         <NSpace align="center" :size="6" class="header-actions">
-          <NBadge :value="15" :max="99" type="error">
-            <NButton quaternary circle :aria-label="t('shell.notifications')">
-              <template #icon
-                ><NIcon><NotificationsOutline /></NIcon
-              ></template>
-            </NButton>
-          </NBadge>
-          <NButton quaternary circle :aria-label="t('shell.theme')">
-            <template #icon
-              ><NIcon><MoonOutline /></NIcon
-            ></template>
+          <NPopover v-model:show="notificationsOpen" trigger="click" placement="bottom-end">
+            <template #trigger>
+              <NBadge :value="unreadNotifications" :max="99" type="error">
+                <NButton quaternary circle :aria-label="t('shell.notifications')">
+                  <template #icon
+                    ><NIcon><NotificationsOutline /></NIcon
+                  ></template>
+                </NButton>
+              </NBadge>
+            </template>
+            <section class="notification-popover" aria-live="polite">
+              <header class="notification-header">
+                <strong>{{ t('shell.notifications') }}</strong>
+                <NButton
+                  text
+                  size="tiny"
+                  :disabled="notificationsRead"
+                  @click="markNotificationsRead"
+                >
+                  {{ notificationsRead ? t('shell.allRead') : t('shell.markAllRead') }}
+                </NButton>
+              </header>
+              <div class="notification-list">
+                <article
+                  v-for="item in notificationItems"
+                  :key="item.key"
+                  class="notification-item"
+                >
+                  <span class="notification-dot" aria-hidden="true" />
+                  <div>
+                    <strong>{{ item.title }}</strong>
+                    <p>{{ item.detail }}</p>
+                  </div>
+                </article>
+              </div>
+            </section>
+          </NPopover>
+          <NButton quaternary circle :aria-label="t('shell.theme')" @click="toggleTheme">
+            <template #icon><NIcon :component="themeIcon" /></template>
           </NButton>
           <NDropdown :options="localeOptions" trigger="click" @select="handleLocale">
             <NButton quaternary size="small" :aria-label="t('shell.language')">
@@ -308,7 +387,7 @@ onBeforeUnmount(() => resizeEnd?.())
       <NLayout has-sider class="shell-body">
         <NLayoutSider
           bordered
-          :width="sidebarWidth"
+          :width="renderedSidebarWidth"
           :collapsed-width="72"
           :collapsed="workspace.sidebarCollapsed"
           collapse-mode="width"
@@ -316,7 +395,12 @@ onBeforeUnmount(() => resizeEnd?.())
           :class="{ 'sider-mobile-open': mobileMenuOpen }"
         >
           <div class="sider-content">
-            <NInput v-model:value="menuSearch" clearable :placeholder="t('shell.searchMenu')">
+            <NInput
+              v-if="!workspace.sidebarCollapsed"
+              v-model:value="menuSearch"
+              clearable
+              :placeholder="t('shell.searchMenu')"
+            >
               <template #prefix
                 ><NIcon><SearchOutline /></NIcon
               ></template>
@@ -338,6 +422,7 @@ onBeforeUnmount(() => resizeEnd?.())
               {{ activeModeLabel }}
             </div>
             <NMenu
+              v-if="!workspace.sidebarCollapsed"
               :value="route.path"
               :options="menuOptions"
               :collapsed="workspace.sidebarCollapsed"
@@ -351,7 +436,10 @@ onBeforeUnmount(() => resizeEnd?.())
             </div>
             <button
               class="sider-collapse"
+              :class="{ 'sider-collapse--hidden': workspace.sidebarCollapsed }"
               type="button"
+              :tabindex="workspace.sidebarCollapsed ? -1 : 0"
+              :aria-hidden="workspace.sidebarCollapsed ? 'true' : undefined"
               :aria-label="
                 workspace.sidebarCollapsed ? t('shell.expandSidebar') : t('shell.collapseSidebar')
               "
@@ -431,29 +519,49 @@ onBeforeUnmount(() => resizeEnd?.())
       </NLayout>
     </NLayout>
 
-    <NModal
-      v-model:show="commandOpen"
-      preset="card"
-      :title="t('shell.commandPalette')"
-      class="command-modal"
-    >
-      <p class="modal-description">{{ t('shell.commandDescription') }}</p>
-      <NInput v-model:value="commandSearch" autofocus :placeholder="t('shell.searchCommand')">
+    <NModal v-model:show="commandOpen" preset="card" class="command-modal">
+      <template #header>
+        <div class="command-modal-header">
+          <span class="command-modal-icon"
+            ><NIcon><SearchOutline /></NIcon
+          ></span>
+          <div>
+            <strong>{{ t('shell.commandPalette') }}</strong>
+            <small>{{ t('shell.commandDescription') }}</small>
+          </div>
+        </div>
+      </template>
+      <NInput
+        v-model:value="commandSearch"
+        autofocus
+        size="large"
+        clearable
+        :placeholder="t('shell.searchCommand')"
+        class="command-search-input"
+      >
         <template #prefix
           ><NIcon><SearchOutline /></NIcon
         ></template>
       </NInput>
-      <div class="command-list">
+      <div v-if="commandOptions.length" class="command-list">
         <NButton
           v-for="command in commandOptions"
           :key="command.key"
+          class="command-option"
           quaternary
           block
           @click="openCommandRoute(command.key)"
         >
-          <template #icon><NIcon :component="command.icon" /></template>{{ command.label }}
+          <template #icon><NIcon :component="command.icon" /></template>
+          <span class="command-option-label">{{ command.label }}</span>
+          <NIcon class="command-option-arrow"><ChevronForwardOutline /></NIcon>
         </NButton>
       </div>
+      <div v-else class="command-empty">{{ t('shell.noCommands') }}</div>
+      <footer class="command-modal-footer">
+        <span><kbd>↵</kbd> {{ t('shell.commandOpen') }}</span>
+        <span><kbd>Esc</kbd> {{ t('shell.commandClose') }}</span>
+      </footer>
     </NModal>
   </div>
 </template>
@@ -470,6 +578,7 @@ onBeforeUnmount(() => resizeEnd?.())
   background: #f5f7fa;
 }
 .shell-header {
+  position: relative;
   z-index: 20;
   display: flex;
   align-items: center;
@@ -477,6 +586,9 @@ onBeforeUnmount(() => resizeEnd?.())
   height: 62px;
   padding: 0 18px 0 16px;
   background: #fff;
+}
+.mobile-menu-button {
+  display: none;
 }
 .header-left,
 .header-actions {
@@ -512,6 +624,9 @@ onBeforeUnmount(() => resizeEnd?.())
 .shell-sider {
   position: relative;
   background: #fff;
+}
+.shell-sider :deep(.n-layout-sider-scroll-container) {
+  overflow: hidden;
 }
 .sider-content {
   position: relative;
@@ -549,8 +664,8 @@ onBeforeUnmount(() => resizeEnd?.())
 .sider-collapse {
   position: absolute;
   top: 86px;
-  right: -13px;
-  z-index: 3;
+  right: 12px;
+  z-index: 5;
   display: grid;
   width: 26px;
   height: 26px;
@@ -561,6 +676,10 @@ onBeforeUnmount(() => resizeEnd?.())
   color: #55708b;
   cursor: pointer;
   box-shadow: 0 2px 8px rgb(24 47 68 / 8%);
+}
+.sider-collapse--hidden {
+  opacity: 0;
+  pointer-events: none;
 }
 .sider-resize {
   position: absolute;
@@ -610,18 +729,189 @@ onBeforeUnmount(() => resizeEnd?.())
 }
 .command-modal {
   width: min(620px, calc(100vw - 32px));
+  border: 1px solid #dbe5ec;
+  box-shadow: 0 24px 70px rgb(15 44 67 / 22%);
 }
-.modal-description {
-  margin: 0 0 14px;
-  color: #718298;
-  font-size: 13px;
+.command-modal-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.command-modal-header > div {
+  display: grid;
+  gap: 3px;
+}
+.command-modal-header strong {
+  color: #183b57;
+  font-size: 15px;
+}
+.command-modal-header small {
+  color: #7b8d9d;
+  font-size: 11px;
+  font-weight: 400;
+}
+.command-modal-icon {
+  display: grid;
+  width: 34px;
+  height: 34px;
+  place-items: center;
+  border-radius: 9px;
+  background: #e9f5f7;
+  color: #0878b6;
+}
+.command-search-input {
+  margin-top: 2px;
+}
+.command-search-input :deep(.n-input__input-el) {
+  font-size: 14px;
 }
 .command-list {
   display: grid;
   gap: 4px;
-  max-height: 360px;
+  max-height: 340px;
   margin-top: 12px;
   overflow: auto;
+}
+.command-option {
+  min-height: 44px;
+  justify-content: flex-start;
+  border-radius: 8px;
+  color: #294b65;
+  text-align: left;
+}
+.command-option:hover {
+  background: #eff8f8;
+  color: #0569ad;
+}
+.command-option-label {
+  flex: 1;
+  text-align: left;
+}
+.command-option-arrow {
+  color: #9aaab7;
+}
+.command-empty {
+  padding: 34px 12px;
+  color: #7b8d9d;
+  font-size: 13px;
+  text-align: center;
+}
+.command-modal-footer {
+  display: flex;
+  gap: 16px;
+  margin-top: 14px;
+  padding-top: 12px;
+  border-top: 1px solid #edf1f4;
+  color: #8393a1;
+  font-size: 11px;
+}
+.command-modal-footer kbd {
+  padding: 2px 6px;
+  border: 1px solid #dce5eb;
+  border-radius: 4px;
+  background: #f8fafb;
+  color: #5e7487;
+  font-size: 10px;
+}
+.notification-popover {
+  width: min(330px, calc(100vw - 36px));
+}
+.notification-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding-bottom: 10px;
+  border-bottom: 1px solid #edf1f4;
+  color: #183b57;
+  font-size: 14px;
+}
+.notification-list {
+  display: grid;
+  gap: 2px;
+  padding-top: 5px;
+}
+.notification-item {
+  display: flex;
+  gap: 10px;
+  padding: 10px 4px;
+  border-bottom: 1px solid #f0f3f5;
+}
+.notification-item:last-child {
+  border-bottom: 0;
+}
+.notification-item > div {
+  min-width: 0;
+}
+.notification-item strong {
+  color: #294b65;
+  font-size: 12px;
+}
+.notification-item p {
+  margin: 3px 0 0;
+  color: #7b8d9d;
+  font-size: 11px;
+  line-height: 1.45;
+}
+.notification-dot {
+  width: 8px;
+  height: 8px;
+  flex: 0 0 auto;
+  margin-top: 5px;
+  border-radius: 50%;
+  background: #0b7dbd;
+}
+.erp-shell.theme-dark,
+.erp-shell.theme-dark .shell-body,
+.erp-shell.theme-dark .workspace-layout {
+  background: #111923;
+}
+.erp-shell.theme-dark .shell-header,
+.erp-shell.theme-dark .shell-sider,
+.erp-shell.theme-dark .workspace-tabs-wrap {
+  border-color: #273746;
+  background: #17232e;
+}
+.erp-shell.theme-dark .workspace-content,
+.erp-shell.theme-dark .sider-heading,
+.erp-shell.theme-dark .sider-footer,
+.erp-shell.theme-dark .workspace-search,
+.erp-shell.theme-dark .notification-item p,
+.erp-shell.theme-dark .command-modal-footer {
+  color: #a9bac7;
+}
+.erp-shell.theme-dark .workspace-search {
+  border-color: #304454;
+  background: #1b2a36;
+}
+.erp-shell.theme-dark .sider-footer,
+.erp-shell.theme-dark .workspace-tabs-wrap,
+.erp-shell.theme-dark .notification-header,
+.erp-shell.theme-dark .notification-item,
+.erp-shell.theme-dark .command-modal-footer {
+  border-color: #2a3b49;
+}
+.erp-shell.theme-dark .sider-collapse {
+  border-color: #385062;
+  background: #1d2d3a;
+  color: #b5c8d5;
+}
+.erp-shell.theme-dark .command-modal,
+.erp-shell.theme-dark .command-option:hover,
+.erp-shell.theme-dark .notification-popover {
+  background: #1b2a36;
+}
+.erp-shell.theme-dark .command-modal-header strong,
+.erp-shell.theme-dark .notification-header,
+.erp-shell.theme-dark .notification-item strong {
+  color: #e3edf3;
+}
+.erp-shell.theme-dark .command-modal-header small,
+.erp-shell.theme-dark .command-empty {
+  color: #9eb1bf;
+}
+.erp-shell.theme-dark .command-modal-icon {
+  background: #214354;
+  color: #8bd9e9;
 }
 @media (max-width: 800px) {
   .shell-header {
@@ -629,6 +919,9 @@ onBeforeUnmount(() => resizeEnd?.())
   }
   .brand {
     min-width: auto;
+  }
+  .mobile-menu-button {
+    display: inline-flex;
   }
   .shell-brand-logo {
     width: 112px;

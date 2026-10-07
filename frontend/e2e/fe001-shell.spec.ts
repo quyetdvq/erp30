@@ -39,6 +39,11 @@ test('authenticated shell exposes five modes, deduplicated tabs, locale, and 404
 test('shell keeps the header full width and uses the official logo', async ({ page }) => {
   await mockAuthenticatedSession(page)
   await page.goto('/organizations')
+  await expect(page.locator('.shell-header')).toBeVisible()
+  await expect(page.locator('.shell-sider')).toBeVisible()
+  await expect
+    .poll(async () => (await page.locator('.shell-header').boundingBox())?.width ?? 0)
+    .toBeGreaterThan(0)
 
   const geometry = await page.evaluate(() => {
     const header = document.querySelector('.shell-header')?.getBoundingClientRect()
@@ -62,4 +67,32 @@ test('shell keeps the header full width and uses the official logo', async ({ pa
   expect(await logo.evaluate((image) => (image as HTMLImageElement).naturalWidth)).toBeGreaterThan(
     0,
   )
+})
+
+test('collapsed shell keeps only five mode icons and shell actions work', async ({ page }) => {
+  await mockAuthenticatedSession(page)
+  await page.goto('/organizations')
+  await expect(page.locator('.sider-collapse')).toBeVisible()
+  await expect
+    .poll(async () => (await page.locator('.shell-sider').boundingBox())?.width ?? 0)
+    .toBeGreaterThan(0)
+
+  await page.getByRole('button', { name: 'Thu gọn sidebar' }).evaluate((element) => element.click())
+  await expect(page.locator('.mode-switcher button')).toHaveCount(5)
+  await expect(page.locator('.shell-sider .n-menu')).toHaveCount(0)
+  await expect(page.getByPlaceholder('Tìm menu')).toHaveCount(0)
+
+  await page.getByRole('button', { name: 'Đổi giao diện' }).dispatchEvent('click')
+  await expect(page.locator('.erp-shell')).toHaveClass(/theme-dark/)
+  await page.getByRole('button', { name: 'Đổi giao diện' }).dispatchEvent('click')
+  await expect(page.locator('.erp-shell')).not.toHaveClass(/theme-dark/)
+
+  await page.getByRole('button', { name: 'Thông báo' }).dispatchEvent('click')
+  await expect(page.getByText('Workspace đã sẵn sàng')).toBeVisible()
+  await page.getByRole('button', { name: 'Đánh dấu đã đọc' }).evaluate((element) => element.click())
+  await expect(page.getByRole('button', { name: 'Đã đọc hết' })).toBeVisible()
+
+  await page.getByRole('button', { name: /Tìm trong workspace/ }).dispatchEvent('click')
+  await expect(page.getByText('Command palette')).toBeVisible()
+  await expect(page.getByPlaceholder('Tìm lệnh')).toBeVisible()
 })

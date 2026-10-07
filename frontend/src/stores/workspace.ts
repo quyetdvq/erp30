@@ -3,6 +3,7 @@ import { defineStore } from 'pinia'
 
 export const SIDEBAR_MODES = ['menu', 'favorites', 'recent', 'system', 'organization'] as const
 export type SidebarMode = (typeof SIDEBAR_MODES)[number]
+export type ThemeMode = 'light' | 'dark'
 
 export type WorkspaceTab = {
   key: string
@@ -16,12 +17,14 @@ export type WorkspacePreferences = {
   sidebarMode: SidebarMode
   sidebarCollapsed: boolean
   sidebarWidth: number
+  themeMode: ThemeMode
 }
 
 const DEFAULT_PREFERENCES: WorkspacePreferences = {
   sidebarMode: 'menu',
   sidebarCollapsed: false,
   sidebarWidth: 288,
+  themeMode: 'light',
 }
 
 const MIN_SIDEBAR_WIDTH = 240
@@ -39,12 +42,14 @@ function normalizePreferences(value: unknown): WorkspacePreferences {
     ? (candidate.sidebarMode as SidebarMode)
     : DEFAULT_PREFERENCES.sidebarMode
   const width = Number(candidate.sidebarWidth)
+  const themeMode = candidate.themeMode === 'dark' ? 'dark' : DEFAULT_PREFERENCES.themeMode
   return {
     sidebarMode: mode,
     sidebarCollapsed: candidate.sidebarCollapsed === true,
     sidebarWidth: Number.isFinite(width)
       ? Math.min(MAX_SIDEBAR_WIDTH, Math.max(MIN_SIDEBAR_WIDTH, width))
       : DEFAULT_PREFERENCES.sidebarWidth,
+    themeMode,
   }
 }
 
@@ -56,6 +61,7 @@ export const useWorkspaceStore = defineStore('workspace', () => {
   const sidebarMode = computed(() => preferences.value.sidebarMode)
   const sidebarCollapsed = computed(() => preferences.value.sidebarCollapsed)
   const sidebarWidth = computed(() => preferences.value.sidebarWidth)
+  const themeMode = computed(() => preferences.value.themeMode)
 
   function persistPreferences(): void {
     if (!activeUserId.value || typeof window === 'undefined') return
@@ -104,6 +110,11 @@ export const useWorkspaceStore = defineStore('workspace', () => {
     persistPreferences()
   }
 
+  function setThemeMode(mode: ThemeMode): void {
+    preferences.value = { ...preferences.value, themeMode: mode }
+    persistPreferences()
+  }
+
   function openTab(tab: Omit<WorkspaceTab, 'dirty'> & { dirty?: boolean }): WorkspaceTab {
     const existing = tabs.value.find((candidate) => candidate.key === tab.key)
     if (existing) return existing
@@ -139,11 +150,13 @@ export const useWorkspaceStore = defineStore('workspace', () => {
     sidebarMode,
     sidebarCollapsed,
     sidebarWidth,
+    themeMode,
     activateUser,
     clearSession,
     setSidebarMode,
     setSidebarCollapsed,
     setSidebarWidth,
+    setThemeMode,
     openTab,
     markDirty,
     isDirty,

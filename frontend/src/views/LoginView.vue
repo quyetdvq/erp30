@@ -226,10 +226,12 @@ function handleLanguageTrigger(event: MouseEvent): void {
 
 <style scoped>
 .auth-screen {
-  min-height: 100vh;
+  height: 100dvh;
+  min-height: 100dvh;
   display: grid;
   place-items: center;
-  padding: 28px;
+  overflow: hidden;
+  padding: clamp(12px, 2.5vh, 28px);
   background: #edf2f6;
 }
 
@@ -237,7 +239,8 @@ function handleLanguageTrigger(event: MouseEvent): void {
   display: grid;
   grid-template-columns: minmax(320px, 0.92fr) minmax(420px, 1.08fr);
   width: min(1080px, 100%);
-  min-height: 650px;
+  height: min(720px, 100%);
+  min-height: 0;
   overflow: hidden;
   border: 1px solid #d7e1e8;
   border-radius: 14px;
@@ -249,7 +252,7 @@ function handleLanguageTrigger(event: MouseEvent): void {
   position: relative;
   display: flex;
   flex-direction: column;
-  padding: 42px 44px 34px;
+  padding: clamp(24px, 4vh, 42px) clamp(26px, 4vw, 44px) 28px;
   overflow: hidden;
   background: #102f46;
   color: #fff;
@@ -372,7 +375,7 @@ function handleLanguageTrigger(event: MouseEvent): void {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 23px 30px;
+  padding: clamp(14px, 2.5vh, 23px) 30px;
   border-bottom: 1px solid #edf1f4;
 }
 
@@ -393,7 +396,7 @@ function handleLanguageTrigger(event: MouseEvent): void {
   align-self: center;
   width: min(410px, calc(100% - 60px));
   margin: 0 auto;
-  padding: 52px 0 42px;
+  padding: clamp(24px, 5vh, 52px) 0 clamp(22px, 4vh, 42px);
 }
 
 .mobile-brand {
@@ -415,7 +418,7 @@ function handleLanguageTrigger(event: MouseEvent): void {
 }
 
 .auth-form-wrap :deep(.n-form-item) {
-  margin-bottom: 20px;
+  margin-bottom: 16px;
 }
 
 .auth-form-wrap :deep(.n-form-item-label) {
@@ -437,7 +440,7 @@ function handleLanguageTrigger(event: MouseEvent): void {
   align-items: center;
   justify-content: space-between;
   gap: 12px;
-  margin: 1px 0 20px;
+  margin: 1px 0 16px;
 }
 
 .secure-label {
@@ -466,7 +469,7 @@ function handleLanguageTrigger(event: MouseEvent): void {
 }
 
 .form-caption {
-  margin: 22px 0 0;
+  margin: 16px 0 0;
   color: #5f707e;
   font-size: 11px;
   line-height: 1.6;
@@ -477,10 +480,33 @@ function handleLanguageTrigger(event: MouseEvent): void {
   display: flex;
   justify-content: space-between;
   gap: 16px;
-  padding: 18px 30px;
+  padding: 14px 30px;
   border-top: 1px solid #edf1f4;
   color: #5c6d7b;
   font-size: 10px;
+}
+
+@media (max-height: 720px) and (min-width: 761px) {
+  .spotlight-content h2 {
+    font-size: 32px;
+  }
+
+  .spotlight-lead {
+    margin-top: 12px;
+  }
+
+  .trust-list {
+    gap: 8px;
+    margin-top: 16px;
+  }
+
+  .auth-form-wrap h1 {
+    font-size: 27px;
+  }
+
+  .auth-lead {
+    margin-bottom: 20px;
+  }
 }
 
 @media (max-width: 760px) {
@@ -490,7 +516,7 @@ function handleLanguageTrigger(event: MouseEvent): void {
 
   .auth-layout {
     grid-template-columns: 1fr;
-    min-height: 100vh;
+    height: 100%;
     border: 0;
     border-radius: 0;
   }

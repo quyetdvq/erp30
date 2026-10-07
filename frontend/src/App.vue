@@ -1,12 +1,24 @@
 <script setup lang="ts">
-import { NConfigProvider, NMessageProvider } from 'naive-ui'
+import { computed } from 'vue'
+import { darkTheme, NConfigProvider, NGlobalStyle, NMessageProvider } from 'naive-ui'
 import { RouterView } from 'vue-router'
+
+import { useAuthStore } from '@/stores/auth'
+import { useWorkspaceStore } from '@/stores/workspace'
+
+const auth = useAuthStore()
+const workspace = useWorkspaceStore()
+const isDark = computed(() => auth.isAuthenticated && workspace.themeMode === 'dark')
+const naiveTheme = computed(() => (isDark.value ? darkTheme : null))
 </script>
 
 <template>
-  <NConfigProvider>
+  <NConfigProvider :theme="naiveTheme">
+    <NGlobalStyle />
     <NMessageProvider>
-      <RouterView />
+      <div class="app-root" :class="{ 'app-root--dark': isDark }">
+        <RouterView />
+      </div>
     </NMessageProvider>
   </NConfigProvider>
 </template>
@@ -33,6 +45,12 @@ body {
   margin: 0;
   min-width: 320px;
   background: #f4f6fb;
+}
+.app-root {
+  min-height: 100vh;
+}
+.app-root--dark {
+  background: #111923;
 }
 button,
 input,

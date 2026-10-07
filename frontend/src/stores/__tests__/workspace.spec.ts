@@ -15,16 +15,19 @@ describe('workspace shell state', () => {
     store.setSidebarMode('favorites')
     store.setSidebarCollapsed(true)
     store.setSidebarWidth(480)
+    store.setThemeMode('dark')
 
     store.activateUser(8)
     expect(store.sidebarMode).toBe('menu')
     expect(store.sidebarCollapsed).toBe(false)
     expect(store.sidebarWidth).toBe(288)
+    expect(store.themeMode).toBe('light')
 
     store.activateUser(7)
     expect(store.sidebarMode).toBe('favorites')
     expect(store.sidebarCollapsed).toBe(true)
     expect(store.sidebarWidth).toBe(420)
+    expect(store.themeMode).toBe('dark')
   })
 
   it('deduplicates tabs and protects dirty close', () => {
