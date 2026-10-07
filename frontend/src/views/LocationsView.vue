@@ -9,9 +9,11 @@ import {
   ListQueryControls,
   ListShell,
   ListTable,
+  TableDetailModal,
   TableRowActions,
 } from '@/components/lists'
 import type { ListColumn, ListQuery } from '@/components/lists/listTypes'
+import type { TableDetailField } from '@/components/lists/TableDetailModal.vue'
 import { useListState } from '@/composables/useListState'
 import {
   changeProvinceState,
@@ -30,6 +32,8 @@ const route = useRoute()
 const isWards = computed(() => route.path.endsWith('/wards'))
 const error = ref<unknown | null>(null)
 const modalOpen = ref(false)
+const detailOpen = ref(false)
+const detailRow = ref<LocationRow | null>(null)
 const editingId = ref<string | undefined>()
 const mutationBusy = ref(false)
 const provinces = ref<Province[]>([])
@@ -85,6 +89,26 @@ const provinceOptions = computed(() =>
     (province) => province.status === 'ACTIVE' || String(province.id) === form.value.province_id,
   ),
 )
+const detailFields = computed<readonly TableDetailField[]>(() => {
+  const row = detailRow.value
+  if (!row) return []
+  const fields: TableDetailField[] = [
+    { key: 'code', label: t('locations.code'), value: row.code },
+    { key: 'name', label: t('locations.name'), value: row.name },
+  ]
+  if (isWards.value) {
+    fields.push(
+      { key: 'name_full', label: t('locations.fullName'), value: (row as Ward).name_full },
+      {
+        key: 'province',
+        label: t('locations.province'),
+        value: provinceName(String((row as Ward).province_id)),
+      },
+    )
+  }
+  fields.push({ key: 'status', label: t('locations.status'), status: row.status })
+  return fields
+})
 
 const columns = computed<readonly ListColumn<LocationRow>[]>(() =>
   isWards.value
@@ -162,6 +186,11 @@ function openEdit(row: LocationRow): void {
     status: row.status,
   }
   modalOpen.value = true
+}
+
+function openView(row: LocationRow): void {
+  detailRow.value = row
+  detailOpen.value = true
 }
 
 async function save(): Promise<void> {
@@ -270,11 +299,14 @@ onMounted(async () => {
           <TableRowActions
             :active="row.status === 'ACTIVE'"
             :busy="mutationBusy"
+            :show-view="true"
             :show-edit="true"
             :show-toggle="true"
             :edit-label="t('common.edit')"
             :activate-label="t('common.activate')"
             :deactivate-label="t('common.deactivate')"
+            :view-label="t('common.view')"
+            @view="openView(row)"
             @edit="openEdit(row)"
             @toggle="toggleState(row)"
           />
@@ -299,6 +331,12 @@ onMounted(async () => {
       />
     </ListShell>
   </section>
+  <TableDetailModal
+    :open="detailOpen"
+    :title="t('common.view') + ' - ' + title"
+    :fields="detailFields"
+    @close="detailOpen = false"
+  />
   <div v-if="modalOpen" class="modal-backdrop" @click.self="modalOpen = false">
     <section class="modal-card" role="dialog" aria-modal="true" :aria-label="t('common.form')">
       <header>

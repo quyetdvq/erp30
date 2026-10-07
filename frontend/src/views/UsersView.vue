@@ -2,7 +2,8 @@
 import { computed, onMounted, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 
-import { TableRowActions, TableStatus } from '@/components/lists'
+import { TableDetailModal, TableRowActions, TableStatus } from '@/components/lists'
+import type { TableDetailField } from '@/components/lists/TableDetailModal.vue'
 import { getGroups, getUsers, saveUser, type Group, type ManagedUser } from '@/services/admin'
 
 const { t } = useI18n()
@@ -12,6 +13,8 @@ const search = ref('')
 const busy = ref(false)
 const error = ref('')
 const modalOpen = ref(false)
+const detailOpen = ref(false)
+const detailUser = ref<ManagedUser | null>(null)
 const editing = ref<ManagedUser | null>(null)
 const form = ref({ username: '', email: '', password: '', groups: [] as string[], active: true })
 
@@ -20,6 +23,17 @@ const filteredUsers = computed(() =>
     `${user.username} ${user.email || ''}`.toLowerCase().includes(search.value.toLowerCase()),
   ),
 )
+const detailFields = computed<readonly TableDetailField[]>(() => {
+  const user = detailUser.value
+  if (!user) return []
+  return [
+    { key: 'id', label: t('users.id'), value: String(user.id) },
+    { key: 'username', label: t('users.username'), value: user.username },
+    { key: 'email', label: t('users.email'), value: user.email },
+    { key: 'groups', label: t('users.groups'), value: user.groups.join(', ') },
+    { key: 'status', label: t('users.status'), status: user.active },
+  ]
+})
 
 async function load(): Promise<void> {
   busy.value = true
@@ -48,6 +62,10 @@ function openEdit(user: ManagedUser): void {
     active: user.active,
   }
   modalOpen.value = true
+}
+function openView(user: ManagedUser): void {
+  detailUser.value = user
+  detailOpen.value = true
 }
 async function submit(): Promise<void> {
   busy.value = true
@@ -111,8 +129,11 @@ onMounted(load)
             </td>
             <td>
               <TableRowActions
+                :show-view="true"
                 :show-edit="true"
                 :edit-label="t('common.edit')"
+                :view-label="t('common.view')"
+                @view="openView(user)"
                 @edit="openEdit(user)"
               />
             </td>
@@ -171,6 +192,12 @@ onMounted(load)
       </form>
     </section>
   </div>
+  <TableDetailModal
+    :open="detailOpen"
+    :title="t('users.detailTitle')"
+    :fields="detailFields"
+    @close="detailOpen = false"
+  />
 </template>
 
 <style scoped>

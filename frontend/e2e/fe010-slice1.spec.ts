@@ -154,6 +154,12 @@ test('Organization tree, parent matrix, contacts history, and accessibility', as
     .evaluate((element) => (element as HTMLElement).click())
   await expect(page.getByRole('cell', { name: 'Alice', exact: true })).toBeVisible()
   const contactRegion = page.getByRole('region', { name: 'Liên hệ' })
+  await contactRegion.getByRole('button', { name: 'Xem chi tiết' }).click()
+  await expect(page.getByRole('dialog', { name: /Xem chi tiết/ })).toContainText('Alice')
+  await page
+    .getByRole('dialog', { name: /Xem chi tiết/ })
+    .getByRole('button', { name: 'Đóng' })
+    .click()
   await contactRegion.getByRole('button', { name: 'Sửa liên hệ' }).click()
   await page.locator('.modal-card input').first().fill('Alice Updated')
   await page.getByRole('button', { name: 'Lưu' }).click()

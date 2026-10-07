@@ -15,9 +15,11 @@ import {
   ListQueryControls,
   ListShell,
   ListTable,
+  TableDetailModal,
   TableRowActions,
 } from '@/components/lists'
 import { createListQuery, type ListColumn, type ListQuery } from '@/components/lists/listTypes'
+import type { TableDetailField } from '@/components/lists/TableDetailModal.vue'
 import { useListState } from '@/composables/useListState'
 import { reportApiError } from '@/services/errorBoundary'
 import ContactFormModal from './ContactFormModal.vue'
@@ -33,6 +35,8 @@ const props = withDefaults(
 const { t } = useI18n()
 const mode = ref<'active' | 'history'>('active')
 const modalOpen = ref(false)
+const detailOpen = ref(false)
+const detailContact = ref<Contact | null>(null)
 const editing = ref<Contact | null>(null)
 const mutationBusy = ref(false)
 const error = ref<unknown | null>(null)
@@ -68,6 +72,21 @@ const columns: readonly ListColumn<Contact>[] = [
 const statusLabel = computed(() =>
   mode.value === 'active' ? t('contact.activeView') : t('contact.historyView'),
 )
+const detailFields = computed<readonly TableDetailField[]>(() => {
+  const contact = detailContact.value
+  if (!contact) return []
+  return [
+    { key: 'name', label: t('contact.name'), value: contact.name },
+    { key: 'email', label: t('contact.email'), value: contact.email },
+    { key: 'phone', label: t('contact.phone'), value: contact.phone },
+    { key: 'mobile', label: t('contact.mobile'), value: contact.mobile },
+    { key: 'address', label: t('contact.address'), value: contact.address },
+    { key: 'province', label: t('contact.province'), value: contact.province_name },
+    { key: 'ward', label: t('contact.ward'), value: contact.ward_name },
+    { key: 'description', label: t('contact.description'), value: contact.description },
+    { key: 'status', label: t('contact.status'), status: contact.status },
+  ]
+})
 
 async function load(): Promise<void> {
   error.value = null
@@ -112,6 +131,11 @@ function openEdit(contact: Contact): void {
   editing.value = contact
   modalOpen.value = true
   void loadWards(contact.province_id ?? '')
+}
+
+function openView(contact: Contact): void {
+  detailContact.value = contact
+  detailOpen.value = true
 }
 
 async function save(payload: Parameters<typeof saveContact>[0]): Promise<void> {
@@ -232,11 +256,14 @@ onMounted(async () => {
           <TableRowActions
             :active="row.status === 'ACTIVE'"
             :busy="mutationBusy"
+            :show-view="true"
             :show-edit="true"
             :show-toggle="true"
             :edit-label="t('contact.edit')"
             :activate-label="t('contact.activate')"
             :deactivate-label="t('contact.deactivate')"
+            :view-label="t('common.view')"
+            @view="openView(row)"
             @edit="openEdit(row)"
             @toggle="toggleState(row)"
           />
@@ -271,6 +298,12 @@ onMounted(async () => {
       @close="modalOpen = false"
       @save="save"
       @province-change="loadWards"
+    />
+    <TableDetailModal
+      :open="detailOpen"
+      :title="t('common.view') + ' - ' + t('contact.title')"
+      :fields="detailFields"
+      @close="detailOpen = false"
     />
     <div class="contact-actions" aria-live="polite">
       <span>{{ statusLabel }}</span>

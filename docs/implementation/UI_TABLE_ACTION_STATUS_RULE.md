@@ -15,6 +15,6 @@ This implementation rule applies to every Vue data table in DinkERP.
 - Use only actions supported by the screen's real workflow: `showView`, `showEdit`, and/or `showToggle`.
 - Actions are icon-only, with an i18n label exposed through `title` and `aria-label`.
 - `showToggle` maps to a ban icon for deactivation and a power icon for activation; it must preserve the existing authorization and mutation handler.
-- Do not add a view icon unless the screen has an actual view/detail workflow.
+- `showView` opens the shared read-only `TableDetailModal` populated from the selected row; it must not mutate data or bypass authorization.
 
 New tables must use these primitives instead of reintroducing text status pills or text/emoji row-action links.

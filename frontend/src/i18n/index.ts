@@ -270,6 +270,14 @@ export const messages = {
       saving: 'Đang lưu...',
       view: 'Xem chi tiết',
     },
+    users: {
+      detailTitle: 'Chi tiết người dùng',
+      email: 'Email',
+      groups: 'Nhóm quyền',
+      id: 'Mã người dùng',
+      status: 'Trạng thái',
+      username: 'Tên tài khoản',
+    },
     errors: {
       defaultMessage: 'Đã xảy ra lỗi khi xử lý yêu cầu.',
       unknownCode: 'Lỗi không xác định',
@@ -546,6 +554,14 @@ export const messages = {
       save: 'Save',
       saving: 'Saving...',
       view: 'View details',
+    },
+    users: {
+      detailTitle: 'User details',
+      email: 'Email',
+      groups: 'Permission groups',
+      id: 'User ID',
+      status: 'Status',
+      username: 'Username',
     },
     errors: {
       defaultMessage: 'An error occurred while processing the request.',
