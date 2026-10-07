@@ -124,7 +124,15 @@ test.describe('P1-FE-030 security surfaces', () => {
         status: 200,
         contentType: 'application/json',
         body: JSON.stringify({
-          data: [{ id: '2', type: 'policy', name: 'Policy', domain: 'ORGANIZATION' }],
+          data: [
+            {
+              id: '2',
+              type: 'policy',
+              name: 'Policy',
+              domain: 'ORGANIZATION',
+              lifecycle_id: '50',
+            },
+          ],
           meta: { page: 1, page_size: 25, total: 1, request_id: 'test-resource' },
         }),
       }),
@@ -136,6 +144,25 @@ test.describe('P1-FE-030 security surfaces', () => {
         body: JSON.stringify({
           data: [{ id: '20', resource_id: '2', code: 'view', description: null }],
           meta: { request_id: 'test-actions' },
+        }),
+      }),
+    )
+    await page.route('**/api/v1/lifecycles/50/states', async (route) =>
+      route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({
+          data: [
+            {
+              id: '501',
+              lifecycle_id: '50',
+              state_id: '31',
+              sequence: 1,
+              is_initial: true,
+              is_final: false,
+            },
+          ],
+          meta: { request_id: 'test-lifecycle-state' },
         }),
       }),
     )
@@ -224,8 +251,11 @@ test.describe('P1-FE-030 security surfaces', () => {
         status: 200,
         contentType: 'application/json',
         body: JSON.stringify({
-          data: [],
-          meta: { page: 1, page_size: 200, total: 0, request_id: 'test-state' },
+          data: [
+            { id: '31', code: 'DRAFT', name: 'Draft', status: 'ACTIVE' },
+            { id: '32', code: 'APPROVED', name: 'Approved', status: 'ACTIVE' },
+          ],
+          meta: { page: 1, page_size: 200, total: 2, request_id: 'test-state' },
         }),
       }),
     )
@@ -282,6 +312,10 @@ test.describe('P1-FE-030 security surfaces', () => {
   test('resources expose canonical Domain values and policies expose exact PBAC vocabularies', async ({
     page,
   }) => {
+    let policyUserRequests = 0
+    page.on('request', (request) => {
+      if (request.url().includes('/api/v1/security/users')) policyUserRequests += 1
+    })
     await page.goto('/security/resources')
     await expect(page.getByRole('heading', { name: 'Resource và Action' })).toBeVisible()
     await page.getByRole('button', { name: /Tạo|Create/ }).click()
@@ -295,9 +329,18 @@ test.describe('P1-FE-030 security surfaces', () => {
     await page.goto('/security/policies')
     await expect(page.getByRole('heading', { name: 'Policy PBAC' })).toBeVisible()
     await page.getByRole('button', { name: /Tạo|Create/ }).click()
+    await expect(page.locator('#policy-organization-scope')).toBeVisible()
+    await expect(
+      page.locator('select').filter({ has: page.locator('option[value="31"]') }),
+    ).toBeVisible()
+    await expect(page.locator('option[value="32"]')).toHaveCount(0)
+    await expect.poll(() => policyUserRequests).toBe(1)
     await expect(page.locator('option[value="ROLE"]')).toHaveCount(0)
     await page.getByRole('button', { name: /Thêm Action|Add Action/ }).click()
     await expect(page.locator('option[value="ABSOLUTE_DENY"]')).toHaveCount(1)
+    await expect(page.getByRole('button', { name: /Xóa|Delete/ })).toHaveCount(1)
+    const accessibility = await new AxeBuilder({ page }).include('.modal-card').analyze()
+    expect(accessibility.violations).toEqual([])
   })
 
   test('authorization logs remain read-only and support Request-ID copy control', async ({

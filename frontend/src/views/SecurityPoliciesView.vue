@@ -1,7 +1,10 @@
 <script setup lang="ts">
-import { computed, onMounted, ref } from 'vue'
+import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
+import { NIcon, NSelect } from 'naive-ui'
+import { TrashOutline } from '@vicons/ionicons5'
 import type { Policy, PolicyAction, Resource } from '@/api/generated/types.gen'
+import OrganizationTreeSelect from '@/components/organizations/OrganizationTreeSelect.vue'
 import {
   ListPagination,
   ListQueryControls,
@@ -11,12 +14,12 @@ import {
 } from '@/components/lists'
 import type { ListColumn, ListQuery } from '@/components/lists/listTypes'
 import { useListState } from '@/composables/useListState'
-import { getCurrentUser, type AuthUser } from '@/services/auth'
 import {
   getResourceActions,
   listAuthorizationGroupPage,
   listPolicyPage,
   listResourcePage,
+  listSecurityUserPage,
   savePolicy,
   type SecurityAction,
 } from '@/services/security'
@@ -37,9 +40,11 @@ import type {
 import { i18n } from '@/i18n'
 import { reportApiError } from '@/services/errorBoundary'
 import { useBasePermission } from '@/composables/useBasePermission'
+import { getLifecycleStates, type LifecycleStateMembership } from '@/services/workflow'
 
 type ParticipantType = Policy['participant_type']
 type PolicyDraftAction = { resource_action_id: string; effect: PolicyAction['effect'] }
+type ParticipantOption = { id: string; label: string }
 const participantTypes: ParticipantType[] = [
   'USER',
   'GROUP',
@@ -59,11 +64,16 @@ const error = ref<unknown | null>(null)
 const organizations = ref<Organization[]>([])
 const resources = ref<Resource[]>([])
 const groups = ref<AuthorizationGroup[]>([])
-const departments = ref<Department[]>([])
-const positions = ref<Position[]>([])
 const workflowStates = ref<WorkflowState[]>([])
-const currentUser = ref<AuthUser | null>(null)
 const actions = ref<SecurityAction[]>([])
+const participantOptions = ref<ParticipantOption[]>([])
+const participantLoading = ref(false)
+const lifecycleStateMemberships = ref<LifecycleStateMembership[]>([])
+const workflowStatesLoading = ref(false)
+const lifecycleStatesById = new Map<string, LifecycleStateMembership[]>()
+let participantRequestId = 0
+let workflowStateRequestId = 0
+let participantSearchTimer: ReturnType<typeof setTimeout> | undefined
 const form = ref({
   organization_id: '',
   resource_id: '',
@@ -81,43 +91,21 @@ const columns: readonly ListColumn<Policy>[] = [
   { key: 'actions', labelKey: 'security.effectsSummary' },
   { key: 'row_actions', labelKey: 'security.actions' },
 ]
-const participantOptions = computed(() => {
-  switch (form.value.participant_type) {
-    case 'USER':
-      return currentUser.value
-        ? [
-            {
-              id: String(currentUser.value.id),
-              label: `${currentUser.value.username} (#${currentUser.value.id})`,
-            },
-          ]
-        : []
-    case 'GROUP':
-      return groups.value.map((group) => ({
-        id: String(group.id),
-        label: `${group.code} · ${group.name}`,
-      }))
-    case 'POSITION':
-      return positions.value.map((item) => ({
-        id: String(item.id),
-        label: `${item.code} · ${item.name}`,
-      }))
-    case 'DEPARTMENT':
-      return departments.value.map((item) => ({
-        id: String(item.id),
-        label: `${item.code} · ${item.name}`,
-      }))
-    case 'ORGANIZATION':
-      return organizations.value.map((item) => ({
-        id: String(item.id),
-        label: `${item.code} · ${item.name}`,
-      }))
-  }
-  return []
-})
 const actionOptions = computed(() =>
   actions.value.filter((action) => String(action.resource_id) === form.value.resource_id),
 )
+const workflowStateOptions = computed(() =>
+  lifecycleStateMemberships.value
+    .map((membership) =>
+      workflowStates.value.find((state) => String(state.id) === String(membership.state_id)),
+    )
+    .filter((state): state is WorkflowState => state !== undefined)
+    .map((state) => ({ id: String(state.id), label: `${state.code} · ${state.name}` })),
+)
+const participantSelectOptions = computed(() =>
+  participantOptions.value.map((option) => ({ value: option.id, label: option.label })),
+)
+const isRemoteParticipant = computed(() => form.value.participant_type !== 'GROUP')
 function labelForOrganization(id: string): string {
   return organizations.value.find((item) => String(item.id) === id)?.name ?? `#${id}`
 }
@@ -129,21 +117,11 @@ function labelForParticipant(policy: Policy): string {
   return found || `#${policy.participant_ref_id}`
 }
 function participantOptionsFor(type: ParticipantType, id: string): string {
-  const source =
-    type === 'GROUP'
-      ? groups.value
-      : type === 'POSITION'
-        ? positions.value
-        : type === 'DEPARTMENT'
-          ? departments.value
-          : type === 'ORGANIZATION'
-            ? organizations.value
-            : currentUser.value
-              ? [currentUser.value]
-              : []
-  const item = source.find((candidate) => String(candidate.id) === id) as
-    { name?: string; username?: string; code?: string } | undefined
-  return item ? `${item.code ? `${item.code} · ` : ''}${item.name ?? item.username ?? id}` : ''
+  if (type === 'GROUP') {
+    const group = groups.value.find((candidate) => String(candidate.id) === id)
+    return group ? `${group.code} · ${group.name}` : ''
+  }
+  return participantOptions.value.find((candidate) => candidate.id === id)?.label ?? ''
 }
 function effectsSummary(policy: Policy): string {
   return policy.actions.map((action) => `${action.effect}:${action.resource_action_id}`).join(', ')
@@ -173,35 +151,11 @@ async function loadReferences(): Promise<void> {
   const emptyQuery: ListQuery = { q: '', page: 1, page_size: 200, sort: '', filter: {} }
   const headers = { 'Accept-Language': i18n.global.locale.value as 'vi' | 'en' }
   try {
-    const [
-      resourcePage,
-      groupPage,
-      organizationPage,
-      departmentPage,
-      positionPage,
-      statePage,
-      user,
-    ] = await Promise.all([
+    const [resourcePage, groupPage, organizationPage, statePage] = await Promise.all([
       listResourcePage(emptyQuery),
       listAuthorizationGroupPage(emptyQuery),
       withTypedClient((client) =>
         listOrganizations({
-          client,
-          headers,
-          query: { page: 1, page_size: 200, sort: 'name', filter: {} },
-          throwOnError: true,
-        }),
-      ).then((response) => ({ data: response.data.data ?? [] })),
-      withTypedClient((client) =>
-        listDepartments({
-          client,
-          headers,
-          query: { page: 1, page_size: 200, sort: 'name', filter: {} },
-          throwOnError: true,
-        }),
-      ).then((response) => ({ data: response.data.data ?? [] })),
-      withTypedClient((client) =>
-        listPositions({
           client,
           headers,
           query: { page: 1, page_size: 200, sort: 'name', filter: {} },
@@ -216,15 +170,11 @@ async function loadReferences(): Promise<void> {
           throwOnError: true,
         }),
       ).then((response) => ({ data: response.data.data ?? [] })),
-      getCurrentUser(),
     ])
     resources.value = resourcePage.data
     groups.value = groupPage.data
     organizations.value = organizationPage.data as Organization[]
-    departments.value = departmentPage.data as Department[]
-    positions.value = positionPage.data as Position[]
     workflowStates.value = statePage.data as WorkflowState[]
-    currentUser.value = user
   } catch (caught: unknown) {
     error.value = caught
     reportApiError(caught)
@@ -233,6 +183,147 @@ async function loadReferences(): Promise<void> {
 async function loadActions(resourceId: string): Promise<void> {
   actions.value = resourceId ? await getResourceActions(resourceId) : []
 }
+function preserveParticipantSelection(): void {
+  const id = form.value.participant_ref_id
+  if (id && !participantOptions.value.some((option) => option.id === id)) {
+    participantOptions.value = [{ id, label: `#${id}` }, ...participantOptions.value]
+  }
+}
+async function loadParticipantOptions(
+  type: ParticipantType,
+  query: string,
+  resetSelection = false,
+): Promise<void> {
+  const requestId = ++participantRequestId
+  participantLoading.value = true
+  const listQuery: ListQuery = { q: query, page: 1, page_size: 50, sort: 'name', filter: {} }
+  try {
+    let options: ParticipantOption[]
+    switch (type) {
+      case 'USER': {
+        const page = await listSecurityUserPage({ ...listQuery, sort: 'username' })
+        options = page.data.map((user) => ({
+          id: String(user.id),
+          label: `${user.username}${user.name ? ` · ${user.name}` : ''}`,
+        }))
+        break
+      }
+      case 'POSITION': {
+        const response = await withTypedClient((client) =>
+          listPositions({
+            client,
+            headers: { 'Accept-Language': i18n.global.locale.value as 'vi' | 'en' },
+            query: { ...listQuery, filter: {} },
+            throwOnError: true,
+          }),
+        )
+        options = (response.data.data ?? []).map((item: Position) => ({
+          id: String(item.id),
+          label: `${item.code} · ${item.name}`,
+        }))
+        break
+      }
+      case 'DEPARTMENT': {
+        const response = await withTypedClient((client) =>
+          listDepartments({
+            client,
+            headers: { 'Accept-Language': i18n.global.locale.value as 'vi' | 'en' },
+            query: { ...listQuery, filter: {} },
+            throwOnError: true,
+          }),
+        )
+        options = (response.data.data ?? []).map((item: Department) => ({
+          id: String(item.id),
+          label: `${item.code} · ${item.name}`,
+        }))
+        break
+      }
+      case 'ORGANIZATION': {
+        const response = await withTypedClient((client) =>
+          listOrganizations({
+            client,
+            headers: { 'Accept-Language': i18n.global.locale.value as 'vi' | 'en' },
+            query: { ...listQuery, filter: {} },
+            throwOnError: true,
+          }),
+        )
+        options = (response.data.data ?? []).map((item: Organization) => ({
+          id: String(item.id),
+          label: `${item.code} · ${item.name}`,
+        }))
+        break
+      }
+      case 'GROUP':
+        options = groups.value.map((group) => ({
+          id: String(group.id),
+          label: `${group.code} · ${group.name}`,
+        }))
+        break
+    }
+    if (requestId !== participantRequestId || type !== form.value.participant_type) return
+    participantOptions.value = options
+    if (resetSelection) form.value.participant_ref_id = options[0]?.id ?? ''
+    else preserveParticipantSelection()
+  } catch (caught: unknown) {
+    if (requestId === participantRequestId) {
+      error.value = caught
+      reportApiError(caught)
+    }
+  } finally {
+    if (requestId === participantRequestId) participantLoading.value = false
+  }
+}
+function onParticipantTypeChange(type: ParticipantType): void {
+  form.value.participant_ref_id = ''
+  void loadParticipantOptions(type, '', true)
+}
+function searchParticipants(query: string): void {
+  if (!isRemoteParticipant.value) return
+  if (participantSearchTimer) clearTimeout(participantSearchTimer)
+  participantSearchTimer = setTimeout(() => {
+    void loadParticipantOptions(form.value.participant_type, query)
+  }, 250)
+}
+async function loadWorkflowStates(resourceId: string): Promise<void> {
+  const resource = resources.value.find((item) => String(item.id) === resourceId)
+  const lifecycleId = resource?.lifecycle_id ? String(resource.lifecycle_id) : ''
+  const requestId = ++workflowStateRequestId
+  workflowStatesLoading.value = true
+  try {
+    if (!lifecycleId) {
+      lifecycleStateMemberships.value = []
+    } else {
+      let memberships = lifecycleStatesById.get(lifecycleId)
+      if (!memberships) {
+        memberships = await getLifecycleStates(lifecycleId)
+        lifecycleStatesById.set(lifecycleId, memberships)
+      }
+      if (requestId !== workflowStateRequestId) return
+      lifecycleStateMemberships.value = memberships
+    }
+    if (
+      form.value.state_id &&
+      !lifecycleStateMemberships.value.some(
+        (membership) => String(membership.state_id) === form.value.state_id,
+      )
+    ) {
+      form.value.state_id = ''
+    }
+  } catch (caught: unknown) {
+    if (requestId === workflowStateRequestId) {
+      lifecycleStateMemberships.value = []
+      form.value.state_id = ''
+      error.value = caught
+      reportApiError(caught)
+    }
+  } finally {
+    if (requestId === workflowStateRequestId) workflowStatesLoading.value = false
+  }
+}
+function onResourceChange(resourceId: string): void {
+  form.value.state_id = ''
+  void Promise.all([loadActions(resourceId), loadWorkflowStates(resourceId)])
+}
 function openCreate(): void {
   editingId.value = undefined
   form.value = {
@@ -240,10 +331,14 @@ function openCreate(): void {
     resource_id: resources.value[0] ? String(resources.value[0].id) : '',
     state_id: '',
     participant_type: 'USER',
-    participant_ref_id: currentUser.value ? String(currentUser.value.id) : '',
+    participant_ref_id: '',
     actions: [],
   }
-  void loadActions(form.value.resource_id)
+  void Promise.all([
+    loadActions(form.value.resource_id),
+    loadWorkflowStates(form.value.resource_id),
+    loadParticipantOptions(form.value.participant_type, '', true),
+  ])
   modalOpen.value = true
 }
 function openEdit(policy: Policy): void {
@@ -259,7 +354,11 @@ function openEdit(policy: Policy): void {
       effect: action.effect,
     })),
   }
-  void loadActions(form.value.resource_id)
+  void Promise.all([
+    loadActions(form.value.resource_id),
+    loadWorkflowStates(form.value.resource_id),
+    loadParticipantOptions(form.value.participant_type, ''),
+  ])
   modalOpen.value = true
 }
 function addAction(): void {
@@ -295,6 +394,9 @@ async function save(): Promise<void> {
 }
 onMounted(async () => {
   await Promise.all([load(), loadReferences()])
+})
+onBeforeUnmount(() => {
+  if (participantSearchTimer) clearTimeout(participantSearchTimer)
 })
 </script>
 
@@ -407,18 +509,18 @@ onMounted(async () => {
       <form class="modal-card__body" @submit.prevent="save">
         <label
           ><span>{{ t('security.organizationScope') }}</span
-          ><select v-model="form.organization_id" class="field-select" required>
-            <option v-for="item in organizations" :key="item.id" :value="String(item.id)">
-              {{ item.code }} · {{ item.name }}
-            </option>
-          </select></label
+          ><OrganizationTreeSelect
+            id="policy-organization-scope"
+            v-model="form.organization_id"
+            :organizations="organizations"
+            :placeholder="t('security.organizationScope')" /></label
         ><label
           ><span>{{ t('security.resource') }}</span
           ><select
             v-model="form.resource_id"
             class="field-select"
             required
-            @change="void loadActions(form.resource_id)"
+            @change="onResourceChange(form.resource_id)"
           >
             <option v-for="item in resources" :key="item.id" :value="String(item.id)">
               {{ item.type }} · {{ item.name }}
@@ -426,10 +528,14 @@ onMounted(async () => {
           </select></label
         ><label
           ><span>{{ t('security.workflowState') }}</span
-          ><select v-model="form.state_id" class="field-select">
+          ><select
+            v-model="form.state_id"
+            class="field-select"
+            :disabled="workflowStatesLoading || !form.resource_id"
+          >
             <option value="">{{ t('security.allStates') }}</option>
-            <option v-for="item in workflowStates" :key="item.id" :value="String(item.id)">
-              {{ item.code }} · {{ item.name }}
+            <option v-for="item in workflowStateOptions" :key="item.id" :value="item.id">
+              {{ item.label }}
             </option>
           </select></label
         >
@@ -440,18 +546,23 @@ onMounted(async () => {
               v-model="form.participant_type"
               class="field-select"
               required
-              @change="form.participant_ref_id = participantOptions[0]?.id ?? ''"
+              @change="onParticipantTypeChange(form.participant_type)"
             >
               <option v-for="type in participantTypes" :key="type" :value="type">{{ type }}</option>
             </select></label
           ><label
             ><span>{{ t('security.participant') }}</span
-            ><select v-model="form.participant_ref_id" class="field-select" required>
-              <option v-for="item in participantOptions" :key="item.id" :value="item.id">
-                {{ item.label }}
-              </option>
-            </select></label
-          >
+            ><NSelect
+              v-model:value="form.participant_ref_id"
+              :options="participantSelectOptions"
+              :loading="participantLoading"
+              :remote="isRemoteParticipant"
+              :filterable="true"
+              :clearable="false"
+              :placeholder="t('security.participant')"
+              :aria-label="t('security.participant')"
+              @search="searchParticipants"
+          /></label>
         </div>
         <div class="action-editor">
           <div class="detail-actions">
@@ -470,21 +581,33 @@ onMounted(async () => {
             :key="`${row.resource_action_id}-${index}`"
             class="action-edit-row"
           >
-            <select v-model="row.resource_action_id" class="field-select" required>
+            <select
+              v-model="row.resource_action_id"
+              class="field-select"
+              required
+              :aria-label="t('security.actionEffects')"
+            >
               <option v-for="action in actionOptions" :key="action.id" :value="action.id">
                 {{ action.code }}
               </option></select
-            ><select v-model="row.effect" class="field-select" required>
+            ><select
+              v-model="row.effect"
+              class="field-select"
+              required
+              :aria-label="t('security.effectsSummary')"
+            >
               <option v-for="effect in effects" :key="effect" :value="effect">
                 {{ effect }}
               </option></select
             ><button
               v-if="hasBasePermission('policy', 'edit')"
               type="button"
-              class="secondary-button"
+              class="icon-button action-delete-button"
+              :aria-label="t('common.delete')"
+              :title="t('common.delete')"
               @click="removeAction(index)"
             >
-              {{ t('common.delete') }}
+              <NIcon :component="TrashOutline" aria-hidden="true" />
             </button>
           </div>
           <p class="security-note">{{ t('security.policyBasePermissionNote') }}</p>
@@ -498,6 +621,7 @@ onMounted(async () => {
             :disabled="
               busy ||
               form.actions.length === 0 ||
+              !form.participant_ref_id ||
               !hasBasePermission(editingId ? 'policy' : 'policy', editingId ? 'edit' : 'create')
             "
           >
@@ -529,7 +653,7 @@ onMounted(async () => {
 }
 .security-note {
   margin: 0;
-  color: #6c8191;
+  color: #536b7b;
   font-size: 12px;
   line-height: 1.6;
 }
@@ -611,6 +735,16 @@ onMounted(async () => {
   background: transparent;
   color: #536b7b;
   font-size: 22px;
+}
+.action-delete-button {
+  display: inline-grid;
+  width: 34px;
+  height: 34px;
+  place-items: center;
+  border: 1px solid #dce6ec;
+  border-radius: 5px;
+  color: #b64444;
+  font-size: 18px;
 }
 code {
   font-family: ui-monospace, SFMono-Regular, Consolas, monospace;
