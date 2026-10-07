@@ -49,6 +49,36 @@ const router = createRouter({
           meta: { labelKey: 'nav.users' },
         },
         {
+          path: 'security/users',
+          name: 'security-users',
+          component: () => import('@/views/SecurityUsersView.vue'),
+          meta: { labelKey: 'nav.securityUsers' },
+        },
+        {
+          path: 'security/authorization-groups',
+          name: 'security-authorization-groups',
+          component: () => import('@/views/SecurityAuthorizationGroupsView.vue'),
+          meta: { labelKey: 'nav.authorizationGroups' },
+        },
+        {
+          path: 'security/resources',
+          name: 'security-resources',
+          component: () => import('@/views/SecurityResourcesView.vue'),
+          meta: { labelKey: 'nav.resources' },
+        },
+        {
+          path: 'security/policies',
+          name: 'security-policies',
+          component: () => import('@/views/SecurityPoliciesView.vue'),
+          meta: { labelKey: 'nav.policies' },
+        },
+        {
+          path: 'security/authorization-logs',
+          name: 'security-authorization-logs',
+          component: () => import('@/views/SecurityAuthorizationLogsView.vue'),
+          meta: { labelKey: 'nav.authorizationLogs' },
+        },
+        {
           path: 'admin/groups',
           name: 'groups',
           component: () => import('@/views/GroupsView.vue'),

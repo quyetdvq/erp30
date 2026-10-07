@@ -101,6 +101,15 @@ const navItems: NavigationItem[] = [
   { labelKey: 'nav.products', to: '/products', icon: CubeOutline },
   { labelKey: 'nav.sales', to: '/sales', icon: GridOutline },
   { labelKey: 'nav.users', to: '/admin/users', icon: SettingsOutline, group: 'orgadmin' },
+  { labelKey: 'nav.securityUsers', to: '/security/users', icon: SettingsOutline },
+  {
+    labelKey: 'nav.authorizationGroups',
+    to: '/security/authorization-groups',
+    icon: PeopleOutline,
+  },
+  { labelKey: 'nav.resources', to: '/security/resources', icon: SettingsOutline },
+  { labelKey: 'nav.policies', to: '/security/policies', icon: SettingsOutline },
+  { labelKey: 'nav.authorizationLogs', to: '/security/authorization-logs', icon: TimeOutline },
 ]
 
 const localeOptions = [
@@ -153,7 +162,16 @@ const modeItems = computed(() => {
   }
   if (activeMode.value === 'system') {
     return allowedNavItems.value.filter((item) =>
-      ['/admin/users', '/admin/groups', '/system/display-settings'].includes(item.to),
+      [
+        '/admin/users',
+        '/admin/groups',
+        '/system/display-settings',
+        '/security/users',
+        '/security/authorization-groups',
+        '/security/resources',
+        '/security/policies',
+        '/security/authorization-logs',
+      ].includes(item.to),
     )
   }
   if (activeMode.value === 'organization') {

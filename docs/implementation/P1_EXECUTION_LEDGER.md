@@ -7,7 +7,7 @@ Implementation Plan, API Design, or UI Design.
 The registry contains exactly 107 P1 tasks. Current ledger state records 91
 completed tasks: Gate 0 is 10/10, Gate 1 is 14/14, Gate 2 is 8/8, Gate 3 is
 10/10, Gate 4 is 7/7, Gate 5 is 11/11, Gate 6 is 9/9, Gate 7 is 15/15,
-Gate 8 is 7/14, and Gate 9 is 0/9.
+Gate 8 is 8/14, and Gate 9 is 0/9.
 
 The Implementation Plan v1.8 retains a planning snapshot of `69/107`; the
 `80/107` value below is evidence-derived from the current Git/ledger history
@@ -20,7 +20,7 @@ registry.
 
 | Measure | Progress |
 |---|---:|
-| P1 tasks DONE | 91/107 |
+| P1 tasks DONE | 92/107 |
 | Gate 0 | 10/10 DONE |
 | Gate 1 | 14/14 DONE |
 | Gate 2 | 8/8 DONE |
@@ -29,7 +29,7 @@ registry.
 | Gate 5 | 11/11 DONE |
 | Gate 6 | 9/9 DONE |
 | Gate 7 | 15/15 DONE |
-| Gate 8 | 7/14 DONE |
+| Gate 8 | 8/14 DONE |
 | Gate 9 | 0/9 DONE |
 
 ## Task Ledger
@@ -127,7 +127,7 @@ registry.
 | P1-FE-003 | DONE | 0000000 | service-standard | Shared list shell/query controls/table/pagination/export plumbing using FE-002/API-003 contracts, DSP-005 formatters, canonical string preservation, state-transition coverage, and evidence: `docs/implementation/evidence/P1-FE-003/01_common_list_components_assessment.md`. |
 | P1-FE-010 | DONE | 0000000 | service-standard | Location/Organization/Contact Slice 1 UI; FE-003 list states, generated API-010 client boundary, canonical parent/type matrix, reusable Contact UI, critical Playwright and frontend/API validation. Evidence: `docs/implementation/evidence/P1-FE-010/01_slice1_ui_assessment.md`. |
 | P1-FE-020 | DONE | 0000000 | frontend | Employee/Assignment Slice 2 UI: Department hierarchy and Position master aligned to the Locations/Wards list pattern; Employee ListTable/detail/filter/form with constrained responsive modal; Contacts reused the FE-010 Wards-aligned list surface and resolves canonical Province/Ward IDs; Audit uses the matching detail summary without fabricated entries; canonical gender, manager guards, Assignment CRUD/history/Primary overlap handling, searchable large-option dropdowns with case-insensitive realtime filtering, accessibility and critical Playwright evidence. Evidence: `docs/implementation/evidence/P1-FE-020/01_employee_assignment_ui_assessment.md`. |
-| P1-FE-030 | NOT_STARTED | — | high-risk | No accepted implementation evidence. |
+| P1-FE-030 | DONE | 0000000 | high-risk | Security/Authorization UI evidence: `docs/implementation/evidence/P1-FE-030/01_security_authorization_ui_assessment.md`. Repository-wide Oxlint remains blocked by an untouched pre-existing `SearchableSelect.spec.ts` unused variable; scoped touched-file Oxlint passes. |
 | P1-FE-040 | NOT_STARTED | — | service-standard | No accepted implementation evidence. |
 | P1-FE-050 | NOT_STARTED | — | high-risk | No accepted implementation evidence. |
 | P1-FE-060 | NOT_STARTED | — | high-risk | No accepted implementation evidence. |

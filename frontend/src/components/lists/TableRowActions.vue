@@ -2,7 +2,13 @@
 import { computed } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { NIcon } from 'naive-ui'
-import { BanOutline, CreateOutline, EyeOutline, PowerOutline } from '@vicons/ionicons5'
+import {
+  BanOutline,
+  CreateOutline,
+  EyeOutline,
+  PowerOutline,
+  TrashOutline,
+} from '@vicons/ionicons5'
 
 const props = withDefaults(
   defineProps<{
@@ -11,18 +17,28 @@ const props = withDefaults(
     showView?: boolean
     showEdit?: boolean
     showToggle?: boolean
+    showDelete?: boolean
     viewLabel?: string
     editLabel?: string
     activateLabel?: string
     deactivateLabel?: string
+    deleteLabel?: string
   }>(),
-  { active: undefined, busy: false, showView: false, showEdit: false, showToggle: false },
+  {
+    active: undefined,
+    busy: false,
+    showView: false,
+    showEdit: false,
+    showToggle: false,
+    showDelete: false,
+  },
 )
 
 const emit = defineEmits<{
   view: []
   edit: []
   toggle: []
+  delete: []
 }>()
 
 const { t } = useI18n()
@@ -67,6 +83,17 @@ const toggleIcon = computed(() => (props.active === false ? PowerOutline : BanOu
     >
       <NIcon :component="toggleIcon" aria-hidden="true" />
     </button>
+    <button
+      v-if="props.showDelete"
+      type="button"
+      class="table-row-action table-row-action--delete"
+      :disabled="props.busy"
+      :title="props.deleteLabel ?? t('common.delete')"
+      :aria-label="props.deleteLabel ?? t('common.delete')"
+      @click="emit('delete')"
+    >
+      <NIcon :component="TrashOutline" aria-hidden="true" />
+    </button>
   </span>
 </template>
 
@@ -102,6 +129,14 @@ const toggleIcon = computed(() => (props.active === false ? PowerOutline : BanOu
 .table-row-action--state:focus-visible {
   border-color: #b45309;
   color: #b45309;
+}
+.table-row-action--delete {
+  color: #a23a32;
+}
+.table-row-action--delete:hover:not(:disabled),
+.table-row-action--delete:focus-visible {
+  border-color: #a23a32;
+  color: #a23a32;
 }
 .table-row-action:disabled {
   cursor: not-allowed;
