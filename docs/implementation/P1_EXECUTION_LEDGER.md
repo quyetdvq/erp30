@@ -16,7 +16,7 @@ No task is downgraded to force that stale count.
 
 | Measure | Progress |
 |---|---:|
-| P1 tasks DONE | 74/100 |
+| P1 tasks DONE | 75/100 |
 | Gate 0 | 10/10 DONE |
 | Gate 1 | 14/14 DONE |
 | Gate 2 | 8/8 DONE |
@@ -24,7 +24,7 @@ No task is downgraded to force that stale count.
 | Gate 4 | 7/7 DONE |
 | Gate 5 | 11/11 DONE |
 | Gate 6 | 9/9 DONE |
-| Gate 7 | 5/10 DONE |
+| Gate 7 | 6/10 DONE |
 | Gate 8 | 0/12 DONE |
 | Gate 9 | 0/9 DONE |
 

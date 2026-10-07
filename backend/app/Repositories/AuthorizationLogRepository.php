@@ -65,4 +65,40 @@ final class AuthorizationLogRepository
 
         return $id;
     }
+
+    /** @return list<array<string, mixed>> */
+    public function findAllWithResourceType(): array
+    {
+        try {
+            $result = $this->db->table('authorization_logs al')
+                ->select('al.*, r.type resource_type')
+                ->join('resources r', 'r.id = al.resource_id')
+                ->orderBy('al.id', 'ASC')
+                ->get();
+        } catch (\Throwable $exception) {
+            throw new PersistenceException(self::ERROR_PERSISTENCE_FAILED, 'findAllWithResourceType', $exception);
+        }
+        if ($result === false) {
+            throw new PersistenceException(self::ERROR_PERSISTENCE_FAILED, 'findAllWithResourceType');
+        }
+
+        return array_values($result->getResultArray());
+    }
+
+    /** @return array<string, mixed>|null */
+    public function findById(int $id): ?array
+    {
+        try {
+            $result = $this->db->table('authorization_logs')->where('id', $id)->get();
+        } catch (\Throwable $exception) {
+            throw new PersistenceException(self::ERROR_PERSISTENCE_FAILED, 'findById', $exception);
+        }
+        if ($result === false) {
+            throw new PersistenceException(self::ERROR_PERSISTENCE_FAILED, 'findById');
+        }
+
+        $row = $result->getRowArray();
+
+        return $row === null ? null : $row;
+    }
 }

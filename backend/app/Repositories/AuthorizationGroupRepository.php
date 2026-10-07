@@ -190,6 +190,64 @@ final class AuthorizationGroupRepository
         return $result->getRowArray() !== null;
     }
 
+    /** @param list<int> $userIds */
+    public function replaceMembers(string $groupCode, array $userIds, ?OperationContext $operation = null): bool
+    {
+        if (! $this->db instanceof BaseConnection) {
+            throw new DomainException(self::ERROR_CONNECTION_INVALID, ['operation' => 'replaceMembers']);
+        }
+        $table = (string) config('Auth')->tables['groups_users'];
+        $this->db->transBegin();
+        try {
+            if (! $this->db->table($table)->where('group', strtolower($groupCode))->delete()) {
+                throw new PersistenceException(self::ERROR_PERSISTENCE_FAILED, 'replaceMembers.delete');
+            }
+            foreach ($userIds as $userId) {
+                if (! $this->db->table($table)->insert([
+                    'user_id' => $userId,
+                    'group' => strtolower($groupCode),
+                    'created_at' => ($operation ?? MutationContext::system(service('clock'))->begin())->evaluationTime->utc()->format('Y-m-d H:i:s'),
+                ])) {
+                    throw new PersistenceException(self::ERROR_PERSISTENCE_FAILED, 'replaceMembers.insert');
+                }
+            }
+            if (! $this->db->transStatus()) {
+                throw new DomainException('AUTH_GROUP_MUTATION_FAILED');
+            }
+            $this->db->transCommit();
+
+            return true;
+        } catch (\Throwable $exception) {
+            $this->db->transRollback();
+            $this->db->resetTransStatus();
+            if ($exception instanceof DomainException) {
+                throw $exception;
+            }
+            throw new PersistenceException(self::ERROR_MUTATION_FAILED, 'replaceMembers', $exception);
+        }
+    }
+
+    /** @return list<array<string, mixed>> */
+    public function findMembers(string $groupCode): array
+    {
+        $users = (string) config('Auth')->tables['users'];
+        try {
+            $result = $this->db->table((string) config('Auth')->tables['groups_users'] . ' gu')
+                ->select('u.id, u.username, u.active, u.status')
+                ->join($users . ' u', 'u.id = gu.user_id')
+                ->where('gu.group', strtolower($groupCode))
+                ->where('u.deleted_at', null)
+                ->orderBy('u.id', 'ASC')->get();
+        } catch (\Throwable $exception) {
+            throw new PersistenceException(self::ERROR_PERSISTENCE_FAILED, 'findMembers', $exception);
+        }
+        if ($result === false) {
+            throw new PersistenceException(self::ERROR_PERSISTENCE_FAILED, 'findMembers');
+        }
+
+        return array_values($result->getResultArray());
+    }
+
     /** @param list<int> $resourceActionIds */
     public function replacePermissions(int $groupId, array $resourceActionIds, ?OperationContext $operation = null): bool
     {

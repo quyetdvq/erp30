@@ -16,10 +16,10 @@ use App\Infrastructure\Mutation\MutationContext;
 use App\Infrastructure\Mutation\OperationContext;
 use App\Infrastructure\RequestContext;
 use App\Repositories\AuthorizationGroupRepository;
+use App\Repositories\AuthorizationLogRepository;
 use App\Repositories\LifecycleRepository;
 use App\Repositories\PolicyRepository;
 use App\Repositories\ResourceCatalogRepository;
-use CodeIgniter\Database\BaseConnection;
 use CodeIgniter\Database\ConnectionInterface;
 use CodeIgniter\Exceptions\PageNotFoundException;
 use CodeIgniter\Shield\Entities\User;
@@ -29,16 +29,6 @@ final class Api030AuthorizationWorkflowService
 {
     /** @var list<string> */
     private const RESOURCES = ['authorization_group', 'resource', 'policy', 'authorization_log', 'workflow_state', 'lifecycle'];
-
-    /** @var array<string, string> */
-    private const TABLES = [
-        'authorization_group' => 'groups',
-        'resource' => 'resources',
-        'policy' => 'policies',
-        'authorization_log' => 'authorization_logs',
-        'workflow_state' => 'workflow_states',
-        'lifecycle' => 'lifecycles',
-    ];
 
     /** @var ConnectionInterface<mixed, mixed> */
     private ConnectionInterface $connection;
@@ -51,8 +41,10 @@ final class Api030AuthorizationWorkflowService
         private readonly ?PolicyAdministrationService $policies = null,
         private readonly ?LifecycleService $lifecycleService = null,
         private readonly ?AuthorizationGroupRepository $groupRepository = null,
+        private readonly ?AuthorizationLogRepository $authorizationLogRepository = null,
         private readonly ?PolicyRepository $policyRepository = null,
         private readonly ?LifecycleRepository $lifecycleRepository = null,
+        private readonly ?ResourceCatalogRepository $resourceRepository = null,
         ?ConnectionInterface $db = null,
         private readonly ?MutationContext $mutationContext = null,
     ) {
@@ -196,35 +188,12 @@ final class Api030AuthorizationWorkflowService
         $operation = $this->operation();
         $this->authorize('authorization_group', 'assign_member', $group, $payload, $operation);
         $userIds = $this->positiveIdList($payload['user_ids'] ?? null, 'user_ids');
-        $table = (string) config('Auth')->tables['groups_users'];
-        $users = (string) config('Auth')->tables['users'];
-        if (! $this->connection instanceof BaseConnection) {
-            throw new DomainException('AUTH_GROUP_CONNECTION_INVALID');
+        foreach ($userIds as $userId) {
+            if (! $this->groupRepository()->userExists($userId)) {
+                throw new DomainException('AUTH_GROUP_TARGET_NOT_FOUND', ['user_id' => $userId]);
+            }
         }
-        $this->connection->transBegin();
-        try {
-            foreach ($userIds as $userId) {
-                if ($this->connection->table($users)->where('id', $userId)->where('deleted_at', null)->countAllResults() < 1) {
-                    throw new DomainException('AUTH_GROUP_TARGET_NOT_FOUND', ['user_id' => $userId]);
-                }
-            }
-            $this->connection->table($table)->where('group', strtolower((string) $group['code']))->delete();
-            foreach ($userIds as $userId) {
-                $this->connection->table($table)->insert([
-                    'user_id' => $userId,
-                    'group' => strtolower((string) $group['code']),
-                    'created_at' => $operation->evaluationTime->utc()->format('Y-m-d H:i:s'),
-                ]);
-            }
-            if (! $this->connection->transStatus()) {
-                throw new DomainException('AUTH_GROUP_MUTATION_FAILED');
-            }
-            $this->connection->transCommit();
-        } catch (\Throwable $exception) {
-            $this->connection->transRollback();
-            $this->connection->resetTransStatus();
-            throw $exception;
-        }
+        $this->groupRepository()->replaceMembers((string) $group['code'], $userIds, $operation);
 
         return $this->memberRows($groupId);
     }
@@ -260,7 +229,7 @@ final class Api030AuthorizationWorkflowService
         $resource = $this->find('resource', $resourceId);
         $this->authorize('resource', 'view', $resource, [], $this->operation());
 
-        return $this->queryRows($this->connection->table('resource_actions')->where('resource_id', $resourceId)->orderBy('id', 'ASC')->get(), 'resourceActions');
+        return $this->resourceRepository()->findResourceActions($resourceId);
     }
 
     /**
@@ -274,11 +243,9 @@ final class Api030AuthorizationWorkflowService
         $this->authorize('resource', 'edit', $resource, $payload, $operation);
         $code = $this->token($payload['code'] ?? null, 'code');
         $row = ['resource_id' => $resourceId, 'code' => $code, 'description' => $payload['description'] ?? null, ...$operation->createdAudit()];
-        if (! $this->connection->table('resource_actions')->insert($row)) {
-            throw new DomainException('RESOURCE_CATALOG_PERSISTENCE_FAILED');
-        }
+        $actionId = $this->resourceRepository()->insertResourceAction($row);
 
-        return $this->queryRow($this->connection->table('resource_actions')->where('id', $this->insertId())->get(), 'createResourceAction') ?? [];
+        return $this->resourceRepository()->findResourceActionById($actionId) ?? [];
     }
 
     /**
@@ -288,7 +255,7 @@ final class Api030AuthorizationWorkflowService
     public function updateResourceAction(int $resourceId, int $actionId, array $payload): array
     {
         $resource = $this->find('resource', $resourceId);
-        $action = $this->queryRow($this->connection->table('resource_actions')->where('id', $actionId)->where('resource_id', $resourceId)->get(), 'updateResourceAction.find');
+        $action = $this->resourceRepository()->findResourceAction($resourceId, $actionId);
         if ($action === null) {
             throw new PageNotFoundException('Resource action not found.');
         }
@@ -305,31 +272,27 @@ final class Api030AuthorizationWorkflowService
             throw new DomainException('VALIDATION_ERROR');
         }
         $changes = [...$changes, ...$operation->updatedAudit()];
-        $this->connection->table('resource_actions')->where('id', $actionId)->update($changes);
+        $this->resourceRepository()->updateResourceAction($actionId, $changes);
 
-        return $this->queryRow($this->connection->table('resource_actions')->where('id', $actionId)->get(), 'updateResourceAction') ?? [];
+        return $this->resourceRepository()->findResourceActionById($actionId) ?? [];
     }
 
     public function deleteResourceAction(int $resourceId, int $actionId): void
     {
         $resource = $this->find('resource', $resourceId);
-        $action = $this->queryRow($this->connection->table('resource_actions')->where('id', $actionId)->where('resource_id', $resourceId)->get(), 'deleteResourceAction.find');
+        $action = $this->resourceRepository()->findResourceAction($resourceId, $actionId);
         if ($action === null) {
             throw new PageNotFoundException('Resource action not found.');
         }
         $this->authorize('resource', 'delete', $resource, [], $this->operation());
-        if (! $this->connection->table('resource_actions')->where('id', $actionId)->delete()) {
-            throw new DomainException('RESOURCE_CATALOG_PERSISTENCE_FAILED');
-        }
+        $this->resourceRepository()->deleteResourceAction($actionId);
     }
 
     public function deleteResourceActionTarget(int $resourceId): void
     {
         $resource = $this->find('resource', $resourceId);
         $this->authorize('resource', 'delete', $resource, [], $this->operation());
-        if (! $this->connection->table('resources')->where('id', $resourceId)->delete()) {
-            throw new DomainException('RESOURCE_CATALOG_PERSISTENCE_FAILED');
-        }
+        $this->resourceRepository()->deleteResource($resourceId);
     }
 
     /** @return list<array<string, mixed>> */
@@ -373,7 +336,8 @@ final class Api030AuthorizationWorkflowService
             'policy' => $this->policyRepository()->find($id),
             'workflow_state' => $this->lifecycleRepository()->findWorkflowState($id),
             'lifecycle' => $this->lifecycleRepository()->findLifecycle($id),
-            'resource', 'authorization_log' => $this->queryRow($this->connection->table(self::TABLES[$resource])->where('id', $id)->get(), 'find'),
+            'resource' => $this->resourceRepository()->findResource($id),
+            'authorization_log' => $this->authorizationLogRepository()->findById($id),
             default => null,
         };
         if ($row === null) {
@@ -391,8 +355,8 @@ final class Api030AuthorizationWorkflowService
             'policy' => $this->policyRepository()->findAll(),
             'workflow_state' => $this->lifecycleRepository()->findWorkflowStates(),
             'lifecycle' => $this->lifecycleRepository()->findLifecycles(),
-            'resource' => $this->queryRows($this->connection->table('resources')->orderBy('id', 'ASC')->get(), 'rows'),
-            'authorization_log' => $this->queryRows($this->connection->table('authorization_logs al')->select('al.*, r.type resource_type')->join('resources r', 'r.id = al.resource_id')->orderBy('al.id', 'ASC')->get(), 'rows'),
+            'resource' => $this->resourceRepository()->findResources(),
+            'authorization_log' => $this->authorizationLogRepository()->findAllWithResourceType(),
             default => [],
         };
     }
@@ -429,11 +393,7 @@ final class Api030AuthorizationWorkflowService
             'lifecycle_id' => $payload['lifecycle_id'] ?? null,
             ...$operation->createdAudit(),
         ];
-        if (! $this->connection->table('resources')->insert($row)) {
-            throw new DomainException('RESOURCE_CATALOG_PERSISTENCE_FAILED');
-        }
-
-        return $this->insertId();
+        return $this->resourceRepository()->insertResource($row);
     }
 
     /** @param array<string, mixed> $payload */
@@ -455,7 +415,7 @@ final class Api030AuthorizationWorkflowService
             throw new DomainException('VALIDATION_ERROR');
         }
 
-        return $this->connection->table('resources')->where('id', $id)->update([...$changes, ...$operation->updatedAudit()]) !== false;
+        return $this->resourceRepository()->updateResource($id, [...$changes, ...$operation->updatedAudit()]);
     }
 
     /**
@@ -536,7 +496,7 @@ final class Api030AuthorizationWorkflowService
             $row['actions'] = $this->policyRepository()->findPolicyActions((int) $row['id']);
         }
         if ($resource === 'resource') {
-            $row['actions'] = $this->queryRows($this->connection->table('resource_actions')->where('resource_id', (int) $row['id'])->orderBy('id', 'ASC')->get(), 'output.actions');
+            $row['actions'] = $this->resourceRepository()->findResourceActions((int) $row['id']);
         }
         return $row;
     }
@@ -557,14 +517,7 @@ final class Api030AuthorizationWorkflowService
         if ($group === null) {
             throw new PageNotFoundException('Authorization group not found.');
         }
-        $table = (string) config('Auth')->tables['groups_users'];
-        $result = $this->connection->table($table . ' gu')
-            ->select('u.id, u.username, u.active, u.status')
-            ->join((string) config('Auth')->tables['users'] . ' u', 'u.id = gu.user_id')
-            ->where('gu.group', strtolower((string) $group['code']))
-            ->where('u.deleted_at', null)
-            ->orderBy('u.id', 'ASC')->get();
-        return array_map([$this, 'outputMember'], $this->queryRows($result, 'members'));
+        return array_map([$this, 'outputMember'], $this->groupRepository()->findMembers((string) $group['code']));
     }
 
     /** @return CommonListQueryAllowlist */
@@ -640,39 +593,6 @@ final class Api030AuthorizationWorkflowService
         return strtolower(trim($value));
     }
 
-    /**
-     * @param \CodeIgniter\Database\ResultInterface<mixed, mixed>|false $result
-     * @return list<array<string, mixed>>
-     */
-    private function queryRows(\CodeIgniter\Database\ResultInterface|false $result, string $operation): array
-    {
-        if ($result === false) {
-            throw new DomainException('RESOURCE_CATALOG_PERSISTENCE_FAILED', ['operation' => $operation]);
-        }
-        return array_values($result->getResultArray());
-    }
-
-    /**
-     * @param \CodeIgniter\Database\ResultInterface<mixed, mixed>|false $result
-     * @return array<string, mixed>|null
-     */
-    private function queryRow(\CodeIgniter\Database\ResultInterface|false $result, string $operation): ?array
-    {
-        if ($result === false) {
-            throw new DomainException('RESOURCE_CATALOG_PERSISTENCE_FAILED', ['operation' => $operation]);
-        }
-        $row = $result->getRowArray();
-        return $row === null ? null : $row;
-    }
-
-    private function insertId(): int
-    {
-        if (! $this->connection instanceof BaseConnection) {
-            throw new DomainException('RESOURCE_CATALOG_CONNECTION_INVALID');
-        }
-        return (int) $this->connection->insertID();
-    }
-
     private function isVisibilityDenial(DomainException $exception): bool
     {
         $code = strtoupper($exception->getErrorCode());
@@ -709,6 +629,11 @@ final class Api030AuthorizationWorkflowService
         return $this->groupRepository ?? new AuthorizationGroupRepository($this->connection);
     }
 
+    private function authorizationLogRepository(): AuthorizationLogRepository
+    {
+        return $this->authorizationLogRepository ?? new AuthorizationLogRepository($this->connection);
+    }
+
     private function policyRepository(): PolicyRepository
     {
         return $this->policyRepository ?? new PolicyRepository($this->connection);
@@ -717,6 +642,11 @@ final class Api030AuthorizationWorkflowService
     private function lifecycleRepository(): LifecycleRepository
     {
         return $this->lifecycleRepository ?? new LifecycleRepository($this->connection);
+    }
+
+    private function resourceRepository(): ResourceCatalogRepository
+    {
+        return $this->resourceRepository ?? new ResourceCatalogRepository($this->connection);
     }
 
     private function groupService(OperationContext $operation): AuthorizationGroupService
