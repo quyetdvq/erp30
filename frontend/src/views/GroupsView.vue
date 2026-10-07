@@ -9,8 +9,10 @@ import {
   type Group,
   type ResourceAction,
 } from '@/services/admin'
+import { useBasePermission } from '@/composables/useBasePermission'
 
 const groups = ref<Group[]>([])
+const { hasBasePermission, refreshBasePermissions } = useBasePermission()
 const catalog = ref<ResourceAction[]>([])
 const assigned = ref<number[]>([])
 const selected = ref<Group | null>(null)
@@ -60,6 +62,7 @@ async function savePermissions(): Promise<void> {
   busy.value = true
   try {
     await saveGroupPermissions(selected.value.id, assigned.value)
+    await refreshBasePermissions()
   } catch {
     error.value = 'Không thể lưu ma trận quyền.'
   } finally {
@@ -76,7 +79,14 @@ onMounted(load)
       <h1>Groups & permission matrix</h1>
       <p>Danh mục group dùng chung với CodeIgniter Shield.</p>
     </div>
-    <button class="primary-button" type="button" @click="openCreate">＋ Tạo group</button>
+    <button
+      v-if="hasBasePermission('authorization_group', 'create')"
+      class="primary-button"
+      type="button"
+      @click="openCreate"
+    >
+      ＋ Tạo group
+    </button>
   </div>
   <div class="split-layout">
     <section class="content-panel">
@@ -106,7 +116,12 @@ onMounted(load)
       <template v-else>
         <div class="toolbar">
           <strong class="toolbar-title">{{ selected.name }}</strong
-          ><button class="primary-button" type="button" :disabled="busy" @click="savePermissions">
+          ><button
+            class="primary-button"
+            type="button"
+            :disabled="busy || !hasBasePermission('authorization_group', 'assign_permission')"
+            @click="savePermissions"
+          >
             Lưu quyền
           </button>
         </div>
@@ -142,7 +157,13 @@ onMounted(load)
         </div>
         <footer>
           <button class="secondary-button" type="button" @click="modalOpen = false">Hủy</button
-          ><button class="primary-button" type="submit">Lưu</button>
+          ><button
+            class="primary-button"
+            type="submit"
+            :disabled="!hasBasePermission('authorization_group', 'create')"
+          >
+            Lưu
+          </button>
         </footer>
       </form>
     </section>

@@ -144,8 +144,39 @@ export type HealthResponse = {
     meta: Meta;
 };
 
+export type AuthLogin = {
+    email: string;
+    password: string;
+    remember: boolean;
+};
+
+export type AuthProfilePatch = {
+    username: string;
+    email: string;
+    password?: string;
+};
+
+export type AuthUser = {
+    id: number;
+    username: string;
+    email: string | null;
+    active: boolean;
+    status: string | null;
+    groups: Array<string>;
+    /**
+     * Sorted canonical Base Permission keys only; not final Authorization.
+     */
+    base_permissions: Array<string>;
+};
+
 export type DisplaySettingsRuntimeResponse = SuccessResponse & {
     data?: DisplaySettingsRuntime;
+};
+
+export type AuthUserResponse = SuccessResponse & {
+    data?: {
+        user: AuthUser;
+    };
 };
 
 export type DisplaySettingDefinitionsResponse = SuccessResponse & {
@@ -1108,6 +1139,10 @@ export type DisplayOrganizationId = PositiveBigInt;
 
 export type DisplayContextType = 'SYSTEM' | 'ORGANIZATION';
 
+export type AuthLogin2 = AuthLogin;
+
+export type AuthProfilePatch2 = AuthProfilePatch;
+
 export type ProvinceCreate2 = ProvinceCreate;
 
 export type ProvincePatch2 = ProvincePatch;
@@ -1274,6 +1309,154 @@ export type GetHealthResponses = {
 };
 
 export type GetHealthResponse = GetHealthResponses[keyof GetHealthResponses];
+
+export type LoginData = {
+    body: AuthLogin2;
+    headers?: {
+        /**
+         * Supported request language. Unsupported values fall back to vi.
+         */
+        'Accept-Language'?: 'vi' | 'en';
+        /**
+         * Client request correlation identifier; invalid or missing values are replaced by a generated UUID.
+         */
+        'X-Request-ID'?: RequestId;
+    };
+    path?: never;
+    query?: never;
+    url: '/api/v1/auth/login';
+};
+
+export type LoginErrors = {
+    /**
+     * Unauthenticated or invalid authentication.
+     */
+    401: ErrorResponse;
+    /**
+     * Semantically invalid request.
+     */
+    422: ErrorResponse;
+};
+
+export type LoginError = LoginErrors[keyof LoginErrors];
+
+export type LoginResponses = {
+    /**
+     * Authenticated user and Base Permission snapshot.
+     */
+    200: AuthUserResponse;
+};
+
+export type LoginResponse = LoginResponses[keyof LoginResponses];
+
+export type GetCurrentUserData = {
+    body?: never;
+    headers?: {
+        /**
+         * Supported request language. Unsupported values fall back to vi.
+         */
+        'Accept-Language'?: 'vi' | 'en';
+        /**
+         * Client request correlation identifier; invalid or missing values are replaced by a generated UUID.
+         */
+        'X-Request-ID'?: RequestId;
+    };
+    path?: never;
+    query?: never;
+    url: '/api/v1/auth/me';
+};
+
+export type GetCurrentUserErrors = {
+    /**
+     * Unauthenticated or invalid authentication.
+     */
+    401: ErrorResponse;
+};
+
+export type GetCurrentUserError = GetCurrentUserErrors[keyof GetCurrentUserErrors];
+
+export type GetCurrentUserResponses = {
+    /**
+     * Authenticated user and Base Permission snapshot.
+     */
+    200: AuthUserResponse;
+};
+
+export type GetCurrentUserResponse = GetCurrentUserResponses[keyof GetCurrentUserResponses];
+
+export type UpdateAuthProfileData = {
+    body: AuthProfilePatch2;
+    headers?: {
+        /**
+         * Supported request language. Unsupported values fall back to vi.
+         */
+        'Accept-Language'?: 'vi' | 'en';
+        /**
+         * Client request correlation identifier; invalid or missing values are replaced by a generated UUID.
+         */
+        'X-Request-ID'?: RequestId;
+    };
+    path?: never;
+    query?: never;
+    url: '/api/v1/auth/profile';
+};
+
+export type UpdateAuthProfileErrors = {
+    /**
+     * Unauthenticated or invalid authentication.
+     */
+    401: ErrorResponse;
+    /**
+     * Semantically invalid request.
+     */
+    422: ErrorResponse;
+};
+
+export type UpdateAuthProfileError = UpdateAuthProfileErrors[keyof UpdateAuthProfileErrors];
+
+export type UpdateAuthProfileResponses = {
+    /**
+     * Authenticated user and Base Permission snapshot.
+     */
+    200: AuthUserResponse;
+};
+
+export type UpdateAuthProfileResponse = UpdateAuthProfileResponses[keyof UpdateAuthProfileResponses];
+
+export type LogoutData = {
+    body?: never;
+    headers?: {
+        /**
+         * Supported request language. Unsupported values fall back to vi.
+         */
+        'Accept-Language'?: 'vi' | 'en';
+        /**
+         * Client request correlation identifier; invalid or missing values are replaced by a generated UUID.
+         */
+        'X-Request-ID'?: RequestId;
+    };
+    path?: never;
+    query?: never;
+    url: '/api/v1/auth/logout';
+};
+
+export type LogoutErrors = {
+    /**
+     * Unauthenticated or invalid authentication.
+     */
+    401: ErrorResponse;
+};
+
+export type LogoutError = LogoutErrors[keyof LogoutErrors];
+
+export type LogoutResponses = {
+    /**
+     * Successful API response.
+     */
+    200: SuccessResponse;
+};
+
+export type LogoutResponse = LogoutResponses[keyof LogoutResponses];
 
 export type GetDisplaySettingsRuntimeData = {
     body?: never;

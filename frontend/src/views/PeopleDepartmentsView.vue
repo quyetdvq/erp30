@@ -21,8 +21,10 @@ import {
   saveDepartment,
 } from '@/services/employeeStructure'
 import { reportApiError } from '@/services/errorBoundary'
+import { useBasePermission } from '@/composables/useBasePermission'
 
 const { t } = useI18n()
+const { hasBasePermission } = useBasePermission()
 const state = useListState<Department>((query) => listDepartmentPage(query), { sort: 'name' })
 const selectedId = ref<string | null>(null)
 const modalOpen = ref(false)
@@ -195,7 +197,12 @@ onMounted(() => void load())
       <h1>{{ t('people.departmentsTitle') }}</h1>
       <p>{{ t('people.departmentsDescription') }}</p>
     </div>
-    <button type="button" class="primary-button" @click="openCreate">
+    <button
+      v-if="hasBasePermission('department', 'create')"
+      type="button"
+      class="primary-button"
+      @click="openCreate"
+    >
       ＋ {{ t('common.create') }}
     </button>
   </div>
@@ -241,6 +248,9 @@ onMounted(() => void load())
             :show-view="true"
             :show-edit="true"
             :show-toggle="true"
+            view-permission="department.view"
+            edit-permission="department.edit"
+            toggle-permission="department.setstate"
             :edit-label="t('common.edit')"
             :activate-label="t('common.activate')"
             :deactivate-label="t('common.deactivate')"
@@ -331,7 +341,11 @@ onMounted(() => void load())
         <footer class="modal-card__footer">
           <button type="button" class="secondary-button" @click="modalOpen = false">
             {{ t('common.cancel') }}</button
-          ><button type="submit" class="primary-button" :disabled="busy">
+          ><button
+            type="submit"
+            class="primary-button"
+            :disabled="busy || !hasBasePermission('department', editingId ? 'edit' : 'create')"
+          >
             {{ busy ? t('common.saving') : t('common.save') }}
           </button>
         </footer>

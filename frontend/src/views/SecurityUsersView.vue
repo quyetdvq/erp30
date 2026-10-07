@@ -137,6 +137,7 @@ onMounted(() => void load())
           <TableRowActions
             :busy="busy"
             :show-view="true"
+            view-permission="user.view"
             :view-label="t('security.viewDetails')"
             @view="void openDetails(row)"
           />

@@ -9,7 +9,38 @@ async function mockBase(page: Page, status = 200): Promise<void> {
     route.fulfill({
       status: 200,
       contentType: 'application/json',
-      body: JSON.stringify({ data: { user: { id: 7, username: 'admin', groups: ['orgadmin'] } } }),
+      body: JSON.stringify({
+        data: {
+          user: {
+            id: 7,
+            username: 'admin',
+            groups: ['orgadmin'],
+            base_permissions: [
+              'organization.view',
+              'department.view',
+              'department.create',
+              'department.edit',
+              'department.setstate',
+              'position.view',
+              'position.create',
+              'position.edit',
+              'position.setstate',
+              'employee.view',
+              'employee.create',
+              'employee.edit',
+              'employee.setstate',
+              'employee_assignment.view',
+              'employee_assignment.create',
+              'employee_assignment.edit',
+              'employee_assignment.setstate',
+              'contact.view',
+              'contact.create',
+              'contact.edit',
+              'contact.setstate',
+            ],
+          },
+        },
+      }),
     }),
   )
   const departments = [

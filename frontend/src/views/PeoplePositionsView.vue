@@ -15,8 +15,10 @@ import type { TableDetailField } from '@/components/lists/TableDetailModal.vue'
 import { useListState } from '@/composables/useListState'
 import { changePositionState, listPositionPage, savePosition } from '@/services/employeeStructure'
 import { reportApiError } from '@/services/errorBoundary'
+import { useBasePermission } from '@/composables/useBasePermission'
 
 const { t } = useI18n()
+const { hasBasePermission } = useBasePermission()
 const state = useListState<Position>((query) => listPositionPage(query), { sort: 'name' })
 const modalOpen = ref(false)
 const detailOpen = ref(false)
@@ -133,7 +135,12 @@ onMounted(() => void load())
       <h1>{{ t('people.positionsTitle') }}</h1>
       <p>{{ t('people.positionsDescription') }}</p>
     </div>
-    <button type="button" class="primary-button" @click="openCreate">
+    <button
+      v-if="hasBasePermission('position', 'create')"
+      type="button"
+      class="primary-button"
+      @click="openCreate"
+    >
       ＋ {{ t('common.create') }}
     </button>
   </div>
@@ -174,6 +181,9 @@ onMounted(() => void load())
             :show-view="true"
             :show-edit="true"
             :show-toggle="true"
+            view-permission="position.view"
+            edit-permission="position.edit"
+            toggle-permission="position.setstate"
             :view-label="t('common.view')"
             :edit-label="t('common.edit')"
             :activate-label="t('common.activate')"
@@ -254,7 +264,11 @@ onMounted(() => void load())
         <footer class="modal-card__footer">
           <button type="button" class="secondary-button" @click="modalOpen = false">
             {{ t('common.cancel') }}</button
-          ><button type="submit" class="primary-button" :disabled="busy">
+          ><button
+            type="submit"
+            class="primary-button"
+            :disabled="busy || !hasBasePermission('position', editingId ? 'edit' : 'create')"
+          >
             {{ busy ? t('common.saving') : t('common.save') }}
           </button>
         </footer>

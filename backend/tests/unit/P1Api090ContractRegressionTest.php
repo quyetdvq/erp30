@@ -149,7 +149,7 @@ final class P1Api090ContractRegressionTest extends CIUnitTestCase
         $inventory = [];
         foreach (['GET', 'POST', 'PATCH', 'PUT', 'DELETE'] as $verb) {
             foreach ($routes->getRoutes($verb, false) as $path => $handler) {
-                if (! str_starts_with($path, 'api/v1/') || str_starts_with($path, 'api/v1/auth/')) {
+                if (! str_starts_with($path, 'api/v1/')) {
                     continue;
                 }
                 $signature = $verb . ' ' . $this->normalizeRuntimePath($path);

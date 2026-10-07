@@ -13,7 +13,33 @@ async function mockSession(page: Page): Promise<void> {
     route.fulfill({
       status: 200,
       contentType: 'application/json',
-      body: JSON.stringify({ data: { user: { id: 7, username: 'admin', groups: ['orgadmin'] } } }),
+      body: JSON.stringify({
+        data: {
+          user: {
+            id: 7,
+            username: 'admin',
+            groups: ['orgadmin'],
+            base_permissions: [
+              'organization.view',
+              'organization.create',
+              'organization.edit',
+              'organization.setstate',
+              'contact.view',
+              'contact.create',
+              'contact.edit',
+              'contact.setstate',
+              'province.view',
+              'province.create',
+              'province.edit',
+              'province.setstate',
+              'ward.view',
+              'ward.create',
+              'ward.edit',
+              'ward.setstate',
+            ],
+          },
+        },
+      }),
     }),
   )
 }

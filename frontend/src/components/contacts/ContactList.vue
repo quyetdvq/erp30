@@ -21,6 +21,7 @@ import {
 import { createListQuery, type ListColumn, type ListQuery } from '@/components/lists/listTypes'
 import type { TableDetailField } from '@/components/lists/TableDetailModal.vue'
 import { useListState } from '@/composables/useListState'
+import { useBasePermission } from '@/composables/useBasePermission'
 import { reportApiError } from '@/services/errorBoundary'
 import ContactFormModal from './ContactFormModal.vue'
 
@@ -33,6 +34,7 @@ const props = withDefaults(
 )
 
 const { t } = useI18n()
+const { hasBasePermission } = useBasePermission()
 const mode = ref<'active' | 'history'>('active')
 const modalOpen = ref(false)
 const detailOpen = ref(false)
@@ -233,7 +235,12 @@ onMounted(async () => {
           {{ t('contact.historyView') }}
         </button>
       </div>
-      <button type="button" class="primary-button" @click="openCreate">
+      <button
+        v-if="hasBasePermission('contact', 'create')"
+        type="button"
+        class="primary-button"
+        @click="openCreate"
+      >
         ＋ {{ t('contact.add') }}
       </button>
     </header>
@@ -270,6 +277,9 @@ onMounted(async () => {
             :show-view="true"
             :show-edit="true"
             :show-toggle="true"
+            view-permission="contact.view"
+            edit-permission="contact.edit"
+            toggle-permission="contact.setstate"
             :edit-label="t('contact.edit')"
             :activate-label="t('contact.activate')"
             :deactivate-label="t('contact.deactivate')"

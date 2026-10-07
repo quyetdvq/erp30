@@ -17,20 +17,29 @@ export const useAuthStore = defineStore('auth', () => {
   const hydrated = ref(false)
   const busy = ref(false)
   const error = ref('')
+  const permissionSnapshotState = ref<'loading' | 'ready' | 'stale' | 'unavailable'>('unavailable')
 
   const isAuthenticated = computed(() => user.value !== null)
+
+  function setAuthenticatedUser(nextUser: AuthUser): void {
+    user.value = nextUser
+    permissionSnapshotState.value = 'ready'
+  }
 
   async function hydrate(): Promise<void> {
     if (hydrated.value) return
     hydrated.value = true
+    permissionSnapshotState.value = 'loading'
     try {
-      user.value = await getCurrentUser()
-      useDisplaySettingsStore().activateUser(user.value.id)
-      useWorkspaceStore().activateUser(user.value.id)
+      const nextUser = await getCurrentUser()
+      setAuthenticatedUser(nextUser)
+      useDisplaySettingsStore().activateUser(nextUser.id)
+      useWorkspaceStore().activateUser(nextUser.id)
     } catch (requestError: unknown) {
       if (!axios.isAxiosError(requestError) || requestError.response?.status !== 401)
         error.value = 'Không thể tải phiên đăng nhập.'
       user.value = null
+      permissionSnapshotState.value = 'unavailable'
       useDisplaySettingsStore().clearSession()
       useWorkspaceStore().clearSession()
     }
@@ -40,10 +49,11 @@ export const useAuthStore = defineStore('auth', () => {
     busy.value = true
     error.value = ''
     try {
-      user.value = await loginRequest({ email, password, remember })
+      const nextUser = await loginRequest({ email, password, remember })
+      setAuthenticatedUser(nextUser)
       hydrated.value = true
-      useDisplaySettingsStore().activateUser(user.value.id)
-      useWorkspaceStore().activateUser(user.value.id)
+      useDisplaySettingsStore().activateUser(nextUser.id)
+      useWorkspaceStore().activateUser(nextUser.id)
     } catch (requestError: unknown) {
       error.value = axios.isAxiosError(requestError)
         ? (requestError.response?.data?.message ?? 'Đăng nhập không thành công.')
@@ -59,6 +69,7 @@ export const useAuthStore = defineStore('auth', () => {
       await logoutRequest()
     } finally {
       user.value = null
+      permissionSnapshotState.value = 'unavailable'
       useDisplaySettingsStore().clearSession()
       useWorkspaceStore().clearSession()
     }
@@ -69,7 +80,26 @@ export const useAuthStore = defineStore('auth', () => {
     email: string
     password?: string
   }): Promise<void> {
-    user.value = await updateProfile(payload)
+    setAuthenticatedUser(await updateProfile(payload))
+  }
+
+  async function refreshBasePermissions(): Promise<void> {
+    if (!user.value) {
+      permissionSnapshotState.value = 'unavailable'
+      return
+    }
+
+    permissionSnapshotState.value = 'loading'
+    try {
+      setAuthenticatedUser(await getCurrentUser())
+    } catch (requestError: unknown) {
+      permissionSnapshotState.value = 'unavailable'
+      throw requestError
+    }
+  }
+
+  function markPermissionSnapshotStale(): void {
+    if (user.value) permissionSnapshotState.value = 'stale'
   }
 
   function clearError(): void {
@@ -81,11 +111,14 @@ export const useAuthStore = defineStore('auth', () => {
     hydrated,
     busy,
     error,
+    permissionSnapshotState,
     isAuthenticated,
     hydrate,
     login,
     logout,
     saveProfile,
+    refreshBasePermissions,
+    markPermissionSnapshotStale,
     clearError,
   }
 })

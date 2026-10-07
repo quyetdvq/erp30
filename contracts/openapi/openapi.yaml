@@ -47,6 +47,43 @@ paths:
           $ref: '#/components/responses/UnprocessableEntity'
         '500':
           $ref: '#/components/responses/InternalServerError'
+  /api/v1/auth/login:
+    post:
+      operationId: login
+      summary: Authenticate a Shield session user
+      security: []
+      parameters: [{$ref: '#/components/parameters/AcceptLanguage'}, {$ref: '#/components/parameters/RequestId'}]
+      requestBody: {$ref: '#/components/requestBodies/AuthLogin'}
+      responses:
+        '200': {$ref: '#/components/responses/AuthUserResponse'}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '422': {$ref: '#/components/responses/UnprocessableEntity'}
+  /api/v1/auth/me:
+    get:
+      operationId: getCurrentUser
+      summary: Get the authenticated session user and Base Permission snapshot
+      parameters: [{$ref: '#/components/parameters/AcceptLanguage'}, {$ref: '#/components/parameters/RequestId'}]
+      responses:
+        '200': {$ref: '#/components/responses/AuthUserResponse'}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+  /api/v1/auth/profile:
+    patch:
+      operationId: updateAuthProfile
+      summary: Update the authenticated user profile and refresh permissions
+      parameters: [{$ref: '#/components/parameters/AcceptLanguage'}, {$ref: '#/components/parameters/RequestId'}]
+      requestBody: {$ref: '#/components/requestBodies/AuthProfilePatch'}
+      responses:
+        '200': {$ref: '#/components/responses/AuthUserResponse'}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '422': {$ref: '#/components/responses/UnprocessableEntity'}
+  /api/v1/auth/logout:
+    post:
+      operationId: logout
+      summary: End the authenticated Shield session
+      parameters: [{$ref: '#/components/parameters/AcceptLanguage'}, {$ref: '#/components/parameters/RequestId'}]
+      responses:
+        '200': {$ref: '#/components/responses/Success'}
+        '401': {$ref: '#/components/responses/Unauthorized'}
   /api/v1/display-settings/runtime:
     get:
       operationId: getDisplaySettingsRuntime
@@ -901,6 +938,8 @@ components:
         type: string
         enum: [SYSTEM, ORGANIZATION]
   requestBodies:
+    AuthLogin: {required: true, content: {application/json: {schema: {$ref: '#/components/schemas/AuthLogin'}}}}
+    AuthProfilePatch: {required: true, content: {application/json: {schema: {$ref: '#/components/schemas/AuthProfilePatch'}}}}
     ProvinceCreate: {required: true, content: {application/json: {schema: {$ref: '#/components/schemas/ProvinceCreate'}}}}
     ProvincePatch: {required: true, content: {application/json: {schema: {$ref: '#/components/schemas/ProvincePatch'}}}}
     WardCreate: {required: true, content: {application/json: {schema: {$ref: '#/components/schemas/WardCreate'}}}}
@@ -975,6 +1014,7 @@ components:
         enum: [vi, en]
   responses:
     Success: {description: Successful API response., content: {application/json: {schema: {$ref: '#/components/schemas/SuccessResponse'}}}}
+    AuthUserResponse: {description: Authenticated user and Base Permission snapshot., content: {application/json: {schema: {$ref: '#/components/schemas/AuthUserResponse'}}}}
     DisplaySettingsRuntimeResponse: {description: Presentation-only runtime snapshot., content: {application/json: {schema: {$ref: '#/components/schemas/DisplaySettingsRuntimeResponse'}}}}
     DisplaySettingDefinitionsResponse: {description: Registered Display Settings definitions., content: {application/json: {schema: {$ref: '#/components/schemas/DisplaySettingDefinitionsResponse'}}}}
     DisplaySettingValuesResponse: {description: Display Settings values and effective source metadata., content: {application/json: {schema: {$ref: '#/components/schemas/DisplaySettingValuesResponse'}}}}
@@ -1362,7 +1402,39 @@ components:
           $ref: '#/components/schemas/HealthData'
         meta:
           $ref: '#/components/schemas/Meta'
+    AuthLogin:
+      type: object
+      required: [email, password, remember]
+      properties:
+        email: {type: string}
+        password: {type: string, format: password}
+        remember: {type: boolean}
+    AuthProfilePatch:
+      type: object
+      required: [username, email]
+      properties:
+        username: {type: string}
+        email: {type: string, format: email}
+        password: {type: string, format: password}
+    AuthUser:
+      type: object
+      required: [id, username, email, active, status, groups, base_permissions]
+      properties:
+        id: {type: integer, format: int64, minimum: 1}
+        username: {type: string}
+        email: {type: [string, 'null'], format: email}
+        active: {type: boolean}
+        status: {type: [string, 'null']}
+        groups: {type: array, items: {type: string}}
+        base_permissions:
+          type: array
+          uniqueItems: true
+          items:
+            type: string
+            pattern: '^[a-z0-9_]+\.[a-z0-9_]+$'
+          description: Sorted canonical Base Permission keys only; not final Authorization.
     DisplaySettingsRuntimeResponse: {allOf: [{$ref: '#/components/schemas/SuccessResponse'}], properties: {data: {$ref: '#/components/schemas/DisplaySettingsRuntime'}}}
+    AuthUserResponse: {allOf: [{$ref: '#/components/schemas/SuccessResponse'}], properties: {data: {type: object, required: [user], properties: {user: {$ref: '#/components/schemas/AuthUser'}}}}}
     DisplaySettingDefinitionsResponse: {allOf: [{$ref: '#/components/schemas/SuccessResponse'}], properties: {data: {type: array, items: {$ref: '#/components/schemas/DisplaySettingDefinition'}}}}
     DisplaySettingValuesResponse: {allOf: [{$ref: '#/components/schemas/SuccessResponse'}], properties: {data: {type: array, items: {$ref: '#/components/schemas/DisplaySettingValue'}}}}
     ProductGroup:

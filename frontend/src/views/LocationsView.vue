@@ -16,6 +16,7 @@ import type { ListColumn, ListQuery } from '@/components/lists/listTypes'
 import type { TableDetailField } from '@/components/lists/TableDetailModal.vue'
 import SearchableSelect from '@/components/forms/SearchableSelect.vue'
 import { useListState } from '@/composables/useListState'
+import { useBasePermission } from '@/composables/useBasePermission'
 import {
   changeProvinceState,
   changeWardState,
@@ -29,6 +30,7 @@ import { reportApiError } from '@/services/errorBoundary'
 type LocationRow = Province | Ward
 
 const { t } = useI18n()
+const { hasBasePermissionKey } = useBasePermission()
 const route = useRoute()
 const isWards = computed(() => route.path.endsWith('/wards'))
 const error = ref<unknown | null>(null)
@@ -266,7 +268,12 @@ onMounted(async () => {
       <h1>{{ title }}</h1>
       <p>{{ description }}</p>
     </div>
-    <button type="button" class="primary-button" @click="openCreate">
+    <button
+      v-if="hasBasePermissionKey(isWards ? 'ward.create' : 'province.create')"
+      type="button"
+      class="primary-button"
+      @click="openCreate"
+    >
       ＋ {{ t('common.create') }}
     </button>
   </div>
@@ -310,6 +317,9 @@ onMounted(async () => {
             :show-view="true"
             :show-edit="true"
             :show-toggle="true"
+            :view-permission="isWards ? 'ward.view' : 'province.view'"
+            :edit-permission="isWards ? 'ward.edit' : 'province.edit'"
+            :toggle-permission="isWards ? 'ward.setstate' : 'province.setstate'"
             :edit-label="t('common.edit')"
             :activate-label="t('common.activate')"
             :deactivate-label="t('common.deactivate')"
@@ -396,7 +406,16 @@ onMounted(async () => {
         <footer>
           <button type="button" class="secondary-button" @click="modalOpen = false">
             {{ t('common.cancel') }}</button
-          ><button type="submit" class="primary-button" :disabled="mutationBusy">
+          ><button
+            type="submit"
+            class="primary-button"
+            :disabled="
+              mutationBusy ||
+              (Boolean(editingId) &&
+                !hasBasePermissionKey(isWards ? 'ward.edit' : 'province.edit')) ||
+              (!editingId && !hasBasePermissionKey(isWards ? 'ward.create' : 'province.create'))
+            "
+          >
             {{ mutationBusy ? t('common.saving') : t('common.save') }}
           </button>
         </footer>

@@ -5,8 +5,10 @@ import { useI18n } from 'vue-i18n'
 import { TableDetailModal, TableRowActions, TableStatus } from '@/components/lists'
 import type { TableDetailField } from '@/components/lists/TableDetailModal.vue'
 import { getGroups, getUsers, saveUser, type Group, type ManagedUser } from '@/services/admin'
+import { useBasePermission } from '@/composables/useBasePermission'
 
 const { t } = useI18n()
+const { hasBasePermission } = useBasePermission()
 const users = ref<ManagedUser[]>([])
 const groups = ref<Group[]>([])
 const search = ref('')
@@ -91,7 +93,14 @@ onMounted(load)
       <h1>Người dùng</h1>
       <p>Quản lý tài khoản, trạng thái và nhóm quyền.</p>
     </div>
-    <button class="primary-button" type="button" @click="openCreate">＋ Tạo người dùng</button>
+    <button
+      v-if="hasBasePermission('user', 'create')"
+      class="primary-button"
+      type="button"
+      @click="openCreate"
+    >
+      ＋ Tạo người dùng
+    </button>
   </div>
   <section class="content-panel">
     <div class="toolbar">
@@ -131,6 +140,8 @@ onMounted(load)
               <TableRowActions
                 :show-view="true"
                 :show-edit="true"
+                view-permission="user.view"
+                edit-permission="user.edit"
                 :edit-label="t('common.edit')"
                 :view-label="t('common.view')"
                 @view="openView(user)"
@@ -187,7 +198,13 @@ onMounted(load)
         <p v-if="error" class="form-error">{{ error }}</p>
         <footer>
           <button class="secondary-button" type="button" @click="modalOpen = false">Hủy</button
-          ><button class="primary-button" type="submit" :disabled="busy">Lưu thay đổi</button>
+          ><button
+            class="primary-button"
+            type="submit"
+            :disabled="busy || !hasBasePermission('user', editing ? 'edit' : 'create')"
+          >
+            Lưu thay đổi
+          </button>
         </footer>
       </form>
     </section>

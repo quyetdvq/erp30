@@ -46,6 +46,7 @@ import {
 import { RouterLink, RouterView, useRoute, useRouter } from 'vue-router'
 
 import { setLocale, type AppLocale } from '@/i18n'
+import { useBasePermission } from '@/composables/useBasePermission'
 import { dismissApiError, errorNotices, clearApiErrors } from '@/services/errorBoundary'
 import { useAuthStore } from '@/stores/auth'
 import {
@@ -60,6 +61,7 @@ const workspace = useWorkspaceStore()
 const route = useRoute()
 const router = useRouter()
 const { t, locale } = useI18n()
+const { hasBasePermissionKey } = useBasePermission()
 
 const mobileMenuOpen = ref(false)
 const commandOpen = ref(false)
@@ -81,35 +83,92 @@ const sidebarModes = [
   { key: 'organization', labelKey: 'shell.modes.organization', icon: BusinessOutline },
 ] as const
 
-type NavigationItem = { labelKey: string; to: string; icon: object; group?: string }
+type NavigationItem = { labelKey: string; to: string; icon: object; permission?: string }
 
 const navItems: NavigationItem[] = [
   { labelKey: 'nav.dashboard', to: '/', icon: HomeOutline },
   { labelKey: 'nav.approvals', to: '/approvals', icon: CheckmarkCircleOutline },
-  { labelKey: 'nav.organizations', to: '/organizations', icon: BusinessOutline },
-  { labelKey: 'nav.locations', to: '/settings/locations/provinces', icon: BusinessOutline },
-  { labelKey: 'nav.wards', to: '/settings/locations/wards', icon: BusinessOutline },
-  { labelKey: 'nav.departments', to: '/people/departments', icon: PeopleOutline },
-  { labelKey: 'nav.positions', to: '/people/positions', icon: PeopleOutline },
-  { labelKey: 'nav.employees', to: '/people/employees', icon: PersonCircleOutline },
-  { labelKey: 'nav.groups', to: '/admin/groups', icon: PeopleOutline, group: 'orgadmin' },
+  {
+    labelKey: 'nav.organizations',
+    to: '/organizations',
+    icon: BusinessOutline,
+    permission: 'organization.view',
+  },
+  {
+    labelKey: 'nav.locations',
+    to: '/settings/locations/provinces',
+    icon: BusinessOutline,
+    permission: 'province.view',
+  },
+  {
+    labelKey: 'nav.wards',
+    to: '/settings/locations/wards',
+    icon: BusinessOutline,
+    permission: 'ward.view',
+  },
+  {
+    labelKey: 'nav.departments',
+    to: '/people/departments',
+    icon: PeopleOutline,
+    permission: 'department.view',
+  },
+  {
+    labelKey: 'nav.positions',
+    to: '/people/positions',
+    icon: PeopleOutline,
+    permission: 'position.view',
+  },
+  {
+    labelKey: 'nav.employees',
+    to: '/people/employees',
+    icon: PersonCircleOutline,
+    permission: 'employee.view',
+  },
+  {
+    labelKey: 'nav.groups',
+    to: '/admin/groups',
+    icon: PeopleOutline,
+    permission: 'authorization_group.view',
+  },
   {
     labelKey: 'nav.displaySettings',
     to: '/system/display-settings',
     icon: SettingsOutline,
+    permission: 'display_setting.view',
   },
   { labelKey: 'nav.products', to: '/products', icon: CubeOutline },
   { labelKey: 'nav.sales', to: '/sales', icon: GridOutline },
-  { labelKey: 'nav.users', to: '/admin/users', icon: SettingsOutline, group: 'orgadmin' },
-  { labelKey: 'nav.securityUsers', to: '/security/users', icon: SettingsOutline },
+  { labelKey: 'nav.users', to: '/admin/users', icon: SettingsOutline, permission: 'user.view' },
+  {
+    labelKey: 'nav.securityUsers',
+    to: '/security/users',
+    icon: SettingsOutline,
+    permission: 'user.view',
+  },
   {
     labelKey: 'nav.authorizationGroups',
     to: '/security/authorization-groups',
     icon: PeopleOutline,
+    permission: 'authorization_group.view',
   },
-  { labelKey: 'nav.resources', to: '/security/resources', icon: SettingsOutline },
-  { labelKey: 'nav.policies', to: '/security/policies', icon: SettingsOutline },
-  { labelKey: 'nav.authorizationLogs', to: '/security/authorization-logs', icon: TimeOutline },
+  {
+    labelKey: 'nav.resources',
+    to: '/security/resources',
+    icon: SettingsOutline,
+    permission: 'resource.view',
+  },
+  {
+    labelKey: 'nav.policies',
+    to: '/security/policies',
+    icon: SettingsOutline,
+    permission: 'policy.view',
+  },
+  {
+    labelKey: 'nav.authorizationLogs',
+    to: '/security/authorization-logs',
+    icon: TimeOutline,
+    permission: 'authorization_log.view',
+  },
 ]
 
 const localeOptions = [
@@ -150,7 +209,7 @@ const activeModeLabel = computed(() => {
 })
 
 const allowedNavItems = computed(() =>
-  navItems.filter((item) => !item.group || auth.user?.groups.includes(item.group)),
+  navItems.filter((item) => !item.permission || hasBasePermissionKey(item.permission)),
 )
 
 const modeItems = computed(() => {
@@ -192,7 +251,7 @@ const menuOptions = computed<MenuOption[]>(() =>
 
 const commandOptions = computed(() =>
   navItems
-    .filter((item) => !item.group || auth.user?.groups.includes(item.group))
+    .filter((item) => !item.permission || hasBasePermissionKey(item.permission))
     .filter((item) => t(item.labelKey).toLowerCase().includes(commandSearch.value.toLowerCase()))
     .map((item) => ({ key: item.to, label: t(item.labelKey), icon: icon(item.icon) })),
 )

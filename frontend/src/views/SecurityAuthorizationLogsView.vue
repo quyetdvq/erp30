@@ -14,8 +14,10 @@ import type { TableDetailField } from '@/components/lists/TableDetailModal.vue'
 import { useListState } from '@/composables/useListState'
 import { getAuthorizationLogById, listAuthorizationLogPage } from '@/services/security'
 import { reportApiError } from '@/services/errorBoundary'
+import { useBasePermission } from '@/composables/useBasePermission'
 
 const { t } = useI18n()
+const { hasBasePermission } = useBasePermission()
 const state = useListState<AuthorizationLog>((query) => listAuthorizationLogPage(query), {
   sort: '-created_at',
 })
@@ -145,7 +147,12 @@ onMounted(() => void load())
             {{ copiedId === row.request_id ? t('security.copied') : row.request_id }}</button
           ><span v-else>{{ t('list.noValue') }}</span></template
         ><template #cell-row_actions="{ row }"
-          ><button type="button" class="secondary-button" @click="openDetail(row)">
+          ><button
+            v-if="hasBasePermission('authorization_log', 'view')"
+            type="button"
+            class="secondary-button"
+            @click="openDetail(row)"
+          >
             {{ t('common.view') }}
           </button></template
         ></ListTable

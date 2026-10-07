@@ -9,6 +9,7 @@ import {
   PowerOutline,
   TrashOutline,
 } from '@vicons/ionicons5'
+import { useBasePermission } from '@/composables/useBasePermission'
 
 const props = withDefaults(
   defineProps<{
@@ -18,6 +19,10 @@ const props = withDefaults(
     showEdit?: boolean
     showToggle?: boolean
     showDelete?: boolean
+    viewPermission?: string
+    editPermission?: string
+    togglePermission?: string
+    deletePermission?: string
     viewLabel?: string
     editLabel?: string
     activateLabel?: string
@@ -42,6 +47,9 @@ const emit = defineEmits<{
 }>()
 
 const { t } = useI18n()
+const { hasBasePermissionKey } = useBasePermission()
+const can = (permission?: string): boolean =>
+  permission === undefined || hasBasePermissionKey(permission)
 const toggleLabel = computed(() =>
   props.active === false
     ? (props.activateLabel ?? t('common.activate'))
@@ -53,7 +61,7 @@ const toggleIcon = computed(() => (props.active === false ? PowerOutline : BanOu
 <template>
   <span class="table-row-actions">
     <button
-      v-if="props.showView"
+      v-if="props.showView && can(props.viewPermission)"
       type="button"
       class="table-row-action"
       :title="props.viewLabel ?? t('common.view')"
@@ -63,7 +71,7 @@ const toggleIcon = computed(() => (props.active === false ? PowerOutline : BanOu
       <NIcon :component="EyeOutline" aria-hidden="true" />
     </button>
     <button
-      v-if="props.showEdit"
+      v-if="props.showEdit && can(props.editPermission)"
       type="button"
       class="table-row-action"
       :title="props.editLabel ?? t('common.edit')"
@@ -73,7 +81,7 @@ const toggleIcon = computed(() => (props.active === false ? PowerOutline : BanOu
       <NIcon :component="CreateOutline" aria-hidden="true" />
     </button>
     <button
-      v-if="props.showToggle && props.active !== undefined"
+      v-if="props.showToggle && props.active !== undefined && can(props.togglePermission)"
       type="button"
       class="table-row-action table-row-action--state"
       :disabled="props.busy"
@@ -84,7 +92,7 @@ const toggleIcon = computed(() => (props.active === false ? PowerOutline : BanOu
       <NIcon :component="toggleIcon" aria-hidden="true" />
     </button>
     <button
-      v-if="props.showDelete"
+      v-if="props.showDelete && can(props.deletePermission)"
       type="button"
       class="table-row-action table-row-action--delete"
       :disabled="props.busy"

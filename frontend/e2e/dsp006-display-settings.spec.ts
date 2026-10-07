@@ -37,7 +37,15 @@ async function mockSession(page: Page, groups = ['orgadmin']): Promise<void> {
       status: 200,
       contentType: 'application/json',
       body: JSON.stringify({
-        data: { user: { id: 7, username: 'admin', email: 'a@test', groups } },
+        data: {
+          user: {
+            id: 7,
+            username: 'admin',
+            email: 'a@test',
+            groups,
+            base_permissions: ['display_setting.view', 'display_setting.edit'],
+          },
+        },
       }),
     }),
   )

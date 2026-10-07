@@ -14,6 +14,7 @@ async function mockAuthenticatedSession(page: Page): Promise<void> {
             active: true,
             status: 'ACTIVE',
             groups: ['orgadmin'],
+            base_permissions: ['organization.view', 'province.view', 'product.view'],
           },
         },
       }),

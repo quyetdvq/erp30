@@ -36,6 +36,7 @@ import type {
 } from '@/api/generated/types.gen'
 import { i18n } from '@/i18n'
 import { reportApiError } from '@/services/errorBoundary'
+import { useBasePermission } from '@/composables/useBasePermission'
 
 type ParticipantType = Policy['participant_type']
 type PolicyDraftAction = { resource_action_id: string; effect: PolicyAction['effect'] }
@@ -48,6 +49,7 @@ const participantTypes: ParticipantType[] = [
 ]
 const effects: PolicyAction['effect'][] = ['ALLOW', 'DENY', 'ABSOLUTE_DENY']
 const { t } = useI18n()
+const { hasBasePermission } = useBasePermission()
 const state = useListState<Policy>((query) => listPolicyPage(query), { sort: 'id' })
 const selectedId = ref<string | null>(null)
 const modalOpen = ref(false)
@@ -302,7 +304,12 @@ onMounted(async () => {
       <h1>{{ t('security.policiesTitle') }}</h1>
       <p>{{ t('security.policiesDescription') }}</p>
     </div>
-    <button type="button" class="primary-button" @click="openCreate">
+    <button
+      v-if="hasBasePermission('policy', 'create')"
+      type="button"
+      class="primary-button"
+      @click="openCreate"
+    >
       ＋ {{ t('common.create') }}
     </button>
   </div>
@@ -355,6 +362,8 @@ onMounted(async () => {
             :busy="busy"
             :show-view="true"
             :show-edit="true"
+            view-permission="policy.view"
+            edit-permission="policy.edit"
             :edit-label="t('common.edit')"
             :view-label="t('common.view')"
             @view="openEdit(row)"
@@ -447,7 +456,12 @@ onMounted(async () => {
         <div class="action-editor">
           <div class="detail-actions">
             <strong>{{ t('security.actionEffects') }}</strong
-            ><button type="button" class="secondary-button" @click="addAction">
+            ><button
+              v-if="hasBasePermission('policy', 'edit')"
+              type="button"
+              class="secondary-button"
+              @click="addAction"
+            >
               ＋ {{ t('security.addAction') }}
             </button>
           </div>
@@ -464,7 +478,12 @@ onMounted(async () => {
               <option v-for="effect in effects" :key="effect" :value="effect">
                 {{ effect }}
               </option></select
-            ><button type="button" class="secondary-button" @click="removeAction(index)">
+            ><button
+              v-if="hasBasePermission('policy', 'edit')"
+              type="button"
+              class="secondary-button"
+              @click="removeAction(index)"
+            >
               {{ t('common.delete') }}
             </button>
           </div>
@@ -476,7 +495,11 @@ onMounted(async () => {
           ><button
             type="submit"
             class="primary-button"
-            :disabled="busy || form.actions.length === 0"
+            :disabled="
+              busy ||
+              form.actions.length === 0 ||
+              !hasBasePermission(editingId ? 'policy' : 'policy', editingId ? 'edit' : 'create')
+            "
           >
             {{ busy ? t('common.saving') : t('common.save') }}
           </button>

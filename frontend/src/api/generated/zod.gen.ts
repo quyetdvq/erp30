@@ -146,8 +146,36 @@ export const zHealthResponse = z.object({
     meta: zMeta
 });
 
+export const zAuthLogin = z.object({
+    email: z.string(),
+    password: z.string(),
+    remember: z.boolean()
+});
+
+export const zAuthProfilePatch = z.object({
+    username: z.string(),
+    email: z.email(),
+    password: z.string().optional()
+});
+
+export const zAuthUser = z.object({
+    id: z.coerce.bigint().gte(BigInt(1)).max(BigInt('9223372036854775807'), { error: 'Invalid value: Expected int64 to be <= 9223372036854775807' }),
+    username: z.string(),
+    email: z.email().nullable(),
+    active: z.boolean(),
+    status: z.string().nullable(),
+    groups: z.array(z.string()),
+    base_permissions: z.array(z.string().regex(/^[a-z0-9_]+\.[a-z0-9_]+$/))
+});
+
 export const zDisplaySettingsRuntimeResponse = zSuccessResponse.and(z.object({
     data: zDisplaySettingsRuntime.optional()
+}));
+
+export const zAuthUserResponse = zSuccessResponse.and(z.object({
+    data: z.object({
+        user: zAuthUser
+    }).optional()
 }));
 
 export const zDisplaySettingDefinitionsResponse = zSuccessResponse.and(z.object({
@@ -1266,6 +1294,10 @@ export const zDisplayOrganizationId = zPositiveBigInt;
 
 export const zDisplayContextType = z.enum(['SYSTEM', 'ORGANIZATION']);
 
+export const zAuthLogin2 = zAuthLogin;
+
+export const zAuthProfilePatch2 = zAuthProfilePatch;
+
 export const zProvinceCreate2 = zProvinceCreate;
 
 export const zProvincePatch2 = zProvincePatch;
@@ -1383,6 +1415,50 @@ export const zGetHealthHeaders = z.object({
  * Service is available.
  */
 export const zGetHealthResponse = zHealthResponse;
+
+export const zLoginBody = zAuthLogin2;
+
+export const zLoginHeaders = z.object({
+    'Accept-Language': z.enum(['vi', 'en']).optional().default('vi'),
+    'X-Request-ID': zRequestId.optional()
+});
+
+/**
+ * Authenticated user and Base Permission snapshot.
+ */
+export const zLoginResponse = zAuthUserResponse;
+
+export const zGetCurrentUserHeaders = z.object({
+    'Accept-Language': z.enum(['vi', 'en']).optional().default('vi'),
+    'X-Request-ID': zRequestId.optional()
+});
+
+/**
+ * Authenticated user and Base Permission snapshot.
+ */
+export const zGetCurrentUserResponse = zAuthUserResponse;
+
+export const zUpdateAuthProfileBody = zAuthProfilePatch2;
+
+export const zUpdateAuthProfileHeaders = z.object({
+    'Accept-Language': z.enum(['vi', 'en']).optional().default('vi'),
+    'X-Request-ID': zRequestId.optional()
+});
+
+/**
+ * Authenticated user and Base Permission snapshot.
+ */
+export const zUpdateAuthProfileResponse = zAuthUserResponse;
+
+export const zLogoutHeaders = z.object({
+    'Accept-Language': z.enum(['vi', 'en']).optional().default('vi'),
+    'X-Request-ID': zRequestId.optional()
+});
+
+/**
+ * Successful API response.
+ */
+export const zLogoutResponse = zSuccessResponse;
 
 export const zGetDisplaySettingsRuntimeHeaders = z.object({
     'Accept-Language': z.enum(['vi', 'en']).optional().default('vi'),

@@ -25,11 +25,13 @@ import {
 } from '@/presentation/formatters'
 import { useAuthStore } from '@/stores/auth'
 import { useDisplaySettingsStore } from '@/stores/displaySettings'
+import { useBasePermission } from '@/composables/useBasePermission'
 
 type Category = 'DATE_TIME' | 'NUMBER' | 'MONEY'
 
 const { t } = useI18n()
 const auth = useAuthStore()
+const { hasBasePermission } = useBasePermission()
 const displayStore = useDisplaySettingsStore()
 const contextType = ref<'SYSTEM' | 'ORGANIZATION'>('SYSTEM')
 const organizationId = ref('')
@@ -332,7 +334,10 @@ onMounted(async () => {
     </div>
   </div>
 
-  <section class="content-panel display-settings-panel">
+  <p v-if="!hasBasePermission('display_setting', 'view')" class="inline-error" role="alert">
+    {{ t('displaySettings.forbidden') }}
+  </p>
+  <section v-else class="content-panel display-settings-panel">
     <div class="context-toolbar">
       <label for="display-context">{{ t('displaySettings.context') }}</label>
       <select id="display-context" v-model="contextType" class="field-input context-select">
@@ -435,7 +440,10 @@ onMounted(async () => {
                 <button
                   class="primary-button"
                   type="button"
-                  :disabled="savingKey === rowFor(definition).key"
+                  :disabled="
+                    savingKey === rowFor(definition).key ||
+                    !hasBasePermission('display_setting', 'edit')
+                  "
                   @click="save(rowFor(definition))"
                 >
                   {{
@@ -445,7 +453,9 @@ onMounted(async () => {
                   }}
                 </button>
                 <button
-                  v-if="isOverridden(rowFor(definition))"
+                  v-if="
+                    isOverridden(rowFor(definition)) && hasBasePermission('display_setting', 'edit')
+                  "
                   class="secondary-button"
                   type="button"
                   :disabled="savingKey === rowFor(definition).key"

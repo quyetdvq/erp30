@@ -55,7 +55,9 @@ The repository inventory found a suitable existing authenticated seam:
   does not evaluate PBAC, Organization-path policy, Workflow State,
   resource-instance decisions, or `ABSOLUTE_DENY`.
 
-No existing endpoint currently exposes those keys to the frontend.
+The implementation now exposes those keys additively through the existing
+authenticated user responses; no standalone permission-summary endpoint is
+introduced.
 
 ## 3. Approved route and DTO
 
@@ -208,11 +210,10 @@ when the future runtime implementation is authorized.
 
 ## 9. Readiness and exclusions
 
-This document is a change-control/document synchronization artifact only. It
-does not implement backend, API, OpenAPI, generated-client, or frontend code.
-It does not change the P1 task registry or task status, and it does not start
-`P1-FE-040`.
+This change-control remains bounded to the authenticated Base Permission
+snapshot and completed-slice retrofit. Its implementation does not change the
+P1 task registry or task status, and it does not start `P1-FE-040`.
 
-The permission-aware retrofit is implementation-unblocked after this authority
-is committed and registered. Runtime delivery remains a future bounded change
-that must use the exact DTO and helper contract above.
+The implementation is unblocked with the exact DTO and helper contract above.
+It does not add persistence, a standalone permission-summary route, PBAC or
+resource-instance evaluation, or any System Admin bypass.

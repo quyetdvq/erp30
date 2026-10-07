@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Controllers\Api;
 
+use App\Authorization\EffectiveProfileResolver;
 use CodeIgniter\HTTP\ResponseInterface;
 use CodeIgniter\Shield\Authentication\Authenticators\Session;
 use CodeIgniter\Shield\Entities\User;
@@ -106,6 +107,7 @@ final class Auth extends ApiController
     private function userPayload(User $user): array
     {
         $groups = $user->getGroups() ?? [];
+        $basePermissions = (new EffectiveProfileResolver())->resolve($user)->keys();
 
         return [
             'id' => (int) $user->id,
@@ -114,6 +116,7 @@ final class Auth extends ApiController
             'active' => (bool) $user->active,
             'status' => $user->status,
             'groups' => array_values(array_map('strval', $groups)),
+            'base_permissions' => $basePermissions,
         ];
     }
 }

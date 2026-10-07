@@ -69,6 +69,7 @@ test('redirects to the workspace after a successful login', async ({ page }) => 
             active: true,
             status: 'ACTIVE',
             groups: ['workspace'],
+            base_permissions: [],
           },
         },
         meta: { request_id: 'login-test-request' },

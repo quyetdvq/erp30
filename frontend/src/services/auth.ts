@@ -12,6 +12,7 @@ export type AuthUser = {
   active: boolean
   status: string | null
   groups: string[]
+  base_permissions: string[]
 }
 
 type AuthPayload = {

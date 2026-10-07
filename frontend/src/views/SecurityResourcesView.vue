@@ -21,8 +21,10 @@ import {
   type SecurityAction,
 } from '@/services/security'
 import { reportApiError } from '@/services/errorBoundary'
+import { useBasePermission } from '@/composables/useBasePermission'
 
 const { t } = useI18n()
+const { hasBasePermission } = useBasePermission()
 const state = useListState<Resource>((query) => listResourcePage(query), { sort: 'type' })
 const selectedId = ref<string | null>(null)
 const selected = computed(
@@ -192,7 +194,12 @@ onMounted(() => void load())
       <h1>{{ t('security.resourcesTitle') }}</h1>
       <p>{{ t('security.resourcesDescription') }}</p>
     </div>
-    <button type="button" class="primary-button" @click="openCreate">
+    <button
+      v-if="hasBasePermission('resource', 'create')"
+      type="button"
+      class="primary-button"
+      @click="openCreate"
+    >
       ＋ {{ t('common.create') }}
     </button>
   </div>
@@ -235,6 +242,9 @@ onMounted(() => void load())
             :show-view="true"
             :show-edit="true"
             :show-delete="true"
+            view-permission="resource.view"
+            edit-permission="resource.edit"
+            delete-permission="resource.delete"
             :edit-label="t('common.edit')"
             :view-label="t('common.view')"
             :delete-label="t('common.delete')"
@@ -300,7 +310,12 @@ onMounted(() => void load())
     <div v-else class="security-editor">
       <div class="detail-actions">
         <h3>{{ t('security.resourceActions') }}</h3>
-        <button type="button" class="primary-button" @click="openActionCreate">
+        <button
+          v-if="hasBasePermission('resource', 'edit')"
+          type="button"
+          class="primary-button"
+          @click="openActionCreate"
+        >
           ＋ {{ t('common.create') }}
         </button>
       </div>
@@ -311,9 +326,19 @@ onMounted(() => void load())
             ><small>{{ action.description || t('security.noDescription') }}</small>
           </div>
           <span
-            ><button type="button" class="secondary-button" @click="openActionEdit(action)">
+            ><button
+              v-if="hasBasePermission('resource', 'edit')"
+              type="button"
+              class="secondary-button"
+              @click="openActionEdit(action)"
+            >
               {{ t('common.edit') }}</button
-            ><button type="button" class="secondary-button" @click="removeAction(action)">
+            ><button
+              v-if="hasBasePermission('resource', 'edit')"
+              type="button"
+              class="secondary-button"
+              @click="removeAction(action)"
+            >
               {{ t('common.delete') }}
             </button></span
           >

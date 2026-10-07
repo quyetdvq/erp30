@@ -29,6 +29,11 @@ apiClient.interceptors.response.use(
   (error: unknown) => {
     const url = axios.isAxiosError(error) ? error.config?.url || '' : ''
     const status = axios.isAxiosError(error) ? error.response?.status : undefined
+    if (status === 403 || status === 404) {
+      void import('@/stores/auth').then(({ useAuthStore }) => {
+        useAuthStore().markPermissionSnapshotStale()
+      })
+    }
     if (!(url.includes('/auth/me') && status === 401)) reportApiError(error)
     return Promise.reject(error)
   },

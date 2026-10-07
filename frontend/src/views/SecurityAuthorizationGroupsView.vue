@@ -29,8 +29,10 @@ import {
 } from '@/services/security'
 import { reportApiError } from '@/services/errorBoundary'
 import type { ManagedUser } from '@/services/admin'
+import { useBasePermission } from '@/composables/useBasePermission'
 
 const { t } = useI18n()
+const { hasBasePermission, refreshBasePermissions } = useBasePermission()
 const state = useListState<AuthorizationGroup>((query) => listAuthorizationGroupPage(query), {
   sort: 'name',
 })
@@ -220,6 +222,7 @@ async function saveMembers(): Promise<void> {
   error.value = null
   try {
     members.value = await saveGroupMembers(String(selected.value.id), memberDraft.value)
+    await refreshBasePermissions()
     await load()
   } catch (caught: unknown) {
     error.value = caught
@@ -234,6 +237,7 @@ async function savePermissions(): Promise<void> {
   error.value = null
   try {
     permissions.value = await saveGroupPermissions(String(selected.value.id), permissionDraft.value)
+    await refreshBasePermissions()
     await load()
   } catch (caught: unknown) {
     error.value = caught
@@ -264,7 +268,12 @@ onMounted(() => void load())
       <h1>{{ t('security.groupsTitle') }}</h1>
       <p>{{ t('security.groupsDescription') }}</p>
     </div>
-    <button type="button" class="primary-button" @click="openCreate">
+    <button
+      v-if="hasBasePermission('authorization_group', 'create')"
+      type="button"
+      class="primary-button"
+      @click="openCreate"
+    >
       ＋ {{ t('common.create') }}
     </button>
   </div>
@@ -312,6 +321,9 @@ onMounted(() => void load())
             :show-view="true"
             :show-edit="true"
             :show-toggle="true"
+            view-permission="authorization_group.view"
+            edit-permission="authorization_group.edit"
+            toggle-permission="authorization_group.setstate"
             :edit-label="t('common.edit')"
             :view-label="t('common.view')"
             :activate-label="t('common.activate')"
@@ -421,7 +433,11 @@ onMounted(() => void load())
         <button
           type="button"
           class="primary-button"
-          :disabled="busy || selected.status !== 'ACTIVE'"
+          :disabled="
+            busy ||
+            selected.status !== 'ACTIVE' ||
+            !hasBasePermission('authorization_group', 'assign_member')
+          "
           @click="saveMembers"
         >
           {{ busy ? t('common.saving') : t('security.saveMembers') }}
@@ -480,7 +496,11 @@ onMounted(() => void load())
         <button
           type="button"
           class="primary-button"
-          :disabled="busy || selected.status !== 'ACTIVE'"
+          :disabled="
+            busy ||
+            selected.status !== 'ACTIVE' ||
+            !hasBasePermission('authorization_group', 'assign_permission')
+          "
           @click="savePermissions"
         >
           {{ busy ? t('common.saving') : t('security.savePermissions') }}

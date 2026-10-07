@@ -16,10 +16,12 @@ import {
 import { reportApiError } from '@/services/errorBoundary'
 import { allowedOrganizationChildren } from '@/modules/organizationMatrix'
 import { useFormatters } from '@/composables/useFormatters'
+import { useBasePermission } from '@/composables/useBasePermission'
 
 type OrganizationType = Organization['type']
 
 const { t } = useI18n()
+const { hasBasePermission } = useBasePermission()
 const formatters = useFormatters()
 const selectedId = ref<string | null>(null)
 const activeTab = ref<'overview' | 'contacts' | 'audit'>('overview')
@@ -242,6 +244,7 @@ onMounted(() => void load())
     <button
       type="button"
       class="primary-button"
+      v-if="hasBasePermission('organization', 'create')"
       :disabled="!!selected && (selected.status !== 'ACTIVE' || selected.type === 'WAREHOUSE')"
       @click="openCreate"
     >
@@ -318,10 +321,16 @@ onMounted(() => void load())
             <p>{{ t(`status.${selected.status.toLowerCase()}`) }}</p>
           </div>
           <div class="detail-actions">
-            <button type="button" class="secondary-button" @click="openEdit(selected)">
+            <button
+              v-if="hasBasePermission('organization', 'edit')"
+              type="button"
+              class="secondary-button"
+              @click="openEdit(selected)"
+            >
               {{ t('common.edit') }}</button
             ><button
               type="button"
+              v-if="hasBasePermission('organization', 'setstate')"
               class="secondary-button"
               :disabled="mutationBusy"
               @click="toggleState(selected)"
@@ -491,7 +500,13 @@ onMounted(() => void load())
         <footer>
           <button type="button" class="secondary-button" @click="modalOpen = false">
             {{ t('common.cancel') }}</button
-          ><button type="submit" class="primary-button" :disabled="mutationBusy">
+          ><button
+            type="submit"
+            class="primary-button"
+            :disabled="
+              mutationBusy || !hasBasePermission('organization', editingId ? 'edit' : 'create')
+            "
+          >
             {{ mutationBusy ? t('common.saving') : t('common.save') }}
           </button>
         </footer>

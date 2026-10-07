@@ -40,10 +40,12 @@ import {
 } from '@/services/employeeStructure'
 import { reportApiError } from '@/services/errorBoundary'
 import { hasPrimaryOverlap, wouldCreateManagerCycle } from '@/modules/employeeRules'
+import { useBasePermission } from '@/composables/useBasePermission'
 
 type Gender = 'MALE' | 'FEMALE' | 'OTHER' | null
 type Tab = 'overview' | 'assignments' | 'contacts' | 'audit'
 const { t, locale } = useI18n()
+const { hasBasePermission } = useBasePermission()
 const today = () => new Date().toISOString().slice(0, 10)
 
 const state = useListState<Employee>((query) => listEmployeePage(query), { sort: 'employee_name' })
@@ -507,7 +509,12 @@ onMounted(async () => {
       <h1>{{ t('people.employeesTitle') }}</h1>
       <p>{{ t('people.employeesDescription') }}</p>
     </div>
-    <button type="button" class="primary-button" @click="openCreate">
+    <button
+      v-if="hasBasePermission('employee', 'create')"
+      type="button"
+      class="primary-button"
+      @click="openCreate"
+    >
       ＋ {{ t('common.create') }}
     </button>
   </div>
@@ -554,6 +561,9 @@ onMounted(async () => {
             :show-view="true"
             :show-edit="true"
             :show-toggle="true"
+            view-permission="employee.view"
+            edit-permission="employee.edit"
+            toggle-permission="employee.setstate"
             :view-label="t('common.view')"
             :edit-label="t('common.edit')"
             :activate-label="t('common.activate')"
@@ -603,7 +613,12 @@ onMounted(async () => {
             {{ selected.user_id ? t('people.userLinked') : t('people.userNotLinked') }}
           </p>
         </div>
-        <button type="button" class="secondary-button" @click="openEdit(selected)">
+        <button
+          v-if="hasBasePermission('employee', 'edit')"
+          type="button"
+          class="secondary-button"
+          @click="openEdit(selected)"
+        >
           {{ t('common.edit') }}
         </button>
         <button
@@ -673,7 +688,12 @@ onMounted(async () => {
               {{ t('people.assignmentHistory') }}
             </button>
           </div>
-          <button type="button" class="primary-button" @click="openAssignmentCreate">
+          <button
+            v-if="hasBasePermission('employee_assignment', 'create')"
+            type="button"
+            class="primary-button"
+            @click="openAssignmentCreate"
+          >
             ＋ {{ t('people.addAssignment') }}
           </button>
         </header>
@@ -706,6 +726,8 @@ onMounted(async () => {
                   :busy="busy"
                   :show-edit="true"
                   :show-toggle="true"
+                  edit-permission="employee_assignment.edit"
+                  toggle-permission="employee_assignment.setstate"
                   :edit-label="t('common.edit')"
                   :activate-label="t('common.activate')"
                   :deactivate-label="t('common.deactivate')"
@@ -835,7 +857,15 @@ onMounted(async () => {
         <footer class="modal-card__footer">
           <button type="button" class="secondary-button" @click="employeeModal = false">
             {{ t('common.cancel') }}</button
-          ><button type="submit" class="primary-button" :disabled="busy || !!managerError()">
+          ><button
+            type="submit"
+            class="primary-button"
+            :disabled="
+              busy ||
+              !!managerError() ||
+              !hasBasePermission('employee', editingEmployeeId ? 'edit' : 'create')
+            "
+          >
             {{ busy ? t('common.saving') : t('common.save') }}
           </button>
         </footer>
@@ -925,7 +955,15 @@ onMounted(async () => {
         <footer class="modal-card__footer">
           <button type="button" class="secondary-button" @click="assignmentModal = false">
             {{ t('common.cancel') }}</button
-          ><button type="submit" class="primary-button" :disabled="busy || assignmentOverlap">
+          ><button
+            type="submit"
+            class="primary-button"
+            :disabled="
+              busy ||
+              assignmentOverlap ||
+              !hasBasePermission('employee_assignment', editingAssignmentId ? 'edit' : 'create')
+            "
+          >
             {{ busy ? t('common.saving') : t('common.save') }}
           </button>
         </footer>
