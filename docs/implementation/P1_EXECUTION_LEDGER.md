@@ -4,19 +4,17 @@ This ledger is lightweight operational evidence. It is not architecture
 authority and does not replace UR, FRS, DBD, the Implementation Contract, the
 Implementation Plan, API Design, or UI Design.
 
-As of the P1-API-020 task validation, the registry contains exactly 100 P1 tasks.
-Repository evidence verifies 74 completed tasks: Gate 0 is 10/10, Gate 1 is
-14/14, Gate 2 is 8/8, Gate 3 is 10/10, Gate 4 is 7/7, Gate 5 is 11/11, Gate
-6 is 9/9, and Gate 7 is 5/10.
-The previously supplied 28/100 and 4/8 checkpoint is stale: the accepted
-`c4049f0` P1-ORG-002 commit is present in current history.
-No task is downgraded to force that stale count.
+The registry contains exactly 100 P1 tasks. Current ledger state records 76
+completed tasks: Gate 0 is 10/10, Gate 1 is 14/14, Gate 2 is 8/8, Gate 3 is
+10/10, Gate 4 is 7/7, Gate 5 is 11/11, Gate 6 is 9/9, and Gate 7 is 7/10.
+These summaries are derived from the task rows below and the canonical Gate
+registry.
 
 ## Overall Progress
 
 | Measure | Progress |
 |---|---:|
-| P1 tasks DONE | 75/100 |
+| P1 tasks DONE | 76/100 |
 | Gate 0 | 10/10 DONE |
 | Gate 1 | 14/14 DONE |
 | Gate 2 | 8/8 DONE |
@@ -24,7 +22,7 @@ No task is downgraded to force that stale count.
 | Gate 4 | 7/7 DONE |
 | Gate 5 | 11/11 DONE |
 | Gate 6 | 9/9 DONE |
-| Gate 7 | 6/10 DONE |
+| Gate 7 | 7/10 DONE |
 | Gate 8 | 0/12 DONE |
 | Gate 9 | 0/9 DONE |
 
@@ -107,7 +105,7 @@ No task is downgraded to force that stale count.
 | P1-API-010 | DONE | 0000000 | api | Foundation/Organization/Contact CONTRACT_READY endpoints, API-003 scoped lists, owner/target authorization, OpenAPI/codegen, and focused evidence. |
 | P1-API-020 | DONE | 0000000 | high-risk | Employee Structure API: 20 CRUD/state endpoints, catalog-driven MASTER/GROUP and ORGANIZATION authorization, allowlisted effective Assignment filters, Department hierarchy/Employee manager invariants, historical Assignment correction, OpenAPI/codegen, and full regression evidence. |
 | P1-API-030 | DONE | 8267f31 | high-risk | Resource/Authorization Group/Policy/Authorization Log/Workflow State/Lifecycle CONTRACT_READY API surface, generated client, and validation evidence. Evidence: `docs/implementation/evidence/P1-API-030/01_authorization_workflow_api_assessment.md`. |
-| P1-API-040 | NOT_STARTED | — | high-risk | No accepted implementation evidence. |
+| P1-API-040 | DONE | bb2a3c7 | api | Auto Numbering API: six Resource numbering-series operations, configure-numbering authorization, non-consuming validation, concurrency-safe default invariant, and generated client. Evidence: `docs/implementation/evidence/P1-API-040/01_auto_numbering_api_assessment.md`. |
 | P1-API-050 | NOT_STARTED | — | high-risk | No accepted implementation evidence. |
 | P1-API-060 | NOT_STARTED | — | high-risk | No accepted implementation evidence. |
 | P1-API-090 | NOT_STARTED | — | high-risk | No accepted implementation evidence. |
