@@ -66,6 +66,288 @@ export const zHealthResponse = z.object({
     meta: zMeta
 });
 
+export const zProductGroup = z.object({
+    id: zBigInt,
+    parent_id: zBigInt.nullish(),
+    code: z.string(),
+    name: z.string(),
+    description: z.string().nullish(),
+    status: z.enum(['ACTIVE', 'INACTIVE'])
+});
+
+export const zProductGroupCreate = z.object({
+    parent_id: zBigInt.nullish(),
+    code: z.string(),
+    name: z.string(),
+    description: z.string().nullish(),
+    status: z.enum(['ACTIVE', 'INACTIVE']).optional()
+});
+
+export const zProductGroupPatch = z.object({
+    parent_id: zBigInt.nullish(),
+    code: z.string().optional(),
+    name: z.string().optional(),
+    description: z.string().nullish(),
+    status: z.enum(['ACTIVE', 'INACTIVE']).optional()
+});
+
+export const zProductUom = z.object({
+    id: zBigInt,
+    code: z.string(),
+    name: z.string(),
+    description: z.string().nullish(),
+    status: z.enum(['ACTIVE', 'INACTIVE'])
+});
+
+export const zProductUomCreate = z.object({
+    code: z.string(),
+    name: z.string(),
+    description: z.string().nullish(),
+    status: z.enum(['ACTIVE', 'INACTIVE']).optional()
+});
+
+export const zProductUomPatch = z.object({
+    code: z.string().optional(),
+    name: z.string().optional(),
+    description: z.string().nullish(),
+    status: z.enum(['ACTIVE', 'INACTIVE']).optional()
+});
+
+export const zProduct = z.object({
+    id: zBigInt,
+    product_code: z.string().max(50).nullish(),
+    sku: z.string().nullish(),
+    barcode: z.string().nullish(),
+    parent_product_id: zBigInt.nullish(),
+    product_name: z.string().nullish(),
+    product_child_name: z.string().nullish(),
+    product_group_id: zBigInt.nullish(),
+    product_type: z.enum(['STANDARD', 'COMBO']),
+    base_uom_id: zBigInt.nullish(),
+    price: zDecimal.nullish(),
+    net_weight_g: zDecimal.nullish(),
+    package_gross_weight_g: zDecimal.nullish(),
+    package_length_mm: zDecimal.nullish(),
+    package_width_mm: zDecimal.nullish(),
+    package_height_mm: zDecimal.nullish(),
+    description: z.string().nullish(),
+    manual_standard_cost: zDecimal.nullish(),
+    serial_management_enabled: z.boolean().optional(),
+    status: z.enum(['ACTIVE', 'INACTIVE']),
+    role: z.enum([
+        'SIMPLE',
+        'PARENT',
+        'CHILD',
+        'COMBO'
+    ]),
+    full_name: z.string(),
+    selectable: z.boolean(),
+    leaf_transactionable: z.boolean()
+});
+
+export const zProductCreate = z.object({
+    product_code: z.string().max(50).nullish(),
+    sku: z.string().nullish(),
+    barcode: z.string().nullish(),
+    parent_product_id: zBigInt.optional(),
+    product_name: z.string().nullish(),
+    product_child_name: z.string().nullish(),
+    product_group_id: zBigInt.optional(),
+    product_type: z.enum(['STANDARD', 'COMBO']).optional(),
+    base_uom_id: zBigInt.optional(),
+    price: zDecimal.optional(),
+    net_weight_g: zDecimal.optional(),
+    package_gross_weight_g: zDecimal.optional(),
+    package_length_mm: zDecimal.optional(),
+    package_width_mm: zDecimal.optional(),
+    package_height_mm: zDecimal.optional(),
+    description: z.string().optional(),
+    manual_standard_cost: zDecimal.optional(),
+    serial_management_enabled: z.boolean().optional(),
+    status: z.enum(['ACTIVE', 'INACTIVE']).optional()
+});
+
+export const zProductPatch = z.object({
+    product_code: z.string().max(50).nullish(),
+    sku: z.string().nullish(),
+    barcode: z.string().nullish(),
+    parent_product_id: zBigInt.optional(),
+    product_name: z.string().nullish(),
+    product_child_name: z.string().nullish(),
+    product_group_id: zBigInt.optional(),
+    product_type: z.enum(['STANDARD', 'COMBO']).optional(),
+    base_uom_id: zBigInt.optional(),
+    price: zDecimal.optional(),
+    net_weight_g: zDecimal.optional(),
+    package_gross_weight_g: zDecimal.optional(),
+    package_length_mm: zDecimal.optional(),
+    package_width_mm: zDecimal.optional(),
+    package_height_mm: zDecimal.optional(),
+    description: z.string().nullish(),
+    manual_standard_cost: zDecimal.optional(),
+    serial_management_enabled: z.boolean().optional(),
+    status: z.enum(['ACTIVE', 'INACTIVE']).optional()
+});
+
+export const zPriceList = z.object({
+    id: zBigInt,
+    code: z.string(),
+    name: z.string(),
+    organization_id: zBigInt,
+    effective_from: z.iso.datetime(),
+    effective_to: z.iso.datetime().nullish(),
+    priority: z.int(),
+    status: z.enum(['ACTIVE', 'INACTIVE']),
+    description: z.string().nullish()
+});
+
+export const zPriceListCreate = z.object({
+    code: z.string(),
+    name: z.string(),
+    organization_id: zBigInt,
+    effective_from: z.iso.datetime(),
+    effective_to: z.iso.datetime().nullish(),
+    priority: z.int().optional(),
+    status: z.enum(['ACTIVE', 'INACTIVE']).optional(),
+    description: z.string().nullish()
+});
+
+export const zPriceListPatch = z.object({
+    code: z.string().optional(),
+    name: z.string().optional(),
+    organization_id: zBigInt.optional(),
+    effective_from: z.iso.datetime().optional(),
+    effective_to: z.iso.datetime().nullish(),
+    priority: z.int().optional(),
+    status: z.enum(['ACTIVE', 'INACTIVE']).optional(),
+    description: z.string().nullish()
+});
+
+export const zProductUomConversion = z.object({
+    id: zBigInt,
+    product_id: zBigInt,
+    uom_id: zBigInt,
+    conversion_factor: zDecimal,
+    price: zDecimal.nullish(),
+    package_gross_weight_g: zDecimal.nullish(),
+    package_length_mm: zDecimal.nullish(),
+    package_width_mm: zDecimal.nullish(),
+    package_height_mm: zDecimal.nullish(),
+    usage_type: z.enum([
+        'PURCHASE',
+        'SALES',
+        'BOTH'
+    ]),
+    status: z.enum(['ACTIVE', 'INACTIVE'])
+});
+
+export const zProductUomConversionInput = z.object({
+    uom_id: zBigInt,
+    conversion_factor: zDecimal,
+    price: zDecimal.nullish(),
+    package_gross_weight_g: zDecimal.nullish(),
+    package_length_mm: zDecimal.nullish(),
+    package_width_mm: zDecimal.nullish(),
+    package_height_mm: zDecimal.nullish(),
+    usage_type: z.enum([
+        'PURCHASE',
+        'SALES',
+        'BOTH'
+    ]).optional(),
+    status: z.enum(['ACTIVE', 'INACTIVE']).optional()
+});
+
+export const zProductUomConversionsRequest = z.union([
+    z.array(zProductUomConversionInput),
+    z.object({
+        items: z.array(zProductUomConversionInput)
+    })
+]);
+
+export const zPriceListItem = z.object({
+    id: zBigInt,
+    price_list_id: zBigInt,
+    product_id: zBigInt,
+    uom_id: zBigInt,
+    price: zDecimal
+});
+
+export const zPriceListItemInput = z.object({
+    product_id: zBigInt,
+    uom_id: zBigInt,
+    price: zDecimal
+});
+
+export const zPriceListItemsRequest = z.union([
+    z.array(zPriceListItemInput),
+    z.object({
+        items: z.array(zPriceListItemInput)
+    })
+]);
+
+export const zComboItem = z.object({
+    id: zBigInt,
+    combo_product_id: zBigInt,
+    component_product_id: zBigInt,
+    quantity: zDecimal
+});
+
+export const zComboItemInput = z.object({
+    component_product_id: zBigInt,
+    quantity: zDecimal
+});
+
+export const zComboItemsRequest = z.union([
+    z.array(zComboItemInput),
+    z.object({
+        items: z.array(zComboItemInput)
+    })
+]);
+
+export const zProductGroupResponse = zSuccessResponse.and(z.object({
+    data: zProductGroup.optional()
+}));
+
+export const zProductGroupCollection = zCollectionResponse.and(z.object({
+    data: z.array(zProductGroup).optional()
+}));
+
+export const zProductUomResponse = zSuccessResponse.and(z.object({
+    data: zProductUom.optional()
+}));
+
+export const zProductUomCollection = zCollectionResponse.and(z.object({
+    data: z.array(zProductUom).optional()
+}));
+
+export const zProductResponse = zSuccessResponse.and(z.object({
+    data: zProduct.optional()
+}));
+
+export const zProductCollection = zCollectionResponse.and(z.object({
+    data: z.array(zProduct).optional()
+}));
+
+export const zPriceListResponse = zSuccessResponse.and(z.object({
+    data: zPriceList.optional()
+}));
+
+export const zPriceListCollection = zCollectionResponse.and(z.object({
+    data: z.array(zPriceList).optional()
+}));
+
+export const zProductUomConversionsResponse = zSuccessResponse.and(z.object({
+    data: z.array(zProductUomConversion).optional()
+}));
+
+export const zPriceListItemsResponse = zSuccessResponse.and(z.object({
+    data: z.array(zPriceListItem).optional()
+}));
+
+export const zComboItemsResponse = zSuccessResponse.and(z.object({
+    data: z.array(zComboItem).optional()
+}));
+
 export const zProvince = z.object({
     id: zBigInt,
     code: z.string(),
@@ -868,6 +1150,28 @@ export const zLifecycleCreate2 = zLifecycleCreate;
 export const zLifecyclePatch2 = zLifecyclePatch;
 
 export const zLifecycleConfiguration2 = zLifecycleConfiguration;
+
+export const zProductGroupCreate2 = zProductGroupCreate;
+
+export const zProductGroupPatch2 = zProductGroupPatch;
+
+export const zProductUomCreate2 = zProductUomCreate;
+
+export const zProductUomPatch2 = zProductUomPatch;
+
+export const zProductCreate2 = zProductCreate;
+
+export const zProductPatch2 = zProductPatch;
+
+export const zPriceListCreate2 = zPriceListCreate;
+
+export const zPriceListPatch2 = zPriceListPatch;
+
+export const zProductUomConversions = zProductUomConversionsRequest;
+
+export const zPriceListItems = zPriceListItemsRequest;
+
+export const zComboItems = zComboItemsRequest;
 
 export const zGetHealthHeaders = z.object({
     'Accept-Language': z.enum(['vi', 'en']).optional().default('vi'),
@@ -1884,3 +2188,299 @@ export const zConfigureLifecycleTransitionsPath = z.object({
  * Successful API response.
  */
 export const zConfigureLifecycleTransitionsResponse = zSuccessResponse;
+
+export const zListProductGroupsHeaders = z.object({
+    'Accept-Language': z.enum(['vi', 'en']).optional().default('vi'),
+    'X-Request-ID': zRequestId.optional()
+});
+
+export const zListProductGroupsQuery = z.object({
+    q: z.string().optional(),
+    page: z.int().gte(1).optional().default(1),
+    page_size: z.int().gte(1).lte(200).optional().default(50),
+    sort: z.string().optional(),
+    filter: z.record(z.string(), z.union([
+        z.string(),
+        z.array(z.string())
+    ])).optional()
+});
+
+/**
+ * Authorized product group collection.
+ */
+export const zListProductGroupsResponse = zProductGroupCollection;
+
+export const zCreateProductGroupBody = zProductGroupCreate2;
+
+/**
+ * Product group response.
+ */
+export const zCreateProductGroupResponse = zProductGroupResponse;
+
+export const zGetProductGroupPath = z.object({
+    id: zBigInt
+});
+
+/**
+ * Product group response.
+ */
+export const zGetProductGroupResponse = zProductGroupResponse;
+
+export const zUpdateProductGroupBody = zProductGroupPatch2;
+
+export const zUpdateProductGroupPath = z.object({
+    id: zBigInt
+});
+
+/**
+ * Product group response.
+ */
+export const zUpdateProductGroupResponse = zProductGroupResponse;
+
+export const zSetProductGroupStateBody = zState2;
+
+export const zSetProductGroupStatePath = z.object({
+    id: zBigInt
+});
+
+/**
+ * Product group response.
+ */
+export const zSetProductGroupStateResponse = zProductGroupResponse;
+
+export const zListProductUomsHeaders = z.object({
+    'Accept-Language': z.enum(['vi', 'en']).optional().default('vi'),
+    'X-Request-ID': zRequestId.optional()
+});
+
+export const zListProductUomsQuery = z.object({
+    q: z.string().optional(),
+    page: z.int().gte(1).optional().default(1),
+    page_size: z.int().gte(1).lte(200).optional().default(50),
+    sort: z.string().optional(),
+    filter: z.record(z.string(), z.union([
+        z.string(),
+        z.array(z.string())
+    ])).optional()
+});
+
+/**
+ * Authorized product UOM collection.
+ */
+export const zListProductUomsResponse = zProductUomCollection;
+
+export const zCreateProductUomBody = zProductUomCreate2;
+
+/**
+ * Product UOM response.
+ */
+export const zCreateProductUomResponse = zProductUomResponse;
+
+export const zGetProductUomPath = z.object({
+    id: zBigInt
+});
+
+/**
+ * Product UOM response.
+ */
+export const zGetProductUomResponse = zProductUomResponse;
+
+export const zUpdateProductUomBody = zProductUomPatch2;
+
+export const zUpdateProductUomPath = z.object({
+    id: zBigInt
+});
+
+/**
+ * Product UOM response.
+ */
+export const zUpdateProductUomResponse = zProductUomResponse;
+
+export const zSetProductUomStateBody = zState2;
+
+export const zSetProductUomStatePath = z.object({
+    id: zBigInt
+});
+
+/**
+ * Product UOM response.
+ */
+export const zSetProductUomStateResponse = zProductUomResponse;
+
+export const zListProductsHeaders = z.object({
+    'Accept-Language': z.enum(['vi', 'en']).optional().default('vi'),
+    'X-Request-ID': zRequestId.optional()
+});
+
+export const zListProductsQuery = z.object({
+    q: z.string().optional(),
+    page: z.int().gte(1).optional().default(1),
+    page_size: z.int().gte(1).lte(200).optional().default(50),
+    sort: z.string().optional(),
+    filter: z.record(z.string(), z.union([
+        z.string(),
+        z.array(z.string())
+    ])).optional()
+});
+
+/**
+ * Authorized product collection.
+ */
+export const zListProductsResponse = zProductCollection;
+
+export const zCreateProductBody = zProductCreate2;
+
+/**
+ * Product response.
+ */
+export const zCreateProductResponse = zProductResponse;
+
+export const zGetProductPath = z.object({
+    id: zBigInt
+});
+
+/**
+ * Product response.
+ */
+export const zGetProductResponse = zProductResponse;
+
+export const zUpdateProductBody = zProductPatch2;
+
+export const zUpdateProductPath = z.object({
+    id: zBigInt
+});
+
+/**
+ * Product response.
+ */
+export const zUpdateProductResponse = zProductResponse;
+
+export const zSetProductStateBody = zState2;
+
+export const zSetProductStatePath = z.object({
+    id: zBigInt
+});
+
+/**
+ * Product response.
+ */
+export const zSetProductStateResponse = zProductResponse;
+
+export const zListProductUomConversionsPath = z.object({
+    id: zBigInt
+});
+
+/**
+ * Product UOM conversion collection response.
+ */
+export const zListProductUomConversionsResponse = zProductUomConversionsResponse;
+
+export const zReplaceProductUomConversionsBody = zProductUomConversions;
+
+export const zReplaceProductUomConversionsPath = z.object({
+    id: zBigInt
+});
+
+/**
+ * Product UOM conversion collection response.
+ */
+export const zReplaceProductUomConversionsResponse = zProductUomConversionsResponse;
+
+export const zListComboItemsPath = z.object({
+    id: zBigInt
+});
+
+/**
+ * COMBO item collection response.
+ */
+export const zListComboItemsResponse = zComboItemsResponse;
+
+export const zReplaceComboItemsBody = zComboItems;
+
+export const zReplaceComboItemsPath = z.object({
+    id: zBigInt
+});
+
+/**
+ * COMBO item collection response.
+ */
+export const zReplaceComboItemsResponse = zComboItemsResponse;
+
+export const zListPriceListsHeaders = z.object({
+    'Accept-Language': z.enum(['vi', 'en']).optional().default('vi'),
+    'X-Request-ID': zRequestId.optional()
+});
+
+export const zListPriceListsQuery = z.object({
+    q: z.string().optional(),
+    page: z.int().gte(1).optional().default(1),
+    page_size: z.int().gte(1).lte(200).optional().default(50),
+    sort: z.string().optional(),
+    filter: z.record(z.string(), z.union([
+        z.string(),
+        z.array(z.string())
+    ])).optional()
+});
+
+/**
+ * Authorized price list collection.
+ */
+export const zListPriceListsResponse = zPriceListCollection;
+
+export const zCreatePriceListBody = zPriceListCreate2;
+
+/**
+ * Price list response.
+ */
+export const zCreatePriceListResponse = zPriceListResponse;
+
+export const zGetPriceListPath = z.object({
+    id: zBigInt
+});
+
+/**
+ * Price list response.
+ */
+export const zGetPriceListResponse = zPriceListResponse;
+
+export const zUpdatePriceListBody = zPriceListPatch2;
+
+export const zUpdatePriceListPath = z.object({
+    id: zBigInt
+});
+
+/**
+ * Price list response.
+ */
+export const zUpdatePriceListResponse = zPriceListResponse;
+
+export const zSetPriceListStateBody = zState2;
+
+export const zSetPriceListStatePath = z.object({
+    id: zBigInt
+});
+
+/**
+ * Price list response.
+ */
+export const zSetPriceListStateResponse = zPriceListResponse;
+
+export const zListPriceListItemsPath = z.object({
+    id: zBigInt
+});
+
+/**
+ * Price list item collection response.
+ */
+export const zListPriceListItemsResponse = zPriceListItemsResponse;
+
+export const zReplacePriceListItemsBody = zPriceListItems;
+
+export const zReplacePriceListItemsPath = z.object({
+    id: zBigInt
+});
+
+/**
+ * Price list item collection response.
+ */
+export const zReplacePriceListItemsResponse = zPriceListItemsResponse;

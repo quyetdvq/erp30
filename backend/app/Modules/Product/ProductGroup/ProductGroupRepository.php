@@ -128,6 +128,24 @@ final class ProductGroupRepository
         return array_values($result->getResultArray());
     }
 
+    /** @return list<array<string, mixed>> */
+    public function listAll(): array
+    {
+        try {
+            $result = $this->db->table('product_groups')
+                ->orderBy('code', 'ASC')
+                ->orderBy('id', 'ASC')
+                ->get();
+        } catch (\Throwable $exception) {
+            throw new PersistenceException(self::ERROR_PERSISTENCE_FAILED, 'listAll', $exception);
+        }
+        if ($result === false) {
+            throw new PersistenceException(self::ERROR_PERSISTENCE_FAILED, 'listAll');
+        }
+
+        return array_values($result->getResultArray());
+    }
+
     /** @param array<string, mixed> $data */
     public function create(array $data, ?OperationContext $operation = null): int
     {

@@ -194,6 +194,77 @@ final class ProductUomService
         return $this->repo()->listByProduct($productId);
     }
 
+    /**
+     * Replace the complete alternate-UOM set atomically.
+     *
+     * @param list<array<string, mixed>> $submittedItems
+     * @return list<array<string, mixed>>
+     */
+    public function replaceByProduct(
+        mixed $productId,
+        array $submittedItems,
+        ?OperationContext $operation = null,
+        mixed $clientHint = null,
+    ): array {
+        $operation ??= $this->operation();
+        $productId = PositiveId::normalize($productId, 'product_id', ProductRoleService::ERROR_NOT_FOUND);
+        $product = $this->existingProduct($productId);
+        $items = [];
+        $seen = [];
+        foreach ($submittedItems as $item) {
+            $normalized = $this->normalizePayload($item, true);
+            $uomId = (int) $normalized['uom_id'];
+            if (isset($seen[$uomId])) {
+                throw new DomainException(self::ERROR_DUPLICATE, ['uom_id' => $uomId]);
+            }
+            $seen[$uomId] = true;
+            $items[] = $normalized;
+        }
+        $decision = $this->authorize($operation, $product, ['product_id' => $productId], $clientHint);
+        $rootId = $this->rootId($product);
+
+        return $this->withStructureLock($rootId, function () use ($productId, $items, $operation, $decision): array {
+            return $this->transaction(function () use ($productId, $items, $operation, $decision): array {
+                $lockedProduct = $this->lockedProduct($productId);
+                $this->assertEligibleRole($lockedProduct);
+                $this->validateBaseUom($lockedProduct);
+                $existingRows = $this->repo()->listByProduct($productId);
+                $existingByUom = [];
+                foreach ($existingRows as $row) {
+                    $existingByUom[(int) $row['uom_id']] = $row;
+                }
+                $submittedUoms = [];
+                foreach ($items as $item) {
+                    $uomId = (int) $item['uom_id'];
+                    $submittedUoms[$uomId] = true;
+                    $current = $existingByUom[$uomId] ?? null;
+                    if ($current === null) {
+                        $this->validateNewUom($lockedProduct, $uomId);
+                        $this->usageAndPrice($item['usage_type'], $item['price'] ?? null);
+                    } else {
+                        $this->validateMerged($lockedProduct, $current, array_merge($current, $item));
+                    }
+                }
+                foreach ($existingRows as $row) {
+                    if (! isset($submittedUoms[(int) $row['uom_id']])) {
+                        $this->repo()->delete((int) $row['id'], $operation);
+                    }
+                }
+                foreach ($items as $item) {
+                    $current = $existingByUom[(int) $item['uom_id']] ?? null;
+                    if ($current === null) {
+                        $this->repo()->create(array_merge($item, ['product_id' => $productId]), $operation);
+                    } else {
+                        $this->repo()->update((int) $current['id'], $this->persistencePayload($item), $operation);
+                    }
+                }
+                $this->audit()->recordIfRequired($decision);
+
+                return $this->repo()->listByProduct($productId);
+            }, 'product_uom_conversion_replace');
+        });
+    }
+
     public function existsForProduct(mixed $productId): bool
     {
         return $this->repo()->existsForProduct($productId);

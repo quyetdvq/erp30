@@ -573,6 +573,159 @@ paths:
       summary: Add lifecycle transition configuration
       requestBody: {$ref: '#/components/requestBodies/LifecycleConfiguration'}
       responses: {'200': {$ref: '#/components/responses/Success'}, '401': {$ref: '#/components/responses/Unauthorized'}, '403': {$ref: '#/components/responses/Forbidden'}, '404': {$ref: '#/components/responses/NotFound'}, '409': {$ref: '#/components/responses/Conflict'}, '422': {$ref: '#/components/responses/UnprocessableEntity'}}
+
+  /api/v1/product-groups:
+    get:
+      operationId: listProductGroups
+      summary: List authorized product groups
+      parameters: [{$ref: '#/components/parameters/AcceptLanguage'}, {$ref: '#/components/parameters/RequestId'}, {$ref: '#/components/parameters/Q'}, {$ref: '#/components/parameters/Page'}, {$ref: '#/components/parameters/PageSize'}, {$ref: '#/components/parameters/Sort'}, {$ref: '#/components/parameters/Filter'}]
+      responses: {'200': {$ref: '#/components/responses/ProductGroupCollection'}, '401': {$ref: '#/components/responses/Unauthorized'}, '403': {$ref: '#/components/responses/Forbidden'}}
+    post:
+      operationId: createProductGroup
+      summary: Create a product group
+      requestBody: {$ref: '#/components/requestBodies/ProductGroupCreate'}
+      responses: {'201': {$ref: '#/components/responses/ProductGroupResponse'}, '401': {$ref: '#/components/responses/Unauthorized'}, '403': {$ref: '#/components/responses/Forbidden'}, '409': {$ref: '#/components/responses/Conflict'}, '422': {$ref: '#/components/responses/UnprocessableEntity'}}
+  /api/v1/product-groups/{id}:
+    parameters: [{$ref: '#/components/parameters/Id'}]
+    get:
+      operationId: getProductGroup
+      summary: Get a product group
+      responses: {'200': {$ref: '#/components/responses/ProductGroupResponse'}, '401': {$ref: '#/components/responses/Unauthorized'}, '403': {$ref: '#/components/responses/Forbidden'}, '404': {$ref: '#/components/responses/NotFound'}}
+    patch:
+      operationId: updateProductGroup
+      summary: Update a product group
+      requestBody: {$ref: '#/components/requestBodies/ProductGroupPatch'}
+      responses: {'200': {$ref: '#/components/responses/ProductGroupResponse'}, '401': {$ref: '#/components/responses/Unauthorized'}, '403': {$ref: '#/components/responses/Forbidden'}, '404': {$ref: '#/components/responses/NotFound'}, '409': {$ref: '#/components/responses/Conflict'}, '422': {$ref: '#/components/responses/UnprocessableEntity'}}
+  /api/v1/product-groups/{id}/actions/set-state:
+    parameters: [{$ref: '#/components/parameters/Id'}]
+    post:
+      operationId: setProductGroupState
+      summary: Set product group state
+      requestBody: {$ref: '#/components/requestBodies/State'}
+      responses: {'200': {$ref: '#/components/responses/ProductGroupResponse'}, '401': {$ref: '#/components/responses/Unauthorized'}, '403': {$ref: '#/components/responses/Forbidden'}, '404': {$ref: '#/components/responses/NotFound'}, '422': {$ref: '#/components/responses/UnprocessableEntity'}}
+
+  /api/v1/product-uoms:
+    get:
+      operationId: listProductUoms
+      summary: List authorized product UOM masters
+      parameters: [{$ref: '#/components/parameters/AcceptLanguage'}, {$ref: '#/components/parameters/RequestId'}, {$ref: '#/components/parameters/Q'}, {$ref: '#/components/parameters/Page'}, {$ref: '#/components/parameters/PageSize'}, {$ref: '#/components/parameters/Sort'}, {$ref: '#/components/parameters/Filter'}]
+      responses: {'200': {$ref: '#/components/responses/ProductUomCollection'}, '401': {$ref: '#/components/responses/Unauthorized'}, '403': {$ref: '#/components/responses/Forbidden'}}
+    post:
+      operationId: createProductUom
+      summary: Create a product UOM master
+      requestBody: {$ref: '#/components/requestBodies/ProductUomCreate'}
+      responses: {'201': {$ref: '#/components/responses/ProductUomResponse'}, '401': {$ref: '#/components/responses/Unauthorized'}, '403': {$ref: '#/components/responses/Forbidden'}, '409': {$ref: '#/components/responses/Conflict'}, '422': {$ref: '#/components/responses/UnprocessableEntity'}}
+  /api/v1/product-uoms/{id}:
+    parameters: [{$ref: '#/components/parameters/Id'}]
+    get:
+      operationId: getProductUom
+      summary: Get a product UOM master
+      responses: {'200': {$ref: '#/components/responses/ProductUomResponse'}, '401': {$ref: '#/components/responses/Unauthorized'}, '403': {$ref: '#/components/responses/Forbidden'}, '404': {$ref: '#/components/responses/NotFound'}}
+    patch:
+      operationId: updateProductUom
+      summary: Update a product UOM master
+      requestBody: {$ref: '#/components/requestBodies/ProductUomPatch'}
+      responses: {'200': {$ref: '#/components/responses/ProductUomResponse'}, '401': {$ref: '#/components/responses/Unauthorized'}, '403': {$ref: '#/components/responses/Forbidden'}, '404': {$ref: '#/components/responses/NotFound'}, '409': {$ref: '#/components/responses/Conflict'}, '422': {$ref: '#/components/responses/UnprocessableEntity'}}
+  /api/v1/product-uoms/{id}/actions/set-state:
+    parameters: [{$ref: '#/components/parameters/Id'}]
+    post:
+      operationId: setProductUomState
+      summary: Set product UOM state
+      requestBody: {$ref: '#/components/requestBodies/State'}
+      responses: {'200': {$ref: '#/components/responses/ProductUomResponse'}, '401': {$ref: '#/components/responses/Unauthorized'}, '403': {$ref: '#/components/responses/Forbidden'}, '404': {$ref: '#/components/responses/NotFound'}, '422': {$ref: '#/components/responses/UnprocessableEntity'}}
+
+  /api/v1/products:
+    get:
+      operationId: listProducts
+      summary: List authorized products
+      parameters: [{$ref: '#/components/parameters/AcceptLanguage'}, {$ref: '#/components/parameters/RequestId'}, {$ref: '#/components/parameters/Q'}, {$ref: '#/components/parameters/Page'}, {$ref: '#/components/parameters/PageSize'}, {$ref: '#/components/parameters/Sort'}, {$ref: '#/components/parameters/Filter'}]
+      responses: {'200': {$ref: '#/components/responses/ProductCollection'}, '401': {$ref: '#/components/responses/Unauthorized'}, '403': {$ref: '#/components/responses/Forbidden'}}
+    post:
+      operationId: createProduct
+      summary: Create a product
+      requestBody: {$ref: '#/components/requestBodies/ProductCreate'}
+      responses: {'201': {$ref: '#/components/responses/ProductResponse'}, '401': {$ref: '#/components/responses/Unauthorized'}, '403': {$ref: '#/components/responses/Forbidden'}, '409': {$ref: '#/components/responses/Conflict'}, '422': {$ref: '#/components/responses/UnprocessableEntity'}}
+  /api/v1/products/{id}:
+    parameters: [{$ref: '#/components/parameters/Id'}]
+    get:
+      operationId: getProduct
+      summary: Get a product
+      responses: {'200': {$ref: '#/components/responses/ProductResponse'}, '401': {$ref: '#/components/responses/Unauthorized'}, '403': {$ref: '#/components/responses/Forbidden'}, '404': {$ref: '#/components/responses/NotFound'}}
+    patch:
+      operationId: updateProduct
+      summary: Update a product
+      requestBody: {$ref: '#/components/requestBodies/ProductPatch'}
+      responses: {'200': {$ref: '#/components/responses/ProductResponse'}, '401': {$ref: '#/components/responses/Unauthorized'}, '403': {$ref: '#/components/responses/Forbidden'}, '404': {$ref: '#/components/responses/NotFound'}, '409': {$ref: '#/components/responses/Conflict'}, '422': {$ref: '#/components/responses/UnprocessableEntity'}}
+  /api/v1/products/{id}/actions/set-state:
+    parameters: [{$ref: '#/components/parameters/Id'}]
+    post:
+      operationId: setProductState
+      summary: Set product state
+      requestBody: {$ref: '#/components/requestBodies/State'}
+      responses: {'200': {$ref: '#/components/responses/ProductResponse'}, '401': {$ref: '#/components/responses/Unauthorized'}, '403': {$ref: '#/components/responses/Forbidden'}, '404': {$ref: '#/components/responses/NotFound'}, '422': {$ref: '#/components/responses/UnprocessableEntity'}}
+  /api/v1/products/{id}/uom-conversions:
+    parameters: [{$ref: '#/components/parameters/Id'}]
+    get:
+      operationId: listProductUomConversions
+      summary: List product UOM conversions
+      responses: {'200': {$ref: '#/components/responses/ProductUomConversionsResponse'}, '401': {$ref: '#/components/responses/Unauthorized'}, '403': {$ref: '#/components/responses/Forbidden'}, '404': {$ref: '#/components/responses/NotFound'}}
+    put:
+      operationId: replaceProductUomConversions
+      summary: Replace product UOM conversions
+      requestBody: {$ref: '#/components/requestBodies/ProductUomConversions'}
+      responses: {'200': {$ref: '#/components/responses/ProductUomConversionsResponse'}, '401': {$ref: '#/components/responses/Unauthorized'}, '403': {$ref: '#/components/responses/Forbidden'}, '404': {$ref: '#/components/responses/NotFound'}, '409': {$ref: '#/components/responses/Conflict'}, '422': {$ref: '#/components/responses/UnprocessableEntity'}}
+  /api/v1/products/{id}/combo-items:
+    parameters: [{$ref: '#/components/parameters/Id'}]
+    get:
+      operationId: listComboItems
+      summary: List COMBO components
+      responses: {'200': {$ref: '#/components/responses/ComboItemsResponse'}, '401': {$ref: '#/components/responses/Unauthorized'}, '403': {$ref: '#/components/responses/Forbidden'}, '404': {$ref: '#/components/responses/NotFound'}}
+    put:
+      operationId: replaceComboItems
+      summary: Replace COMBO components
+      requestBody: {$ref: '#/components/requestBodies/ComboItems'}
+      responses: {'200': {$ref: '#/components/responses/ComboItemsResponse'}, '401': {$ref: '#/components/responses/Unauthorized'}, '403': {$ref: '#/components/responses/Forbidden'}, '404': {$ref: '#/components/responses/NotFound'}, '409': {$ref: '#/components/responses/Conflict'}, '422': {$ref: '#/components/responses/UnprocessableEntity'}}
+
+  /api/v1/price-lists:
+    get:
+      operationId: listPriceLists
+      summary: List authorized price lists
+      parameters: [{$ref: '#/components/parameters/AcceptLanguage'}, {$ref: '#/components/parameters/RequestId'}, {$ref: '#/components/parameters/Q'}, {$ref: '#/components/parameters/Page'}, {$ref: '#/components/parameters/PageSize'}, {$ref: '#/components/parameters/Sort'}, {$ref: '#/components/parameters/Filter'}]
+      responses: {'200': {$ref: '#/components/responses/PriceListCollection'}, '401': {$ref: '#/components/responses/Unauthorized'}, '403': {$ref: '#/components/responses/Forbidden'}}
+    post:
+      operationId: createPriceList
+      summary: Create a price list
+      requestBody: {$ref: '#/components/requestBodies/PriceListCreate'}
+      responses: {'201': {$ref: '#/components/responses/PriceListResponse'}, '401': {$ref: '#/components/responses/Unauthorized'}, '403': {$ref: '#/components/responses/Forbidden'}, '409': {$ref: '#/components/responses/Conflict'}, '422': {$ref: '#/components/responses/UnprocessableEntity'}}
+  /api/v1/price-lists/{id}:
+    parameters: [{$ref: '#/components/parameters/Id'}]
+    get:
+      operationId: getPriceList
+      summary: Get a price list
+      responses: {'200': {$ref: '#/components/responses/PriceListResponse'}, '401': {$ref: '#/components/responses/Unauthorized'}, '403': {$ref: '#/components/responses/Forbidden'}, '404': {$ref: '#/components/responses/NotFound'}}
+    patch:
+      operationId: updatePriceList
+      summary: Update a price list
+      requestBody: {$ref: '#/components/requestBodies/PriceListPatch'}
+      responses: {'200': {$ref: '#/components/responses/PriceListResponse'}, '401': {$ref: '#/components/responses/Unauthorized'}, '403': {$ref: '#/components/responses/Forbidden'}, '404': {$ref: '#/components/responses/NotFound'}, '409': {$ref: '#/components/responses/Conflict'}, '422': {$ref: '#/components/responses/UnprocessableEntity'}}
+  /api/v1/price-lists/{id}/actions/set-state:
+    parameters: [{$ref: '#/components/parameters/Id'}]
+    post:
+      operationId: setPriceListState
+      summary: Set price list state
+      requestBody: {$ref: '#/components/requestBodies/State'}
+      responses: {'200': {$ref: '#/components/responses/PriceListResponse'}, '401': {$ref: '#/components/responses/Unauthorized'}, '403': {$ref: '#/components/responses/Forbidden'}, '404': {$ref: '#/components/responses/NotFound'}, '422': {$ref: '#/components/responses/UnprocessableEntity'}}
+  /api/v1/price-lists/{id}/items:
+    parameters: [{$ref: '#/components/parameters/Id'}]
+    get:
+      operationId: listPriceListItems
+      summary: List price list items
+      responses: {'200': {$ref: '#/components/responses/PriceListItemsResponse'}, '401': {$ref: '#/components/responses/Unauthorized'}, '403': {$ref: '#/components/responses/Forbidden'}, '404': {$ref: '#/components/responses/NotFound'}}
+    put:
+      operationId: replacePriceListItems
+      summary: Replace price list items
+      requestBody: {$ref: '#/components/requestBodies/PriceListItems'}
+      responses: {'200': {$ref: '#/components/responses/PriceListItemsResponse'}, '401': {$ref: '#/components/responses/Unauthorized'}, '403': {$ref: '#/components/responses/Forbidden'}, '404': {$ref: '#/components/responses/NotFound'}, '409': {$ref: '#/components/responses/Conflict'}, '422': {$ref: '#/components/responses/UnprocessableEntity'}}
 components:
   parameters:
     AcceptLanguage:
@@ -681,6 +834,17 @@ components:
     LifecycleCreate: {required: true, content: {application/json: {schema: {$ref: '#/components/schemas/LifecycleCreate'}}}}
     LifecyclePatch: {required: true, content: {application/json: {schema: {$ref: '#/components/schemas/LifecyclePatch'}}}}
     LifecycleConfiguration: {required: true, content: {application/json: {schema: {$ref: '#/components/schemas/LifecycleConfiguration'}}}}
+    ProductGroupCreate: {required: true, content: {application/json: {schema: {$ref: '#/components/schemas/ProductGroupCreate'}}}}
+    ProductGroupPatch: {required: true, content: {application/json: {schema: {$ref: '#/components/schemas/ProductGroupPatch'}}}}
+    ProductUomCreate: {required: true, content: {application/json: {schema: {$ref: '#/components/schemas/ProductUomCreate'}}}}
+    ProductUomPatch: {required: true, content: {application/json: {schema: {$ref: '#/components/schemas/ProductUomPatch'}}}}
+    ProductCreate: {required: true, content: {application/json: {schema: {$ref: '#/components/schemas/ProductCreate'}}}}
+    ProductPatch: {required: true, content: {application/json: {schema: {$ref: '#/components/schemas/ProductPatch'}}}}
+    PriceListCreate: {required: true, content: {application/json: {schema: {$ref: '#/components/schemas/PriceListCreate'}}}}
+    PriceListPatch: {required: true, content: {application/json: {schema: {$ref: '#/components/schemas/PriceListPatch'}}}}
+    ProductUomConversions: {required: true, content: {application/json: {schema: {$ref: '#/components/schemas/ProductUomConversionsRequest'}}}}
+    PriceListItems: {required: true, content: {application/json: {schema: {$ref: '#/components/schemas/PriceListItemsRequest'}}}}
+    ComboItems: {required: true, content: {application/json: {schema: {$ref: '#/components/schemas/ComboItemsRequest'}}}}
   securitySchemes:
     sessionAuth:
       type: http
@@ -725,6 +889,17 @@ components:
     WardCollection:
       description: Authorized ward collection.
       content: {application/json: {schema: {$ref: '#/components/schemas/WardCollection'}}}
+    ProductGroupResponse: {description: Product group response., content: {application/json: {schema: {$ref: '#/components/schemas/ProductGroupResponse'}}}}
+    ProductGroupCollection: {description: Authorized product group collection., content: {application/json: {schema: {$ref: '#/components/schemas/ProductGroupCollection'}}}}
+    ProductUomResponse: {description: Product UOM response., content: {application/json: {schema: {$ref: '#/components/schemas/ProductUomResponse'}}}}
+    ProductUomCollection: {description: Authorized product UOM collection., content: {application/json: {schema: {$ref: '#/components/schemas/ProductUomCollection'}}}}
+    ProductResponse: {description: Product response., content: {application/json: {schema: {$ref: '#/components/schemas/ProductResponse'}}}}
+    ProductCollection: {description: Authorized product collection., content: {application/json: {schema: {$ref: '#/components/schemas/ProductCollection'}}}}
+    PriceListResponse: {description: Price list response., content: {application/json: {schema: {$ref: '#/components/schemas/PriceListResponse'}}}}
+    PriceListCollection: {description: Authorized price list collection., content: {application/json: {schema: {$ref: '#/components/schemas/PriceListCollection'}}}}
+    ProductUomConversionsResponse: {description: Product UOM conversion collection response., content: {application/json: {schema: {$ref: '#/components/schemas/ProductUomConversionsResponse'}}}}
+    PriceListItemsResponse: {description: Price list item collection response., content: {application/json: {schema: {$ref: '#/components/schemas/PriceListItemsResponse'}}}}
+    ComboItemsResponse: {description: COMBO item collection response., content: {application/json: {schema: {$ref: '#/components/schemas/ComboItemsResponse'}}}}
     OrganizationResponse:
       description: Organization resource.
       content: {application/json: {schema: {$ref: '#/components/schemas/OrganizationResponse'}}}
@@ -963,6 +1138,258 @@ components:
           $ref: '#/components/schemas/HealthData'
         meta:
           $ref: '#/components/schemas/Meta'
+    ProductGroup:
+      type: object
+      required: [id, code, name, status]
+      properties:
+        id: {$ref: '#/components/schemas/BigInt'}
+        parent_id: {oneOf: [{$ref: '#/components/schemas/BigInt'}, {type: 'null'}]}
+        code: {type: string}
+        name: {type: string}
+        description: {type: [string, 'null']}
+        status: {type: string, enum: [ACTIVE, INACTIVE]}
+    ProductGroupCreate:
+      type: object
+      required: [code, name]
+      properties:
+        parent_id: {oneOf: [{$ref: '#/components/schemas/BigInt'}, {type: 'null'}]}
+        code: {type: string}
+        name: {type: string}
+        description: {type: [string, 'null']}
+        status: {type: string, enum: [ACTIVE, INACTIVE]}
+    ProductGroupPatch:
+      type: object
+      properties:
+        parent_id: {oneOf: [{$ref: '#/components/schemas/BigInt'}, {type: 'null'}]}
+        code: {type: string}
+        name: {type: string}
+        description: {type: [string, 'null']}
+        status: {type: string, enum: [ACTIVE, INACTIVE]}
+    ProductUom:
+      type: object
+      required: [id, code, name, status]
+      properties:
+        id: {$ref: '#/components/schemas/BigInt'}
+        code: {type: string}
+        name: {type: string}
+        description: {type: [string, 'null']}
+        status: {type: string, enum: [ACTIVE, INACTIVE]}
+    ProductUomCreate:
+      type: object
+      required: [code, name]
+      properties:
+        code: {type: string}
+        name: {type: string}
+        description: {type: [string, 'null']}
+        status: {type: string, enum: [ACTIVE, INACTIVE]}
+    ProductUomPatch:
+      type: object
+      properties:
+        code: {type: string}
+        name: {type: string}
+        description: {type: [string, 'null']}
+        status: {type: string, enum: [ACTIVE, INACTIVE]}
+    Product:
+      type: object
+      required: [id, product_type, status, role, full_name, selectable, leaf_transactionable]
+      properties:
+        id: {$ref: '#/components/schemas/BigInt'}
+        product_code: {type: [string, 'null'], maxLength: 50}
+        sku: {type: [string, 'null']}
+        barcode: {type: [string, 'null']}
+        parent_product_id: {oneOf: [{$ref: '#/components/schemas/BigInt'}, {type: 'null'}]}
+        product_name: {type: [string, 'null']}
+        product_child_name: {type: [string, 'null']}
+        product_group_id: {oneOf: [{$ref: '#/components/schemas/BigInt'}, {type: 'null'}]}
+        product_type: {type: string, enum: [STANDARD, COMBO]}
+        base_uom_id: {oneOf: [{$ref: '#/components/schemas/BigInt'}, {type: 'null'}]}
+        price: {oneOf: [{$ref: '#/components/schemas/Decimal'}, {type: 'null'}]}
+        net_weight_g: {oneOf: [{$ref: '#/components/schemas/Decimal'}, {type: 'null'}]}
+        package_gross_weight_g: {oneOf: [{$ref: '#/components/schemas/Decimal'}, {type: 'null'}]}
+        package_length_mm: {oneOf: [{$ref: '#/components/schemas/Decimal'}, {type: 'null'}]}
+        package_width_mm: {oneOf: [{$ref: '#/components/schemas/Decimal'}, {type: 'null'}]}
+        package_height_mm: {oneOf: [{$ref: '#/components/schemas/Decimal'}, {type: 'null'}]}
+        description: {type: [string, 'null']}
+        manual_standard_cost: {oneOf: [{$ref: '#/components/schemas/Decimal'}, {type: 'null'}]}
+        serial_management_enabled: {type: boolean}
+        status: {type: string, enum: [ACTIVE, INACTIVE]}
+        role: {type: string, enum: [SIMPLE, PARENT, CHILD, COMBO]}
+        full_name: {type: string}
+        selectable: {type: boolean}
+        leaf_transactionable: {type: boolean}
+    ProductCreate:
+      type: object
+      properties:
+        product_code: {type: [string, 'null'], maxLength: 50}
+        sku: {type: [string, 'null']}
+        barcode: {type: [string, 'null']}
+        parent_product_id: {$ref: '#/components/schemas/BigInt'}
+        product_name: {type: [string, 'null']}
+        product_child_name: {type: [string, 'null']}
+        product_group_id: {$ref: '#/components/schemas/BigInt'}
+        product_type: {type: string, enum: [STANDARD, COMBO]}
+        base_uom_id: {$ref: '#/components/schemas/BigInt'}
+        price: {$ref: '#/components/schemas/Decimal'}
+        net_weight_g: {$ref: '#/components/schemas/Decimal'}
+        package_gross_weight_g: {$ref: '#/components/schemas/Decimal'}
+        package_length_mm: {$ref: '#/components/schemas/Decimal'}
+        package_width_mm: {$ref: '#/components/schemas/Decimal'}
+        package_height_mm: {$ref: '#/components/schemas/Decimal'}
+        description: {type: string}
+        manual_standard_cost: {$ref: '#/components/schemas/Decimal'}
+        serial_management_enabled: {type: boolean}
+        status: {type: string, enum: [ACTIVE, INACTIVE]}
+    ProductPatch:
+      type: object
+      properties:
+        product_code: {type: [string, 'null'], maxLength: 50}
+        sku: {type: [string, 'null']}
+        barcode: {type: [string, 'null']}
+        parent_product_id: {$ref: '#/components/schemas/BigInt'}
+        product_name: {type: [string, 'null']}
+        product_child_name: {type: [string, 'null']}
+        product_group_id: {$ref: '#/components/schemas/BigInt'}
+        product_type: {type: string, enum: [STANDARD, COMBO]}
+        base_uom_id: {$ref: '#/components/schemas/BigInt'}
+        price: {$ref: '#/components/schemas/Decimal'}
+        net_weight_g: {$ref: '#/components/schemas/Decimal'}
+        package_gross_weight_g: {$ref: '#/components/schemas/Decimal'}
+        package_length_mm: {$ref: '#/components/schemas/Decimal'}
+        package_width_mm: {$ref: '#/components/schemas/Decimal'}
+        package_height_mm: {$ref: '#/components/schemas/Decimal'}
+        description: {type: [string, 'null']}
+        manual_standard_cost: {$ref: '#/components/schemas/Decimal'}
+        serial_management_enabled: {type: boolean}
+        status: {type: string, enum: [ACTIVE, INACTIVE]}
+    PriceList:
+      type: object
+      required: [id, code, name, organization_id, effective_from, priority, status]
+      properties:
+        id: {$ref: '#/components/schemas/BigInt'}
+        code: {type: string}
+        name: {type: string}
+        organization_id: {$ref: '#/components/schemas/BigInt'}
+        effective_from: {type: string, format: date-time}
+        effective_to: {type: [string, 'null'], format: date-time}
+        priority: {type: integer}
+        status: {type: string, enum: [ACTIVE, INACTIVE]}
+        description: {type: [string, 'null']}
+    PriceListCreate:
+      type: object
+      required: [code, name, organization_id, effective_from]
+      properties:
+        code: {type: string}
+        name: {type: string}
+        organization_id: {$ref: '#/components/schemas/BigInt'}
+        effective_from: {type: string, format: date-time}
+        effective_to: {type: [string, 'null'], format: date-time}
+        priority: {type: integer}
+        status: {type: string, enum: [ACTIVE, INACTIVE]}
+        description: {type: [string, 'null']}
+    PriceListPatch:
+      type: object
+      properties:
+        code: {type: string}
+        name: {type: string}
+        organization_id: {$ref: '#/components/schemas/BigInt'}
+        effective_from: {type: string, format: date-time}
+        effective_to: {type: [string, 'null'], format: date-time}
+        priority: {type: integer}
+        status: {type: string, enum: [ACTIVE, INACTIVE]}
+        description: {type: [string, 'null']}
+    ProductUomConversion:
+      type: object
+      required: [id, product_id, uom_id, conversion_factor, usage_type, status]
+      properties:
+        id: {$ref: '#/components/schemas/BigInt'}
+        product_id: {$ref: '#/components/schemas/BigInt'}
+        uom_id: {$ref: '#/components/schemas/BigInt'}
+        conversion_factor: {$ref: '#/components/schemas/Decimal'}
+        price: {oneOf: [{$ref: '#/components/schemas/Decimal'}, {type: 'null'}]}
+        package_gross_weight_g: {oneOf: [{$ref: '#/components/schemas/Decimal'}, {type: 'null'}]}
+        package_length_mm: {oneOf: [{$ref: '#/components/schemas/Decimal'}, {type: 'null'}]}
+        package_width_mm: {oneOf: [{$ref: '#/components/schemas/Decimal'}, {type: 'null'}]}
+        package_height_mm: {oneOf: [{$ref: '#/components/schemas/Decimal'}, {type: 'null'}]}
+        usage_type: {type: string, enum: [PURCHASE, SALES, BOTH]}
+        status: {type: string, enum: [ACTIVE, INACTIVE]}
+    ProductUomConversionInput:
+      type: object
+      required: [uom_id, conversion_factor]
+      properties:
+        uom_id: {$ref: '#/components/schemas/BigInt'}
+        conversion_factor: {$ref: '#/components/schemas/Decimal'}
+        price: {oneOf: [{$ref: '#/components/schemas/Decimal'}, {type: 'null'}]}
+        package_gross_weight_g: {oneOf: [{$ref: '#/components/schemas/Decimal'}, {type: 'null'}]}
+        package_length_mm: {oneOf: [{$ref: '#/components/schemas/Decimal'}, {type: 'null'}]}
+        package_width_mm: {oneOf: [{$ref: '#/components/schemas/Decimal'}, {type: 'null'}]}
+        package_height_mm: {oneOf: [{$ref: '#/components/schemas/Decimal'}, {type: 'null'}]}
+        usage_type: {type: string, enum: [PURCHASE, SALES, BOTH]}
+        status: {type: string, enum: [ACTIVE, INACTIVE]}
+    ProductUomConversionsRequest:
+      oneOf:
+        - type: array
+          items: {$ref: '#/components/schemas/ProductUomConversionInput'}
+        - type: object
+          required: [items]
+          properties:
+            items: {type: array, items: {$ref: '#/components/schemas/ProductUomConversionInput'}}
+    PriceListItem:
+      type: object
+      required: [id, price_list_id, product_id, uom_id, price]
+      properties:
+        id: {$ref: '#/components/schemas/BigInt'}
+        price_list_id: {$ref: '#/components/schemas/BigInt'}
+        product_id: {$ref: '#/components/schemas/BigInt'}
+        uom_id: {$ref: '#/components/schemas/BigInt'}
+        price: {$ref: '#/components/schemas/Decimal'}
+    PriceListItemInput:
+      type: object
+      required: [product_id, uom_id, price]
+      properties:
+        product_id: {$ref: '#/components/schemas/BigInt'}
+        uom_id: {$ref: '#/components/schemas/BigInt'}
+        price: {$ref: '#/components/schemas/Decimal'}
+    PriceListItemsRequest:
+      oneOf:
+        - type: array
+          items: {$ref: '#/components/schemas/PriceListItemInput'}
+        - type: object
+          required: [items]
+          properties:
+            items: {type: array, items: {$ref: '#/components/schemas/PriceListItemInput'}}
+    ComboItem:
+      type: object
+      required: [id, combo_product_id, component_product_id, quantity]
+      properties:
+        id: {$ref: '#/components/schemas/BigInt'}
+        combo_product_id: {$ref: '#/components/schemas/BigInt'}
+        component_product_id: {$ref: '#/components/schemas/BigInt'}
+        quantity: {$ref: '#/components/schemas/Decimal'}
+    ComboItemInput:
+      type: object
+      required: [component_product_id, quantity]
+      properties:
+        component_product_id: {$ref: '#/components/schemas/BigInt'}
+        quantity: {$ref: '#/components/schemas/Decimal'}
+    ComboItemsRequest:
+      oneOf:
+        - type: array
+          items: {$ref: '#/components/schemas/ComboItemInput'}
+        - type: object
+          required: [items]
+          properties:
+            items: {type: array, items: {$ref: '#/components/schemas/ComboItemInput'}}
+    ProductGroupResponse: {allOf: [{$ref: '#/components/schemas/SuccessResponse'}], properties: {data: {$ref: '#/components/schemas/ProductGroup'}}}
+    ProductGroupCollection: {allOf: [{$ref: '#/components/schemas/CollectionResponse'}], properties: {data: {type: array, items: {$ref: '#/components/schemas/ProductGroup'}}}}
+    ProductUomResponse: {allOf: [{$ref: '#/components/schemas/SuccessResponse'}], properties: {data: {$ref: '#/components/schemas/ProductUom'}}}
+    ProductUomCollection: {allOf: [{$ref: '#/components/schemas/CollectionResponse'}], properties: {data: {type: array, items: {$ref: '#/components/schemas/ProductUom'}}}}
+    ProductResponse: {allOf: [{$ref: '#/components/schemas/SuccessResponse'}], properties: {data: {$ref: '#/components/schemas/Product'}}}
+    ProductCollection: {allOf: [{$ref: '#/components/schemas/CollectionResponse'}], properties: {data: {type: array, items: {$ref: '#/components/schemas/Product'}}}}
+    PriceListResponse: {allOf: [{$ref: '#/components/schemas/SuccessResponse'}], properties: {data: {$ref: '#/components/schemas/PriceList'}}}
+    PriceListCollection: {allOf: [{$ref: '#/components/schemas/CollectionResponse'}], properties: {data: {type: array, items: {$ref: '#/components/schemas/PriceList'}}}}
+    ProductUomConversionsResponse: {allOf: [{$ref: '#/components/schemas/SuccessResponse'}], properties: {data: {type: array, items: {$ref: '#/components/schemas/ProductUomConversion'}}}}
+    PriceListItemsResponse: {allOf: [{$ref: '#/components/schemas/SuccessResponse'}], properties: {data: {type: array, items: {$ref: '#/components/schemas/PriceListItem'}}}}
+    ComboItemsResponse: {allOf: [{$ref: '#/components/schemas/SuccessResponse'}], properties: {data: {type: array, items: {$ref: '#/components/schemas/ComboItem'}}}}
     Province:
       type: object
       required: [id, code, name, status]

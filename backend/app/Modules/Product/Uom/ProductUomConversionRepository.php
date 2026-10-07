@@ -192,6 +192,21 @@ final class ProductUomConversionRepository
         return $this->update($id, ['status' => $status], $operation);
     }
 
+    public function delete(mixed $id, ?OperationContext $operation = null): bool
+    {
+        $normalizedId = $this->id($id, 'conversion_id');
+        try {
+            $deleted = $this->db->table('product_uom_conversions')->where('id', $normalizedId)->delete();
+        } catch (\Throwable $exception) {
+            throw new PersistenceException(self::ERROR_PERSISTENCE_FAILED, 'delete', $exception);
+        }
+        if ($deleted === false) {
+            throw new PersistenceException(self::ERROR_PERSISTENCE_FAILED, 'delete');
+        }
+
+        return $deleted > 0;
+    }
+
     /** @return array<string, mixed>|null */
     private function findRow(string $operation, callable $query): ?array
     {

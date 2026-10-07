@@ -96,6 +96,25 @@ final class PriceListRepository
         return array_values($result->getResultArray());
     }
 
+    /** @return list<array<string, mixed>> */
+    public function listAll(): array
+    {
+        try {
+            $result = $this->db->table('price_lists')
+                ->orderBy('priority', 'DESC')
+                ->orderBy('effective_from', 'DESC')
+                ->orderBy('id', 'ASC')
+                ->get();
+        } catch (\Throwable $exception) {
+            throw new PersistenceException(self::ERROR_PERSISTENCE_FAILED, 'listAll', $exception);
+        }
+        if ($result === false) {
+            throw new PersistenceException(self::ERROR_PERSISTENCE_FAILED, 'listAll');
+        }
+
+        return array_values($result->getResultArray());
+    }
+
     /**
      * Find the best active Price List in one organization for an exact
      * Product/UOM pair at one trusted evaluation instant.

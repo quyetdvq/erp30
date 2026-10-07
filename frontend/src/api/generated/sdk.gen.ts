@@ -2,7 +2,7 @@
 
 import type { Client, ClientMeta, Options as Options2, RequestResult, TDataShape } from './client';
 import { client } from './client.gen';
-import type { ConfigureLifecycleStatesData, ConfigureLifecycleStatesErrors, ConfigureLifecycleStatesResponses, ConfigureLifecycleTransitionsData, ConfigureLifecycleTransitionsErrors, ConfigureLifecycleTransitionsResponses, CreateAuthorizationGroupData, CreateAuthorizationGroupErrors, CreateAuthorizationGroupResponses, CreateContactData, CreateContactErrors, CreateContactResponses, CreateDepartmentData, CreateDepartmentErrors, CreateDepartmentResponses, CreateEmployeeAssignmentData, CreateEmployeeAssignmentErrors, CreateEmployeeAssignmentResponses, CreateEmployeeData, CreateEmployeeErrors, CreateEmployeeResponses, CreateLifecycleData, CreateLifecycleErrors, CreateLifecycleResponses, CreateNumberingSeriesData, CreateNumberingSeriesErrors, CreateNumberingSeriesResponses, CreateOrganizationData, CreateOrganizationErrors, CreateOrganizationResponses, CreatePolicyData, CreatePolicyErrors, CreatePolicyResponses, CreatePositionData, CreatePositionErrors, CreatePositionResponses, CreateProvinceData, CreateProvinceErrors, CreateProvinceResponses, CreateResourceActionData, CreateResourceActionErrors, CreateResourceActionResponses, CreateResourceData, CreateResourceErrors, CreateResourceResponses, CreateWardData, CreateWardErrors, CreateWardResponses, CreateWorkflowStateData, CreateWorkflowStateErrors, CreateWorkflowStateResponses, DeletePolicyData, DeletePolicyErrors, DeletePolicyResponses, DeleteResourceActionData, DeleteResourceActionErrors, DeleteResourceActionResponses, DeleteResourceData, DeleteResourceErrors, DeleteResourceResponses, GetAuthorizationGroupData, GetAuthorizationGroupErrors, GetAuthorizationGroupResponses, GetAuthorizationLogData, GetAuthorizationLogErrors, GetAuthorizationLogResponses, GetContactData, GetContactErrors, GetContactResponses, GetDepartmentData, GetDepartmentErrors, GetDepartmentResponses, GetEmployeeAssignmentData, GetEmployeeAssignmentErrors, GetEmployeeAssignmentResponses, GetEmployeeData, GetEmployeeErrors, GetEmployeeResponses, GetHealthData, GetHealthErrors, GetHealthResponses, GetLifecycleData, GetLifecycleErrors, GetLifecycleResponses, GetNumberingSeriesData, GetNumberingSeriesErrors, GetNumberingSeriesResponses, GetOrganizationData, GetOrganizationErrors, GetOrganizationResponses, GetOrganizationTreeData, GetOrganizationTreeErrors, GetOrganizationTreeResponses, GetPolicyData, GetPolicyErrors, GetPolicyResponses, GetPositionData, GetPositionErrors, GetPositionResponses, GetProvinceData, GetProvinceErrors, GetProvinceResponses, GetResourceData, GetResourceErrors, GetResourceResponses, GetWardData, GetWardErrors, GetWardResponses, GetWorkflowStateData, GetWorkflowStateErrors, GetWorkflowStateResponses, ListAuthorizationGroupMembersData, ListAuthorizationGroupMembersErrors, ListAuthorizationGroupMembersResponses, ListAuthorizationGroupPermissionsData, ListAuthorizationGroupPermissionsErrors, ListAuthorizationGroupPermissionsResponses, ListAuthorizationGroupsData, ListAuthorizationGroupsErrors, ListAuthorizationGroupsResponses, ListAuthorizationLogsData, ListAuthorizationLogsErrors, ListAuthorizationLogsResponses, ListContactsData, ListContactsErrors, ListContactsResponses, ListDepartmentsData, ListDepartmentsErrors, ListDepartmentsResponses, ListEmployeeAssignmentsData, ListEmployeeAssignmentsErrors, ListEmployeeAssignmentsResponses, ListEmployeesData, ListEmployeesErrors, ListEmployeesResponses, ListLifecyclesData, ListLifecyclesErrors, ListLifecyclesResponses, ListLifecycleStatesData, ListLifecycleStatesErrors, ListLifecycleStatesResponses, ListLifecycleTransitionsData, ListLifecycleTransitionsErrors, ListLifecycleTransitionsResponses, ListNumberingSeriesData, ListNumberingSeriesErrors, ListNumberingSeriesResponses, ListOrganizationsData, ListOrganizationsErrors, ListOrganizationsResponses, ListPoliciesData, ListPoliciesErrors, ListPoliciesResponses, ListPositionsData, ListPositionsErrors, ListPositionsResponses, ListProvincesData, ListProvincesErrors, ListProvincesResponses, ListResourceActionsData, ListResourceActionsErrors, ListResourceActionsResponses, ListResourcesData, ListResourcesErrors, ListResourcesResponses, ListWardsData, ListWardsErrors, ListWardsResponses, ListWorkflowStatesData, ListWorkflowStatesErrors, ListWorkflowStatesResponses, ReplaceAuthorizationGroupMembersData, ReplaceAuthorizationGroupMembersErrors, ReplaceAuthorizationGroupMembersResponses, ReplaceAuthorizationGroupPermissionsData, ReplaceAuthorizationGroupPermissionsErrors, ReplaceAuthorizationGroupPermissionsResponses, SetAuthorizationGroupStateData, SetAuthorizationGroupStateErrors, SetAuthorizationGroupStateResponses, SetContactStateData, SetContactStateErrors, SetContactStateResponses, SetDepartmentStateData, SetDepartmentStateErrors, SetDepartmentStateResponses, SetEmployeeAssignmentStateData, SetEmployeeAssignmentStateErrors, SetEmployeeAssignmentStateResponses, SetEmployeeStateData, SetEmployeeStateErrors, SetEmployeeStateResponses, SetLifecycleStateData, SetLifecycleStateErrors, SetLifecycleStateResponses, SetNumberingSeriesStateData, SetNumberingSeriesStateErrors, SetNumberingSeriesStateResponses, SetOrganizationStateData, SetOrganizationStateErrors, SetOrganizationStateResponses, SetPositionStateData, SetPositionStateErrors, SetPositionStateResponses, SetProvinceStateData, SetProvinceStateErrors, SetProvinceStateResponses, SetWardStateData, SetWardStateErrors, SetWardStateResponses, SetWorkflowStateStateData, SetWorkflowStateStateErrors, SetWorkflowStateStateResponses, UpdateAuthorizationGroupData, UpdateAuthorizationGroupErrors, UpdateAuthorizationGroupResponses, UpdateContactData, UpdateContactErrors, UpdateContactResponses, UpdateDepartmentData, UpdateDepartmentErrors, UpdateDepartmentResponses, UpdateEmployeeAssignmentData, UpdateEmployeeAssignmentErrors, UpdateEmployeeAssignmentResponses, UpdateEmployeeData, UpdateEmployeeErrors, UpdateEmployeeResponses, UpdateLifecycleData, UpdateLifecycleErrors, UpdateLifecycleResponses, UpdateNumberingSeriesData, UpdateNumberingSeriesErrors, UpdateNumberingSeriesResponses, UpdateOrganizationData, UpdateOrganizationErrors, UpdateOrganizationResponses, UpdatePolicyData, UpdatePolicyErrors, UpdatePolicyResponses, UpdatePositionData, UpdatePositionErrors, UpdatePositionResponses, UpdateProvinceData, UpdateProvinceErrors, UpdateProvinceResponses, UpdateResourceActionData, UpdateResourceActionErrors, UpdateResourceActionResponses, UpdateResourceData, UpdateResourceErrors, UpdateResourceResponses, UpdateWardData, UpdateWardErrors, UpdateWardResponses, UpdateWorkflowStateData, UpdateWorkflowStateErrors, UpdateWorkflowStateResponses, ValidateNumberingSeriesConfigData, ValidateNumberingSeriesConfigErrors, ValidateNumberingSeriesConfigResponses } from './types.gen';
+import type { ConfigureLifecycleStatesData, ConfigureLifecycleStatesErrors, ConfigureLifecycleStatesResponses, ConfigureLifecycleTransitionsData, ConfigureLifecycleTransitionsErrors, ConfigureLifecycleTransitionsResponses, CreateAuthorizationGroupData, CreateAuthorizationGroupErrors, CreateAuthorizationGroupResponses, CreateContactData, CreateContactErrors, CreateContactResponses, CreateDepartmentData, CreateDepartmentErrors, CreateDepartmentResponses, CreateEmployeeAssignmentData, CreateEmployeeAssignmentErrors, CreateEmployeeAssignmentResponses, CreateEmployeeData, CreateEmployeeErrors, CreateEmployeeResponses, CreateLifecycleData, CreateLifecycleErrors, CreateLifecycleResponses, CreateNumberingSeriesData, CreateNumberingSeriesErrors, CreateNumberingSeriesResponses, CreateOrganizationData, CreateOrganizationErrors, CreateOrganizationResponses, CreatePolicyData, CreatePolicyErrors, CreatePolicyResponses, CreatePositionData, CreatePositionErrors, CreatePositionResponses, CreatePriceListData, CreatePriceListErrors, CreatePriceListResponses, CreateProductData, CreateProductErrors, CreateProductGroupData, CreateProductGroupErrors, CreateProductGroupResponses, CreateProductResponses, CreateProductUomData, CreateProductUomErrors, CreateProductUomResponses, CreateProvinceData, CreateProvinceErrors, CreateProvinceResponses, CreateResourceActionData, CreateResourceActionErrors, CreateResourceActionResponses, CreateResourceData, CreateResourceErrors, CreateResourceResponses, CreateWardData, CreateWardErrors, CreateWardResponses, CreateWorkflowStateData, CreateWorkflowStateErrors, CreateWorkflowStateResponses, DeletePolicyData, DeletePolicyErrors, DeletePolicyResponses, DeleteResourceActionData, DeleteResourceActionErrors, DeleteResourceActionResponses, DeleteResourceData, DeleteResourceErrors, DeleteResourceResponses, GetAuthorizationGroupData, GetAuthorizationGroupErrors, GetAuthorizationGroupResponses, GetAuthorizationLogData, GetAuthorizationLogErrors, GetAuthorizationLogResponses, GetContactData, GetContactErrors, GetContactResponses, GetDepartmentData, GetDepartmentErrors, GetDepartmentResponses, GetEmployeeAssignmentData, GetEmployeeAssignmentErrors, GetEmployeeAssignmentResponses, GetEmployeeData, GetEmployeeErrors, GetEmployeeResponses, GetHealthData, GetHealthErrors, GetHealthResponses, GetLifecycleData, GetLifecycleErrors, GetLifecycleResponses, GetNumberingSeriesData, GetNumberingSeriesErrors, GetNumberingSeriesResponses, GetOrganizationData, GetOrganizationErrors, GetOrganizationResponses, GetOrganizationTreeData, GetOrganizationTreeErrors, GetOrganizationTreeResponses, GetPolicyData, GetPolicyErrors, GetPolicyResponses, GetPositionData, GetPositionErrors, GetPositionResponses, GetPriceListData, GetPriceListErrors, GetPriceListResponses, GetProductData, GetProductErrors, GetProductGroupData, GetProductGroupErrors, GetProductGroupResponses, GetProductResponses, GetProductUomData, GetProductUomErrors, GetProductUomResponses, GetProvinceData, GetProvinceErrors, GetProvinceResponses, GetResourceData, GetResourceErrors, GetResourceResponses, GetWardData, GetWardErrors, GetWardResponses, GetWorkflowStateData, GetWorkflowStateErrors, GetWorkflowStateResponses, ListAuthorizationGroupMembersData, ListAuthorizationGroupMembersErrors, ListAuthorizationGroupMembersResponses, ListAuthorizationGroupPermissionsData, ListAuthorizationGroupPermissionsErrors, ListAuthorizationGroupPermissionsResponses, ListAuthorizationGroupsData, ListAuthorizationGroupsErrors, ListAuthorizationGroupsResponses, ListAuthorizationLogsData, ListAuthorizationLogsErrors, ListAuthorizationLogsResponses, ListComboItemsData, ListComboItemsErrors, ListComboItemsResponses, ListContactsData, ListContactsErrors, ListContactsResponses, ListDepartmentsData, ListDepartmentsErrors, ListDepartmentsResponses, ListEmployeeAssignmentsData, ListEmployeeAssignmentsErrors, ListEmployeeAssignmentsResponses, ListEmployeesData, ListEmployeesErrors, ListEmployeesResponses, ListLifecyclesData, ListLifecyclesErrors, ListLifecyclesResponses, ListLifecycleStatesData, ListLifecycleStatesErrors, ListLifecycleStatesResponses, ListLifecycleTransitionsData, ListLifecycleTransitionsErrors, ListLifecycleTransitionsResponses, ListNumberingSeriesData, ListNumberingSeriesErrors, ListNumberingSeriesResponses, ListOrganizationsData, ListOrganizationsErrors, ListOrganizationsResponses, ListPoliciesData, ListPoliciesErrors, ListPoliciesResponses, ListPositionsData, ListPositionsErrors, ListPositionsResponses, ListPriceListItemsData, ListPriceListItemsErrors, ListPriceListItemsResponses, ListPriceListsData, ListPriceListsErrors, ListPriceListsResponses, ListProductGroupsData, ListProductGroupsErrors, ListProductGroupsResponses, ListProductsData, ListProductsErrors, ListProductsResponses, ListProductUomConversionsData, ListProductUomConversionsErrors, ListProductUomConversionsResponses, ListProductUomsData, ListProductUomsErrors, ListProductUomsResponses, ListProvincesData, ListProvincesErrors, ListProvincesResponses, ListResourceActionsData, ListResourceActionsErrors, ListResourceActionsResponses, ListResourcesData, ListResourcesErrors, ListResourcesResponses, ListWardsData, ListWardsErrors, ListWardsResponses, ListWorkflowStatesData, ListWorkflowStatesErrors, ListWorkflowStatesResponses, ReplaceAuthorizationGroupMembersData, ReplaceAuthorizationGroupMembersErrors, ReplaceAuthorizationGroupMembersResponses, ReplaceAuthorizationGroupPermissionsData, ReplaceAuthorizationGroupPermissionsErrors, ReplaceAuthorizationGroupPermissionsResponses, ReplaceComboItemsData, ReplaceComboItemsErrors, ReplaceComboItemsResponses, ReplacePriceListItemsData, ReplacePriceListItemsErrors, ReplacePriceListItemsResponses, ReplaceProductUomConversionsData, ReplaceProductUomConversionsErrors, ReplaceProductUomConversionsResponses, SetAuthorizationGroupStateData, SetAuthorizationGroupStateErrors, SetAuthorizationGroupStateResponses, SetContactStateData, SetContactStateErrors, SetContactStateResponses, SetDepartmentStateData, SetDepartmentStateErrors, SetDepartmentStateResponses, SetEmployeeAssignmentStateData, SetEmployeeAssignmentStateErrors, SetEmployeeAssignmentStateResponses, SetEmployeeStateData, SetEmployeeStateErrors, SetEmployeeStateResponses, SetLifecycleStateData, SetLifecycleStateErrors, SetLifecycleStateResponses, SetNumberingSeriesStateData, SetNumberingSeriesStateErrors, SetNumberingSeriesStateResponses, SetOrganizationStateData, SetOrganizationStateErrors, SetOrganizationStateResponses, SetPositionStateData, SetPositionStateErrors, SetPositionStateResponses, SetPriceListStateData, SetPriceListStateErrors, SetPriceListStateResponses, SetProductGroupStateData, SetProductGroupStateErrors, SetProductGroupStateResponses, SetProductStateData, SetProductStateErrors, SetProductStateResponses, SetProductUomStateData, SetProductUomStateErrors, SetProductUomStateResponses, SetProvinceStateData, SetProvinceStateErrors, SetProvinceStateResponses, SetWardStateData, SetWardStateErrors, SetWardStateResponses, SetWorkflowStateStateData, SetWorkflowStateStateErrors, SetWorkflowStateStateResponses, UpdateAuthorizationGroupData, UpdateAuthorizationGroupErrors, UpdateAuthorizationGroupResponses, UpdateContactData, UpdateContactErrors, UpdateContactResponses, UpdateDepartmentData, UpdateDepartmentErrors, UpdateDepartmentResponses, UpdateEmployeeAssignmentData, UpdateEmployeeAssignmentErrors, UpdateEmployeeAssignmentResponses, UpdateEmployeeData, UpdateEmployeeErrors, UpdateEmployeeResponses, UpdateLifecycleData, UpdateLifecycleErrors, UpdateLifecycleResponses, UpdateNumberingSeriesData, UpdateNumberingSeriesErrors, UpdateNumberingSeriesResponses, UpdateOrganizationData, UpdateOrganizationErrors, UpdateOrganizationResponses, UpdatePolicyData, UpdatePolicyErrors, UpdatePolicyResponses, UpdatePositionData, UpdatePositionErrors, UpdatePositionResponses, UpdatePriceListData, UpdatePriceListErrors, UpdatePriceListResponses, UpdateProductData, UpdateProductErrors, UpdateProductGroupData, UpdateProductGroupErrors, UpdateProductGroupResponses, UpdateProductResponses, UpdateProductUomData, UpdateProductUomErrors, UpdateProductUomResponses, UpdateProvinceData, UpdateProvinceErrors, UpdateProvinceResponses, UpdateResourceActionData, UpdateResourceActionErrors, UpdateResourceActionResponses, UpdateResourceData, UpdateResourceErrors, UpdateResourceResponses, UpdateWardData, UpdateWardErrors, UpdateWardResponses, UpdateWorkflowStateData, UpdateWorkflowStateErrors, UpdateWorkflowStateResponses, ValidateNumberingSeriesConfigData, ValidateNumberingSeriesConfigErrors, ValidateNumberingSeriesConfigResponses } from './types.gen';
 
 export type Options<TData extends TDataShape = TDataShape, ThrowOnError extends boolean = boolean, TResponse = unknown> = Options2<TData, ThrowOnError, TResponse> & {
     /**
@@ -1065,6 +1065,326 @@ export const configureLifecycleTransitions = <ThrowOnError extends boolean = fal
     responseType: 'json',
     security: [{ scheme: 'bearer', type: 'http' }],
     url: '/api/v1/lifecycles/{id}/transitions',
+    ...options,
+    headers: {
+        'Content-Type': 'application/json',
+        ...options.headers
+    }
+});
+
+/**
+ * List authorized product groups
+ */
+export const listProductGroups = <ThrowOnError extends boolean = false>(options?: Options<ListProductGroupsData, ThrowOnError>): RequestResult<ListProductGroupsResponses, ListProductGroupsErrors, ThrowOnError> => (options?.client ?? client).get<ListProductGroupsResponses, ListProductGroupsErrors, ThrowOnError>({
+    responseType: 'json',
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/api/v1/product-groups',
+    ...options
+});
+
+/**
+ * Create a product group
+ */
+export const createProductGroup = <ThrowOnError extends boolean = false>(options: Options<CreateProductGroupData, ThrowOnError>): RequestResult<CreateProductGroupResponses, CreateProductGroupErrors, ThrowOnError> => (options.client ?? client).post<CreateProductGroupResponses, CreateProductGroupErrors, ThrowOnError>({
+    responseType: 'json',
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/api/v1/product-groups',
+    ...options,
+    headers: {
+        'Content-Type': 'application/json',
+        ...options.headers
+    }
+});
+
+/**
+ * Get a product group
+ */
+export const getProductGroup = <ThrowOnError extends boolean = false>(options: Options<GetProductGroupData, ThrowOnError>): RequestResult<GetProductGroupResponses, GetProductGroupErrors, ThrowOnError> => (options.client ?? client).get<GetProductGroupResponses, GetProductGroupErrors, ThrowOnError>({
+    responseType: 'json',
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/api/v1/product-groups/{id}',
+    ...options
+});
+
+/**
+ * Update a product group
+ */
+export const updateProductGroup = <ThrowOnError extends boolean = false>(options: Options<UpdateProductGroupData, ThrowOnError>): RequestResult<UpdateProductGroupResponses, UpdateProductGroupErrors, ThrowOnError> => (options.client ?? client).patch<UpdateProductGroupResponses, UpdateProductGroupErrors, ThrowOnError>({
+    responseType: 'json',
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/api/v1/product-groups/{id}',
+    ...options,
+    headers: {
+        'Content-Type': 'application/json',
+        ...options.headers
+    }
+});
+
+/**
+ * Set product group state
+ */
+export const setProductGroupState = <ThrowOnError extends boolean = false>(options: Options<SetProductGroupStateData, ThrowOnError>): RequestResult<SetProductGroupStateResponses, SetProductGroupStateErrors, ThrowOnError> => (options.client ?? client).post<SetProductGroupStateResponses, SetProductGroupStateErrors, ThrowOnError>({
+    responseType: 'json',
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/api/v1/product-groups/{id}/actions/set-state',
+    ...options,
+    headers: {
+        'Content-Type': 'application/json',
+        ...options.headers
+    }
+});
+
+/**
+ * List authorized product UOM masters
+ */
+export const listProductUoms = <ThrowOnError extends boolean = false>(options?: Options<ListProductUomsData, ThrowOnError>): RequestResult<ListProductUomsResponses, ListProductUomsErrors, ThrowOnError> => (options?.client ?? client).get<ListProductUomsResponses, ListProductUomsErrors, ThrowOnError>({
+    responseType: 'json',
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/api/v1/product-uoms',
+    ...options
+});
+
+/**
+ * Create a product UOM master
+ */
+export const createProductUom = <ThrowOnError extends boolean = false>(options: Options<CreateProductUomData, ThrowOnError>): RequestResult<CreateProductUomResponses, CreateProductUomErrors, ThrowOnError> => (options.client ?? client).post<CreateProductUomResponses, CreateProductUomErrors, ThrowOnError>({
+    responseType: 'json',
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/api/v1/product-uoms',
+    ...options,
+    headers: {
+        'Content-Type': 'application/json',
+        ...options.headers
+    }
+});
+
+/**
+ * Get a product UOM master
+ */
+export const getProductUom = <ThrowOnError extends boolean = false>(options: Options<GetProductUomData, ThrowOnError>): RequestResult<GetProductUomResponses, GetProductUomErrors, ThrowOnError> => (options.client ?? client).get<GetProductUomResponses, GetProductUomErrors, ThrowOnError>({
+    responseType: 'json',
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/api/v1/product-uoms/{id}',
+    ...options
+});
+
+/**
+ * Update a product UOM master
+ */
+export const updateProductUom = <ThrowOnError extends boolean = false>(options: Options<UpdateProductUomData, ThrowOnError>): RequestResult<UpdateProductUomResponses, UpdateProductUomErrors, ThrowOnError> => (options.client ?? client).patch<UpdateProductUomResponses, UpdateProductUomErrors, ThrowOnError>({
+    responseType: 'json',
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/api/v1/product-uoms/{id}',
+    ...options,
+    headers: {
+        'Content-Type': 'application/json',
+        ...options.headers
+    }
+});
+
+/**
+ * Set product UOM state
+ */
+export const setProductUomState = <ThrowOnError extends boolean = false>(options: Options<SetProductUomStateData, ThrowOnError>): RequestResult<SetProductUomStateResponses, SetProductUomStateErrors, ThrowOnError> => (options.client ?? client).post<SetProductUomStateResponses, SetProductUomStateErrors, ThrowOnError>({
+    responseType: 'json',
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/api/v1/product-uoms/{id}/actions/set-state',
+    ...options,
+    headers: {
+        'Content-Type': 'application/json',
+        ...options.headers
+    }
+});
+
+/**
+ * List authorized products
+ */
+export const listProducts = <ThrowOnError extends boolean = false>(options?: Options<ListProductsData, ThrowOnError>): RequestResult<ListProductsResponses, ListProductsErrors, ThrowOnError> => (options?.client ?? client).get<ListProductsResponses, ListProductsErrors, ThrowOnError>({
+    responseType: 'json',
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/api/v1/products',
+    ...options
+});
+
+/**
+ * Create a product
+ */
+export const createProduct = <ThrowOnError extends boolean = false>(options: Options<CreateProductData, ThrowOnError>): RequestResult<CreateProductResponses, CreateProductErrors, ThrowOnError> => (options.client ?? client).post<CreateProductResponses, CreateProductErrors, ThrowOnError>({
+    responseType: 'json',
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/api/v1/products',
+    ...options,
+    headers: {
+        'Content-Type': 'application/json',
+        ...options.headers
+    }
+});
+
+/**
+ * Get a product
+ */
+export const getProduct = <ThrowOnError extends boolean = false>(options: Options<GetProductData, ThrowOnError>): RequestResult<GetProductResponses, GetProductErrors, ThrowOnError> => (options.client ?? client).get<GetProductResponses, GetProductErrors, ThrowOnError>({
+    responseType: 'json',
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/api/v1/products/{id}',
+    ...options
+});
+
+/**
+ * Update a product
+ */
+export const updateProduct = <ThrowOnError extends boolean = false>(options: Options<UpdateProductData, ThrowOnError>): RequestResult<UpdateProductResponses, UpdateProductErrors, ThrowOnError> => (options.client ?? client).patch<UpdateProductResponses, UpdateProductErrors, ThrowOnError>({
+    responseType: 'json',
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/api/v1/products/{id}',
+    ...options,
+    headers: {
+        'Content-Type': 'application/json',
+        ...options.headers
+    }
+});
+
+/**
+ * Set product state
+ */
+export const setProductState = <ThrowOnError extends boolean = false>(options: Options<SetProductStateData, ThrowOnError>): RequestResult<SetProductStateResponses, SetProductStateErrors, ThrowOnError> => (options.client ?? client).post<SetProductStateResponses, SetProductStateErrors, ThrowOnError>({
+    responseType: 'json',
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/api/v1/products/{id}/actions/set-state',
+    ...options,
+    headers: {
+        'Content-Type': 'application/json',
+        ...options.headers
+    }
+});
+
+/**
+ * List product UOM conversions
+ */
+export const listProductUomConversions = <ThrowOnError extends boolean = false>(options: Options<ListProductUomConversionsData, ThrowOnError>): RequestResult<ListProductUomConversionsResponses, ListProductUomConversionsErrors, ThrowOnError> => (options.client ?? client).get<ListProductUomConversionsResponses, ListProductUomConversionsErrors, ThrowOnError>({
+    responseType: 'json',
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/api/v1/products/{id}/uom-conversions',
+    ...options
+});
+
+/**
+ * Replace product UOM conversions
+ */
+export const replaceProductUomConversions = <ThrowOnError extends boolean = false>(options: Options<ReplaceProductUomConversionsData, ThrowOnError>): RequestResult<ReplaceProductUomConversionsResponses, ReplaceProductUomConversionsErrors, ThrowOnError> => (options.client ?? client).put<ReplaceProductUomConversionsResponses, ReplaceProductUomConversionsErrors, ThrowOnError>({
+    responseType: 'json',
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/api/v1/products/{id}/uom-conversions',
+    ...options,
+    headers: {
+        'Content-Type': 'application/json',
+        ...options.headers
+    }
+});
+
+/**
+ * List COMBO components
+ */
+export const listComboItems = <ThrowOnError extends boolean = false>(options: Options<ListComboItemsData, ThrowOnError>): RequestResult<ListComboItemsResponses, ListComboItemsErrors, ThrowOnError> => (options.client ?? client).get<ListComboItemsResponses, ListComboItemsErrors, ThrowOnError>({
+    responseType: 'json',
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/api/v1/products/{id}/combo-items',
+    ...options
+});
+
+/**
+ * Replace COMBO components
+ */
+export const replaceComboItems = <ThrowOnError extends boolean = false>(options: Options<ReplaceComboItemsData, ThrowOnError>): RequestResult<ReplaceComboItemsResponses, ReplaceComboItemsErrors, ThrowOnError> => (options.client ?? client).put<ReplaceComboItemsResponses, ReplaceComboItemsErrors, ThrowOnError>({
+    responseType: 'json',
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/api/v1/products/{id}/combo-items',
+    ...options,
+    headers: {
+        'Content-Type': 'application/json',
+        ...options.headers
+    }
+});
+
+/**
+ * List authorized price lists
+ */
+export const listPriceLists = <ThrowOnError extends boolean = false>(options?: Options<ListPriceListsData, ThrowOnError>): RequestResult<ListPriceListsResponses, ListPriceListsErrors, ThrowOnError> => (options?.client ?? client).get<ListPriceListsResponses, ListPriceListsErrors, ThrowOnError>({
+    responseType: 'json',
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/api/v1/price-lists',
+    ...options
+});
+
+/**
+ * Create a price list
+ */
+export const createPriceList = <ThrowOnError extends boolean = false>(options: Options<CreatePriceListData, ThrowOnError>): RequestResult<CreatePriceListResponses, CreatePriceListErrors, ThrowOnError> => (options.client ?? client).post<CreatePriceListResponses, CreatePriceListErrors, ThrowOnError>({
+    responseType: 'json',
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/api/v1/price-lists',
+    ...options,
+    headers: {
+        'Content-Type': 'application/json',
+        ...options.headers
+    }
+});
+
+/**
+ * Get a price list
+ */
+export const getPriceList = <ThrowOnError extends boolean = false>(options: Options<GetPriceListData, ThrowOnError>): RequestResult<GetPriceListResponses, GetPriceListErrors, ThrowOnError> => (options.client ?? client).get<GetPriceListResponses, GetPriceListErrors, ThrowOnError>({
+    responseType: 'json',
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/api/v1/price-lists/{id}',
+    ...options
+});
+
+/**
+ * Update a price list
+ */
+export const updatePriceList = <ThrowOnError extends boolean = false>(options: Options<UpdatePriceListData, ThrowOnError>): RequestResult<UpdatePriceListResponses, UpdatePriceListErrors, ThrowOnError> => (options.client ?? client).patch<UpdatePriceListResponses, UpdatePriceListErrors, ThrowOnError>({
+    responseType: 'json',
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/api/v1/price-lists/{id}',
+    ...options,
+    headers: {
+        'Content-Type': 'application/json',
+        ...options.headers
+    }
+});
+
+/**
+ * Set price list state
+ */
+export const setPriceListState = <ThrowOnError extends boolean = false>(options: Options<SetPriceListStateData, ThrowOnError>): RequestResult<SetPriceListStateResponses, SetPriceListStateErrors, ThrowOnError> => (options.client ?? client).post<SetPriceListStateResponses, SetPriceListStateErrors, ThrowOnError>({
+    responseType: 'json',
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/api/v1/price-lists/{id}/actions/set-state',
+    ...options,
+    headers: {
+        'Content-Type': 'application/json',
+        ...options.headers
+    }
+});
+
+/**
+ * List price list items
+ */
+export const listPriceListItems = <ThrowOnError extends boolean = false>(options: Options<ListPriceListItemsData, ThrowOnError>): RequestResult<ListPriceListItemsResponses, ListPriceListItemsErrors, ThrowOnError> => (options.client ?? client).get<ListPriceListItemsResponses, ListPriceListItemsErrors, ThrowOnError>({
+    responseType: 'json',
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/api/v1/price-lists/{id}/items',
+    ...options
+});
+
+/**
+ * Replace price list items
+ */
+export const replacePriceListItems = <ThrowOnError extends boolean = false>(options: Options<ReplacePriceListItemsData, ThrowOnError>): RequestResult<ReplacePriceListItemsResponses, ReplacePriceListItemsErrors, ThrowOnError> => (options.client ?? client).put<ReplacePriceListItemsResponses, ReplacePriceListItemsErrors, ThrowOnError>({
+    responseType: 'json',
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/api/v1/price-lists/{id}/items',
     ...options,
     headers: {
         'Content-Type': 'application/json',

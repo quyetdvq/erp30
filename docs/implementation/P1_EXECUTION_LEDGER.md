@@ -106,7 +106,7 @@ registry.
 | P1-API-020 | DONE | 0000000 | high-risk | Employee Structure API: 20 CRUD/state endpoints, catalog-driven MASTER/GROUP and ORGANIZATION authorization, allowlisted effective Assignment filters, Department hierarchy/Employee manager invariants, historical Assignment correction, OpenAPI/codegen, and full regression evidence. |
 | P1-API-030 | DONE | 8267f31 | high-risk | Resource/Authorization Group/Policy/Authorization Log/Workflow State/Lifecycle CONTRACT_READY API surface, generated client, and validation evidence. Evidence: `docs/implementation/evidence/P1-API-030/01_authorization_workflow_api_assessment.md`. |
 | P1-API-040 | DONE | bb2a3c7 | api | Auto Numbering API: six Resource numbering-series operations, configure-numbering authorization, non-consuming validation, concurrency-safe default invariant, and generated client. Evidence: `docs/implementation/evidence/P1-API-040/01_auto_numbering_api_assessment.md`. |
-| P1-API-050 | NOT_STARTED | — | high-risk | No accepted implementation evidence. |
+| P1-API-050 | IN_PROGRESS | — | high-risk | Product/UOM/Pricing/COMBO API implementation and OpenAPI evidence recorded in `docs/implementation/evidence/P1-API-050/01_product_uom_pricing_combo_api_assessment.md`; authenticated DB-backed acceptance remains blocked by inconsistent `erp_test` migration state. |
 | P1-API-060 | NOT_STARTED | — | high-risk | No accepted implementation evidence. |
 | P1-API-090 | NOT_STARTED | — | high-risk | No accepted implementation evidence. |
 | P1-FE-001 | NOT_STARTED | — | service-standard | No accepted implementation evidence. |

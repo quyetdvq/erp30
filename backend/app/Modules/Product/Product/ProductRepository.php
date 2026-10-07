@@ -131,6 +131,24 @@ final class ProductRepository
         return array_values($result->getResultArray());
     }
 
+    /** @return list<array<string, mixed>> */
+    public function listAll(): array
+    {
+        try {
+            $result = $this->db->table('products')
+                ->orderBy('code', 'ASC')
+                ->orderBy('id', 'ASC')
+                ->get();
+        } catch (\Throwable $exception) {
+            throw new PersistenceException(self::ERROR_PERSISTENCE_FAILED, 'listAll', $exception);
+        }
+        if ($result === false) {
+            throw new PersistenceException(self::ERROR_PERSISTENCE_FAILED, 'listAll');
+        }
+
+        return array_values($result->getResultArray());
+    }
+
     public function hasChildren(mixed $parentId): bool
     {
         return $this->countChildren($parentId) > 0;

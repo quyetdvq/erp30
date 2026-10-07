@@ -71,6 +71,266 @@ export type HealthResponse = {
     meta: Meta;
 };
 
+export type ProductGroup = {
+    id: BigInt;
+    parent_id?: BigInt | null;
+    code: string;
+    name: string;
+    description?: string | null;
+    status: 'ACTIVE' | 'INACTIVE';
+};
+
+export type ProductGroupCreate = {
+    parent_id?: BigInt | null;
+    code: string;
+    name: string;
+    description?: string | null;
+    status?: 'ACTIVE' | 'INACTIVE';
+};
+
+export type ProductGroupPatch = {
+    parent_id?: BigInt | null;
+    code?: string;
+    name?: string;
+    description?: string | null;
+    status?: 'ACTIVE' | 'INACTIVE';
+};
+
+export type ProductUom = {
+    id: BigInt;
+    code: string;
+    name: string;
+    description?: string | null;
+    status: 'ACTIVE' | 'INACTIVE';
+};
+
+export type ProductUomCreate = {
+    code: string;
+    name: string;
+    description?: string | null;
+    status?: 'ACTIVE' | 'INACTIVE';
+};
+
+export type ProductUomPatch = {
+    code?: string;
+    name?: string;
+    description?: string | null;
+    status?: 'ACTIVE' | 'INACTIVE';
+};
+
+export type Product = {
+    id: BigInt;
+    product_code?: string | null;
+    sku?: string | null;
+    barcode?: string | null;
+    parent_product_id?: BigInt | null;
+    product_name?: string | null;
+    product_child_name?: string | null;
+    product_group_id?: BigInt | null;
+    product_type: 'STANDARD' | 'COMBO';
+    base_uom_id?: BigInt | null;
+    price?: Decimal | null;
+    net_weight_g?: Decimal | null;
+    package_gross_weight_g?: Decimal | null;
+    package_length_mm?: Decimal | null;
+    package_width_mm?: Decimal | null;
+    package_height_mm?: Decimal | null;
+    description?: string | null;
+    manual_standard_cost?: Decimal | null;
+    serial_management_enabled?: boolean;
+    status: 'ACTIVE' | 'INACTIVE';
+    role: 'SIMPLE' | 'PARENT' | 'CHILD' | 'COMBO';
+    full_name: string;
+    selectable: boolean;
+    leaf_transactionable: boolean;
+};
+
+export type ProductCreate = {
+    product_code?: string | null;
+    sku?: string | null;
+    barcode?: string | null;
+    parent_product_id?: BigInt;
+    product_name?: string | null;
+    product_child_name?: string | null;
+    product_group_id?: BigInt;
+    product_type?: 'STANDARD' | 'COMBO';
+    base_uom_id?: BigInt;
+    price?: Decimal;
+    net_weight_g?: Decimal;
+    package_gross_weight_g?: Decimal;
+    package_length_mm?: Decimal;
+    package_width_mm?: Decimal;
+    package_height_mm?: Decimal;
+    description?: string;
+    manual_standard_cost?: Decimal;
+    serial_management_enabled?: boolean;
+    status?: 'ACTIVE' | 'INACTIVE';
+};
+
+export type ProductPatch = {
+    product_code?: string | null;
+    sku?: string | null;
+    barcode?: string | null;
+    parent_product_id?: BigInt;
+    product_name?: string | null;
+    product_child_name?: string | null;
+    product_group_id?: BigInt;
+    product_type?: 'STANDARD' | 'COMBO';
+    base_uom_id?: BigInt;
+    price?: Decimal;
+    net_weight_g?: Decimal;
+    package_gross_weight_g?: Decimal;
+    package_length_mm?: Decimal;
+    package_width_mm?: Decimal;
+    package_height_mm?: Decimal;
+    description?: string | null;
+    manual_standard_cost?: Decimal;
+    serial_management_enabled?: boolean;
+    status?: 'ACTIVE' | 'INACTIVE';
+};
+
+export type PriceList = {
+    id: BigInt;
+    code: string;
+    name: string;
+    organization_id: BigInt;
+    effective_from: string;
+    effective_to?: string | null;
+    priority: number;
+    status: 'ACTIVE' | 'INACTIVE';
+    description?: string | null;
+};
+
+export type PriceListCreate = {
+    code: string;
+    name: string;
+    organization_id: BigInt;
+    effective_from: string;
+    effective_to?: string | null;
+    priority?: number;
+    status?: 'ACTIVE' | 'INACTIVE';
+    description?: string | null;
+};
+
+export type PriceListPatch = {
+    code?: string;
+    name?: string;
+    organization_id?: BigInt;
+    effective_from?: string;
+    effective_to?: string | null;
+    priority?: number;
+    status?: 'ACTIVE' | 'INACTIVE';
+    description?: string | null;
+};
+
+export type ProductUomConversion = {
+    id: BigInt;
+    product_id: BigInt;
+    uom_id: BigInt;
+    conversion_factor: Decimal;
+    price?: Decimal | null;
+    package_gross_weight_g?: Decimal | null;
+    package_length_mm?: Decimal | null;
+    package_width_mm?: Decimal | null;
+    package_height_mm?: Decimal | null;
+    usage_type: 'PURCHASE' | 'SALES' | 'BOTH';
+    status: 'ACTIVE' | 'INACTIVE';
+};
+
+export type ProductUomConversionInput = {
+    uom_id: BigInt;
+    conversion_factor: Decimal;
+    price?: Decimal | null;
+    package_gross_weight_g?: Decimal | null;
+    package_length_mm?: Decimal | null;
+    package_width_mm?: Decimal | null;
+    package_height_mm?: Decimal | null;
+    usage_type?: 'PURCHASE' | 'SALES' | 'BOTH';
+    status?: 'ACTIVE' | 'INACTIVE';
+};
+
+export type ProductUomConversionsRequest = Array<ProductUomConversionInput> | {
+    items: Array<ProductUomConversionInput>;
+};
+
+export type PriceListItem = {
+    id: BigInt;
+    price_list_id: BigInt;
+    product_id: BigInt;
+    uom_id: BigInt;
+    price: Decimal;
+};
+
+export type PriceListItemInput = {
+    product_id: BigInt;
+    uom_id: BigInt;
+    price: Decimal;
+};
+
+export type PriceListItemsRequest = Array<PriceListItemInput> | {
+    items: Array<PriceListItemInput>;
+};
+
+export type ComboItem = {
+    id: BigInt;
+    combo_product_id: BigInt;
+    component_product_id: BigInt;
+    quantity: Decimal;
+};
+
+export type ComboItemInput = {
+    component_product_id: BigInt;
+    quantity: Decimal;
+};
+
+export type ComboItemsRequest = Array<ComboItemInput> | {
+    items: Array<ComboItemInput>;
+};
+
+export type ProductGroupResponse = SuccessResponse & {
+    data?: ProductGroup;
+};
+
+export type ProductGroupCollection = CollectionResponse & {
+    data?: Array<ProductGroup>;
+};
+
+export type ProductUomResponse = SuccessResponse & {
+    data?: ProductUom;
+};
+
+export type ProductUomCollection = CollectionResponse & {
+    data?: Array<ProductUom>;
+};
+
+export type ProductResponse = SuccessResponse & {
+    data?: Product;
+};
+
+export type ProductCollection = CollectionResponse & {
+    data?: Array<Product>;
+};
+
+export type PriceListResponse = SuccessResponse & {
+    data?: PriceList;
+};
+
+export type PriceListCollection = CollectionResponse & {
+    data?: Array<PriceList>;
+};
+
+export type ProductUomConversionsResponse = SuccessResponse & {
+    data?: Array<ProductUomConversion>;
+};
+
+export type PriceListItemsResponse = SuccessResponse & {
+    data?: Array<PriceListItem>;
+};
+
+export type ComboItemsResponse = SuccessResponse & {
+    data?: Array<ComboItem>;
+};
+
 export type Province = {
     id: BigInt;
     code: string;
@@ -769,6 +1029,28 @@ export type LifecycleCreate2 = LifecycleCreate;
 export type LifecyclePatch2 = LifecyclePatch;
 
 export type LifecycleConfiguration2 = LifecycleConfiguration;
+
+export type ProductGroupCreate2 = ProductGroupCreate;
+
+export type ProductGroupPatch2 = ProductGroupPatch;
+
+export type ProductUomCreate2 = ProductUomCreate;
+
+export type ProductUomPatch2 = ProductUomPatch;
+
+export type ProductCreate2 = ProductCreate;
+
+export type ProductPatch2 = ProductPatch;
+
+export type PriceListCreate2 = PriceListCreate;
+
+export type PriceListPatch2 = PriceListPatch;
+
+export type ProductUomConversions = ProductUomConversionsRequest;
+
+export type PriceListItems = PriceListItemsRequest;
+
+export type ComboItems = ComboItemsRequest;
 
 export type GetHealthData = {
     body?: never;
@@ -4228,3 +4510,1053 @@ export type ConfigureLifecycleTransitionsResponses = {
 };
 
 export type ConfigureLifecycleTransitionsResponse = ConfigureLifecycleTransitionsResponses[keyof ConfigureLifecycleTransitionsResponses];
+
+export type ListProductGroupsData = {
+    body?: never;
+    headers?: {
+        /**
+         * Supported request language. Unsupported values fall back to vi.
+         */
+        'Accept-Language'?: 'vi' | 'en';
+        /**
+         * Client request correlation identifier; invalid or missing values are replaced by a generated UUID.
+         */
+        'X-Request-ID'?: RequestId;
+    };
+    path?: never;
+    query?: {
+        q?: string;
+        page?: number;
+        page_size?: number;
+        /**
+         * Allowlisted comma-separated sort terms; a final id ASC tie-breaker is applied.
+         */
+        sort?: string;
+        filter?: {
+            [key: string]: string | Array<string>;
+        };
+    };
+    url: '/api/v1/product-groups';
+};
+
+export type ListProductGroupsErrors = {
+    /**
+     * Unauthenticated or invalid authentication.
+     */
+    401: ErrorResponse;
+    /**
+     * Visible target but action denied.
+     */
+    403: ErrorResponse;
+};
+
+export type ListProductGroupsError = ListProductGroupsErrors[keyof ListProductGroupsErrors];
+
+export type ListProductGroupsResponses = {
+    /**
+     * Authorized product group collection.
+     */
+    200: ProductGroupCollection;
+};
+
+export type ListProductGroupsResponse = ListProductGroupsResponses[keyof ListProductGroupsResponses];
+
+export type CreateProductGroupData = {
+    body: ProductGroupCreate2;
+    path?: never;
+    query?: never;
+    url: '/api/v1/product-groups';
+};
+
+export type CreateProductGroupErrors = {
+    /**
+     * Unauthenticated or invalid authentication.
+     */
+    401: ErrorResponse;
+    /**
+     * Visible target but action denied.
+     */
+    403: ErrorResponse;
+    /**
+     * Conflict, concurrency, uniqueness, or current-state failure.
+     */
+    409: ErrorResponse;
+    /**
+     * Semantically invalid request.
+     */
+    422: ErrorResponse;
+};
+
+export type CreateProductGroupError = CreateProductGroupErrors[keyof CreateProductGroupErrors];
+
+export type CreateProductGroupResponses = {
+    /**
+     * Product group response.
+     */
+    201: ProductGroupResponse;
+};
+
+export type CreateProductGroupResponse = CreateProductGroupResponses[keyof CreateProductGroupResponses];
+
+export type GetProductGroupData = {
+    body?: never;
+    path: {
+        id: BigInt;
+    };
+    query?: never;
+    url: '/api/v1/product-groups/{id}';
+};
+
+export type GetProductGroupErrors = {
+    /**
+     * Unauthenticated or invalid authentication.
+     */
+    401: ErrorResponse;
+    /**
+     * Visible target but action denied.
+     */
+    403: ErrorResponse;
+    /**
+     * Target not found or not visible.
+     */
+    404: ErrorResponse;
+};
+
+export type GetProductGroupError = GetProductGroupErrors[keyof GetProductGroupErrors];
+
+export type GetProductGroupResponses = {
+    /**
+     * Product group response.
+     */
+    200: ProductGroupResponse;
+};
+
+export type GetProductGroupResponse = GetProductGroupResponses[keyof GetProductGroupResponses];
+
+export type UpdateProductGroupData = {
+    body: ProductGroupPatch2;
+    path: {
+        id: BigInt;
+    };
+    query?: never;
+    url: '/api/v1/product-groups/{id}';
+};
+
+export type UpdateProductGroupErrors = {
+    /**
+     * Unauthenticated or invalid authentication.
+     */
+    401: ErrorResponse;
+    /**
+     * Visible target but action denied.
+     */
+    403: ErrorResponse;
+    /**
+     * Target not found or not visible.
+     */
+    404: ErrorResponse;
+    /**
+     * Conflict, concurrency, uniqueness, or current-state failure.
+     */
+    409: ErrorResponse;
+    /**
+     * Semantically invalid request.
+     */
+    422: ErrorResponse;
+};
+
+export type UpdateProductGroupError = UpdateProductGroupErrors[keyof UpdateProductGroupErrors];
+
+export type UpdateProductGroupResponses = {
+    /**
+     * Product group response.
+     */
+    200: ProductGroupResponse;
+};
+
+export type UpdateProductGroupResponse = UpdateProductGroupResponses[keyof UpdateProductGroupResponses];
+
+export type SetProductGroupStateData = {
+    body: State2;
+    path: {
+        id: BigInt;
+    };
+    query?: never;
+    url: '/api/v1/product-groups/{id}/actions/set-state';
+};
+
+export type SetProductGroupStateErrors = {
+    /**
+     * Unauthenticated or invalid authentication.
+     */
+    401: ErrorResponse;
+    /**
+     * Visible target but action denied.
+     */
+    403: ErrorResponse;
+    /**
+     * Target not found or not visible.
+     */
+    404: ErrorResponse;
+    /**
+     * Semantically invalid request.
+     */
+    422: ErrorResponse;
+};
+
+export type SetProductGroupStateError = SetProductGroupStateErrors[keyof SetProductGroupStateErrors];
+
+export type SetProductGroupStateResponses = {
+    /**
+     * Product group response.
+     */
+    200: ProductGroupResponse;
+};
+
+export type SetProductGroupStateResponse = SetProductGroupStateResponses[keyof SetProductGroupStateResponses];
+
+export type ListProductUomsData = {
+    body?: never;
+    headers?: {
+        /**
+         * Supported request language. Unsupported values fall back to vi.
+         */
+        'Accept-Language'?: 'vi' | 'en';
+        /**
+         * Client request correlation identifier; invalid or missing values are replaced by a generated UUID.
+         */
+        'X-Request-ID'?: RequestId;
+    };
+    path?: never;
+    query?: {
+        q?: string;
+        page?: number;
+        page_size?: number;
+        /**
+         * Allowlisted comma-separated sort terms; a final id ASC tie-breaker is applied.
+         */
+        sort?: string;
+        filter?: {
+            [key: string]: string | Array<string>;
+        };
+    };
+    url: '/api/v1/product-uoms';
+};
+
+export type ListProductUomsErrors = {
+    /**
+     * Unauthenticated or invalid authentication.
+     */
+    401: ErrorResponse;
+    /**
+     * Visible target but action denied.
+     */
+    403: ErrorResponse;
+};
+
+export type ListProductUomsError = ListProductUomsErrors[keyof ListProductUomsErrors];
+
+export type ListProductUomsResponses = {
+    /**
+     * Authorized product UOM collection.
+     */
+    200: ProductUomCollection;
+};
+
+export type ListProductUomsResponse = ListProductUomsResponses[keyof ListProductUomsResponses];
+
+export type CreateProductUomData = {
+    body: ProductUomCreate2;
+    path?: never;
+    query?: never;
+    url: '/api/v1/product-uoms';
+};
+
+export type CreateProductUomErrors = {
+    /**
+     * Unauthenticated or invalid authentication.
+     */
+    401: ErrorResponse;
+    /**
+     * Visible target but action denied.
+     */
+    403: ErrorResponse;
+    /**
+     * Conflict, concurrency, uniqueness, or current-state failure.
+     */
+    409: ErrorResponse;
+    /**
+     * Semantically invalid request.
+     */
+    422: ErrorResponse;
+};
+
+export type CreateProductUomError = CreateProductUomErrors[keyof CreateProductUomErrors];
+
+export type CreateProductUomResponses = {
+    /**
+     * Product UOM response.
+     */
+    201: ProductUomResponse;
+};
+
+export type CreateProductUomResponse = CreateProductUomResponses[keyof CreateProductUomResponses];
+
+export type GetProductUomData = {
+    body?: never;
+    path: {
+        id: BigInt;
+    };
+    query?: never;
+    url: '/api/v1/product-uoms/{id}';
+};
+
+export type GetProductUomErrors = {
+    /**
+     * Unauthenticated or invalid authentication.
+     */
+    401: ErrorResponse;
+    /**
+     * Visible target but action denied.
+     */
+    403: ErrorResponse;
+    /**
+     * Target not found or not visible.
+     */
+    404: ErrorResponse;
+};
+
+export type GetProductUomError = GetProductUomErrors[keyof GetProductUomErrors];
+
+export type GetProductUomResponses = {
+    /**
+     * Product UOM response.
+     */
+    200: ProductUomResponse;
+};
+
+export type GetProductUomResponse = GetProductUomResponses[keyof GetProductUomResponses];
+
+export type UpdateProductUomData = {
+    body: ProductUomPatch2;
+    path: {
+        id: BigInt;
+    };
+    query?: never;
+    url: '/api/v1/product-uoms/{id}';
+};
+
+export type UpdateProductUomErrors = {
+    /**
+     * Unauthenticated or invalid authentication.
+     */
+    401: ErrorResponse;
+    /**
+     * Visible target but action denied.
+     */
+    403: ErrorResponse;
+    /**
+     * Target not found or not visible.
+     */
+    404: ErrorResponse;
+    /**
+     * Conflict, concurrency, uniqueness, or current-state failure.
+     */
+    409: ErrorResponse;
+    /**
+     * Semantically invalid request.
+     */
+    422: ErrorResponse;
+};
+
+export type UpdateProductUomError = UpdateProductUomErrors[keyof UpdateProductUomErrors];
+
+export type UpdateProductUomResponses = {
+    /**
+     * Product UOM response.
+     */
+    200: ProductUomResponse;
+};
+
+export type UpdateProductUomResponse = UpdateProductUomResponses[keyof UpdateProductUomResponses];
+
+export type SetProductUomStateData = {
+    body: State2;
+    path: {
+        id: BigInt;
+    };
+    query?: never;
+    url: '/api/v1/product-uoms/{id}/actions/set-state';
+};
+
+export type SetProductUomStateErrors = {
+    /**
+     * Unauthenticated or invalid authentication.
+     */
+    401: ErrorResponse;
+    /**
+     * Visible target but action denied.
+     */
+    403: ErrorResponse;
+    /**
+     * Target not found or not visible.
+     */
+    404: ErrorResponse;
+    /**
+     * Semantically invalid request.
+     */
+    422: ErrorResponse;
+};
+
+export type SetProductUomStateError = SetProductUomStateErrors[keyof SetProductUomStateErrors];
+
+export type SetProductUomStateResponses = {
+    /**
+     * Product UOM response.
+     */
+    200: ProductUomResponse;
+};
+
+export type SetProductUomStateResponse = SetProductUomStateResponses[keyof SetProductUomStateResponses];
+
+export type ListProductsData = {
+    body?: never;
+    headers?: {
+        /**
+         * Supported request language. Unsupported values fall back to vi.
+         */
+        'Accept-Language'?: 'vi' | 'en';
+        /**
+         * Client request correlation identifier; invalid or missing values are replaced by a generated UUID.
+         */
+        'X-Request-ID'?: RequestId;
+    };
+    path?: never;
+    query?: {
+        q?: string;
+        page?: number;
+        page_size?: number;
+        /**
+         * Allowlisted comma-separated sort terms; a final id ASC tie-breaker is applied.
+         */
+        sort?: string;
+        filter?: {
+            [key: string]: string | Array<string>;
+        };
+    };
+    url: '/api/v1/products';
+};
+
+export type ListProductsErrors = {
+    /**
+     * Unauthenticated or invalid authentication.
+     */
+    401: ErrorResponse;
+    /**
+     * Visible target but action denied.
+     */
+    403: ErrorResponse;
+};
+
+export type ListProductsError = ListProductsErrors[keyof ListProductsErrors];
+
+export type ListProductsResponses = {
+    /**
+     * Authorized product collection.
+     */
+    200: ProductCollection;
+};
+
+export type ListProductsResponse = ListProductsResponses[keyof ListProductsResponses];
+
+export type CreateProductData = {
+    body: ProductCreate2;
+    path?: never;
+    query?: never;
+    url: '/api/v1/products';
+};
+
+export type CreateProductErrors = {
+    /**
+     * Unauthenticated or invalid authentication.
+     */
+    401: ErrorResponse;
+    /**
+     * Visible target but action denied.
+     */
+    403: ErrorResponse;
+    /**
+     * Conflict, concurrency, uniqueness, or current-state failure.
+     */
+    409: ErrorResponse;
+    /**
+     * Semantically invalid request.
+     */
+    422: ErrorResponse;
+};
+
+export type CreateProductError = CreateProductErrors[keyof CreateProductErrors];
+
+export type CreateProductResponses = {
+    /**
+     * Product response.
+     */
+    201: ProductResponse;
+};
+
+export type CreateProductResponse = CreateProductResponses[keyof CreateProductResponses];
+
+export type GetProductData = {
+    body?: never;
+    path: {
+        id: BigInt;
+    };
+    query?: never;
+    url: '/api/v1/products/{id}';
+};
+
+export type GetProductErrors = {
+    /**
+     * Unauthenticated or invalid authentication.
+     */
+    401: ErrorResponse;
+    /**
+     * Visible target but action denied.
+     */
+    403: ErrorResponse;
+    /**
+     * Target not found or not visible.
+     */
+    404: ErrorResponse;
+};
+
+export type GetProductError = GetProductErrors[keyof GetProductErrors];
+
+export type GetProductResponses = {
+    /**
+     * Product response.
+     */
+    200: ProductResponse;
+};
+
+export type GetProductResponse = GetProductResponses[keyof GetProductResponses];
+
+export type UpdateProductData = {
+    body: ProductPatch2;
+    path: {
+        id: BigInt;
+    };
+    query?: never;
+    url: '/api/v1/products/{id}';
+};
+
+export type UpdateProductErrors = {
+    /**
+     * Unauthenticated or invalid authentication.
+     */
+    401: ErrorResponse;
+    /**
+     * Visible target but action denied.
+     */
+    403: ErrorResponse;
+    /**
+     * Target not found or not visible.
+     */
+    404: ErrorResponse;
+    /**
+     * Conflict, concurrency, uniqueness, or current-state failure.
+     */
+    409: ErrorResponse;
+    /**
+     * Semantically invalid request.
+     */
+    422: ErrorResponse;
+};
+
+export type UpdateProductError = UpdateProductErrors[keyof UpdateProductErrors];
+
+export type UpdateProductResponses = {
+    /**
+     * Product response.
+     */
+    200: ProductResponse;
+};
+
+export type UpdateProductResponse = UpdateProductResponses[keyof UpdateProductResponses];
+
+export type SetProductStateData = {
+    body: State2;
+    path: {
+        id: BigInt;
+    };
+    query?: never;
+    url: '/api/v1/products/{id}/actions/set-state';
+};
+
+export type SetProductStateErrors = {
+    /**
+     * Unauthenticated or invalid authentication.
+     */
+    401: ErrorResponse;
+    /**
+     * Visible target but action denied.
+     */
+    403: ErrorResponse;
+    /**
+     * Target not found or not visible.
+     */
+    404: ErrorResponse;
+    /**
+     * Semantically invalid request.
+     */
+    422: ErrorResponse;
+};
+
+export type SetProductStateError = SetProductStateErrors[keyof SetProductStateErrors];
+
+export type SetProductStateResponses = {
+    /**
+     * Product response.
+     */
+    200: ProductResponse;
+};
+
+export type SetProductStateResponse = SetProductStateResponses[keyof SetProductStateResponses];
+
+export type ListProductUomConversionsData = {
+    body?: never;
+    path: {
+        id: BigInt;
+    };
+    query?: never;
+    url: '/api/v1/products/{id}/uom-conversions';
+};
+
+export type ListProductUomConversionsErrors = {
+    /**
+     * Unauthenticated or invalid authentication.
+     */
+    401: ErrorResponse;
+    /**
+     * Visible target but action denied.
+     */
+    403: ErrorResponse;
+    /**
+     * Target not found or not visible.
+     */
+    404: ErrorResponse;
+};
+
+export type ListProductUomConversionsError = ListProductUomConversionsErrors[keyof ListProductUomConversionsErrors];
+
+export type ListProductUomConversionsResponses = {
+    /**
+     * Product UOM conversion collection response.
+     */
+    200: ProductUomConversionsResponse;
+};
+
+export type ListProductUomConversionsResponse = ListProductUomConversionsResponses[keyof ListProductUomConversionsResponses];
+
+export type ReplaceProductUomConversionsData = {
+    body: ProductUomConversions;
+    path: {
+        id: BigInt;
+    };
+    query?: never;
+    url: '/api/v1/products/{id}/uom-conversions';
+};
+
+export type ReplaceProductUomConversionsErrors = {
+    /**
+     * Unauthenticated or invalid authentication.
+     */
+    401: ErrorResponse;
+    /**
+     * Visible target but action denied.
+     */
+    403: ErrorResponse;
+    /**
+     * Target not found or not visible.
+     */
+    404: ErrorResponse;
+    /**
+     * Conflict, concurrency, uniqueness, or current-state failure.
+     */
+    409: ErrorResponse;
+    /**
+     * Semantically invalid request.
+     */
+    422: ErrorResponse;
+};
+
+export type ReplaceProductUomConversionsError = ReplaceProductUomConversionsErrors[keyof ReplaceProductUomConversionsErrors];
+
+export type ReplaceProductUomConversionsResponses = {
+    /**
+     * Product UOM conversion collection response.
+     */
+    200: ProductUomConversionsResponse;
+};
+
+export type ReplaceProductUomConversionsResponse = ReplaceProductUomConversionsResponses[keyof ReplaceProductUomConversionsResponses];
+
+export type ListComboItemsData = {
+    body?: never;
+    path: {
+        id: BigInt;
+    };
+    query?: never;
+    url: '/api/v1/products/{id}/combo-items';
+};
+
+export type ListComboItemsErrors = {
+    /**
+     * Unauthenticated or invalid authentication.
+     */
+    401: ErrorResponse;
+    /**
+     * Visible target but action denied.
+     */
+    403: ErrorResponse;
+    /**
+     * Target not found or not visible.
+     */
+    404: ErrorResponse;
+};
+
+export type ListComboItemsError = ListComboItemsErrors[keyof ListComboItemsErrors];
+
+export type ListComboItemsResponses = {
+    /**
+     * COMBO item collection response.
+     */
+    200: ComboItemsResponse;
+};
+
+export type ListComboItemsResponse = ListComboItemsResponses[keyof ListComboItemsResponses];
+
+export type ReplaceComboItemsData = {
+    body: ComboItems;
+    path: {
+        id: BigInt;
+    };
+    query?: never;
+    url: '/api/v1/products/{id}/combo-items';
+};
+
+export type ReplaceComboItemsErrors = {
+    /**
+     * Unauthenticated or invalid authentication.
+     */
+    401: ErrorResponse;
+    /**
+     * Visible target but action denied.
+     */
+    403: ErrorResponse;
+    /**
+     * Target not found or not visible.
+     */
+    404: ErrorResponse;
+    /**
+     * Conflict, concurrency, uniqueness, or current-state failure.
+     */
+    409: ErrorResponse;
+    /**
+     * Semantically invalid request.
+     */
+    422: ErrorResponse;
+};
+
+export type ReplaceComboItemsError = ReplaceComboItemsErrors[keyof ReplaceComboItemsErrors];
+
+export type ReplaceComboItemsResponses = {
+    /**
+     * COMBO item collection response.
+     */
+    200: ComboItemsResponse;
+};
+
+export type ReplaceComboItemsResponse = ReplaceComboItemsResponses[keyof ReplaceComboItemsResponses];
+
+export type ListPriceListsData = {
+    body?: never;
+    headers?: {
+        /**
+         * Supported request language. Unsupported values fall back to vi.
+         */
+        'Accept-Language'?: 'vi' | 'en';
+        /**
+         * Client request correlation identifier; invalid or missing values are replaced by a generated UUID.
+         */
+        'X-Request-ID'?: RequestId;
+    };
+    path?: never;
+    query?: {
+        q?: string;
+        page?: number;
+        page_size?: number;
+        /**
+         * Allowlisted comma-separated sort terms; a final id ASC tie-breaker is applied.
+         */
+        sort?: string;
+        filter?: {
+            [key: string]: string | Array<string>;
+        };
+    };
+    url: '/api/v1/price-lists';
+};
+
+export type ListPriceListsErrors = {
+    /**
+     * Unauthenticated or invalid authentication.
+     */
+    401: ErrorResponse;
+    /**
+     * Visible target but action denied.
+     */
+    403: ErrorResponse;
+};
+
+export type ListPriceListsError = ListPriceListsErrors[keyof ListPriceListsErrors];
+
+export type ListPriceListsResponses = {
+    /**
+     * Authorized price list collection.
+     */
+    200: PriceListCollection;
+};
+
+export type ListPriceListsResponse = ListPriceListsResponses[keyof ListPriceListsResponses];
+
+export type CreatePriceListData = {
+    body: PriceListCreate2;
+    path?: never;
+    query?: never;
+    url: '/api/v1/price-lists';
+};
+
+export type CreatePriceListErrors = {
+    /**
+     * Unauthenticated or invalid authentication.
+     */
+    401: ErrorResponse;
+    /**
+     * Visible target but action denied.
+     */
+    403: ErrorResponse;
+    /**
+     * Conflict, concurrency, uniqueness, or current-state failure.
+     */
+    409: ErrorResponse;
+    /**
+     * Semantically invalid request.
+     */
+    422: ErrorResponse;
+};
+
+export type CreatePriceListError = CreatePriceListErrors[keyof CreatePriceListErrors];
+
+export type CreatePriceListResponses = {
+    /**
+     * Price list response.
+     */
+    201: PriceListResponse;
+};
+
+export type CreatePriceListResponse = CreatePriceListResponses[keyof CreatePriceListResponses];
+
+export type GetPriceListData = {
+    body?: never;
+    path: {
+        id: BigInt;
+    };
+    query?: never;
+    url: '/api/v1/price-lists/{id}';
+};
+
+export type GetPriceListErrors = {
+    /**
+     * Unauthenticated or invalid authentication.
+     */
+    401: ErrorResponse;
+    /**
+     * Visible target but action denied.
+     */
+    403: ErrorResponse;
+    /**
+     * Target not found or not visible.
+     */
+    404: ErrorResponse;
+};
+
+export type GetPriceListError = GetPriceListErrors[keyof GetPriceListErrors];
+
+export type GetPriceListResponses = {
+    /**
+     * Price list response.
+     */
+    200: PriceListResponse;
+};
+
+export type GetPriceListResponse = GetPriceListResponses[keyof GetPriceListResponses];
+
+export type UpdatePriceListData = {
+    body: PriceListPatch2;
+    path: {
+        id: BigInt;
+    };
+    query?: never;
+    url: '/api/v1/price-lists/{id}';
+};
+
+export type UpdatePriceListErrors = {
+    /**
+     * Unauthenticated or invalid authentication.
+     */
+    401: ErrorResponse;
+    /**
+     * Visible target but action denied.
+     */
+    403: ErrorResponse;
+    /**
+     * Target not found or not visible.
+     */
+    404: ErrorResponse;
+    /**
+     * Conflict, concurrency, uniqueness, or current-state failure.
+     */
+    409: ErrorResponse;
+    /**
+     * Semantically invalid request.
+     */
+    422: ErrorResponse;
+};
+
+export type UpdatePriceListError = UpdatePriceListErrors[keyof UpdatePriceListErrors];
+
+export type UpdatePriceListResponses = {
+    /**
+     * Price list response.
+     */
+    200: PriceListResponse;
+};
+
+export type UpdatePriceListResponse = UpdatePriceListResponses[keyof UpdatePriceListResponses];
+
+export type SetPriceListStateData = {
+    body: State2;
+    path: {
+        id: BigInt;
+    };
+    query?: never;
+    url: '/api/v1/price-lists/{id}/actions/set-state';
+};
+
+export type SetPriceListStateErrors = {
+    /**
+     * Unauthenticated or invalid authentication.
+     */
+    401: ErrorResponse;
+    /**
+     * Visible target but action denied.
+     */
+    403: ErrorResponse;
+    /**
+     * Target not found or not visible.
+     */
+    404: ErrorResponse;
+    /**
+     * Semantically invalid request.
+     */
+    422: ErrorResponse;
+};
+
+export type SetPriceListStateError = SetPriceListStateErrors[keyof SetPriceListStateErrors];
+
+export type SetPriceListStateResponses = {
+    /**
+     * Price list response.
+     */
+    200: PriceListResponse;
+};
+
+export type SetPriceListStateResponse = SetPriceListStateResponses[keyof SetPriceListStateResponses];
+
+export type ListPriceListItemsData = {
+    body?: never;
+    path: {
+        id: BigInt;
+    };
+    query?: never;
+    url: '/api/v1/price-lists/{id}/items';
+};
+
+export type ListPriceListItemsErrors = {
+    /**
+     * Unauthenticated or invalid authentication.
+     */
+    401: ErrorResponse;
+    /**
+     * Visible target but action denied.
+     */
+    403: ErrorResponse;
+    /**
+     * Target not found or not visible.
+     */
+    404: ErrorResponse;
+};
+
+export type ListPriceListItemsError = ListPriceListItemsErrors[keyof ListPriceListItemsErrors];
+
+export type ListPriceListItemsResponses = {
+    /**
+     * Price list item collection response.
+     */
+    200: PriceListItemsResponse;
+};
+
+export type ListPriceListItemsResponse = ListPriceListItemsResponses[keyof ListPriceListItemsResponses];
+
+export type ReplacePriceListItemsData = {
+    body: PriceListItems;
+    path: {
+        id: BigInt;
+    };
+    query?: never;
+    url: '/api/v1/price-lists/{id}/items';
+};
+
+export type ReplacePriceListItemsErrors = {
+    /**
+     * Unauthenticated or invalid authentication.
+     */
+    401: ErrorResponse;
+    /**
+     * Visible target but action denied.
+     */
+    403: ErrorResponse;
+    /**
+     * Target not found or not visible.
+     */
+    404: ErrorResponse;
+    /**
+     * Conflict, concurrency, uniqueness, or current-state failure.
+     */
+    409: ErrorResponse;
+    /**
+     * Semantically invalid request.
+     */
+    422: ErrorResponse;
+};
+
+export type ReplacePriceListItemsError = ReplacePriceListItemsErrors[keyof ReplacePriceListItemsErrors];
+
+export type ReplacePriceListItemsResponses = {
+    /**
+     * Price list item collection response.
+     */
+    200: PriceListItemsResponse;
+};
+
+export type ReplacePriceListItemsResponse = ReplacePriceListItemsResponses[keyof ReplacePriceListItemsResponses];

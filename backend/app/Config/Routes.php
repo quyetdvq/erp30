@@ -71,6 +71,36 @@ $routes->group('api/v1', ['filter' => 'cors'], static function (RouteCollection 
     $routes->get('lifecycles/(:num)/transitions', 'Api\\AuthorizationWorkflow::transitions/$1');
     $routes->put('lifecycles/(:num)/transitions', 'Api\\AuthorizationWorkflow::configureStates/$1');
 
+    $routes->get('product-groups', 'Api\\ProductCatalog::listGroups');
+    $routes->post('product-groups', 'Api\\ProductCatalog::createGroup');
+    $routes->get('product-groups/(:num)', 'Api\\ProductCatalog::showGroup/$1');
+    $routes->patch('product-groups/(:num)', 'Api\\ProductCatalog::updateGroup/$1');
+    $routes->post('product-groups/(:num)/actions/set-state', 'Api\\ProductCatalog::setGroupState/$1');
+
+    $routes->get('product-uoms', 'Api\\ProductCatalog::listUoms');
+    $routes->post('product-uoms', 'Api\\ProductCatalog::createUom');
+    $routes->get('product-uoms/(:num)', 'Api\\ProductCatalog::showUom/$1');
+    $routes->patch('product-uoms/(:num)', 'Api\\ProductCatalog::updateUom/$1');
+    $routes->post('product-uoms/(:num)/actions/set-state', 'Api\\ProductCatalog::setUomState/$1');
+
+    $routes->get('products', 'Api\\ProductCatalog::listProducts');
+    $routes->post('products', 'Api\\ProductCatalog::createProduct');
+    $routes->get('products/(:num)', 'Api\\ProductCatalog::showProduct/$1');
+    $routes->patch('products/(:num)', 'Api\\ProductCatalog::updateProduct/$1');
+    $routes->post('products/(:num)/actions/set-state', 'Api\\ProductCatalog::setProductState/$1');
+    $routes->get('products/(:num)/uom-conversions', 'Api\\ProductCatalog::listConversions/$1');
+    $routes->put('products/(:num)/uom-conversions', 'Api\\ProductCatalog::replaceConversions/$1');
+    $routes->get('products/(:num)/combo-items', 'Api\\ProductCatalog::listComboItems/$1');
+    $routes->put('products/(:num)/combo-items', 'Api\\ProductCatalog::replaceComboItems/$1');
+
+    $routes->get('price-lists', 'Api\\ProductCatalog::listPriceLists');
+    $routes->post('price-lists', 'Api\\ProductCatalog::createPriceList');
+    $routes->get('price-lists/(:num)', 'Api\\ProductCatalog::showPriceList/$1');
+    $routes->patch('price-lists/(:num)', 'Api\\ProductCatalog::updatePriceList/$1');
+    $routes->post('price-lists/(:num)/actions/set-state', 'Api\\ProductCatalog::setPriceListState/$1');
+    $routes->get('price-lists/(:num)/items', 'Api\\ProductCatalog::listPriceListItems/$1');
+    $routes->put('price-lists/(:num)/items', 'Api\\ProductCatalog::replacePriceListItems/$1');
+
 });
 
 service('auth')->routes($routes);

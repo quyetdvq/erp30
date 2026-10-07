@@ -144,6 +144,12 @@ final class PriceListService
         return $this->repo()->findById($id);
     }
 
+    /** @return list<array<string, mixed>> */
+    public function listAll(): array
+    {
+        return $this->repo()->listAll();
+    }
+
     /** @return array<string, mixed>|null */
     public function findByCode(string $code): ?array
     {
