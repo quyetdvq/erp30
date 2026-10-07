@@ -1,7 +1,7 @@
 import { apiClient } from '@/services/api'
 
 export type ManagedUser = {
-  id: number
+  id: number | string
   username: string
   email: string | null
   status: string | null
@@ -9,7 +9,7 @@ export type ManagedUser = {
   created_at: string | null
   groups: string[]
   direct_permission_count?: number
-  employee_id?: number | null
+  employee_id?: number | string | null
   employee_code?: string | null
   employee_name?: string | null
 }
@@ -48,7 +48,10 @@ export async function getUsers(): Promise<ManagedUser[]> {
   return response.data.data
 }
 
-export async function saveUser(payload: Record<string, unknown>, id?: number): Promise<void> {
+export async function saveUser(
+  payload: Record<string, unknown>,
+  id?: number | string,
+): Promise<void> {
   if (id) await apiClient.patch(`/api/v1/admin/users/${id}`, payload)
   else await apiClient.post('/api/v1/admin/users', payload)
 }
