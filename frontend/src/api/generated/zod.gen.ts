@@ -438,6 +438,238 @@ export const zEmployeeAssignmentCollection = zCollectionResponse.and(z.object({
     data: z.array(zEmployeeAssignment).optional()
 }));
 
+export const zApi030State = z.object({
+    status: z.enum(['ACTIVE', 'INACTIVE'])
+});
+
+export const zAuthorizationGroup = z.object({
+    id: zBigInt,
+    code: z.string(),
+    name: z.string(),
+    description: z.string().nullish(),
+    status: z.enum(['ACTIVE', 'INACTIVE'])
+});
+
+export const zAuthorizationGroupCreate = z.object({
+    code: z.string(),
+    name: z.string(),
+    description: z.string().optional(),
+    status: z.enum(['ACTIVE', 'INACTIVE']).optional()
+});
+
+export const zAuthorizationGroupPatch = z.object({
+    code: z.string().optional(),
+    name: z.string().optional(),
+    description: z.string().nullish(),
+    status: z.enum(['ACTIVE', 'INACTIVE']).optional()
+});
+
+export const zAuthorizationGroupMembers = z.object({
+    user_ids: z.array(zBigInt)
+});
+
+export const zAuthorizationGroupPermissions = z.object({
+    resource_action_ids: z.array(zBigInt)
+});
+
+export const zResource = z.object({
+    id: zBigInt,
+    type: z.string(),
+    name: z.string(),
+    domain: z.enum([
+        'SYSTEM',
+        'MASTER',
+        'ORGANIZATION'
+    ]),
+    lifecycle_id: zBigInt.optional(),
+    actions: z.array(z.record(z.string(), z.unknown())).optional()
+});
+
+export const zResourceCreate = z.object({
+    type: z.string(),
+    name: z.string(),
+    domain: z.enum([
+        'SYSTEM',
+        'MASTER',
+        'ORGANIZATION'
+    ]),
+    lifecycle_id: zBigInt.optional()
+});
+
+export const zResourcePatch = z.object({
+    name: z.string().optional(),
+    lifecycle_id: zBigInt.optional()
+});
+
+export const zResourceActionCreate = z.object({
+    code: z.string(),
+    description: z.string().optional()
+});
+
+export const zResourceActionPatch = z.object({
+    description: z.string().nullish()
+});
+
+export const zPolicyAction = z.object({
+    resource_action_id: zBigInt,
+    effect: z.enum([
+        'ALLOW',
+        'DENY',
+        'ABSOLUTE_DENY'
+    ])
+});
+
+export const zPolicy = z.object({
+    id: zBigInt,
+    organization_id: zBigInt,
+    resource_id: zBigInt,
+    state_id: zBigInt.optional(),
+    participant_type: z.enum([
+        'USER',
+        'GROUP',
+        'POSITION',
+        'DEPARTMENT',
+        'ORGANIZATION'
+    ]),
+    participant_ref_id: zBigInt,
+    actions: z.array(zPolicyAction)
+});
+
+export const zPolicyCreate = z.object({
+    organization_id: zBigInt,
+    resource_id: zBigInt,
+    state_id: zBigInt.optional(),
+    participant_type: z.enum([
+        'USER',
+        'GROUP',
+        'POSITION',
+        'DEPARTMENT',
+        'ORGANIZATION'
+    ]),
+    participant_ref_id: zBigInt,
+    actions: z.array(zPolicyAction)
+});
+
+export const zPolicyPatch = z.object({
+    organization_id: zBigInt.optional(),
+    resource_id: zBigInt.optional(),
+    state_id: zBigInt.optional(),
+    participant_type: z.string().optional(),
+    participant_ref_id: zBigInt.optional(),
+    actions: z.array(zPolicyAction).optional()
+});
+
+export const zAuthorizationLog = z.object({
+    id: zBigInt,
+    user_id: zBigInt,
+    organization_id: zBigInt.optional(),
+    resource_id: zBigInt,
+    action: z.string(),
+    state_id: zBigInt.optional(),
+    decision: z.enum(['ALLOW', 'DENY']),
+    matched_policy_id: zBigInt.optional(),
+    reason: z.string().nullish(),
+    request_id: z.string().nullish(),
+    created_at: z.iso.datetime()
+});
+
+export const zWorkflowState = z.object({
+    id: zBigInt,
+    code: z.string(),
+    name: z.string(),
+    description: z.string().nullish(),
+    status: z.enum(['ACTIVE', 'INACTIVE'])
+});
+
+export const zWorkflowStateCreate = z.object({
+    code: z.string(),
+    name: z.string(),
+    description: z.string().optional(),
+    status: z.enum(['ACTIVE', 'INACTIVE']).optional()
+});
+
+export const zWorkflowStatePatch = z.object({
+    code: z.string().optional(),
+    name: z.string().optional(),
+    description: z.string().nullish(),
+    status: z.enum(['ACTIVE', 'INACTIVE']).optional()
+});
+
+export const zLifecycle = z.object({
+    id: zBigInt,
+    code: z.string(),
+    name: z.string(),
+    description: z.string().nullish(),
+    status: z.enum(['ACTIVE', 'INACTIVE'])
+});
+
+export const zLifecycleCreate = z.object({
+    code: z.string(),
+    name: z.string(),
+    description: z.string().optional(),
+    status: z.enum(['ACTIVE', 'INACTIVE']).optional()
+});
+
+export const zLifecyclePatch = z.object({
+    code: z.string().optional(),
+    name: z.string().optional(),
+    description: z.string().nullish(),
+    status: z.enum(['ACTIVE', 'INACTIVE']).optional()
+});
+
+export const zLifecycleConfiguration = z.object({
+    states: z.array(z.record(z.string(), z.unknown())).optional(),
+    transitions: z.array(z.record(z.string(), z.unknown())).optional()
+});
+
+export const zAuthorizationGroupResponse = zSuccessResponse.and(z.object({
+    data: zAuthorizationGroup.optional()
+}));
+
+export const zAuthorizationGroupCollection = zCollectionResponse.and(z.object({
+    data: z.array(zAuthorizationGroup).optional()
+}));
+
+export const zResourceResponse = zSuccessResponse.and(z.object({
+    data: zResource.optional()
+}));
+
+export const zResourceCollection = zCollectionResponse.and(z.object({
+    data: z.array(zResource).optional()
+}));
+
+export const zPolicyResponse = zSuccessResponse.and(z.object({
+    data: zPolicy.optional()
+}));
+
+export const zPolicyCollection = zCollectionResponse.and(z.object({
+    data: z.array(zPolicy).optional()
+}));
+
+export const zAuthorizationLogResponse = zSuccessResponse.and(z.object({
+    data: zAuthorizationLog.optional()
+}));
+
+export const zAuthorizationLogCollection = zCollectionResponse.and(z.object({
+    data: z.array(zAuthorizationLog).optional()
+}));
+
+export const zWorkflowStateResponse = zSuccessResponse.and(z.object({
+    data: zWorkflowState.optional()
+}));
+
+export const zWorkflowStateCollection = zCollectionResponse.and(z.object({
+    data: z.array(zWorkflowState).optional()
+}));
+
+export const zLifecycleResponse = zSuccessResponse.and(z.object({
+    data: zLifecycle.optional()
+}));
+
+export const zLifecycleCollection = zCollectionResponse.and(z.object({
+    data: z.array(zLifecycle).optional()
+}));
+
 /**
  * Supported request language. Unsupported values fall back to vi.
  */
@@ -507,6 +739,38 @@ export const zEmployeeAssignmentCreate2 = zEmployeeAssignmentCreate;
 export const zEmployeeAssignmentPatch2 = zEmployeeAssignmentPatch;
 
 export const zEmployeeAssignmentState2 = zEmployeeAssignmentState;
+
+export const zApi030State2 = zApi030State;
+
+export const zAuthorizationGroupCreate2 = zAuthorizationGroupCreate;
+
+export const zAuthorizationGroupPatch2 = zAuthorizationGroupPatch;
+
+export const zAuthorizationGroupMembers2 = zAuthorizationGroupMembers;
+
+export const zAuthorizationGroupPermissions2 = zAuthorizationGroupPermissions;
+
+export const zResourceCreate2 = zResourceCreate;
+
+export const zResourcePatch2 = zResourcePatch;
+
+export const zResourceActionCreate2 = zResourceActionCreate;
+
+export const zResourceActionPatch2 = zResourceActionPatch;
+
+export const zPolicyCreate2 = zPolicyCreate;
+
+export const zPolicyPatch2 = zPolicyPatch;
+
+export const zWorkflowStateCreate2 = zWorkflowStateCreate;
+
+export const zWorkflowStatePatch2 = zWorkflowStatePatch;
+
+export const zLifecycleCreate2 = zLifecycleCreate;
+
+export const zLifecyclePatch2 = zLifecyclePatch;
+
+export const zLifecycleConfiguration2 = zLifecycleConfiguration;
 
 export const zGetHealthHeaders = z.object({
     'Accept-Language': z.enum(['vi', 'en']).optional().default('vi'),
@@ -1010,3 +1274,446 @@ export const zSetEmployeeAssignmentStatePath = z.object({
  * Authorized employee assignment resource.
  */
 export const zSetEmployeeAssignmentStateResponse = zEmployeeAssignmentResponse;
+
+export const zListAuthorizationGroupsHeaders = z.object({
+    'Accept-Language': z.enum(['vi', 'en']).optional().default('vi'),
+    'X-Request-ID': zRequestId.optional()
+});
+
+export const zListAuthorizationGroupsQuery = z.object({
+    q: z.string().optional(),
+    page: z.int().gte(1).optional().default(1),
+    page_size: z.int().gte(1).lte(200).optional().default(50),
+    sort: z.string().optional(),
+    filter: z.record(z.string(), z.union([
+        z.string(),
+        z.array(z.string())
+    ])).optional()
+});
+
+/**
+ * Authorization group collection.
+ */
+export const zListAuthorizationGroupsResponse = zAuthorizationGroupCollection;
+
+export const zCreateAuthorizationGroupBody = zAuthorizationGroupCreate2;
+
+/**
+ * Authorization group response.
+ */
+export const zCreateAuthorizationGroupResponse = zAuthorizationGroupResponse;
+
+export const zGetAuthorizationGroupPath = z.object({
+    id: zBigInt
+});
+
+/**
+ * Authorization group response.
+ */
+export const zGetAuthorizationGroupResponse = zAuthorizationGroupResponse;
+
+export const zUpdateAuthorizationGroupBody = zAuthorizationGroupPatch2;
+
+export const zUpdateAuthorizationGroupPath = z.object({
+    id: zBigInt
+});
+
+/**
+ * Authorization group response.
+ */
+export const zUpdateAuthorizationGroupResponse = zAuthorizationGroupResponse;
+
+export const zSetAuthorizationGroupStateBody = zApi030State2;
+
+export const zSetAuthorizationGroupStatePath = z.object({
+    id: zBigInt
+});
+
+/**
+ * Authorization group response.
+ */
+export const zSetAuthorizationGroupStateResponse = zAuthorizationGroupResponse;
+
+export const zListAuthorizationGroupMembersPath = z.object({
+    id: zBigInt
+});
+
+/**
+ * Successful API response.
+ */
+export const zListAuthorizationGroupMembersResponse = zSuccessResponse;
+
+export const zReplaceAuthorizationGroupMembersBody = zAuthorizationGroupMembers2;
+
+export const zReplaceAuthorizationGroupMembersPath = z.object({
+    id: zBigInt
+});
+
+/**
+ * Successful API response.
+ */
+export const zReplaceAuthorizationGroupMembersResponse = zSuccessResponse;
+
+export const zListAuthorizationGroupPermissionsPath = z.object({
+    id: zBigInt
+});
+
+/**
+ * Successful API response.
+ */
+export const zListAuthorizationGroupPermissionsResponse = zSuccessResponse;
+
+export const zReplaceAuthorizationGroupPermissionsBody = zAuthorizationGroupPermissions2;
+
+export const zReplaceAuthorizationGroupPermissionsPath = z.object({
+    id: zBigInt
+});
+
+/**
+ * Successful API response.
+ */
+export const zReplaceAuthorizationGroupPermissionsResponse = zSuccessResponse;
+
+export const zListResourcesHeaders = z.object({
+    'Accept-Language': z.enum(['vi', 'en']).optional().default('vi'),
+    'X-Request-ID': zRequestId.optional()
+});
+
+export const zListResourcesQuery = z.object({
+    q: z.string().optional(),
+    page: z.int().gte(1).optional().default(1),
+    page_size: z.int().gte(1).lte(200).optional().default(50),
+    sort: z.string().optional(),
+    filter: z.record(z.string(), z.union([
+        z.string(),
+        z.array(z.string())
+    ])).optional()
+});
+
+/**
+ * Resource collection.
+ */
+export const zListResourcesResponse = zResourceCollection;
+
+export const zCreateResourceBody = zResourceCreate2;
+
+/**
+ * Resource response.
+ */
+export const zCreateResourceResponse = zResourceResponse;
+
+export const zDeleteResourcePath = z.object({
+    id: zBigInt
+});
+
+/**
+ * Mutation completed successfully.
+ */
+export const zDeleteResourceResponse = z.void();
+
+export const zGetResourcePath = z.object({
+    id: zBigInt
+});
+
+/**
+ * Resource response.
+ */
+export const zGetResourceResponse = zResourceResponse;
+
+export const zUpdateResourceBody = zResourcePatch2;
+
+export const zUpdateResourcePath = z.object({
+    id: zBigInt
+});
+
+/**
+ * Resource response.
+ */
+export const zUpdateResourceResponse = zResourceResponse;
+
+export const zListResourceActionsPath = z.object({
+    id: zBigInt
+});
+
+/**
+ * Successful API response.
+ */
+export const zListResourceActionsResponse = zSuccessResponse;
+
+export const zCreateResourceActionBody = zResourceActionCreate2;
+
+export const zCreateResourceActionPath = z.object({
+    id: zBigInt
+});
+
+/**
+ * Successful API response.
+ */
+export const zCreateResourceActionResponse = zSuccessResponse;
+
+export const zDeleteResourceActionPath = z.object({
+    id: zBigInt,
+    action_id: zBigInt
+});
+
+/**
+ * Mutation completed successfully.
+ */
+export const zDeleteResourceActionResponse = z.void();
+
+export const zUpdateResourceActionBody = zResourceActionPatch2;
+
+export const zUpdateResourceActionPath = z.object({
+    id: zBigInt,
+    action_id: zBigInt
+});
+
+/**
+ * Successful API response.
+ */
+export const zUpdateResourceActionResponse = zSuccessResponse;
+
+export const zListPoliciesHeaders = z.object({
+    'Accept-Language': z.enum(['vi', 'en']).optional().default('vi'),
+    'X-Request-ID': zRequestId.optional()
+});
+
+export const zListPoliciesQuery = z.object({
+    q: z.string().optional(),
+    page: z.int().gte(1).optional().default(1),
+    page_size: z.int().gte(1).lte(200).optional().default(50),
+    sort: z.string().optional(),
+    filter: z.record(z.string(), z.union([
+        z.string(),
+        z.array(z.string())
+    ])).optional()
+});
+
+/**
+ * Policy collection.
+ */
+export const zListPoliciesResponse = zPolicyCollection;
+
+export const zCreatePolicyBody = zPolicyCreate2;
+
+/**
+ * Policy response.
+ */
+export const zCreatePolicyResponse = zPolicyResponse;
+
+export const zDeletePolicyPath = z.object({
+    id: zBigInt
+});
+
+/**
+ * Mutation completed successfully.
+ */
+export const zDeletePolicyResponse = z.void();
+
+export const zGetPolicyPath = z.object({
+    id: zBigInt
+});
+
+/**
+ * Policy response.
+ */
+export const zGetPolicyResponse = zPolicyResponse;
+
+export const zUpdatePolicyBody = zPolicyPatch2;
+
+export const zUpdatePolicyPath = z.object({
+    id: zBigInt
+});
+
+/**
+ * Policy response.
+ */
+export const zUpdatePolicyResponse = zPolicyResponse;
+
+export const zListAuthorizationLogsHeaders = z.object({
+    'Accept-Language': z.enum(['vi', 'en']).optional().default('vi'),
+    'X-Request-ID': zRequestId.optional()
+});
+
+export const zListAuthorizationLogsQuery = z.object({
+    q: z.string().optional(),
+    page: z.int().gte(1).optional().default(1),
+    page_size: z.int().gte(1).lte(200).optional().default(50),
+    sort: z.string().optional(),
+    filter: z.record(z.string(), z.union([
+        z.string(),
+        z.array(z.string())
+    ])).optional()
+});
+
+/**
+ * Authorization log collection.
+ */
+export const zListAuthorizationLogsResponse = zAuthorizationLogCollection;
+
+export const zGetAuthorizationLogPath = z.object({
+    id: zBigInt
+});
+
+/**
+ * Authorization log response.
+ */
+export const zGetAuthorizationLogResponse = zAuthorizationLogResponse;
+
+export const zListWorkflowStatesHeaders = z.object({
+    'Accept-Language': z.enum(['vi', 'en']).optional().default('vi'),
+    'X-Request-ID': zRequestId.optional()
+});
+
+export const zListWorkflowStatesQuery = z.object({
+    q: z.string().optional(),
+    page: z.int().gte(1).optional().default(1),
+    page_size: z.int().gte(1).lte(200).optional().default(50),
+    sort: z.string().optional(),
+    filter: z.record(z.string(), z.union([
+        z.string(),
+        z.array(z.string())
+    ])).optional()
+});
+
+/**
+ * Workflow state collection.
+ */
+export const zListWorkflowStatesResponse = zWorkflowStateCollection;
+
+export const zCreateWorkflowStateBody = zWorkflowStateCreate2;
+
+/**
+ * Workflow state response.
+ */
+export const zCreateWorkflowStateResponse = zWorkflowStateResponse;
+
+export const zGetWorkflowStatePath = z.object({
+    id: zBigInt
+});
+
+/**
+ * Workflow state response.
+ */
+export const zGetWorkflowStateResponse = zWorkflowStateResponse;
+
+export const zUpdateWorkflowStateBody = zWorkflowStatePatch2;
+
+export const zUpdateWorkflowStatePath = z.object({
+    id: zBigInt
+});
+
+/**
+ * Workflow state response.
+ */
+export const zUpdateWorkflowStateResponse = zWorkflowStateResponse;
+
+export const zSetWorkflowStateStateBody = zApi030State2;
+
+export const zSetWorkflowStateStatePath = z.object({
+    id: zBigInt
+});
+
+/**
+ * Workflow state response.
+ */
+export const zSetWorkflowStateStateResponse = zWorkflowStateResponse;
+
+export const zListLifecyclesHeaders = z.object({
+    'Accept-Language': z.enum(['vi', 'en']).optional().default('vi'),
+    'X-Request-ID': zRequestId.optional()
+});
+
+export const zListLifecyclesQuery = z.object({
+    q: z.string().optional(),
+    page: z.int().gte(1).optional().default(1),
+    page_size: z.int().gte(1).lte(200).optional().default(50),
+    sort: z.string().optional(),
+    filter: z.record(z.string(), z.union([
+        z.string(),
+        z.array(z.string())
+    ])).optional()
+});
+
+/**
+ * Lifecycle collection.
+ */
+export const zListLifecyclesResponse = zLifecycleCollection;
+
+export const zCreateLifecycleBody = zLifecycleCreate2;
+
+/**
+ * Lifecycle response.
+ */
+export const zCreateLifecycleResponse = zLifecycleResponse;
+
+export const zGetLifecyclePath = z.object({
+    id: zBigInt
+});
+
+/**
+ * Lifecycle response.
+ */
+export const zGetLifecycleResponse = zLifecycleResponse;
+
+export const zUpdateLifecycleBody = zLifecyclePatch2;
+
+export const zUpdateLifecyclePath = z.object({
+    id: zBigInt
+});
+
+/**
+ * Lifecycle response.
+ */
+export const zUpdateLifecycleResponse = zLifecycleResponse;
+
+export const zSetLifecycleStateBody = zApi030State2;
+
+export const zSetLifecycleStatePath = z.object({
+    id: zBigInt
+});
+
+/**
+ * Lifecycle response.
+ */
+export const zSetLifecycleStateResponse = zLifecycleResponse;
+
+export const zListLifecycleStatesPath = z.object({
+    id: zBigInt
+});
+
+/**
+ * Successful API response.
+ */
+export const zListLifecycleStatesResponse = zSuccessResponse;
+
+export const zConfigureLifecycleStatesBody = zLifecycleConfiguration2;
+
+export const zConfigureLifecycleStatesPath = z.object({
+    id: zBigInt
+});
+
+/**
+ * Successful API response.
+ */
+export const zConfigureLifecycleStatesResponse = zSuccessResponse;
+
+export const zListLifecycleTransitionsPath = z.object({
+    id: zBigInt
+});
+
+/**
+ * Successful API response.
+ */
+export const zListLifecycleTransitionsResponse = zSuccessResponse;
+
+export const zConfigureLifecycleTransitionsBody = zLifecycleConfiguration2;
+
+export const zConfigureLifecycleTransitionsPath = z.object({
+    id: zBigInt
+});
+
+/**
+ * Successful API response.
+ */
+export const zConfigureLifecycleTransitionsResponse = zSuccessResponse;

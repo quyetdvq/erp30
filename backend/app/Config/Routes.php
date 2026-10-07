@@ -35,6 +35,36 @@ $routes->group('api/v1', ['filter' => 'cors'], static function (RouteCollection 
     $routes->post('employee-assignments/(:num)/actions/set-state', 'Api\\EmployeeStructure::setState/employee_assignment/$1');
     $routes->get('organizations/tree', 'Api\\FoundationOrganizationContact::tree');
 
+    foreach (['authorization-groups' => 'authorization_group', 'resources' => 'resource', 'policies' => 'policy', 'authorization-logs' => 'authorization_log', 'workflow-states' => 'workflow_state', 'lifecycles' => 'lifecycle'] as $path => $resource) {
+        $routes->get($path, 'Api\\AuthorizationWorkflow::list/' . $resource);
+        if ($resource !== 'authorization_log') {
+            $routes->post($path, 'Api\\AuthorizationWorkflow::create/' . $resource);
+        }
+        $routes->get($path . '/(:num)', 'Api\\AuthorizationWorkflow::show/' . $resource . '/$1');
+        if ($resource !== 'authorization_log') {
+            $routes->patch($path . '/(:num)', 'Api\\AuthorizationWorkflow::update/' . $resource . '/$1');
+            if ($resource === 'policy') {
+                $routes->delete($path . '/(:num)', 'Api\\AuthorizationWorkflow::deletePolicy/$1');
+            }
+        }
+        if (in_array($resource, ['authorization_group', 'workflow_state', 'lifecycle'], true)) {
+            $routes->post($path . '/(:num)/actions/set-state', 'Api\\AuthorizationWorkflow::setState/' . $resource . '/$1');
+        }
+    }
+    $routes->delete('resources/(:num)', 'Api\\AuthorizationWorkflow::deleteResource/$1');
+    $routes->get('authorization-groups/(:num)/members', 'Api\\AuthorizationWorkflow::members/$1');
+    $routes->put('authorization-groups/(:num)/members', 'Api\\AuthorizationWorkflow::replaceMembers/$1');
+    $routes->get('authorization-groups/(:num)/permissions', 'Api\\AuthorizationWorkflow::permissions/$1');
+    $routes->put('authorization-groups/(:num)/permissions', 'Api\\AuthorizationWorkflow::replacePermissions/$1');
+    $routes->get('resources/(:num)/actions', 'Api\\AuthorizationWorkflow::actions/$1');
+    $routes->post('resources/(:num)/actions', 'Api\\AuthorizationWorkflow::createAction/$1');
+    $routes->patch('resources/(:num)/actions/(:num)', 'Api\\AuthorizationWorkflow::updateAction/$1/$2');
+    $routes->delete('resources/(:num)/actions/(:num)', 'Api\\AuthorizationWorkflow::deleteAction/$1/$2');
+    $routes->get('lifecycles/(:num)/states', 'Api\\AuthorizationWorkflow::states/$1');
+    $routes->put('lifecycles/(:num)/states', 'Api\\AuthorizationWorkflow::configureStates/$1');
+    $routes->get('lifecycles/(:num)/transitions', 'Api\\AuthorizationWorkflow::transitions/$1');
+    $routes->put('lifecycles/(:num)/transitions', 'Api\\AuthorizationWorkflow::configureStates/$1');
+
 });
 
 service('auth')->routes($routes);

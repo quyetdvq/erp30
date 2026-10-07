@@ -295,6 +295,223 @@ paths:
       summary: Set employee assignment state
       requestBody: {$ref: '#/components/requestBodies/EmployeeAssignmentState'}
       responses: {'200': {$ref: '#/components/responses/EmployeeAssignmentResponse'}, '401': {$ref: '#/components/responses/Unauthorized'}, '403': {$ref: '#/components/responses/Forbidden'}, '404': {$ref: '#/components/responses/NotFound'}, '422': {$ref: '#/components/responses/UnprocessableEntity'}}
+  /api/v1/authorization-groups:
+    get:
+      operationId: listAuthorizationGroups
+      summary: List authorization groups
+      parameters: [{$ref: '#/components/parameters/AcceptLanguage'}, {$ref: '#/components/parameters/RequestId'}, {$ref: '#/components/parameters/Q'}, {$ref: '#/components/parameters/Page'}, {$ref: '#/components/parameters/PageSize'}, {$ref: '#/components/parameters/Sort'}, {$ref: '#/components/parameters/Filter'}]
+      responses: {'200': {$ref: '#/components/responses/AuthorizationGroupCollection'}, '401': {$ref: '#/components/responses/Unauthorized'}}
+    post:
+      operationId: createAuthorizationGroup
+      summary: Create authorization group
+      requestBody: {$ref: '#/components/requestBodies/AuthorizationGroupCreate'}
+      responses: {'201': {$ref: '#/components/responses/AuthorizationGroupResponse'}, '401': {$ref: '#/components/responses/Unauthorized'}, '403': {$ref: '#/components/responses/Forbidden'}, '409': {$ref: '#/components/responses/Conflict'}, '422': {$ref: '#/components/responses/UnprocessableEntity'}}
+  /api/v1/authorization-groups/{id}:
+    parameters: [{$ref: '#/components/parameters/Id'}]
+    get:
+      operationId: getAuthorizationGroup
+      summary: Get authorization group
+      responses: {'200': {$ref: '#/components/responses/AuthorizationGroupResponse'}, '401': {$ref: '#/components/responses/Unauthorized'}, '404': {$ref: '#/components/responses/NotFound'}}
+    patch:
+      operationId: updateAuthorizationGroup
+      summary: Update authorization group
+      requestBody: {$ref: '#/components/requestBodies/AuthorizationGroupPatch'}
+      responses: {'200': {$ref: '#/components/responses/AuthorizationGroupResponse'}, '401': {$ref: '#/components/responses/Unauthorized'}, '403': {$ref: '#/components/responses/Forbidden'}, '404': {$ref: '#/components/responses/NotFound'}, '422': {$ref: '#/components/responses/UnprocessableEntity'}}
+  /api/v1/authorization-groups/{id}/actions/set-state:
+    parameters: [{$ref: '#/components/parameters/Id'}]
+    post:
+      operationId: setAuthorizationGroupState
+      summary: Set authorization group state
+      requestBody: {$ref: '#/components/requestBodies/Api030State'}
+      responses: {'200': {$ref: '#/components/responses/AuthorizationGroupResponse'}, '401': {$ref: '#/components/responses/Unauthorized'}, '403': {$ref: '#/components/responses/Forbidden'}, '404': {$ref: '#/components/responses/NotFound'}, '422': {$ref: '#/components/responses/UnprocessableEntity'}}
+  /api/v1/authorization-groups/{id}/members:
+    parameters: [{$ref: '#/components/parameters/Id'}]
+    get:
+      operationId: listAuthorizationGroupMembers
+      summary: List group members
+      responses: {'200': {$ref: '#/components/responses/Success'}, '401': {$ref: '#/components/responses/Unauthorized'}, '404': {$ref: '#/components/responses/NotFound'}}
+    put:
+      operationId: replaceAuthorizationGroupMembers
+      summary: Replace group members
+      requestBody: {$ref: '#/components/requestBodies/AuthorizationGroupMembers'}
+      responses: {'200': {$ref: '#/components/responses/Success'}, '401': {$ref: '#/components/responses/Unauthorized'}, '403': {$ref: '#/components/responses/Forbidden'}, '404': {$ref: '#/components/responses/NotFound'}, '422': {$ref: '#/components/responses/UnprocessableEntity'}}
+  /api/v1/authorization-groups/{id}/permissions:
+    parameters: [{$ref: '#/components/parameters/Id'}]
+    get:
+      operationId: listAuthorizationGroupPermissions
+      summary: List group permissions
+      responses: {'200': {$ref: '#/components/responses/Success'}, '401': {$ref: '#/components/responses/Unauthorized'}, '404': {$ref: '#/components/responses/NotFound'}}
+    put:
+      operationId: replaceAuthorizationGroupPermissions
+      summary: Replace group permissions
+      requestBody: {$ref: '#/components/requestBodies/AuthorizationGroupPermissions'}
+      responses: {'200': {$ref: '#/components/responses/Success'}, '401': {$ref: '#/components/responses/Unauthorized'}, '403': {$ref: '#/components/responses/Forbidden'}, '404': {$ref: '#/components/responses/NotFound'}, '422': {$ref: '#/components/responses/UnprocessableEntity'}}
+  /api/v1/resources:
+    get:
+      operationId: listResources
+      summary: List resources
+      parameters: [{$ref: '#/components/parameters/AcceptLanguage'}, {$ref: '#/components/parameters/RequestId'}, {$ref: '#/components/parameters/Q'}, {$ref: '#/components/parameters/Page'}, {$ref: '#/components/parameters/PageSize'}, {$ref: '#/components/parameters/Sort'}, {$ref: '#/components/parameters/Filter'}]
+      responses: {'200': {$ref: '#/components/responses/ResourceCollection'}, '401': {$ref: '#/components/responses/Unauthorized'}}
+    post:
+      operationId: createResource
+      summary: Create resource
+      requestBody: {$ref: '#/components/requestBodies/ResourceCreate'}
+      responses: {'201': {$ref: '#/components/responses/ResourceResponse'}, '401': {$ref: '#/components/responses/Unauthorized'}, '403': {$ref: '#/components/responses/Forbidden'}, '409': {$ref: '#/components/responses/Conflict'}, '422': {$ref: '#/components/responses/UnprocessableEntity'}}
+  /api/v1/resources/{id}:
+    parameters: [{$ref: '#/components/parameters/Id'}]
+    get:
+      operationId: getResource
+      summary: Get resource
+      responses: {'200': {$ref: '#/components/responses/ResourceResponse'}, '401': {$ref: '#/components/responses/Unauthorized'}, '404': {$ref: '#/components/responses/NotFound'}}
+    patch:
+      operationId: updateResource
+      summary: Update resource
+      requestBody: {$ref: '#/components/requestBodies/ResourcePatch'}
+      responses: {'200': {$ref: '#/components/responses/ResourceResponse'}, '401': {$ref: '#/components/responses/Unauthorized'}, '403': {$ref: '#/components/responses/Forbidden'}, '404': {$ref: '#/components/responses/NotFound'}, '422': {$ref: '#/components/responses/UnprocessableEntity'}}
+    delete:
+      operationId: deleteResource
+      summary: Delete resource
+      responses: {'204': {$ref: '#/components/responses/NoContent'}, '401': {$ref: '#/components/responses/Unauthorized'}, '403': {$ref: '#/components/responses/Forbidden'}, '404': {$ref: '#/components/responses/NotFound'}, '409': {$ref: '#/components/responses/Conflict'}}
+  /api/v1/resources/{id}/actions:
+    parameters: [{$ref: '#/components/parameters/Id'}]
+    get:
+      operationId: listResourceActions
+      summary: List resource actions
+      responses: {'200': {$ref: '#/components/responses/Success'}, '401': {$ref: '#/components/responses/Unauthorized'}, '404': {$ref: '#/components/responses/NotFound'}}
+    post:
+      operationId: createResourceAction
+      summary: Create resource action
+      requestBody: {$ref: '#/components/requestBodies/ResourceActionCreate'}
+      responses: {'201': {$ref: '#/components/responses/Success'}, '401': {$ref: '#/components/responses/Unauthorized'}, '403': {$ref: '#/components/responses/Forbidden'}, '422': {$ref: '#/components/responses/UnprocessableEntity'}}
+  /api/v1/resources/{id}/actions/{action_id}:
+    parameters: [{$ref: '#/components/parameters/Id'}, {name: action_id, in: path, required: true, schema: {$ref: '#/components/schemas/BigInt'}}]
+    patch:
+      operationId: updateResourceAction
+      summary: Update resource action
+      requestBody: {$ref: '#/components/requestBodies/ResourceActionPatch'}
+      responses: {'200': {$ref: '#/components/responses/Success'}, '401': {$ref: '#/components/responses/Unauthorized'}, '403': {$ref: '#/components/responses/Forbidden'}, '404': {$ref: '#/components/responses/NotFound'}, '422': {$ref: '#/components/responses/UnprocessableEntity'}}
+    delete:
+      operationId: deleteResourceAction
+      summary: Delete resource action
+      responses: {'204': {$ref: '#/components/responses/NoContent'}, '401': {$ref: '#/components/responses/Unauthorized'}, '403': {$ref: '#/components/responses/Forbidden'}, '404': {$ref: '#/components/responses/NotFound'}}
+  /api/v1/policies:
+    get:
+      operationId: listPolicies
+      summary: List policies
+      parameters: [{$ref: '#/components/parameters/AcceptLanguage'}, {$ref: '#/components/parameters/RequestId'}, {$ref: '#/components/parameters/Q'}, {$ref: '#/components/parameters/Page'}, {$ref: '#/components/parameters/PageSize'}, {$ref: '#/components/parameters/Sort'}, {$ref: '#/components/parameters/Filter'}]
+      responses: {'200': {$ref: '#/components/responses/PolicyCollection'}, '401': {$ref: '#/components/responses/Unauthorized'}}
+    post:
+      operationId: createPolicy
+      summary: Create policy
+      requestBody: {$ref: '#/components/requestBodies/PolicyCreate'}
+      responses: {'201': {$ref: '#/components/responses/PolicyResponse'}, '401': {$ref: '#/components/responses/Unauthorized'}, '403': {$ref: '#/components/responses/Forbidden'}, '409': {$ref: '#/components/responses/Conflict'}, '422': {$ref: '#/components/responses/UnprocessableEntity'}}
+  /api/v1/policies/{id}:
+    parameters: [{$ref: '#/components/parameters/Id'}]
+    get:
+      operationId: getPolicy
+      summary: Get policy
+      responses: {'200': {$ref: '#/components/responses/PolicyResponse'}, '401': {$ref: '#/components/responses/Unauthorized'}, '404': {$ref: '#/components/responses/NotFound'}}
+    patch:
+      operationId: updatePolicy
+      summary: Update policy
+      requestBody: {$ref: '#/components/requestBodies/PolicyPatch'}
+      responses: {'200': {$ref: '#/components/responses/PolicyResponse'}, '401': {$ref: '#/components/responses/Unauthorized'}, '403': {$ref: '#/components/responses/Forbidden'}, '404': {$ref: '#/components/responses/NotFound'}, '422': {$ref: '#/components/responses/UnprocessableEntity'}}
+    delete:
+      operationId: deletePolicy
+      summary: Delete policy
+      responses: {'204': {$ref: '#/components/responses/NoContent'}, '401': {$ref: '#/components/responses/Unauthorized'}, '403': {$ref: '#/components/responses/Forbidden'}, '404': {$ref: '#/components/responses/NotFound'}}
+  /api/v1/authorization-logs:
+    get:
+      operationId: listAuthorizationLogs
+      summary: List authorization logs
+      parameters: [{$ref: '#/components/parameters/AcceptLanguage'}, {$ref: '#/components/parameters/RequestId'}, {$ref: '#/components/parameters/Q'}, {$ref: '#/components/parameters/Page'}, {$ref: '#/components/parameters/PageSize'}, {$ref: '#/components/parameters/Sort'}, {$ref: '#/components/parameters/Filter'}]
+      responses: {'200': {$ref: '#/components/responses/AuthorizationLogCollection'}, '401': {$ref: '#/components/responses/Unauthorized'}}
+  /api/v1/authorization-logs/{id}:
+    parameters: [{$ref: '#/components/parameters/Id'}]
+    get:
+      operationId: getAuthorizationLog
+      summary: Get authorization log
+      responses: {'200': {$ref: '#/components/responses/AuthorizationLogResponse'}, '401': {$ref: '#/components/responses/Unauthorized'}, '404': {$ref: '#/components/responses/NotFound'}}
+  /api/v1/workflow-states:
+    get:
+      operationId: listWorkflowStates
+      summary: List workflow states
+      parameters: [{$ref: '#/components/parameters/AcceptLanguage'}, {$ref: '#/components/parameters/RequestId'}, {$ref: '#/components/parameters/Q'}, {$ref: '#/components/parameters/Page'}, {$ref: '#/components/parameters/PageSize'}, {$ref: '#/components/parameters/Sort'}, {$ref: '#/components/parameters/Filter'}]
+      responses: {'200': {$ref: '#/components/responses/WorkflowStateCollection'}, '401': {$ref: '#/components/responses/Unauthorized'}}
+    post:
+      operationId: createWorkflowState
+      summary: Create workflow state
+      requestBody: {$ref: '#/components/requestBodies/WorkflowStateCreate'}
+      responses: {'201': {$ref: '#/components/responses/WorkflowStateResponse'}, '401': {$ref: '#/components/responses/Unauthorized'}, '403': {$ref: '#/components/responses/Forbidden'}, '422': {$ref: '#/components/responses/UnprocessableEntity'}}
+  /api/v1/workflow-states/{id}:
+    parameters: [{$ref: '#/components/parameters/Id'}]
+    get:
+      operationId: getWorkflowState
+      summary: Get workflow state
+      responses: {'200': {$ref: '#/components/responses/WorkflowStateResponse'}, '401': {$ref: '#/components/responses/Unauthorized'}, '404': {$ref: '#/components/responses/NotFound'}}
+    patch:
+      operationId: updateWorkflowState
+      summary: Update workflow state
+      requestBody: {$ref: '#/components/requestBodies/WorkflowStatePatch'}
+      responses: {'200': {$ref: '#/components/responses/WorkflowStateResponse'}, '401': {$ref: '#/components/responses/Unauthorized'}, '403': {$ref: '#/components/responses/Forbidden'}, '404': {$ref: '#/components/responses/NotFound'}, '422': {$ref: '#/components/responses/UnprocessableEntity'}}
+  /api/v1/workflow-states/{id}/actions/set-state:
+    parameters: [{$ref: '#/components/parameters/Id'}]
+    post:
+      operationId: setWorkflowStateState
+      summary: Set workflow state status
+      requestBody: {$ref: '#/components/requestBodies/Api030State'}
+      responses: {'200': {$ref: '#/components/responses/WorkflowStateResponse'}, '401': {$ref: '#/components/responses/Unauthorized'}, '403': {$ref: '#/components/responses/Forbidden'}, '404': {$ref: '#/components/responses/NotFound'}, '422': {$ref: '#/components/responses/UnprocessableEntity'}}
+  /api/v1/lifecycles:
+    get:
+      operationId: listLifecycles
+      summary: List lifecycles
+      parameters: [{$ref: '#/components/parameters/AcceptLanguage'}, {$ref: '#/components/parameters/RequestId'}, {$ref: '#/components/parameters/Q'}, {$ref: '#/components/parameters/Page'}, {$ref: '#/components/parameters/PageSize'}, {$ref: '#/components/parameters/Sort'}, {$ref: '#/components/parameters/Filter'}]
+      responses: {'200': {$ref: '#/components/responses/LifecycleCollection'}, '401': {$ref: '#/components/responses/Unauthorized'}}
+    post:
+      operationId: createLifecycle
+      summary: Create lifecycle
+      requestBody: {$ref: '#/components/requestBodies/LifecycleCreate'}
+      responses: {'201': {$ref: '#/components/responses/LifecycleResponse'}, '401': {$ref: '#/components/responses/Unauthorized'}, '403': {$ref: '#/components/responses/Forbidden'}, '422': {$ref: '#/components/responses/UnprocessableEntity'}}
+  /api/v1/lifecycles/{id}:
+    parameters: [{$ref: '#/components/parameters/Id'}]
+    get:
+      operationId: getLifecycle
+      summary: Get lifecycle
+      responses: {'200': {$ref: '#/components/responses/LifecycleResponse'}, '401': {$ref: '#/components/responses/Unauthorized'}, '404': {$ref: '#/components/responses/NotFound'}}
+    patch:
+      operationId: updateLifecycle
+      summary: Update lifecycle
+      requestBody: {$ref: '#/components/requestBodies/LifecyclePatch'}
+      responses: {'200': {$ref: '#/components/responses/LifecycleResponse'}, '401': {$ref: '#/components/responses/Unauthorized'}, '403': {$ref: '#/components/responses/Forbidden'}, '404': {$ref: '#/components/responses/NotFound'}, '422': {$ref: '#/components/responses/UnprocessableEntity'}}
+  /api/v1/lifecycles/{id}/actions/set-state:
+    parameters: [{$ref: '#/components/parameters/Id'}]
+    post:
+      operationId: setLifecycleState
+      summary: Set lifecycle status
+      requestBody: {$ref: '#/components/requestBodies/Api030State'}
+      responses: {'200': {$ref: '#/components/responses/LifecycleResponse'}, '401': {$ref: '#/components/responses/Unauthorized'}, '403': {$ref: '#/components/responses/Forbidden'}, '404': {$ref: '#/components/responses/NotFound'}, '422': {$ref: '#/components/responses/UnprocessableEntity'}}
+  /api/v1/lifecycles/{id}/states:
+    parameters: [{$ref: '#/components/parameters/Id'}]
+    get:
+      operationId: listLifecycleStates
+      summary: List lifecycle states
+      responses: {'200': {$ref: '#/components/responses/Success'}, '401': {$ref: '#/components/responses/Unauthorized'}, '404': {$ref: '#/components/responses/NotFound'}}
+    put:
+      operationId: configureLifecycleStates
+      summary: Add lifecycle state and transition configuration
+      requestBody: {$ref: '#/components/requestBodies/LifecycleConfiguration'}
+      responses: {'200': {$ref: '#/components/responses/Success'}, '401': {$ref: '#/components/responses/Unauthorized'}, '403': {$ref: '#/components/responses/Forbidden'}, '404': {$ref: '#/components/responses/NotFound'}, '409': {$ref: '#/components/responses/Conflict'}, '422': {$ref: '#/components/responses/UnprocessableEntity'}}
+  /api/v1/lifecycles/{id}/transitions:
+    parameters: [{$ref: '#/components/parameters/Id'}]
+    get:
+      operationId: listLifecycleTransitions
+      summary: List lifecycle transitions
+      responses: {'200': {$ref: '#/components/responses/Success'}, '401': {$ref: '#/components/responses/Unauthorized'}, '404': {$ref: '#/components/responses/NotFound'}}
+    put:
+      operationId: configureLifecycleTransitions
+      summary: Add lifecycle transition configuration
+      requestBody: {$ref: '#/components/requestBodies/LifecycleConfiguration'}
+      responses: {'200': {$ref: '#/components/responses/Success'}, '401': {$ref: '#/components/responses/Unauthorized'}, '403': {$ref: '#/components/responses/Forbidden'}, '404': {$ref: '#/components/responses/NotFound'}, '409': {$ref: '#/components/responses/Conflict'}, '422': {$ref: '#/components/responses/UnprocessableEntity'}}
 components:
   parameters:
     AcceptLanguage:
@@ -384,6 +601,22 @@ components:
     EmployeeAssignmentCreate: {required: true, content: {application/json: {schema: {$ref: '#/components/schemas/EmployeeAssignmentCreate'}}}}
     EmployeeAssignmentPatch: {required: true, content: {application/json: {schema: {$ref: '#/components/schemas/EmployeeAssignmentPatch'}}}}
     EmployeeAssignmentState: {required: true, content: {application/json: {schema: {$ref: '#/components/schemas/EmployeeAssignmentState'}}}}
+    Api030State: {required: true, content: {application/json: {schema: {$ref: '#/components/schemas/Api030State'}}}}
+    AuthorizationGroupCreate: {required: true, content: {application/json: {schema: {$ref: '#/components/schemas/AuthorizationGroupCreate'}}}}
+    AuthorizationGroupPatch: {required: true, content: {application/json: {schema: {$ref: '#/components/schemas/AuthorizationGroupPatch'}}}}
+    AuthorizationGroupMembers: {required: true, content: {application/json: {schema: {$ref: '#/components/schemas/AuthorizationGroupMembers'}}}}
+    AuthorizationGroupPermissions: {required: true, content: {application/json: {schema: {$ref: '#/components/schemas/AuthorizationGroupPermissions'}}}}
+    ResourceCreate: {required: true, content: {application/json: {schema: {$ref: '#/components/schemas/ResourceCreate'}}}}
+    ResourcePatch: {required: true, content: {application/json: {schema: {$ref: '#/components/schemas/ResourcePatch'}}}}
+    ResourceActionCreate: {required: true, content: {application/json: {schema: {$ref: '#/components/schemas/ResourceActionCreate'}}}}
+    ResourceActionPatch: {required: true, content: {application/json: {schema: {$ref: '#/components/schemas/ResourceActionPatch'}}}}
+    PolicyCreate: {required: true, content: {application/json: {schema: {$ref: '#/components/schemas/PolicyCreate'}}}}
+    PolicyPatch: {required: true, content: {application/json: {schema: {$ref: '#/components/schemas/PolicyPatch'}}}}
+    WorkflowStateCreate: {required: true, content: {application/json: {schema: {$ref: '#/components/schemas/WorkflowStateCreate'}}}}
+    WorkflowStatePatch: {required: true, content: {application/json: {schema: {$ref: '#/components/schemas/WorkflowStatePatch'}}}}
+    LifecycleCreate: {required: true, content: {application/json: {schema: {$ref: '#/components/schemas/LifecycleCreate'}}}}
+    LifecyclePatch: {required: true, content: {application/json: {schema: {$ref: '#/components/schemas/LifecyclePatch'}}}}
+    LifecycleConfiguration: {required: true, content: {application/json: {schema: {$ref: '#/components/schemas/LifecycleConfiguration'}}}}
   securitySchemes:
     sessionAuth:
       type: http
@@ -399,6 +632,20 @@ components:
         type: string
         enum: [vi, en]
   responses:
+    Success: {description: Successful API response., content: {application/json: {schema: {$ref: '#/components/schemas/SuccessResponse'}}}}
+    NoContent: {description: Mutation completed successfully.}
+    AuthorizationGroupResponse: {description: Authorization group response., content: {application/json: {schema: {$ref: '#/components/schemas/AuthorizationGroupResponse'}}}}
+    AuthorizationGroupCollection: {description: Authorization group collection., content: {application/json: {schema: {$ref: '#/components/schemas/AuthorizationGroupCollection'}}}}
+    ResourceResponse: {description: Resource response., content: {application/json: {schema: {$ref: '#/components/schemas/ResourceResponse'}}}}
+    ResourceCollection: {description: Resource collection., content: {application/json: {schema: {$ref: '#/components/schemas/ResourceCollection'}}}}
+    PolicyResponse: {description: Policy response., content: {application/json: {schema: {$ref: '#/components/schemas/PolicyResponse'}}}}
+    PolicyCollection: {description: Policy collection., content: {application/json: {schema: {$ref: '#/components/schemas/PolicyCollection'}}}}
+    AuthorizationLogResponse: {description: Authorization log response., content: {application/json: {schema: {$ref: '#/components/schemas/AuthorizationLogResponse'}}}}
+    AuthorizationLogCollection: {description: Authorization log collection., content: {application/json: {schema: {$ref: '#/components/schemas/AuthorizationLogCollection'}}}}
+    WorkflowStateResponse: {description: Workflow state response., content: {application/json: {schema: {$ref: '#/components/schemas/WorkflowStateResponse'}}}}
+    WorkflowStateCollection: {description: Workflow state collection., content: {application/json: {schema: {$ref: '#/components/schemas/WorkflowStateCollection'}}}}
+    LifecycleResponse: {description: Lifecycle response., content: {application/json: {schema: {$ref: '#/components/schemas/LifecycleResponse'}}}}
+    LifecycleCollection: {description: Lifecycle collection., content: {application/json: {schema: {$ref: '#/components/schemas/LifecycleCollection'}}}}
     ProvinceResponse:
       description: Province resource.
       content: {application/json: {schema: {$ref: '#/components/schemas/ProvinceResponse'}}}
@@ -940,3 +1187,38 @@ components:
     PositionCollection: {allOf: [{$ref: '#/components/schemas/CollectionResponse'}], properties: {data: {type: array, items: {$ref: '#/components/schemas/Position'}}}}
     EmployeeCollection: {allOf: [{$ref: '#/components/schemas/CollectionResponse'}], properties: {data: {type: array, items: {$ref: '#/components/schemas/Employee'}}}}
     EmployeeAssignmentCollection: {allOf: [{$ref: '#/components/schemas/CollectionResponse'}], properties: {data: {type: array, items: {$ref: '#/components/schemas/EmployeeAssignment'}}}}
+    Api030State: {type: object, required: [status], properties: {status: {type: string, enum: [ACTIVE, INACTIVE]}}}
+    AuthorizationGroup: {type: object, required: [id, code, name, status], properties: {id: {$ref: '#/components/schemas/BigInt'}, code: {type: string}, name: {type: string}, description: {type: [string, 'null']}, status: {type: string, enum: [ACTIVE, INACTIVE]}}}
+    AuthorizationGroupCreate: {type: object, required: [code, name], properties: {code: {type: string}, name: {type: string}, description: {type: string}, status: {type: string, enum: [ACTIVE, INACTIVE]}}}
+    AuthorizationGroupPatch: {type: object, properties: {code: {type: string}, name: {type: string}, description: {type: [string, 'null']}, status: {type: string, enum: [ACTIVE, INACTIVE]}}}
+    AuthorizationGroupMembers: {type: object, required: [user_ids], properties: {user_ids: {type: array, items: {$ref: '#/components/schemas/BigInt'}}}}
+    AuthorizationGroupPermissions: {type: object, required: [resource_action_ids], properties: {resource_action_ids: {type: array, items: {$ref: '#/components/schemas/BigInt'}}}}
+    Resource: {type: object, required: [id, type, name, domain], properties: {id: {$ref: '#/components/schemas/BigInt'}, type: {type: string}, name: {type: string}, domain: {type: string, enum: [SYSTEM, MASTER, ORGANIZATION]}, lifecycle_id: {$ref: '#/components/schemas/BigInt'}, actions: {type: array, items: {type: object}}}}
+    ResourceCreate: {type: object, required: [type, name, domain], properties: {type: {type: string}, name: {type: string}, domain: {type: string, enum: [SYSTEM, MASTER, ORGANIZATION]}, lifecycle_id: {$ref: '#/components/schemas/BigInt'}}}
+    ResourcePatch: {type: object, properties: {name: {type: string}, lifecycle_id: {$ref: '#/components/schemas/BigInt'}}}
+    ResourceActionCreate: {type: object, required: [code], properties: {code: {type: string}, description: {type: string}}}
+    ResourceActionPatch: {type: object, properties: {description: {type: [string, 'null']}}}
+    PolicyAction: {type: object, required: [resource_action_id, effect], properties: {resource_action_id: {$ref: '#/components/schemas/BigInt'}, effect: {type: string, enum: [ALLOW, DENY, ABSOLUTE_DENY]}}}
+    Policy: {type: object, required: [id, organization_id, resource_id, participant_type, participant_ref_id, actions], properties: {id: {$ref: '#/components/schemas/BigInt'}, organization_id: {$ref: '#/components/schemas/BigInt'}, resource_id: {$ref: '#/components/schemas/BigInt'}, state_id: {$ref: '#/components/schemas/BigInt'}, participant_type: {type: string, enum: [USER, GROUP, POSITION, DEPARTMENT, ORGANIZATION]}, participant_ref_id: {$ref: '#/components/schemas/BigInt'}, actions: {type: array, items: {$ref: '#/components/schemas/PolicyAction'}}}}
+    PolicyCreate: {type: object, required: [organization_id, resource_id, participant_type, participant_ref_id, actions], properties: {organization_id: {$ref: '#/components/schemas/BigInt'}, resource_id: {$ref: '#/components/schemas/BigInt'}, state_id: {$ref: '#/components/schemas/BigInt'}, participant_type: {type: string, enum: [USER, GROUP, POSITION, DEPARTMENT, ORGANIZATION]}, participant_ref_id: {$ref: '#/components/schemas/BigInt'}, actions: {type: array, items: {$ref: '#/components/schemas/PolicyAction'}}}}
+    PolicyPatch: {type: object, properties: {organization_id: {$ref: '#/components/schemas/BigInt'}, resource_id: {$ref: '#/components/schemas/BigInt'}, state_id: {$ref: '#/components/schemas/BigInt'}, participant_type: {type: string}, participant_ref_id: {$ref: '#/components/schemas/BigInt'}, actions: {type: array, items: {$ref: '#/components/schemas/PolicyAction'}}}}
+    AuthorizationLog: {type: object, required: [id, user_id, resource_id, action, decision, created_at], properties: {id: {$ref: '#/components/schemas/BigInt'}, user_id: {$ref: '#/components/schemas/BigInt'}, organization_id: {$ref: '#/components/schemas/BigInt'}, resource_id: {$ref: '#/components/schemas/BigInt'}, action: {type: string}, state_id: {$ref: '#/components/schemas/BigInt'}, decision: {type: string, enum: [ALLOW, DENY]}, matched_policy_id: {$ref: '#/components/schemas/BigInt'}, reason: {type: [string, 'null']}, request_id: {type: [string, 'null']}, created_at: {type: string, format: date-time}}}
+    WorkflowState: {type: object, required: [id, code, name, status], properties: {id: {$ref: '#/components/schemas/BigInt'}, code: {type: string}, name: {type: string}, description: {type: [string, 'null']}, status: {type: string, enum: [ACTIVE, INACTIVE]}}}
+    WorkflowStateCreate: {type: object, required: [code, name], properties: {code: {type: string}, name: {type: string}, description: {type: string}, status: {type: string, enum: [ACTIVE, INACTIVE]}}}
+    WorkflowStatePatch: {type: object, properties: {code: {type: string}, name: {type: string}, description: {type: [string, 'null']}, status: {type: string, enum: [ACTIVE, INACTIVE]}}}
+    Lifecycle: {type: object, required: [id, code, name, status], properties: {id: {$ref: '#/components/schemas/BigInt'}, code: {type: string}, name: {type: string}, description: {type: [string, 'null']}, status: {type: string, enum: [ACTIVE, INACTIVE]}}}
+    LifecycleCreate: {type: object, required: [code, name], properties: {code: {type: string}, name: {type: string}, description: {type: string}, status: {type: string, enum: [ACTIVE, INACTIVE]}}}
+    LifecyclePatch: {type: object, properties: {code: {type: string}, name: {type: string}, description: {type: [string, 'null']}, status: {type: string, enum: [ACTIVE, INACTIVE]}}}
+    LifecycleConfiguration: {type: object, properties: {states: {type: array, items: {type: object}}, transitions: {type: array, items: {type: object}}}}
+    AuthorizationGroupResponse: {allOf: [{$ref: '#/components/schemas/SuccessResponse'}], properties: {data: {$ref: '#/components/schemas/AuthorizationGroup'}}}
+    AuthorizationGroupCollection: {allOf: [{$ref: '#/components/schemas/CollectionResponse'}], properties: {data: {type: array, items: {$ref: '#/components/schemas/AuthorizationGroup'}}}}
+    ResourceResponse: {allOf: [{$ref: '#/components/schemas/SuccessResponse'}], properties: {data: {$ref: '#/components/schemas/Resource'}}}
+    ResourceCollection: {allOf: [{$ref: '#/components/schemas/CollectionResponse'}], properties: {data: {type: array, items: {$ref: '#/components/schemas/Resource'}}}}
+    PolicyResponse: {allOf: [{$ref: '#/components/schemas/SuccessResponse'}], properties: {data: {$ref: '#/components/schemas/Policy'}}}
+    PolicyCollection: {allOf: [{$ref: '#/components/schemas/CollectionResponse'}], properties: {data: {type: array, items: {$ref: '#/components/schemas/Policy'}}}}
+    AuthorizationLogResponse: {allOf: [{$ref: '#/components/schemas/SuccessResponse'}], properties: {data: {$ref: '#/components/schemas/AuthorizationLog'}}}
+    AuthorizationLogCollection: {allOf: [{$ref: '#/components/schemas/CollectionResponse'}], properties: {data: {type: array, items: {$ref: '#/components/schemas/AuthorizationLog'}}}}
+    WorkflowStateResponse: {allOf: [{$ref: '#/components/schemas/SuccessResponse'}], properties: {data: {$ref: '#/components/schemas/WorkflowState'}}}
+    WorkflowStateCollection: {allOf: [{$ref: '#/components/schemas/CollectionResponse'}], properties: {data: {type: array, items: {$ref: '#/components/schemas/WorkflowState'}}}}
+    LifecycleResponse: {allOf: [{$ref: '#/components/schemas/SuccessResponse'}], properties: {data: {$ref: '#/components/schemas/Lifecycle'}}}
+    LifecycleCollection: {allOf: [{$ref: '#/components/schemas/CollectionResponse'}], properties: {data: {type: array, items: {$ref: '#/components/schemas/Lifecycle'}}}}

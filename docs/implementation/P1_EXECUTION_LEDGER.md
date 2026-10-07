@@ -106,7 +106,7 @@ No task is downgraded to force that stale count.
 | P1-API-003 | DONE | 0000000 | api | Common allowlisted list/search/filter/sort/pagination adapter, authorization-scoped total boundary, collection metadata, and focused evidence. |
 | P1-API-010 | DONE | 0000000 | api | Foundation/Organization/Contact CONTRACT_READY endpoints, API-003 scoped lists, owner/target authorization, OpenAPI/codegen, and focused evidence. |
 | P1-API-020 | DONE | 0000000 | high-risk | Employee Structure API: 20 CRUD/state endpoints, catalog-driven MASTER/GROUP and ORGANIZATION authorization, allowlisted effective Assignment filters, Department hierarchy/Employee manager invariants, historical Assignment correction, OpenAPI/codegen, and full regression evidence. |
-| P1-API-030 | NOT_STARTED | — | high-risk | No accepted implementation evidence. |
+| P1-API-030 | DONE | P1-API-030 | high-risk | Resource/Authorization Group/Policy/Authorization Log/Workflow State/Lifecycle CONTRACT_READY API surface, generated client, and validation evidence. Evidence: `docs/implementation/evidence/P1-API-030/01_authorization_workflow_api_assessment.md`. |
 | P1-API-040 | NOT_STARTED | — | high-risk | No accepted implementation evidence. |
 | P1-API-050 | NOT_STARTED | — | high-risk | No accepted implementation evidence. |
 | P1-API-060 | NOT_STARTED | — | high-risk | No accepted implementation evidence. |

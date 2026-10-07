@@ -385,6 +385,220 @@ export type EmployeeAssignmentCollection = CollectionResponse & {
     data?: Array<EmployeeAssignment>;
 };
 
+export type Api030State = {
+    status: 'ACTIVE' | 'INACTIVE';
+};
+
+export type AuthorizationGroup = {
+    id: BigInt;
+    code: string;
+    name: string;
+    description?: string | null;
+    status: 'ACTIVE' | 'INACTIVE';
+};
+
+export type AuthorizationGroupCreate = {
+    code: string;
+    name: string;
+    description?: string;
+    status?: 'ACTIVE' | 'INACTIVE';
+};
+
+export type AuthorizationGroupPatch = {
+    code?: string;
+    name?: string;
+    description?: string | null;
+    status?: 'ACTIVE' | 'INACTIVE';
+};
+
+export type AuthorizationGroupMembers = {
+    user_ids: Array<BigInt>;
+};
+
+export type AuthorizationGroupPermissions = {
+    resource_action_ids: Array<BigInt>;
+};
+
+export type Resource = {
+    id: BigInt;
+    type: string;
+    name: string;
+    domain: 'SYSTEM' | 'MASTER' | 'ORGANIZATION';
+    lifecycle_id?: BigInt;
+    actions?: Array<{
+        [key: string]: unknown;
+    }>;
+};
+
+export type ResourceCreate = {
+    type: string;
+    name: string;
+    domain: 'SYSTEM' | 'MASTER' | 'ORGANIZATION';
+    lifecycle_id?: BigInt;
+};
+
+export type ResourcePatch = {
+    name?: string;
+    lifecycle_id?: BigInt;
+};
+
+export type ResourceActionCreate = {
+    code: string;
+    description?: string;
+};
+
+export type ResourceActionPatch = {
+    description?: string | null;
+};
+
+export type PolicyAction = {
+    resource_action_id: BigInt;
+    effect: 'ALLOW' | 'DENY' | 'ABSOLUTE_DENY';
+};
+
+export type Policy = {
+    id: BigInt;
+    organization_id: BigInt;
+    resource_id: BigInt;
+    state_id?: BigInt;
+    participant_type: 'USER' | 'GROUP' | 'POSITION' | 'DEPARTMENT' | 'ORGANIZATION';
+    participant_ref_id: BigInt;
+    actions: Array<PolicyAction>;
+};
+
+export type PolicyCreate = {
+    organization_id: BigInt;
+    resource_id: BigInt;
+    state_id?: BigInt;
+    participant_type: 'USER' | 'GROUP' | 'POSITION' | 'DEPARTMENT' | 'ORGANIZATION';
+    participant_ref_id: BigInt;
+    actions: Array<PolicyAction>;
+};
+
+export type PolicyPatch = {
+    organization_id?: BigInt;
+    resource_id?: BigInt;
+    state_id?: BigInt;
+    participant_type?: string;
+    participant_ref_id?: BigInt;
+    actions?: Array<PolicyAction>;
+};
+
+export type AuthorizationLog = {
+    id: BigInt;
+    user_id: BigInt;
+    organization_id?: BigInt;
+    resource_id: BigInt;
+    action: string;
+    state_id?: BigInt;
+    decision: 'ALLOW' | 'DENY';
+    matched_policy_id?: BigInt;
+    reason?: string | null;
+    request_id?: string | null;
+    created_at: string;
+};
+
+export type WorkflowState = {
+    id: BigInt;
+    code: string;
+    name: string;
+    description?: string | null;
+    status: 'ACTIVE' | 'INACTIVE';
+};
+
+export type WorkflowStateCreate = {
+    code: string;
+    name: string;
+    description?: string;
+    status?: 'ACTIVE' | 'INACTIVE';
+};
+
+export type WorkflowStatePatch = {
+    code?: string;
+    name?: string;
+    description?: string | null;
+    status?: 'ACTIVE' | 'INACTIVE';
+};
+
+export type Lifecycle = {
+    id: BigInt;
+    code: string;
+    name: string;
+    description?: string | null;
+    status: 'ACTIVE' | 'INACTIVE';
+};
+
+export type LifecycleCreate = {
+    code: string;
+    name: string;
+    description?: string;
+    status?: 'ACTIVE' | 'INACTIVE';
+};
+
+export type LifecyclePatch = {
+    code?: string;
+    name?: string;
+    description?: string | null;
+    status?: 'ACTIVE' | 'INACTIVE';
+};
+
+export type LifecycleConfiguration = {
+    states?: Array<{
+        [key: string]: unknown;
+    }>;
+    transitions?: Array<{
+        [key: string]: unknown;
+    }>;
+};
+
+export type AuthorizationGroupResponse = SuccessResponse & {
+    data?: AuthorizationGroup;
+};
+
+export type AuthorizationGroupCollection = CollectionResponse & {
+    data?: Array<AuthorizationGroup>;
+};
+
+export type ResourceResponse = SuccessResponse & {
+    data?: Resource;
+};
+
+export type ResourceCollection = CollectionResponse & {
+    data?: Array<Resource>;
+};
+
+export type PolicyResponse = SuccessResponse & {
+    data?: Policy;
+};
+
+export type PolicyCollection = CollectionResponse & {
+    data?: Array<Policy>;
+};
+
+export type AuthorizationLogResponse = SuccessResponse & {
+    data?: AuthorizationLog;
+};
+
+export type AuthorizationLogCollection = CollectionResponse & {
+    data?: Array<AuthorizationLog>;
+};
+
+export type WorkflowStateResponse = SuccessResponse & {
+    data?: WorkflowState;
+};
+
+export type WorkflowStateCollection = CollectionResponse & {
+    data?: Array<WorkflowState>;
+};
+
+export type LifecycleResponse = SuccessResponse & {
+    data?: Lifecycle;
+};
+
+export type LifecycleCollection = CollectionResponse & {
+    data?: Array<Lifecycle>;
+};
+
 /**
  * Supported request language. Unsupported values fall back to vi.
  */
@@ -453,6 +667,38 @@ export type EmployeeAssignmentCreate2 = EmployeeAssignmentCreate;
 export type EmployeeAssignmentPatch2 = EmployeeAssignmentPatch;
 
 export type EmployeeAssignmentState2 = EmployeeAssignmentState;
+
+export type Api030State2 = Api030State;
+
+export type AuthorizationGroupCreate2 = AuthorizationGroupCreate;
+
+export type AuthorizationGroupPatch2 = AuthorizationGroupPatch;
+
+export type AuthorizationGroupMembers2 = AuthorizationGroupMembers;
+
+export type AuthorizationGroupPermissions2 = AuthorizationGroupPermissions;
+
+export type ResourceCreate2 = ResourceCreate;
+
+export type ResourcePatch2 = ResourcePatch;
+
+export type ResourceActionCreate2 = ResourceActionCreate;
+
+export type ResourceActionPatch2 = ResourceActionPatch;
+
+export type PolicyCreate2 = PolicyCreate;
+
+export type PolicyPatch2 = PolicyPatch;
+
+export type WorkflowStateCreate2 = WorkflowStateCreate;
+
+export type WorkflowStatePatch2 = WorkflowStatePatch;
+
+export type LifecycleCreate2 = LifecycleCreate;
+
+export type LifecyclePatch2 = LifecyclePatch;
+
+export type LifecycleConfiguration2 = LifecycleConfiguration;
 
 export type GetHealthData = {
     body?: never;
@@ -2206,3 +2452,1458 @@ export type SetEmployeeAssignmentStateResponses = {
 };
 
 export type SetEmployeeAssignmentStateResponse = SetEmployeeAssignmentStateResponses[keyof SetEmployeeAssignmentStateResponses];
+
+export type ListAuthorizationGroupsData = {
+    body?: never;
+    headers?: {
+        /**
+         * Supported request language. Unsupported values fall back to vi.
+         */
+        'Accept-Language'?: 'vi' | 'en';
+        /**
+         * Client request correlation identifier; invalid or missing values are replaced by a generated UUID.
+         */
+        'X-Request-ID'?: RequestId;
+    };
+    path?: never;
+    query?: {
+        q?: string;
+        page?: number;
+        page_size?: number;
+        /**
+         * Allowlisted comma-separated sort terms; a final id ASC tie-breaker is applied.
+         */
+        sort?: string;
+        filter?: {
+            [key: string]: string | Array<string>;
+        };
+    };
+    url: '/api/v1/authorization-groups';
+};
+
+export type ListAuthorizationGroupsErrors = {
+    /**
+     * Unauthenticated or invalid authentication.
+     */
+    401: ErrorResponse;
+};
+
+export type ListAuthorizationGroupsError = ListAuthorizationGroupsErrors[keyof ListAuthorizationGroupsErrors];
+
+export type ListAuthorizationGroupsResponses = {
+    /**
+     * Authorization group collection.
+     */
+    200: AuthorizationGroupCollection;
+};
+
+export type ListAuthorizationGroupsResponse = ListAuthorizationGroupsResponses[keyof ListAuthorizationGroupsResponses];
+
+export type CreateAuthorizationGroupData = {
+    body: AuthorizationGroupCreate2;
+    path?: never;
+    query?: never;
+    url: '/api/v1/authorization-groups';
+};
+
+export type CreateAuthorizationGroupErrors = {
+    /**
+     * Unauthenticated or invalid authentication.
+     */
+    401: ErrorResponse;
+    /**
+     * Visible target but action denied.
+     */
+    403: ErrorResponse;
+    /**
+     * Conflict, concurrency, uniqueness, or current-state failure.
+     */
+    409: ErrorResponse;
+    /**
+     * Semantically invalid request.
+     */
+    422: ErrorResponse;
+};
+
+export type CreateAuthorizationGroupError = CreateAuthorizationGroupErrors[keyof CreateAuthorizationGroupErrors];
+
+export type CreateAuthorizationGroupResponses = {
+    /**
+     * Authorization group response.
+     */
+    201: AuthorizationGroupResponse;
+};
+
+export type CreateAuthorizationGroupResponse = CreateAuthorizationGroupResponses[keyof CreateAuthorizationGroupResponses];
+
+export type GetAuthorizationGroupData = {
+    body?: never;
+    path: {
+        id: BigInt;
+    };
+    query?: never;
+    url: '/api/v1/authorization-groups/{id}';
+};
+
+export type GetAuthorizationGroupErrors = {
+    /**
+     * Unauthenticated or invalid authentication.
+     */
+    401: ErrorResponse;
+    /**
+     * Target not found or not visible.
+     */
+    404: ErrorResponse;
+};
+
+export type GetAuthorizationGroupError = GetAuthorizationGroupErrors[keyof GetAuthorizationGroupErrors];
+
+export type GetAuthorizationGroupResponses = {
+    /**
+     * Authorization group response.
+     */
+    200: AuthorizationGroupResponse;
+};
+
+export type GetAuthorizationGroupResponse = GetAuthorizationGroupResponses[keyof GetAuthorizationGroupResponses];
+
+export type UpdateAuthorizationGroupData = {
+    body: AuthorizationGroupPatch2;
+    path: {
+        id: BigInt;
+    };
+    query?: never;
+    url: '/api/v1/authorization-groups/{id}';
+};
+
+export type UpdateAuthorizationGroupErrors = {
+    /**
+     * Unauthenticated or invalid authentication.
+     */
+    401: ErrorResponse;
+    /**
+     * Visible target but action denied.
+     */
+    403: ErrorResponse;
+    /**
+     * Target not found or not visible.
+     */
+    404: ErrorResponse;
+    /**
+     * Semantically invalid request.
+     */
+    422: ErrorResponse;
+};
+
+export type UpdateAuthorizationGroupError = UpdateAuthorizationGroupErrors[keyof UpdateAuthorizationGroupErrors];
+
+export type UpdateAuthorizationGroupResponses = {
+    /**
+     * Authorization group response.
+     */
+    200: AuthorizationGroupResponse;
+};
+
+export type UpdateAuthorizationGroupResponse = UpdateAuthorizationGroupResponses[keyof UpdateAuthorizationGroupResponses];
+
+export type SetAuthorizationGroupStateData = {
+    body: Api030State2;
+    path: {
+        id: BigInt;
+    };
+    query?: never;
+    url: '/api/v1/authorization-groups/{id}/actions/set-state';
+};
+
+export type SetAuthorizationGroupStateErrors = {
+    /**
+     * Unauthenticated or invalid authentication.
+     */
+    401: ErrorResponse;
+    /**
+     * Visible target but action denied.
+     */
+    403: ErrorResponse;
+    /**
+     * Target not found or not visible.
+     */
+    404: ErrorResponse;
+    /**
+     * Semantically invalid request.
+     */
+    422: ErrorResponse;
+};
+
+export type SetAuthorizationGroupStateError = SetAuthorizationGroupStateErrors[keyof SetAuthorizationGroupStateErrors];
+
+export type SetAuthorizationGroupStateResponses = {
+    /**
+     * Authorization group response.
+     */
+    200: AuthorizationGroupResponse;
+};
+
+export type SetAuthorizationGroupStateResponse = SetAuthorizationGroupStateResponses[keyof SetAuthorizationGroupStateResponses];
+
+export type ListAuthorizationGroupMembersData = {
+    body?: never;
+    path: {
+        id: BigInt;
+    };
+    query?: never;
+    url: '/api/v1/authorization-groups/{id}/members';
+};
+
+export type ListAuthorizationGroupMembersErrors = {
+    /**
+     * Unauthenticated or invalid authentication.
+     */
+    401: ErrorResponse;
+    /**
+     * Target not found or not visible.
+     */
+    404: ErrorResponse;
+};
+
+export type ListAuthorizationGroupMembersError = ListAuthorizationGroupMembersErrors[keyof ListAuthorizationGroupMembersErrors];
+
+export type ListAuthorizationGroupMembersResponses = {
+    /**
+     * Successful API response.
+     */
+    200: SuccessResponse;
+};
+
+export type ListAuthorizationGroupMembersResponse = ListAuthorizationGroupMembersResponses[keyof ListAuthorizationGroupMembersResponses];
+
+export type ReplaceAuthorizationGroupMembersData = {
+    body: AuthorizationGroupMembers2;
+    path: {
+        id: BigInt;
+    };
+    query?: never;
+    url: '/api/v1/authorization-groups/{id}/members';
+};
+
+export type ReplaceAuthorizationGroupMembersErrors = {
+    /**
+     * Unauthenticated or invalid authentication.
+     */
+    401: ErrorResponse;
+    /**
+     * Visible target but action denied.
+     */
+    403: ErrorResponse;
+    /**
+     * Target not found or not visible.
+     */
+    404: ErrorResponse;
+    /**
+     * Semantically invalid request.
+     */
+    422: ErrorResponse;
+};
+
+export type ReplaceAuthorizationGroupMembersError = ReplaceAuthorizationGroupMembersErrors[keyof ReplaceAuthorizationGroupMembersErrors];
+
+export type ReplaceAuthorizationGroupMembersResponses = {
+    /**
+     * Successful API response.
+     */
+    200: SuccessResponse;
+};
+
+export type ReplaceAuthorizationGroupMembersResponse = ReplaceAuthorizationGroupMembersResponses[keyof ReplaceAuthorizationGroupMembersResponses];
+
+export type ListAuthorizationGroupPermissionsData = {
+    body?: never;
+    path: {
+        id: BigInt;
+    };
+    query?: never;
+    url: '/api/v1/authorization-groups/{id}/permissions';
+};
+
+export type ListAuthorizationGroupPermissionsErrors = {
+    /**
+     * Unauthenticated or invalid authentication.
+     */
+    401: ErrorResponse;
+    /**
+     * Target not found or not visible.
+     */
+    404: ErrorResponse;
+};
+
+export type ListAuthorizationGroupPermissionsError = ListAuthorizationGroupPermissionsErrors[keyof ListAuthorizationGroupPermissionsErrors];
+
+export type ListAuthorizationGroupPermissionsResponses = {
+    /**
+     * Successful API response.
+     */
+    200: SuccessResponse;
+};
+
+export type ListAuthorizationGroupPermissionsResponse = ListAuthorizationGroupPermissionsResponses[keyof ListAuthorizationGroupPermissionsResponses];
+
+export type ReplaceAuthorizationGroupPermissionsData = {
+    body: AuthorizationGroupPermissions2;
+    path: {
+        id: BigInt;
+    };
+    query?: never;
+    url: '/api/v1/authorization-groups/{id}/permissions';
+};
+
+export type ReplaceAuthorizationGroupPermissionsErrors = {
+    /**
+     * Unauthenticated or invalid authentication.
+     */
+    401: ErrorResponse;
+    /**
+     * Visible target but action denied.
+     */
+    403: ErrorResponse;
+    /**
+     * Target not found or not visible.
+     */
+    404: ErrorResponse;
+    /**
+     * Semantically invalid request.
+     */
+    422: ErrorResponse;
+};
+
+export type ReplaceAuthorizationGroupPermissionsError = ReplaceAuthorizationGroupPermissionsErrors[keyof ReplaceAuthorizationGroupPermissionsErrors];
+
+export type ReplaceAuthorizationGroupPermissionsResponses = {
+    /**
+     * Successful API response.
+     */
+    200: SuccessResponse;
+};
+
+export type ReplaceAuthorizationGroupPermissionsResponse = ReplaceAuthorizationGroupPermissionsResponses[keyof ReplaceAuthorizationGroupPermissionsResponses];
+
+export type ListResourcesData = {
+    body?: never;
+    headers?: {
+        /**
+         * Supported request language. Unsupported values fall back to vi.
+         */
+        'Accept-Language'?: 'vi' | 'en';
+        /**
+         * Client request correlation identifier; invalid or missing values are replaced by a generated UUID.
+         */
+        'X-Request-ID'?: RequestId;
+    };
+    path?: never;
+    query?: {
+        q?: string;
+        page?: number;
+        page_size?: number;
+        /**
+         * Allowlisted comma-separated sort terms; a final id ASC tie-breaker is applied.
+         */
+        sort?: string;
+        filter?: {
+            [key: string]: string | Array<string>;
+        };
+    };
+    url: '/api/v1/resources';
+};
+
+export type ListResourcesErrors = {
+    /**
+     * Unauthenticated or invalid authentication.
+     */
+    401: ErrorResponse;
+};
+
+export type ListResourcesError = ListResourcesErrors[keyof ListResourcesErrors];
+
+export type ListResourcesResponses = {
+    /**
+     * Resource collection.
+     */
+    200: ResourceCollection;
+};
+
+export type ListResourcesResponse = ListResourcesResponses[keyof ListResourcesResponses];
+
+export type CreateResourceData = {
+    body: ResourceCreate2;
+    path?: never;
+    query?: never;
+    url: '/api/v1/resources';
+};
+
+export type CreateResourceErrors = {
+    /**
+     * Unauthenticated or invalid authentication.
+     */
+    401: ErrorResponse;
+    /**
+     * Visible target but action denied.
+     */
+    403: ErrorResponse;
+    /**
+     * Conflict, concurrency, uniqueness, or current-state failure.
+     */
+    409: ErrorResponse;
+    /**
+     * Semantically invalid request.
+     */
+    422: ErrorResponse;
+};
+
+export type CreateResourceError = CreateResourceErrors[keyof CreateResourceErrors];
+
+export type CreateResourceResponses = {
+    /**
+     * Resource response.
+     */
+    201: ResourceResponse;
+};
+
+export type CreateResourceResponse = CreateResourceResponses[keyof CreateResourceResponses];
+
+export type DeleteResourceData = {
+    body?: never;
+    path: {
+        id: BigInt;
+    };
+    query?: never;
+    url: '/api/v1/resources/{id}';
+};
+
+export type DeleteResourceErrors = {
+    /**
+     * Unauthenticated or invalid authentication.
+     */
+    401: ErrorResponse;
+    /**
+     * Visible target but action denied.
+     */
+    403: ErrorResponse;
+    /**
+     * Target not found or not visible.
+     */
+    404: ErrorResponse;
+    /**
+     * Conflict, concurrency, uniqueness, or current-state failure.
+     */
+    409: ErrorResponse;
+};
+
+export type DeleteResourceError = DeleteResourceErrors[keyof DeleteResourceErrors];
+
+export type DeleteResourceResponses = {
+    /**
+     * Mutation completed successfully.
+     */
+    204: void;
+};
+
+export type DeleteResourceResponse = DeleteResourceResponses[keyof DeleteResourceResponses];
+
+export type GetResourceData = {
+    body?: never;
+    path: {
+        id: BigInt;
+    };
+    query?: never;
+    url: '/api/v1/resources/{id}';
+};
+
+export type GetResourceErrors = {
+    /**
+     * Unauthenticated or invalid authentication.
+     */
+    401: ErrorResponse;
+    /**
+     * Target not found or not visible.
+     */
+    404: ErrorResponse;
+};
+
+export type GetResourceError = GetResourceErrors[keyof GetResourceErrors];
+
+export type GetResourceResponses = {
+    /**
+     * Resource response.
+     */
+    200: ResourceResponse;
+};
+
+export type GetResourceResponse = GetResourceResponses[keyof GetResourceResponses];
+
+export type UpdateResourceData = {
+    body: ResourcePatch2;
+    path: {
+        id: BigInt;
+    };
+    query?: never;
+    url: '/api/v1/resources/{id}';
+};
+
+export type UpdateResourceErrors = {
+    /**
+     * Unauthenticated or invalid authentication.
+     */
+    401: ErrorResponse;
+    /**
+     * Visible target but action denied.
+     */
+    403: ErrorResponse;
+    /**
+     * Target not found or not visible.
+     */
+    404: ErrorResponse;
+    /**
+     * Semantically invalid request.
+     */
+    422: ErrorResponse;
+};
+
+export type UpdateResourceError = UpdateResourceErrors[keyof UpdateResourceErrors];
+
+export type UpdateResourceResponses = {
+    /**
+     * Resource response.
+     */
+    200: ResourceResponse;
+};
+
+export type UpdateResourceResponse = UpdateResourceResponses[keyof UpdateResourceResponses];
+
+export type ListResourceActionsData = {
+    body?: never;
+    path: {
+        id: BigInt;
+    };
+    query?: never;
+    url: '/api/v1/resources/{id}/actions';
+};
+
+export type ListResourceActionsErrors = {
+    /**
+     * Unauthenticated or invalid authentication.
+     */
+    401: ErrorResponse;
+    /**
+     * Target not found or not visible.
+     */
+    404: ErrorResponse;
+};
+
+export type ListResourceActionsError = ListResourceActionsErrors[keyof ListResourceActionsErrors];
+
+export type ListResourceActionsResponses = {
+    /**
+     * Successful API response.
+     */
+    200: SuccessResponse;
+};
+
+export type ListResourceActionsResponse = ListResourceActionsResponses[keyof ListResourceActionsResponses];
+
+export type CreateResourceActionData = {
+    body: ResourceActionCreate2;
+    path: {
+        id: BigInt;
+    };
+    query?: never;
+    url: '/api/v1/resources/{id}/actions';
+};
+
+export type CreateResourceActionErrors = {
+    /**
+     * Unauthenticated or invalid authentication.
+     */
+    401: ErrorResponse;
+    /**
+     * Visible target but action denied.
+     */
+    403: ErrorResponse;
+    /**
+     * Semantically invalid request.
+     */
+    422: ErrorResponse;
+};
+
+export type CreateResourceActionError = CreateResourceActionErrors[keyof CreateResourceActionErrors];
+
+export type CreateResourceActionResponses = {
+    /**
+     * Successful API response.
+     */
+    201: SuccessResponse;
+};
+
+export type CreateResourceActionResponse = CreateResourceActionResponses[keyof CreateResourceActionResponses];
+
+export type DeleteResourceActionData = {
+    body?: never;
+    path: {
+        id: BigInt;
+        action_id: BigInt;
+    };
+    query?: never;
+    url: '/api/v1/resources/{id}/actions/{action_id}';
+};
+
+export type DeleteResourceActionErrors = {
+    /**
+     * Unauthenticated or invalid authentication.
+     */
+    401: ErrorResponse;
+    /**
+     * Visible target but action denied.
+     */
+    403: ErrorResponse;
+    /**
+     * Target not found or not visible.
+     */
+    404: ErrorResponse;
+};
+
+export type DeleteResourceActionError = DeleteResourceActionErrors[keyof DeleteResourceActionErrors];
+
+export type DeleteResourceActionResponses = {
+    /**
+     * Mutation completed successfully.
+     */
+    204: void;
+};
+
+export type DeleteResourceActionResponse = DeleteResourceActionResponses[keyof DeleteResourceActionResponses];
+
+export type UpdateResourceActionData = {
+    body: ResourceActionPatch2;
+    path: {
+        id: BigInt;
+        action_id: BigInt;
+    };
+    query?: never;
+    url: '/api/v1/resources/{id}/actions/{action_id}';
+};
+
+export type UpdateResourceActionErrors = {
+    /**
+     * Unauthenticated or invalid authentication.
+     */
+    401: ErrorResponse;
+    /**
+     * Visible target but action denied.
+     */
+    403: ErrorResponse;
+    /**
+     * Target not found or not visible.
+     */
+    404: ErrorResponse;
+    /**
+     * Semantically invalid request.
+     */
+    422: ErrorResponse;
+};
+
+export type UpdateResourceActionError = UpdateResourceActionErrors[keyof UpdateResourceActionErrors];
+
+export type UpdateResourceActionResponses = {
+    /**
+     * Successful API response.
+     */
+    200: SuccessResponse;
+};
+
+export type UpdateResourceActionResponse = UpdateResourceActionResponses[keyof UpdateResourceActionResponses];
+
+export type ListPoliciesData = {
+    body?: never;
+    headers?: {
+        /**
+         * Supported request language. Unsupported values fall back to vi.
+         */
+        'Accept-Language'?: 'vi' | 'en';
+        /**
+         * Client request correlation identifier; invalid or missing values are replaced by a generated UUID.
+         */
+        'X-Request-ID'?: RequestId;
+    };
+    path?: never;
+    query?: {
+        q?: string;
+        page?: number;
+        page_size?: number;
+        /**
+         * Allowlisted comma-separated sort terms; a final id ASC tie-breaker is applied.
+         */
+        sort?: string;
+        filter?: {
+            [key: string]: string | Array<string>;
+        };
+    };
+    url: '/api/v1/policies';
+};
+
+export type ListPoliciesErrors = {
+    /**
+     * Unauthenticated or invalid authentication.
+     */
+    401: ErrorResponse;
+};
+
+export type ListPoliciesError = ListPoliciesErrors[keyof ListPoliciesErrors];
+
+export type ListPoliciesResponses = {
+    /**
+     * Policy collection.
+     */
+    200: PolicyCollection;
+};
+
+export type ListPoliciesResponse = ListPoliciesResponses[keyof ListPoliciesResponses];
+
+export type CreatePolicyData = {
+    body: PolicyCreate2;
+    path?: never;
+    query?: never;
+    url: '/api/v1/policies';
+};
+
+export type CreatePolicyErrors = {
+    /**
+     * Unauthenticated or invalid authentication.
+     */
+    401: ErrorResponse;
+    /**
+     * Visible target but action denied.
+     */
+    403: ErrorResponse;
+    /**
+     * Conflict, concurrency, uniqueness, or current-state failure.
+     */
+    409: ErrorResponse;
+    /**
+     * Semantically invalid request.
+     */
+    422: ErrorResponse;
+};
+
+export type CreatePolicyError = CreatePolicyErrors[keyof CreatePolicyErrors];
+
+export type CreatePolicyResponses = {
+    /**
+     * Policy response.
+     */
+    201: PolicyResponse;
+};
+
+export type CreatePolicyResponse = CreatePolicyResponses[keyof CreatePolicyResponses];
+
+export type DeletePolicyData = {
+    body?: never;
+    path: {
+        id: BigInt;
+    };
+    query?: never;
+    url: '/api/v1/policies/{id}';
+};
+
+export type DeletePolicyErrors = {
+    /**
+     * Unauthenticated or invalid authentication.
+     */
+    401: ErrorResponse;
+    /**
+     * Visible target but action denied.
+     */
+    403: ErrorResponse;
+    /**
+     * Target not found or not visible.
+     */
+    404: ErrorResponse;
+};
+
+export type DeletePolicyError = DeletePolicyErrors[keyof DeletePolicyErrors];
+
+export type DeletePolicyResponses = {
+    /**
+     * Mutation completed successfully.
+     */
+    204: void;
+};
+
+export type DeletePolicyResponse = DeletePolicyResponses[keyof DeletePolicyResponses];
+
+export type GetPolicyData = {
+    body?: never;
+    path: {
+        id: BigInt;
+    };
+    query?: never;
+    url: '/api/v1/policies/{id}';
+};
+
+export type GetPolicyErrors = {
+    /**
+     * Unauthenticated or invalid authentication.
+     */
+    401: ErrorResponse;
+    /**
+     * Target not found or not visible.
+     */
+    404: ErrorResponse;
+};
+
+export type GetPolicyError = GetPolicyErrors[keyof GetPolicyErrors];
+
+export type GetPolicyResponses = {
+    /**
+     * Policy response.
+     */
+    200: PolicyResponse;
+};
+
+export type GetPolicyResponse = GetPolicyResponses[keyof GetPolicyResponses];
+
+export type UpdatePolicyData = {
+    body: PolicyPatch2;
+    path: {
+        id: BigInt;
+    };
+    query?: never;
+    url: '/api/v1/policies/{id}';
+};
+
+export type UpdatePolicyErrors = {
+    /**
+     * Unauthenticated or invalid authentication.
+     */
+    401: ErrorResponse;
+    /**
+     * Visible target but action denied.
+     */
+    403: ErrorResponse;
+    /**
+     * Target not found or not visible.
+     */
+    404: ErrorResponse;
+    /**
+     * Semantically invalid request.
+     */
+    422: ErrorResponse;
+};
+
+export type UpdatePolicyError = UpdatePolicyErrors[keyof UpdatePolicyErrors];
+
+export type UpdatePolicyResponses = {
+    /**
+     * Policy response.
+     */
+    200: PolicyResponse;
+};
+
+export type UpdatePolicyResponse = UpdatePolicyResponses[keyof UpdatePolicyResponses];
+
+export type ListAuthorizationLogsData = {
+    body?: never;
+    headers?: {
+        /**
+         * Supported request language. Unsupported values fall back to vi.
+         */
+        'Accept-Language'?: 'vi' | 'en';
+        /**
+         * Client request correlation identifier; invalid or missing values are replaced by a generated UUID.
+         */
+        'X-Request-ID'?: RequestId;
+    };
+    path?: never;
+    query?: {
+        q?: string;
+        page?: number;
+        page_size?: number;
+        /**
+         * Allowlisted comma-separated sort terms; a final id ASC tie-breaker is applied.
+         */
+        sort?: string;
+        filter?: {
+            [key: string]: string | Array<string>;
+        };
+    };
+    url: '/api/v1/authorization-logs';
+};
+
+export type ListAuthorizationLogsErrors = {
+    /**
+     * Unauthenticated or invalid authentication.
+     */
+    401: ErrorResponse;
+};
+
+export type ListAuthorizationLogsError = ListAuthorizationLogsErrors[keyof ListAuthorizationLogsErrors];
+
+export type ListAuthorizationLogsResponses = {
+    /**
+     * Authorization log collection.
+     */
+    200: AuthorizationLogCollection;
+};
+
+export type ListAuthorizationLogsResponse = ListAuthorizationLogsResponses[keyof ListAuthorizationLogsResponses];
+
+export type GetAuthorizationLogData = {
+    body?: never;
+    path: {
+        id: BigInt;
+    };
+    query?: never;
+    url: '/api/v1/authorization-logs/{id}';
+};
+
+export type GetAuthorizationLogErrors = {
+    /**
+     * Unauthenticated or invalid authentication.
+     */
+    401: ErrorResponse;
+    /**
+     * Target not found or not visible.
+     */
+    404: ErrorResponse;
+};
+
+export type GetAuthorizationLogError = GetAuthorizationLogErrors[keyof GetAuthorizationLogErrors];
+
+export type GetAuthorizationLogResponses = {
+    /**
+     * Authorization log response.
+     */
+    200: AuthorizationLogResponse;
+};
+
+export type GetAuthorizationLogResponse = GetAuthorizationLogResponses[keyof GetAuthorizationLogResponses];
+
+export type ListWorkflowStatesData = {
+    body?: never;
+    headers?: {
+        /**
+         * Supported request language. Unsupported values fall back to vi.
+         */
+        'Accept-Language'?: 'vi' | 'en';
+        /**
+         * Client request correlation identifier; invalid or missing values are replaced by a generated UUID.
+         */
+        'X-Request-ID'?: RequestId;
+    };
+    path?: never;
+    query?: {
+        q?: string;
+        page?: number;
+        page_size?: number;
+        /**
+         * Allowlisted comma-separated sort terms; a final id ASC tie-breaker is applied.
+         */
+        sort?: string;
+        filter?: {
+            [key: string]: string | Array<string>;
+        };
+    };
+    url: '/api/v1/workflow-states';
+};
+
+export type ListWorkflowStatesErrors = {
+    /**
+     * Unauthenticated or invalid authentication.
+     */
+    401: ErrorResponse;
+};
+
+export type ListWorkflowStatesError = ListWorkflowStatesErrors[keyof ListWorkflowStatesErrors];
+
+export type ListWorkflowStatesResponses = {
+    /**
+     * Workflow state collection.
+     */
+    200: WorkflowStateCollection;
+};
+
+export type ListWorkflowStatesResponse = ListWorkflowStatesResponses[keyof ListWorkflowStatesResponses];
+
+export type CreateWorkflowStateData = {
+    body: WorkflowStateCreate2;
+    path?: never;
+    query?: never;
+    url: '/api/v1/workflow-states';
+};
+
+export type CreateWorkflowStateErrors = {
+    /**
+     * Unauthenticated or invalid authentication.
+     */
+    401: ErrorResponse;
+    /**
+     * Visible target but action denied.
+     */
+    403: ErrorResponse;
+    /**
+     * Semantically invalid request.
+     */
+    422: ErrorResponse;
+};
+
+export type CreateWorkflowStateError = CreateWorkflowStateErrors[keyof CreateWorkflowStateErrors];
+
+export type CreateWorkflowStateResponses = {
+    /**
+     * Workflow state response.
+     */
+    201: WorkflowStateResponse;
+};
+
+export type CreateWorkflowStateResponse = CreateWorkflowStateResponses[keyof CreateWorkflowStateResponses];
+
+export type GetWorkflowStateData = {
+    body?: never;
+    path: {
+        id: BigInt;
+    };
+    query?: never;
+    url: '/api/v1/workflow-states/{id}';
+};
+
+export type GetWorkflowStateErrors = {
+    /**
+     * Unauthenticated or invalid authentication.
+     */
+    401: ErrorResponse;
+    /**
+     * Target not found or not visible.
+     */
+    404: ErrorResponse;
+};
+
+export type GetWorkflowStateError = GetWorkflowStateErrors[keyof GetWorkflowStateErrors];
+
+export type GetWorkflowStateResponses = {
+    /**
+     * Workflow state response.
+     */
+    200: WorkflowStateResponse;
+};
+
+export type GetWorkflowStateResponse = GetWorkflowStateResponses[keyof GetWorkflowStateResponses];
+
+export type UpdateWorkflowStateData = {
+    body: WorkflowStatePatch2;
+    path: {
+        id: BigInt;
+    };
+    query?: never;
+    url: '/api/v1/workflow-states/{id}';
+};
+
+export type UpdateWorkflowStateErrors = {
+    /**
+     * Unauthenticated or invalid authentication.
+     */
+    401: ErrorResponse;
+    /**
+     * Visible target but action denied.
+     */
+    403: ErrorResponse;
+    /**
+     * Target not found or not visible.
+     */
+    404: ErrorResponse;
+    /**
+     * Semantically invalid request.
+     */
+    422: ErrorResponse;
+};
+
+export type UpdateWorkflowStateError = UpdateWorkflowStateErrors[keyof UpdateWorkflowStateErrors];
+
+export type UpdateWorkflowStateResponses = {
+    /**
+     * Workflow state response.
+     */
+    200: WorkflowStateResponse;
+};
+
+export type UpdateWorkflowStateResponse = UpdateWorkflowStateResponses[keyof UpdateWorkflowStateResponses];
+
+export type SetWorkflowStateStateData = {
+    body: Api030State2;
+    path: {
+        id: BigInt;
+    };
+    query?: never;
+    url: '/api/v1/workflow-states/{id}/actions/set-state';
+};
+
+export type SetWorkflowStateStateErrors = {
+    /**
+     * Unauthenticated or invalid authentication.
+     */
+    401: ErrorResponse;
+    /**
+     * Visible target but action denied.
+     */
+    403: ErrorResponse;
+    /**
+     * Target not found or not visible.
+     */
+    404: ErrorResponse;
+    /**
+     * Semantically invalid request.
+     */
+    422: ErrorResponse;
+};
+
+export type SetWorkflowStateStateError = SetWorkflowStateStateErrors[keyof SetWorkflowStateStateErrors];
+
+export type SetWorkflowStateStateResponses = {
+    /**
+     * Workflow state response.
+     */
+    200: WorkflowStateResponse;
+};
+
+export type SetWorkflowStateStateResponse = SetWorkflowStateStateResponses[keyof SetWorkflowStateStateResponses];
+
+export type ListLifecyclesData = {
+    body?: never;
+    headers?: {
+        /**
+         * Supported request language. Unsupported values fall back to vi.
+         */
+        'Accept-Language'?: 'vi' | 'en';
+        /**
+         * Client request correlation identifier; invalid or missing values are replaced by a generated UUID.
+         */
+        'X-Request-ID'?: RequestId;
+    };
+    path?: never;
+    query?: {
+        q?: string;
+        page?: number;
+        page_size?: number;
+        /**
+         * Allowlisted comma-separated sort terms; a final id ASC tie-breaker is applied.
+         */
+        sort?: string;
+        filter?: {
+            [key: string]: string | Array<string>;
+        };
+    };
+    url: '/api/v1/lifecycles';
+};
+
+export type ListLifecyclesErrors = {
+    /**
+     * Unauthenticated or invalid authentication.
+     */
+    401: ErrorResponse;
+};
+
+export type ListLifecyclesError = ListLifecyclesErrors[keyof ListLifecyclesErrors];
+
+export type ListLifecyclesResponses = {
+    /**
+     * Lifecycle collection.
+     */
+    200: LifecycleCollection;
+};
+
+export type ListLifecyclesResponse = ListLifecyclesResponses[keyof ListLifecyclesResponses];
+
+export type CreateLifecycleData = {
+    body: LifecycleCreate2;
+    path?: never;
+    query?: never;
+    url: '/api/v1/lifecycles';
+};
+
+export type CreateLifecycleErrors = {
+    /**
+     * Unauthenticated or invalid authentication.
+     */
+    401: ErrorResponse;
+    /**
+     * Visible target but action denied.
+     */
+    403: ErrorResponse;
+    /**
+     * Semantically invalid request.
+     */
+    422: ErrorResponse;
+};
+
+export type CreateLifecycleError = CreateLifecycleErrors[keyof CreateLifecycleErrors];
+
+export type CreateLifecycleResponses = {
+    /**
+     * Lifecycle response.
+     */
+    201: LifecycleResponse;
+};
+
+export type CreateLifecycleResponse = CreateLifecycleResponses[keyof CreateLifecycleResponses];
+
+export type GetLifecycleData = {
+    body?: never;
+    path: {
+        id: BigInt;
+    };
+    query?: never;
+    url: '/api/v1/lifecycles/{id}';
+};
+
+export type GetLifecycleErrors = {
+    /**
+     * Unauthenticated or invalid authentication.
+     */
+    401: ErrorResponse;
+    /**
+     * Target not found or not visible.
+     */
+    404: ErrorResponse;
+};
+
+export type GetLifecycleError = GetLifecycleErrors[keyof GetLifecycleErrors];
+
+export type GetLifecycleResponses = {
+    /**
+     * Lifecycle response.
+     */
+    200: LifecycleResponse;
+};
+
+export type GetLifecycleResponse = GetLifecycleResponses[keyof GetLifecycleResponses];
+
+export type UpdateLifecycleData = {
+    body: LifecyclePatch2;
+    path: {
+        id: BigInt;
+    };
+    query?: never;
+    url: '/api/v1/lifecycles/{id}';
+};
+
+export type UpdateLifecycleErrors = {
+    /**
+     * Unauthenticated or invalid authentication.
+     */
+    401: ErrorResponse;
+    /**
+     * Visible target but action denied.
+     */
+    403: ErrorResponse;
+    /**
+     * Target not found or not visible.
+     */
+    404: ErrorResponse;
+    /**
+     * Semantically invalid request.
+     */
+    422: ErrorResponse;
+};
+
+export type UpdateLifecycleError = UpdateLifecycleErrors[keyof UpdateLifecycleErrors];
+
+export type UpdateLifecycleResponses = {
+    /**
+     * Lifecycle response.
+     */
+    200: LifecycleResponse;
+};
+
+export type UpdateLifecycleResponse = UpdateLifecycleResponses[keyof UpdateLifecycleResponses];
+
+export type SetLifecycleStateData = {
+    body: Api030State2;
+    path: {
+        id: BigInt;
+    };
+    query?: never;
+    url: '/api/v1/lifecycles/{id}/actions/set-state';
+};
+
+export type SetLifecycleStateErrors = {
+    /**
+     * Unauthenticated or invalid authentication.
+     */
+    401: ErrorResponse;
+    /**
+     * Visible target but action denied.
+     */
+    403: ErrorResponse;
+    /**
+     * Target not found or not visible.
+     */
+    404: ErrorResponse;
+    /**
+     * Semantically invalid request.
+     */
+    422: ErrorResponse;
+};
+
+export type SetLifecycleStateError = SetLifecycleStateErrors[keyof SetLifecycleStateErrors];
+
+export type SetLifecycleStateResponses = {
+    /**
+     * Lifecycle response.
+     */
+    200: LifecycleResponse;
+};
+
+export type SetLifecycleStateResponse = SetLifecycleStateResponses[keyof SetLifecycleStateResponses];
+
+export type ListLifecycleStatesData = {
+    body?: never;
+    path: {
+        id: BigInt;
+    };
+    query?: never;
+    url: '/api/v1/lifecycles/{id}/states';
+};
+
+export type ListLifecycleStatesErrors = {
+    /**
+     * Unauthenticated or invalid authentication.
+     */
+    401: ErrorResponse;
+    /**
+     * Target not found or not visible.
+     */
+    404: ErrorResponse;
+};
+
+export type ListLifecycleStatesError = ListLifecycleStatesErrors[keyof ListLifecycleStatesErrors];
+
+export type ListLifecycleStatesResponses = {
+    /**
+     * Successful API response.
+     */
+    200: SuccessResponse;
+};
+
+export type ListLifecycleStatesResponse = ListLifecycleStatesResponses[keyof ListLifecycleStatesResponses];
+
+export type ConfigureLifecycleStatesData = {
+    body: LifecycleConfiguration2;
+    path: {
+        id: BigInt;
+    };
+    query?: never;
+    url: '/api/v1/lifecycles/{id}/states';
+};
+
+export type ConfigureLifecycleStatesErrors = {
+    /**
+     * Unauthenticated or invalid authentication.
+     */
+    401: ErrorResponse;
+    /**
+     * Visible target but action denied.
+     */
+    403: ErrorResponse;
+    /**
+     * Target not found or not visible.
+     */
+    404: ErrorResponse;
+    /**
+     * Conflict, concurrency, uniqueness, or current-state failure.
+     */
+    409: ErrorResponse;
+    /**
+     * Semantically invalid request.
+     */
+    422: ErrorResponse;
+};
+
+export type ConfigureLifecycleStatesError = ConfigureLifecycleStatesErrors[keyof ConfigureLifecycleStatesErrors];
+
+export type ConfigureLifecycleStatesResponses = {
+    /**
+     * Successful API response.
+     */
+    200: SuccessResponse;
+};
+
+export type ConfigureLifecycleStatesResponse = ConfigureLifecycleStatesResponses[keyof ConfigureLifecycleStatesResponses];
+
+export type ListLifecycleTransitionsData = {
+    body?: never;
+    path: {
+        id: BigInt;
+    };
+    query?: never;
+    url: '/api/v1/lifecycles/{id}/transitions';
+};
+
+export type ListLifecycleTransitionsErrors = {
+    /**
+     * Unauthenticated or invalid authentication.
+     */
+    401: ErrorResponse;
+    /**
+     * Target not found or not visible.
+     */
+    404: ErrorResponse;
+};
+
+export type ListLifecycleTransitionsError = ListLifecycleTransitionsErrors[keyof ListLifecycleTransitionsErrors];
+
+export type ListLifecycleTransitionsResponses = {
+    /**
+     * Successful API response.
+     */
+    200: SuccessResponse;
+};
+
+export type ListLifecycleTransitionsResponse = ListLifecycleTransitionsResponses[keyof ListLifecycleTransitionsResponses];
+
+export type ConfigureLifecycleTransitionsData = {
+    body: LifecycleConfiguration2;
+    path: {
+        id: BigInt;
+    };
+    query?: never;
+    url: '/api/v1/lifecycles/{id}/transitions';
+};
+
+export type ConfigureLifecycleTransitionsErrors = {
+    /**
+     * Unauthenticated or invalid authentication.
+     */
+    401: ErrorResponse;
+    /**
+     * Visible target but action denied.
+     */
+    403: ErrorResponse;
+    /**
+     * Target not found or not visible.
+     */
+    404: ErrorResponse;
+    /**
+     * Conflict, concurrency, uniqueness, or current-state failure.
+     */
+    409: ErrorResponse;
+    /**
+     * Semantically invalid request.
+     */
+    422: ErrorResponse;
+};
+
+export type ConfigureLifecycleTransitionsError = ConfigureLifecycleTransitionsErrors[keyof ConfigureLifecycleTransitionsErrors];
+
+export type ConfigureLifecycleTransitionsResponses = {
+    /**
+     * Successful API response.
+     */
+    200: SuccessResponse;
+};
+
+export type ConfigureLifecycleTransitionsResponse = ConfigureLifecycleTransitionsResponses[keyof ConfigureLifecycleTransitionsResponses];

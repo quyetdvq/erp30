@@ -2,7 +2,7 @@
 
 import type { Client, ClientMeta, Options as Options2, RequestResult, TDataShape } from './client';
 import { client } from './client.gen';
-import type { CreateContactData, CreateContactErrors, CreateContactResponses, CreateDepartmentData, CreateDepartmentErrors, CreateDepartmentResponses, CreateEmployeeAssignmentData, CreateEmployeeAssignmentErrors, CreateEmployeeAssignmentResponses, CreateEmployeeData, CreateEmployeeErrors, CreateEmployeeResponses, CreateOrganizationData, CreateOrganizationErrors, CreateOrganizationResponses, CreatePositionData, CreatePositionErrors, CreatePositionResponses, CreateProvinceData, CreateProvinceErrors, CreateProvinceResponses, CreateWardData, CreateWardErrors, CreateWardResponses, GetContactData, GetContactErrors, GetContactResponses, GetDepartmentData, GetDepartmentErrors, GetDepartmentResponses, GetEmployeeAssignmentData, GetEmployeeAssignmentErrors, GetEmployeeAssignmentResponses, GetEmployeeData, GetEmployeeErrors, GetEmployeeResponses, GetHealthData, GetHealthErrors, GetHealthResponses, GetOrganizationData, GetOrganizationErrors, GetOrganizationResponses, GetOrganizationTreeData, GetOrganizationTreeErrors, GetOrganizationTreeResponses, GetPositionData, GetPositionErrors, GetPositionResponses, GetProvinceData, GetProvinceErrors, GetProvinceResponses, GetWardData, GetWardErrors, GetWardResponses, ListContactsData, ListContactsErrors, ListContactsResponses, ListDepartmentsData, ListDepartmentsErrors, ListDepartmentsResponses, ListEmployeeAssignmentsData, ListEmployeeAssignmentsErrors, ListEmployeeAssignmentsResponses, ListEmployeesData, ListEmployeesErrors, ListEmployeesResponses, ListOrganizationsData, ListOrganizationsErrors, ListOrganizationsResponses, ListPositionsData, ListPositionsErrors, ListPositionsResponses, ListProvincesData, ListProvincesErrors, ListProvincesResponses, ListWardsData, ListWardsErrors, ListWardsResponses, SetContactStateData, SetContactStateErrors, SetContactStateResponses, SetDepartmentStateData, SetDepartmentStateErrors, SetDepartmentStateResponses, SetEmployeeAssignmentStateData, SetEmployeeAssignmentStateErrors, SetEmployeeAssignmentStateResponses, SetEmployeeStateData, SetEmployeeStateErrors, SetEmployeeStateResponses, SetOrganizationStateData, SetOrganizationStateErrors, SetOrganizationStateResponses, SetPositionStateData, SetPositionStateErrors, SetPositionStateResponses, SetProvinceStateData, SetProvinceStateErrors, SetProvinceStateResponses, SetWardStateData, SetWardStateErrors, SetWardStateResponses, UpdateContactData, UpdateContactErrors, UpdateContactResponses, UpdateDepartmentData, UpdateDepartmentErrors, UpdateDepartmentResponses, UpdateEmployeeAssignmentData, UpdateEmployeeAssignmentErrors, UpdateEmployeeAssignmentResponses, UpdateEmployeeData, UpdateEmployeeErrors, UpdateEmployeeResponses, UpdateOrganizationData, UpdateOrganizationErrors, UpdateOrganizationResponses, UpdatePositionData, UpdatePositionErrors, UpdatePositionResponses, UpdateProvinceData, UpdateProvinceErrors, UpdateProvinceResponses, UpdateWardData, UpdateWardErrors, UpdateWardResponses } from './types.gen';
+import type { ConfigureLifecycleStatesData, ConfigureLifecycleStatesErrors, ConfigureLifecycleStatesResponses, ConfigureLifecycleTransitionsData, ConfigureLifecycleTransitionsErrors, ConfigureLifecycleTransitionsResponses, CreateAuthorizationGroupData, CreateAuthorizationGroupErrors, CreateAuthorizationGroupResponses, CreateContactData, CreateContactErrors, CreateContactResponses, CreateDepartmentData, CreateDepartmentErrors, CreateDepartmentResponses, CreateEmployeeAssignmentData, CreateEmployeeAssignmentErrors, CreateEmployeeAssignmentResponses, CreateEmployeeData, CreateEmployeeErrors, CreateEmployeeResponses, CreateLifecycleData, CreateLifecycleErrors, CreateLifecycleResponses, CreateOrganizationData, CreateOrganizationErrors, CreateOrganizationResponses, CreatePolicyData, CreatePolicyErrors, CreatePolicyResponses, CreatePositionData, CreatePositionErrors, CreatePositionResponses, CreateProvinceData, CreateProvinceErrors, CreateProvinceResponses, CreateResourceActionData, CreateResourceActionErrors, CreateResourceActionResponses, CreateResourceData, CreateResourceErrors, CreateResourceResponses, CreateWardData, CreateWardErrors, CreateWardResponses, CreateWorkflowStateData, CreateWorkflowStateErrors, CreateWorkflowStateResponses, DeletePolicyData, DeletePolicyErrors, DeletePolicyResponses, DeleteResourceActionData, DeleteResourceActionErrors, DeleteResourceActionResponses, DeleteResourceData, DeleteResourceErrors, DeleteResourceResponses, GetAuthorizationGroupData, GetAuthorizationGroupErrors, GetAuthorizationGroupResponses, GetAuthorizationLogData, GetAuthorizationLogErrors, GetAuthorizationLogResponses, GetContactData, GetContactErrors, GetContactResponses, GetDepartmentData, GetDepartmentErrors, GetDepartmentResponses, GetEmployeeAssignmentData, GetEmployeeAssignmentErrors, GetEmployeeAssignmentResponses, GetEmployeeData, GetEmployeeErrors, GetEmployeeResponses, GetHealthData, GetHealthErrors, GetHealthResponses, GetLifecycleData, GetLifecycleErrors, GetLifecycleResponses, GetOrganizationData, GetOrganizationErrors, GetOrganizationResponses, GetOrganizationTreeData, GetOrganizationTreeErrors, GetOrganizationTreeResponses, GetPolicyData, GetPolicyErrors, GetPolicyResponses, GetPositionData, GetPositionErrors, GetPositionResponses, GetProvinceData, GetProvinceErrors, GetProvinceResponses, GetResourceData, GetResourceErrors, GetResourceResponses, GetWardData, GetWardErrors, GetWardResponses, GetWorkflowStateData, GetWorkflowStateErrors, GetWorkflowStateResponses, ListAuthorizationGroupMembersData, ListAuthorizationGroupMembersErrors, ListAuthorizationGroupMembersResponses, ListAuthorizationGroupPermissionsData, ListAuthorizationGroupPermissionsErrors, ListAuthorizationGroupPermissionsResponses, ListAuthorizationGroupsData, ListAuthorizationGroupsErrors, ListAuthorizationGroupsResponses, ListAuthorizationLogsData, ListAuthorizationLogsErrors, ListAuthorizationLogsResponses, ListContactsData, ListContactsErrors, ListContactsResponses, ListDepartmentsData, ListDepartmentsErrors, ListDepartmentsResponses, ListEmployeeAssignmentsData, ListEmployeeAssignmentsErrors, ListEmployeeAssignmentsResponses, ListEmployeesData, ListEmployeesErrors, ListEmployeesResponses, ListLifecyclesData, ListLifecyclesErrors, ListLifecyclesResponses, ListLifecycleStatesData, ListLifecycleStatesErrors, ListLifecycleStatesResponses, ListLifecycleTransitionsData, ListLifecycleTransitionsErrors, ListLifecycleTransitionsResponses, ListOrganizationsData, ListOrganizationsErrors, ListOrganizationsResponses, ListPoliciesData, ListPoliciesErrors, ListPoliciesResponses, ListPositionsData, ListPositionsErrors, ListPositionsResponses, ListProvincesData, ListProvincesErrors, ListProvincesResponses, ListResourceActionsData, ListResourceActionsErrors, ListResourceActionsResponses, ListResourcesData, ListResourcesErrors, ListResourcesResponses, ListWardsData, ListWardsErrors, ListWardsResponses, ListWorkflowStatesData, ListWorkflowStatesErrors, ListWorkflowStatesResponses, ReplaceAuthorizationGroupMembersData, ReplaceAuthorizationGroupMembersErrors, ReplaceAuthorizationGroupMembersResponses, ReplaceAuthorizationGroupPermissionsData, ReplaceAuthorizationGroupPermissionsErrors, ReplaceAuthorizationGroupPermissionsResponses, SetAuthorizationGroupStateData, SetAuthorizationGroupStateErrors, SetAuthorizationGroupStateResponses, SetContactStateData, SetContactStateErrors, SetContactStateResponses, SetDepartmentStateData, SetDepartmentStateErrors, SetDepartmentStateResponses, SetEmployeeAssignmentStateData, SetEmployeeAssignmentStateErrors, SetEmployeeAssignmentStateResponses, SetEmployeeStateData, SetEmployeeStateErrors, SetEmployeeStateResponses, SetLifecycleStateData, SetLifecycleStateErrors, SetLifecycleStateResponses, SetOrganizationStateData, SetOrganizationStateErrors, SetOrganizationStateResponses, SetPositionStateData, SetPositionStateErrors, SetPositionStateResponses, SetProvinceStateData, SetProvinceStateErrors, SetProvinceStateResponses, SetWardStateData, SetWardStateErrors, SetWardStateResponses, SetWorkflowStateStateData, SetWorkflowStateStateErrors, SetWorkflowStateStateResponses, UpdateAuthorizationGroupData, UpdateAuthorizationGroupErrors, UpdateAuthorizationGroupResponses, UpdateContactData, UpdateContactErrors, UpdateContactResponses, UpdateDepartmentData, UpdateDepartmentErrors, UpdateDepartmentResponses, UpdateEmployeeAssignmentData, UpdateEmployeeAssignmentErrors, UpdateEmployeeAssignmentResponses, UpdateEmployeeData, UpdateEmployeeErrors, UpdateEmployeeResponses, UpdateLifecycleData, UpdateLifecycleErrors, UpdateLifecycleResponses, UpdateOrganizationData, UpdateOrganizationErrors, UpdateOrganizationResponses, UpdatePolicyData, UpdatePolicyErrors, UpdatePolicyResponses, UpdatePositionData, UpdatePositionErrors, UpdatePositionResponses, UpdateProvinceData, UpdateProvinceErrors, UpdateProvinceResponses, UpdateResourceActionData, UpdateResourceActionErrors, UpdateResourceActionResponses, UpdateResourceData, UpdateResourceErrors, UpdateResourceResponses, UpdateWardData, UpdateWardErrors, UpdateWardResponses, UpdateWorkflowStateData, UpdateWorkflowStateErrors, UpdateWorkflowStateResponses } from './types.gen';
 
 export type Options<TData extends TDataShape = TDataShape, ThrowOnError extends boolean = boolean, TResponse = unknown> = Options2<TData, ThrowOnError, TResponse> & {
     /**
@@ -526,6 +526,469 @@ export const setEmployeeAssignmentState = <ThrowOnError extends boolean = false>
     responseType: 'json',
     security: [{ scheme: 'bearer', type: 'http' }],
     url: '/api/v1/employee-assignments/{id}/actions/set-state',
+    ...options,
+    headers: {
+        'Content-Type': 'application/json',
+        ...options.headers
+    }
+});
+
+/**
+ * List authorization groups
+ */
+export const listAuthorizationGroups = <ThrowOnError extends boolean = false>(options?: Options<ListAuthorizationGroupsData, ThrowOnError>): RequestResult<ListAuthorizationGroupsResponses, ListAuthorizationGroupsErrors, ThrowOnError> => (options?.client ?? client).get<ListAuthorizationGroupsResponses, ListAuthorizationGroupsErrors, ThrowOnError>({
+    responseType: 'json',
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/api/v1/authorization-groups',
+    ...options
+});
+
+/**
+ * Create authorization group
+ */
+export const createAuthorizationGroup = <ThrowOnError extends boolean = false>(options: Options<CreateAuthorizationGroupData, ThrowOnError>): RequestResult<CreateAuthorizationGroupResponses, CreateAuthorizationGroupErrors, ThrowOnError> => (options.client ?? client).post<CreateAuthorizationGroupResponses, CreateAuthorizationGroupErrors, ThrowOnError>({
+    responseType: 'json',
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/api/v1/authorization-groups',
+    ...options,
+    headers: {
+        'Content-Type': 'application/json',
+        ...options.headers
+    }
+});
+
+/**
+ * Get authorization group
+ */
+export const getAuthorizationGroup = <ThrowOnError extends boolean = false>(options: Options<GetAuthorizationGroupData, ThrowOnError>): RequestResult<GetAuthorizationGroupResponses, GetAuthorizationGroupErrors, ThrowOnError> => (options.client ?? client).get<GetAuthorizationGroupResponses, GetAuthorizationGroupErrors, ThrowOnError>({
+    responseType: 'json',
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/api/v1/authorization-groups/{id}',
+    ...options
+});
+
+/**
+ * Update authorization group
+ */
+export const updateAuthorizationGroup = <ThrowOnError extends boolean = false>(options: Options<UpdateAuthorizationGroupData, ThrowOnError>): RequestResult<UpdateAuthorizationGroupResponses, UpdateAuthorizationGroupErrors, ThrowOnError> => (options.client ?? client).patch<UpdateAuthorizationGroupResponses, UpdateAuthorizationGroupErrors, ThrowOnError>({
+    responseType: 'json',
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/api/v1/authorization-groups/{id}',
+    ...options,
+    headers: {
+        'Content-Type': 'application/json',
+        ...options.headers
+    }
+});
+
+/**
+ * Set authorization group state
+ */
+export const setAuthorizationGroupState = <ThrowOnError extends boolean = false>(options: Options<SetAuthorizationGroupStateData, ThrowOnError>): RequestResult<SetAuthorizationGroupStateResponses, SetAuthorizationGroupStateErrors, ThrowOnError> => (options.client ?? client).post<SetAuthorizationGroupStateResponses, SetAuthorizationGroupStateErrors, ThrowOnError>({
+    responseType: 'json',
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/api/v1/authorization-groups/{id}/actions/set-state',
+    ...options,
+    headers: {
+        'Content-Type': 'application/json',
+        ...options.headers
+    }
+});
+
+/**
+ * List group members
+ */
+export const listAuthorizationGroupMembers = <ThrowOnError extends boolean = false>(options: Options<ListAuthorizationGroupMembersData, ThrowOnError>): RequestResult<ListAuthorizationGroupMembersResponses, ListAuthorizationGroupMembersErrors, ThrowOnError> => (options.client ?? client).get<ListAuthorizationGroupMembersResponses, ListAuthorizationGroupMembersErrors, ThrowOnError>({
+    responseType: 'json',
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/api/v1/authorization-groups/{id}/members',
+    ...options
+});
+
+/**
+ * Replace group members
+ */
+export const replaceAuthorizationGroupMembers = <ThrowOnError extends boolean = false>(options: Options<ReplaceAuthorizationGroupMembersData, ThrowOnError>): RequestResult<ReplaceAuthorizationGroupMembersResponses, ReplaceAuthorizationGroupMembersErrors, ThrowOnError> => (options.client ?? client).put<ReplaceAuthorizationGroupMembersResponses, ReplaceAuthorizationGroupMembersErrors, ThrowOnError>({
+    responseType: 'json',
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/api/v1/authorization-groups/{id}/members',
+    ...options,
+    headers: {
+        'Content-Type': 'application/json',
+        ...options.headers
+    }
+});
+
+/**
+ * List group permissions
+ */
+export const listAuthorizationGroupPermissions = <ThrowOnError extends boolean = false>(options: Options<ListAuthorizationGroupPermissionsData, ThrowOnError>): RequestResult<ListAuthorizationGroupPermissionsResponses, ListAuthorizationGroupPermissionsErrors, ThrowOnError> => (options.client ?? client).get<ListAuthorizationGroupPermissionsResponses, ListAuthorizationGroupPermissionsErrors, ThrowOnError>({
+    responseType: 'json',
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/api/v1/authorization-groups/{id}/permissions',
+    ...options
+});
+
+/**
+ * Replace group permissions
+ */
+export const replaceAuthorizationGroupPermissions = <ThrowOnError extends boolean = false>(options: Options<ReplaceAuthorizationGroupPermissionsData, ThrowOnError>): RequestResult<ReplaceAuthorizationGroupPermissionsResponses, ReplaceAuthorizationGroupPermissionsErrors, ThrowOnError> => (options.client ?? client).put<ReplaceAuthorizationGroupPermissionsResponses, ReplaceAuthorizationGroupPermissionsErrors, ThrowOnError>({
+    responseType: 'json',
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/api/v1/authorization-groups/{id}/permissions',
+    ...options,
+    headers: {
+        'Content-Type': 'application/json',
+        ...options.headers
+    }
+});
+
+/**
+ * List resources
+ */
+export const listResources = <ThrowOnError extends boolean = false>(options?: Options<ListResourcesData, ThrowOnError>): RequestResult<ListResourcesResponses, ListResourcesErrors, ThrowOnError> => (options?.client ?? client).get<ListResourcesResponses, ListResourcesErrors, ThrowOnError>({
+    responseType: 'json',
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/api/v1/resources',
+    ...options
+});
+
+/**
+ * Create resource
+ */
+export const createResource = <ThrowOnError extends boolean = false>(options: Options<CreateResourceData, ThrowOnError>): RequestResult<CreateResourceResponses, CreateResourceErrors, ThrowOnError> => (options.client ?? client).post<CreateResourceResponses, CreateResourceErrors, ThrowOnError>({
+    responseType: 'json',
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/api/v1/resources',
+    ...options,
+    headers: {
+        'Content-Type': 'application/json',
+        ...options.headers
+    }
+});
+
+/**
+ * Delete resource
+ */
+export const deleteResource = <ThrowOnError extends boolean = false>(options: Options<DeleteResourceData, ThrowOnError>): RequestResult<DeleteResourceResponses, DeleteResourceErrors, ThrowOnError> => (options.client ?? client).delete<DeleteResourceResponses, DeleteResourceErrors, ThrowOnError>({
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/api/v1/resources/{id}',
+    ...options
+});
+
+/**
+ * Get resource
+ */
+export const getResource = <ThrowOnError extends boolean = false>(options: Options<GetResourceData, ThrowOnError>): RequestResult<GetResourceResponses, GetResourceErrors, ThrowOnError> => (options.client ?? client).get<GetResourceResponses, GetResourceErrors, ThrowOnError>({
+    responseType: 'json',
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/api/v1/resources/{id}',
+    ...options
+});
+
+/**
+ * Update resource
+ */
+export const updateResource = <ThrowOnError extends boolean = false>(options: Options<UpdateResourceData, ThrowOnError>): RequestResult<UpdateResourceResponses, UpdateResourceErrors, ThrowOnError> => (options.client ?? client).patch<UpdateResourceResponses, UpdateResourceErrors, ThrowOnError>({
+    responseType: 'json',
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/api/v1/resources/{id}',
+    ...options,
+    headers: {
+        'Content-Type': 'application/json',
+        ...options.headers
+    }
+});
+
+/**
+ * List resource actions
+ */
+export const listResourceActions = <ThrowOnError extends boolean = false>(options: Options<ListResourceActionsData, ThrowOnError>): RequestResult<ListResourceActionsResponses, ListResourceActionsErrors, ThrowOnError> => (options.client ?? client).get<ListResourceActionsResponses, ListResourceActionsErrors, ThrowOnError>({
+    responseType: 'json',
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/api/v1/resources/{id}/actions',
+    ...options
+});
+
+/**
+ * Create resource action
+ */
+export const createResourceAction = <ThrowOnError extends boolean = false>(options: Options<CreateResourceActionData, ThrowOnError>): RequestResult<CreateResourceActionResponses, CreateResourceActionErrors, ThrowOnError> => (options.client ?? client).post<CreateResourceActionResponses, CreateResourceActionErrors, ThrowOnError>({
+    responseType: 'json',
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/api/v1/resources/{id}/actions',
+    ...options,
+    headers: {
+        'Content-Type': 'application/json',
+        ...options.headers
+    }
+});
+
+/**
+ * Delete resource action
+ */
+export const deleteResourceAction = <ThrowOnError extends boolean = false>(options: Options<DeleteResourceActionData, ThrowOnError>): RequestResult<DeleteResourceActionResponses, DeleteResourceActionErrors, ThrowOnError> => (options.client ?? client).delete<DeleteResourceActionResponses, DeleteResourceActionErrors, ThrowOnError>({
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/api/v1/resources/{id}/actions/{action_id}',
+    ...options
+});
+
+/**
+ * Update resource action
+ */
+export const updateResourceAction = <ThrowOnError extends boolean = false>(options: Options<UpdateResourceActionData, ThrowOnError>): RequestResult<UpdateResourceActionResponses, UpdateResourceActionErrors, ThrowOnError> => (options.client ?? client).patch<UpdateResourceActionResponses, UpdateResourceActionErrors, ThrowOnError>({
+    responseType: 'json',
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/api/v1/resources/{id}/actions/{action_id}',
+    ...options,
+    headers: {
+        'Content-Type': 'application/json',
+        ...options.headers
+    }
+});
+
+/**
+ * List policies
+ */
+export const listPolicies = <ThrowOnError extends boolean = false>(options?: Options<ListPoliciesData, ThrowOnError>): RequestResult<ListPoliciesResponses, ListPoliciesErrors, ThrowOnError> => (options?.client ?? client).get<ListPoliciesResponses, ListPoliciesErrors, ThrowOnError>({
+    responseType: 'json',
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/api/v1/policies',
+    ...options
+});
+
+/**
+ * Create policy
+ */
+export const createPolicy = <ThrowOnError extends boolean = false>(options: Options<CreatePolicyData, ThrowOnError>): RequestResult<CreatePolicyResponses, CreatePolicyErrors, ThrowOnError> => (options.client ?? client).post<CreatePolicyResponses, CreatePolicyErrors, ThrowOnError>({
+    responseType: 'json',
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/api/v1/policies',
+    ...options,
+    headers: {
+        'Content-Type': 'application/json',
+        ...options.headers
+    }
+});
+
+/**
+ * Delete policy
+ */
+export const deletePolicy = <ThrowOnError extends boolean = false>(options: Options<DeletePolicyData, ThrowOnError>): RequestResult<DeletePolicyResponses, DeletePolicyErrors, ThrowOnError> => (options.client ?? client).delete<DeletePolicyResponses, DeletePolicyErrors, ThrowOnError>({
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/api/v1/policies/{id}',
+    ...options
+});
+
+/**
+ * Get policy
+ */
+export const getPolicy = <ThrowOnError extends boolean = false>(options: Options<GetPolicyData, ThrowOnError>): RequestResult<GetPolicyResponses, GetPolicyErrors, ThrowOnError> => (options.client ?? client).get<GetPolicyResponses, GetPolicyErrors, ThrowOnError>({
+    responseType: 'json',
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/api/v1/policies/{id}',
+    ...options
+});
+
+/**
+ * Update policy
+ */
+export const updatePolicy = <ThrowOnError extends boolean = false>(options: Options<UpdatePolicyData, ThrowOnError>): RequestResult<UpdatePolicyResponses, UpdatePolicyErrors, ThrowOnError> => (options.client ?? client).patch<UpdatePolicyResponses, UpdatePolicyErrors, ThrowOnError>({
+    responseType: 'json',
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/api/v1/policies/{id}',
+    ...options,
+    headers: {
+        'Content-Type': 'application/json',
+        ...options.headers
+    }
+});
+
+/**
+ * List authorization logs
+ */
+export const listAuthorizationLogs = <ThrowOnError extends boolean = false>(options?: Options<ListAuthorizationLogsData, ThrowOnError>): RequestResult<ListAuthorizationLogsResponses, ListAuthorizationLogsErrors, ThrowOnError> => (options?.client ?? client).get<ListAuthorizationLogsResponses, ListAuthorizationLogsErrors, ThrowOnError>({
+    responseType: 'json',
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/api/v1/authorization-logs',
+    ...options
+});
+
+/**
+ * Get authorization log
+ */
+export const getAuthorizationLog = <ThrowOnError extends boolean = false>(options: Options<GetAuthorizationLogData, ThrowOnError>): RequestResult<GetAuthorizationLogResponses, GetAuthorizationLogErrors, ThrowOnError> => (options.client ?? client).get<GetAuthorizationLogResponses, GetAuthorizationLogErrors, ThrowOnError>({
+    responseType: 'json',
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/api/v1/authorization-logs/{id}',
+    ...options
+});
+
+/**
+ * List workflow states
+ */
+export const listWorkflowStates = <ThrowOnError extends boolean = false>(options?: Options<ListWorkflowStatesData, ThrowOnError>): RequestResult<ListWorkflowStatesResponses, ListWorkflowStatesErrors, ThrowOnError> => (options?.client ?? client).get<ListWorkflowStatesResponses, ListWorkflowStatesErrors, ThrowOnError>({
+    responseType: 'json',
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/api/v1/workflow-states',
+    ...options
+});
+
+/**
+ * Create workflow state
+ */
+export const createWorkflowState = <ThrowOnError extends boolean = false>(options: Options<CreateWorkflowStateData, ThrowOnError>): RequestResult<CreateWorkflowStateResponses, CreateWorkflowStateErrors, ThrowOnError> => (options.client ?? client).post<CreateWorkflowStateResponses, CreateWorkflowStateErrors, ThrowOnError>({
+    responseType: 'json',
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/api/v1/workflow-states',
+    ...options,
+    headers: {
+        'Content-Type': 'application/json',
+        ...options.headers
+    }
+});
+
+/**
+ * Get workflow state
+ */
+export const getWorkflowState = <ThrowOnError extends boolean = false>(options: Options<GetWorkflowStateData, ThrowOnError>): RequestResult<GetWorkflowStateResponses, GetWorkflowStateErrors, ThrowOnError> => (options.client ?? client).get<GetWorkflowStateResponses, GetWorkflowStateErrors, ThrowOnError>({
+    responseType: 'json',
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/api/v1/workflow-states/{id}',
+    ...options
+});
+
+/**
+ * Update workflow state
+ */
+export const updateWorkflowState = <ThrowOnError extends boolean = false>(options: Options<UpdateWorkflowStateData, ThrowOnError>): RequestResult<UpdateWorkflowStateResponses, UpdateWorkflowStateErrors, ThrowOnError> => (options.client ?? client).patch<UpdateWorkflowStateResponses, UpdateWorkflowStateErrors, ThrowOnError>({
+    responseType: 'json',
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/api/v1/workflow-states/{id}',
+    ...options,
+    headers: {
+        'Content-Type': 'application/json',
+        ...options.headers
+    }
+});
+
+/**
+ * Set workflow state status
+ */
+export const setWorkflowStateState = <ThrowOnError extends boolean = false>(options: Options<SetWorkflowStateStateData, ThrowOnError>): RequestResult<SetWorkflowStateStateResponses, SetWorkflowStateStateErrors, ThrowOnError> => (options.client ?? client).post<SetWorkflowStateStateResponses, SetWorkflowStateStateErrors, ThrowOnError>({
+    responseType: 'json',
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/api/v1/workflow-states/{id}/actions/set-state',
+    ...options,
+    headers: {
+        'Content-Type': 'application/json',
+        ...options.headers
+    }
+});
+
+/**
+ * List lifecycles
+ */
+export const listLifecycles = <ThrowOnError extends boolean = false>(options?: Options<ListLifecyclesData, ThrowOnError>): RequestResult<ListLifecyclesResponses, ListLifecyclesErrors, ThrowOnError> => (options?.client ?? client).get<ListLifecyclesResponses, ListLifecyclesErrors, ThrowOnError>({
+    responseType: 'json',
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/api/v1/lifecycles',
+    ...options
+});
+
+/**
+ * Create lifecycle
+ */
+export const createLifecycle = <ThrowOnError extends boolean = false>(options: Options<CreateLifecycleData, ThrowOnError>): RequestResult<CreateLifecycleResponses, CreateLifecycleErrors, ThrowOnError> => (options.client ?? client).post<CreateLifecycleResponses, CreateLifecycleErrors, ThrowOnError>({
+    responseType: 'json',
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/api/v1/lifecycles',
+    ...options,
+    headers: {
+        'Content-Type': 'application/json',
+        ...options.headers
+    }
+});
+
+/**
+ * Get lifecycle
+ */
+export const getLifecycle = <ThrowOnError extends boolean = false>(options: Options<GetLifecycleData, ThrowOnError>): RequestResult<GetLifecycleResponses, GetLifecycleErrors, ThrowOnError> => (options.client ?? client).get<GetLifecycleResponses, GetLifecycleErrors, ThrowOnError>({
+    responseType: 'json',
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/api/v1/lifecycles/{id}',
+    ...options
+});
+
+/**
+ * Update lifecycle
+ */
+export const updateLifecycle = <ThrowOnError extends boolean = false>(options: Options<UpdateLifecycleData, ThrowOnError>): RequestResult<UpdateLifecycleResponses, UpdateLifecycleErrors, ThrowOnError> => (options.client ?? client).patch<UpdateLifecycleResponses, UpdateLifecycleErrors, ThrowOnError>({
+    responseType: 'json',
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/api/v1/lifecycles/{id}',
+    ...options,
+    headers: {
+        'Content-Type': 'application/json',
+        ...options.headers
+    }
+});
+
+/**
+ * Set lifecycle status
+ */
+export const setLifecycleState = <ThrowOnError extends boolean = false>(options: Options<SetLifecycleStateData, ThrowOnError>): RequestResult<SetLifecycleStateResponses, SetLifecycleStateErrors, ThrowOnError> => (options.client ?? client).post<SetLifecycleStateResponses, SetLifecycleStateErrors, ThrowOnError>({
+    responseType: 'json',
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/api/v1/lifecycles/{id}/actions/set-state',
+    ...options,
+    headers: {
+        'Content-Type': 'application/json',
+        ...options.headers
+    }
+});
+
+/**
+ * List lifecycle states
+ */
+export const listLifecycleStates = <ThrowOnError extends boolean = false>(options: Options<ListLifecycleStatesData, ThrowOnError>): RequestResult<ListLifecycleStatesResponses, ListLifecycleStatesErrors, ThrowOnError> => (options.client ?? client).get<ListLifecycleStatesResponses, ListLifecycleStatesErrors, ThrowOnError>({
+    responseType: 'json',
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/api/v1/lifecycles/{id}/states',
+    ...options
+});
+
+/**
+ * Add lifecycle state and transition configuration
+ */
+export const configureLifecycleStates = <ThrowOnError extends boolean = false>(options: Options<ConfigureLifecycleStatesData, ThrowOnError>): RequestResult<ConfigureLifecycleStatesResponses, ConfigureLifecycleStatesErrors, ThrowOnError> => (options.client ?? client).put<ConfigureLifecycleStatesResponses, ConfigureLifecycleStatesErrors, ThrowOnError>({
+    responseType: 'json',
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/api/v1/lifecycles/{id}/states',
+    ...options,
+    headers: {
+        'Content-Type': 'application/json',
+        ...options.headers
+    }
+});
+
+/**
+ * List lifecycle transitions
+ */
+export const listLifecycleTransitions = <ThrowOnError extends boolean = false>(options: Options<ListLifecycleTransitionsData, ThrowOnError>): RequestResult<ListLifecycleTransitionsResponses, ListLifecycleTransitionsErrors, ThrowOnError> => (options.client ?? client).get<ListLifecycleTransitionsResponses, ListLifecycleTransitionsErrors, ThrowOnError>({
+    responseType: 'json',
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/api/v1/lifecycles/{id}/transitions',
+    ...options
+});
+
+/**
+ * Add lifecycle transition configuration
+ */
+export const configureLifecycleTransitions = <ThrowOnError extends boolean = false>(options: Options<ConfigureLifecycleTransitionsData, ThrowOnError>): RequestResult<ConfigureLifecycleTransitionsResponses, ConfigureLifecycleTransitionsErrors, ThrowOnError> => (options.client ?? client).put<ConfigureLifecycleTransitionsResponses, ConfigureLifecycleTransitionsErrors, ThrowOnError>({
+    responseType: 'json',
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/api/v1/lifecycles/{id}/transitions',
     ...options,
     headers: {
         'Content-Type': 'application/json',
