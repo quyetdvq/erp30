@@ -120,7 +120,7 @@ registry, dependency graph, Gate 7 count, or implementation status.
 | P1-API-003 | Allowlisted query, sort, filter, pagination, and authorization-safe totals | P1-API-001 | `CONTRACT_READY` | Uses the common query contract in section 4. |
 | P1-API-010 | Foundation, Organization, and Contact routes/actions in section 7 | Gate 2 | `CONTRACT_READY` | Export media type remains pending where noted. |
 | P1-API-020 | Employee and Assignment routes/actions in section 8 | Gate 2 | `CONTRACT_READY` | Employee `gender` uses the DEC-P1-001 nullable canonical catalog. Employee MASTER/GROUP scope and Assignment ORGANIZATION scope are now canonical under CHANGE-AUTH-DOMAIN-001. |
-| P1-API-030 | Resource, Authorization Group, Policy, Log, Workflow, and Lifecycle routes/actions in section 9 | Gate 3 | `CONTRACT_READY` | Shield User writes remain excluded and pending. |
+| P1-API-030 | Resource, Authorization Group, Policy, Log, Workflow, Lifecycle, and approved Shield User routes/actions in section 9 | Gate 3 + change control | `CONTRACT_READY` | Runtime User mutation remains a retrofit task; no implementation is started by this document. |
 | P1-API-040 | Auto Numbering series and non-consuming validation routes in section 10 | Gate 4 | `CONTRACT_READY` | Uses `resource.configure_numbering`; no new Resource/Action. |
 | P1-API-050 | Product Group, UOM, Product, Price List, and COMBO composition routes in sections 11-12 | Gate 5 | `CONTRACT_READY` | Public Price Resolution and COMBO preview APIs are excluded and pending. |
 | P1-API-060 | Product Import job start/list/detail/rows/report routes in section 13 | Gate 6 | `CONTRACT_READY` | Row DTO and filters are limited to canonical `import_job_rows`; no persisted Record Type/Source Key/raw payload. |
@@ -892,7 +892,7 @@ GET /users
 GET /users/{id}
 ```
 
-Read contract can become `CONTRACT_READY` after `P1-ENV-001` confirms Shield adapter mapping.
+Read and write contracts are `CONTRACT_READY` after the Shield adapter/schema inspection recorded by `CHANGE-USER-IDENTITY-MUTATION-001`; runtime implementation remains a retrofit task.
 
 Write API remains:
 
