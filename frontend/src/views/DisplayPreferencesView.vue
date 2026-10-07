@@ -1,9 +1,10 @@
 <script setup lang="ts">
-import { computed } from 'vue'
+import { computed, onMounted, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 
 import { setLocale, supportedLocales, type AppLocale } from '@/i18n'
 import { useFormatters } from '@/composables/useFormatters'
+import { useAuthStore } from '@/stores/auth'
 import {
   DISPLAY_SETTING_KEYS,
   type DisplaySettingKey,
@@ -12,8 +13,17 @@ import {
 import { useDisplaySettingsStore } from '@/stores/displaySettings'
 
 const { t, locale } = useI18n()
+const auth = useAuthStore()
 const settings = useDisplaySettingsStore()
 const formatters = useFormatters()
+
+function activateAuthenticatedUser(): void {
+  const userId = auth.user?.id
+  if (userId !== undefined && userId !== null) settings.activateUser(userId)
+}
+
+onMounted(activateAuthenticatedUser)
+watch(() => auth.user?.id, activateAuthenticatedUser)
 
 const fieldLabels: Record<DisplaySettingKey, string> = {
   'Display.timezone': 'displaySettings.fields.timezone',

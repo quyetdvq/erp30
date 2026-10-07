@@ -27,6 +27,16 @@ clear `ui.presentation.<user-id>`, preserving user-switch isolation. Preview
 examples use the shared presentation formatter surface and do not affect
 business timezone or canonical API values.
 
+## Corrective follow-up
+
+The preferences view now re-activates the authenticated user on mount and when
+the session user ID changes. This closes the lifecycle gap where a direct route
+mount could render controls before the display store had loaded the user's
+browser namespace. The focused Playwright journey also verifies that a changed
+canonical value remains after a page reload. Persistence remains browser-local
+by approved DSP-005 semantics; no server-side USER route or CORS-dependent
+mutation was introduced.
+
 ## Validation
 
 | Check | Result |
@@ -36,12 +46,11 @@ business timezone or canonical API values.
 | `pnpm run lint:oxlint` | PASS |
 | `pnpm run lint:eslint` | PASS |
 | `pnpm run format:check` | PASS |
-| `pnpm run test:unit -- --run` | PASS; 7 files, 12 tests |
+| `pnpm run test:unit -- --run` | PASS; 10 files, 21 tests |
 | `pnpm run build-only` | PASS; production Vite build |
 | `pnpm run openapi:generate:check` | PASS; 17 generated TypeScript files tool-owned |
-| `pnpm exec playwright test e2e/dsp006-display-settings.spec.ts --project=chromium` | PASS; 2 tests |
-| `pnpm run test:e2e -- --project=chromium` | PASS; 8 tests |
-| `php vendor/bin/phpunit --no-coverage --filter P1Dsp` | PASS; 28 tests, 207 assertions |
+| `pnpm exec playwright test e2e/dsp006-display-settings.spec.ts --project=chromium` | PASS; 3 tests, including reload persistence |
+| `cd backend; php vendor/bin/phpunit --no-coverage --filter P1Dsp` | PASS; 28 tests, 207 assertions |
 | `git diff --check` | PASS |
 | `php .codex/skills/dinkerp-implementation/scripts/validate-context-cache.php` | PASS |
 | `php .codex/skills/dinkerp-implementation/scripts/validate-ledger.php` | PASS after ledger update |

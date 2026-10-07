@@ -180,6 +180,10 @@ test('My Display Preferences stays local and isolates user namespace', async ({ 
   await expect
     .poll(() => page.evaluate(() => localStorage.getItem('ui.presentation.7')))
     .not.toContain('quantityDecimals')
+  await page.locator('#preference-Display\\.quantityDecimals').fill('1')
+  await page.locator('#preference-Display\\.quantityDecimals').dispatchEvent('change')
+  await page.reload()
+  await expect(page.locator('#preference-Display\\.quantityDecimals')).toHaveValue('1')
   await page.locator('#preference-language').selectOption('en')
   await expect.poll(() => page.evaluate(() => localStorage.getItem('ui.locale'))).toBe('en')
 })
