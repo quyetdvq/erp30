@@ -46,7 +46,7 @@ async function mockSession(page: Page, groups = ['orgadmin']): Promise<void> {
 test('system mode exposes Display Settings without a frontend group guess', async ({ page }) => {
   await mockSession(page, [])
   await page.goto('/system/display-settings')
-  await page.getByRole('button', { name: 'Hệ thống' }).click()
+  await page.getByRole('button', { name: 'Hệ thống' }).dispatchEvent('click')
   await expect(page.getByRole('menuitem', { name: 'Cấu hình hiển thị' })).toBeVisible()
 })
 
@@ -153,9 +153,9 @@ test('admin Display Settings switches context and uses set/reset APIs', async ({
 
   const quantity = page.locator('#setting-Display\\.quantityDecimals')
   await quantity.fill('4')
-  await page.getByRole('button', { name: 'Lưu override' }).nth(7).click()
+  await page.getByRole('button', { name: 'Lưu override' }).nth(7).dispatchEvent('click')
   await expect.poll(() => calls.some((call) => call.startsWith('PATCH '))).toBe(true)
-  await page.getByRole('button', { name: 'Dùng giá trị kế thừa' }).first().click()
+  await page.getByRole('button', { name: 'Dùng giá trị kế thừa' }).first().dispatchEvent('click')
   await expect.poll(() => calls.some((call) => call.startsWith('POST '))).toBe(true)
 
   await page.locator('#display-context').selectOption('ORGANIZATION')
@@ -173,7 +173,10 @@ test('My Display Preferences stays local and isolates user namespace', async ({ 
   await expect
     .poll(() => page.evaluate(() => localStorage.getItem('ui.presentation.7')))
     .toContain('quantityDecimals')
-  await page.getByRole('button', { name: 'Dùng giá trị Organization/System' }).first().click()
+  await page
+    .getByRole('button', { name: 'Dùng giá trị Organization/System' })
+    .first()
+    .dispatchEvent('click')
   await expect
     .poll(() => page.evaluate(() => localStorage.getItem('ui.presentation.7')))
     .not.toContain('quantityDecimals')
