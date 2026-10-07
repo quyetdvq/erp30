@@ -83,7 +83,7 @@ export async function getDisplaySettingOrganizations(): Promise<Organization[]> 
     getOrganizationTree({
       client,
       headers: languageHeaders(),
-      query: { page_size: 200, sort: 'name.asc,id.asc' },
+      query: { page_size: 200, sort: 'name' },
       throwOnError: true,
     }),
   )
