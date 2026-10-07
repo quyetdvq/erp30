@@ -8,6 +8,11 @@ $routes->get('/', 'Home::index');
 $routes->group('api/v1', ['filter' => 'cors'], static function (RouteCollection $routes): void {
     $routes->get('health', 'Api\\Health::index');
     $routes->options('health', 'Api\\Health::options');
+    $routes->get('display-settings/runtime', 'Api\\DisplaySettings::runtime');
+    $routes->get('display-settings/definitions', 'Api\\DisplaySettings::definitions');
+    $routes->get('display-settings/values', 'Api\\DisplaySettings::values');
+    $routes->patch('display-settings', 'Api\\DisplaySettings::update');
+    $routes->post('display-settings/actions/reset', 'Api\\DisplaySettings::reset');
     $routes->post('auth/login', 'Api\\Auth::login');
     $routes->post('auth/logout', 'Api\\Auth::logout');
     $routes->get('auth/me', 'Api\\Auth::me');

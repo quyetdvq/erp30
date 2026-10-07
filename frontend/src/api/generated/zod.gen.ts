@@ -63,10 +63,100 @@ export const zHealthData = z.object({
     timestamp: z.iso.datetime()
 });
 
+/**
+ * Positive database BIGINT serialized as a JSON string.
+ */
+export const zPositiveBigInt = z.string().regex(/^[1-9][0-9]*$/);
+
+export const zDisplaySettingsRuntime = z.object({
+    timezone: z.string(),
+    date: z.object({
+        format: z.string(),
+        date_time_format: z.string(),
+        time_format: z.string(),
+        first_day_of_week: z.string()
+    }),
+    number: z.object({
+        decimal_separator: z.string(),
+        group_separator: z.string(),
+        quantity_decimals: z.int().gte(0),
+        percentage_decimals: z.int().gte(0),
+        trailing_zeros: z.boolean()
+    }),
+    money: z.object({
+        decimal_separator: z.string(),
+        group_separator: z.string(),
+        symbol_mode: z.string(),
+        symbol_position: z.string(),
+        decimals_mode: z.string()
+    })
+});
+
+export const zDisplaySettingDefinition = z.object({
+    key: z.string(),
+    category: z.string(),
+    data_type: z.enum([
+        'string',
+        'integer',
+        'boolean'
+    ]),
+    default: z.unknown(),
+    allowed_values: z.array(z.unknown()).optional(),
+    min: z.int().optional(),
+    max: z.int().optional(),
+    user_overridable: z.boolean()
+});
+
+export const zDisplaySettingContext = z.union([
+    z.object({
+        type: z.literal('SYSTEM')
+    }),
+    z.object({
+        type: z.literal('ORGANIZATION'),
+        organization_id: zPositiveBigInt
+    })
+]);
+
+export const zDisplaySettingValue = z.object({
+    key: z.string(),
+    override_value: z.unknown(),
+    effective_value: z.unknown(),
+    source: z.object({
+        type: z.enum(['SYSTEM', 'ORGANIZATION']),
+        organization_id: zPositiveBigInt.nullable()
+    }),
+    inherited: z.boolean()
+});
+
+export const zDisplaySettingsPatch = z.object({
+    context: zDisplaySettingContext,
+    changes: z.array(z.object({
+        key: z.string(),
+        value: z.unknown()
+    })).min(1)
+});
+
+export const zDisplaySettingsReset = z.object({
+    context: zDisplaySettingContext,
+    keys: z.array(z.string()).min(1)
+});
+
 export const zHealthResponse = z.object({
     data: zHealthData,
     meta: zMeta
 });
+
+export const zDisplaySettingsRuntimeResponse = zSuccessResponse.and(z.object({
+    data: zDisplaySettingsRuntime.optional()
+}));
+
+export const zDisplaySettingDefinitionsResponse = zSuccessResponse.and(z.object({
+    data: z.array(zDisplaySettingDefinition).optional()
+}));
+
+export const zDisplaySettingValuesResponse = zSuccessResponse.and(z.object({
+    data: z.array(zDisplaySettingValue).optional()
+}));
 
 export const zProductGroup = z.object({
     id: zBigInt,
@@ -1137,6 +1227,10 @@ export const zFilter = z.record(z.string(), z.union([
     z.array(z.string())
 ]));
 
+export const zDisplayOrganizationId = zPositiveBigInt;
+
+export const zDisplayContextType = z.enum(['SYSTEM', 'ORGANIZATION']);
+
 export const zProvinceCreate2 = zProvinceCreate;
 
 export const zProvincePatch2 = zProvincePatch;
@@ -1241,6 +1335,10 @@ export const zComboItems = zComboItemsRequest;
 
 export const zProductImportStart2 = zProductImportStart;
 
+export const zDisplaySettingsPatch2 = zDisplaySettingsPatch;
+
+export const zDisplaySettingsReset2 = zDisplaySettingsReset;
+
 export const zGetHealthHeaders = z.object({
     'Accept-Language': z.enum(['vi', 'en']).optional().default('vi'),
     'X-Request-ID': zRequestId.optional()
@@ -1250,6 +1348,69 @@ export const zGetHealthHeaders = z.object({
  * Service is available.
  */
 export const zGetHealthResponse = zHealthResponse;
+
+export const zGetDisplaySettingsRuntimeHeaders = z.object({
+    'Accept-Language': z.enum(['vi', 'en']).optional().default('vi'),
+    'X-Request-ID': zRequestId.optional()
+});
+
+export const zGetDisplaySettingsRuntimeQuery = z.object({
+    organization_id: zPositiveBigInt.optional()
+});
+
+/**
+ * Presentation-only runtime snapshot.
+ */
+export const zGetDisplaySettingsRuntimeResponse = zDisplaySettingsRuntimeResponse;
+
+export const zListDisplaySettingDefinitionsHeaders = z.object({
+    'Accept-Language': z.enum(['vi', 'en']).optional().default('vi'),
+    'X-Request-ID': zRequestId.optional()
+});
+
+/**
+ * Registered Display Settings definitions.
+ */
+export const zListDisplaySettingDefinitionsResponse = zDisplaySettingDefinitionsResponse;
+
+export const zListDisplaySettingValuesHeaders = z.object({
+    'Accept-Language': z.enum(['vi', 'en']).optional().default('vi'),
+    'X-Request-ID': zRequestId.optional()
+});
+
+export const zListDisplaySettingValuesQuery = z.object({
+    context_type: z.enum(['SYSTEM', 'ORGANIZATION']),
+    organization_id: zPositiveBigInt.optional()
+});
+
+/**
+ * Display Settings values and effective source metadata.
+ */
+export const zListDisplaySettingValuesResponse = zDisplaySettingValuesResponse;
+
+export const zUpdateDisplaySettingsBody = zDisplaySettingsPatch2;
+
+export const zUpdateDisplaySettingsHeaders = z.object({
+    'Accept-Language': z.enum(['vi', 'en']).optional().default('vi'),
+    'X-Request-ID': zRequestId.optional()
+});
+
+/**
+ * Display Settings values and effective source metadata.
+ */
+export const zUpdateDisplaySettingsResponse = zDisplaySettingValuesResponse;
+
+export const zResetDisplaySettingsBody = zDisplaySettingsReset2;
+
+export const zResetDisplaySettingsHeaders = z.object({
+    'Accept-Language': z.enum(['vi', 'en']).optional().default('vi'),
+    'X-Request-ID': zRequestId.optional()
+});
+
+/**
+ * Display Settings values and effective source metadata.
+ */
+export const zResetDisplaySettingsResponse = zDisplaySettingValuesResponse;
 
 export const zListProvincesHeaders = z.object({
     'Accept-Language': z.enum(['vi', 'en']).optional().default('vi'),

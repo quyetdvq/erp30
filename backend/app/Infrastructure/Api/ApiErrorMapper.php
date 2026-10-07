@@ -39,6 +39,9 @@ final class ApiErrorMapper
 
         if ($exception instanceof DomainException) {
             $code = strtoupper($exception->getErrorCode());
+            if ($code === 'DISPLAY_SETTING_NOT_FOUND') {
+                return 422;
+            }
             return match (true) {
                 str_contains($code, 'NOT_FOUND') || str_contains($code, 'NOTFOUND') => 404,
                 str_contains($code, 'UNAUTHENTICATED') || str_contains($code, 'INVALID_CREDENTIAL') => 401,

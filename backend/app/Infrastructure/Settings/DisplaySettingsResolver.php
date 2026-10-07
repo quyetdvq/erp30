@@ -66,6 +66,12 @@ final class DisplaySettingsResolver
     }
 
     /** @return list<DisplaySettingsContext> */
+    public function contextsFor(int|string|null $organizationId = null): array
+    {
+        return $this->contexts($organizationId);
+    }
+
+    /** @return list<DisplaySettingsContext> */
     private function contexts(int|string|null $organizationId): array
     {
         $contexts = [];

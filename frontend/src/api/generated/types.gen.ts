@@ -68,9 +68,92 @@ export type HealthData = {
     timestamp: string;
 };
 
+/**
+ * Positive database BIGINT serialized as a JSON string.
+ */
+export type PositiveBigInt = string;
+
+export type DisplaySettingsRuntime = {
+    timezone: string;
+    date: {
+        format: string;
+        date_time_format: string;
+        time_format: string;
+        first_day_of_week: string;
+    };
+    number: {
+        decimal_separator: string;
+        group_separator: string;
+        quantity_decimals: number;
+        percentage_decimals: number;
+        trailing_zeros: boolean;
+    };
+    money: {
+        decimal_separator: string;
+        group_separator: string;
+        symbol_mode: string;
+        symbol_position: string;
+        decimals_mode: string;
+    };
+};
+
+export type DisplaySettingDefinition = {
+    key: string;
+    category: string;
+    data_type: 'string' | 'integer' | 'boolean';
+    default: unknown;
+    allowed_values?: Array<unknown>;
+    min?: number;
+    max?: number;
+    user_overridable: boolean;
+};
+
+export type DisplaySettingContext = {
+    type: 'SYSTEM';
+} | {
+    type: 'ORGANIZATION';
+    organization_id: PositiveBigInt;
+};
+
+export type DisplaySettingValue = {
+    key: string;
+    override_value: unknown;
+    effective_value: unknown;
+    source: {
+        type: 'SYSTEM' | 'ORGANIZATION';
+        organization_id: PositiveBigInt | null;
+    };
+    inherited: boolean;
+};
+
+export type DisplaySettingsPatch = {
+    context: DisplaySettingContext;
+    changes: Array<{
+        key: string;
+        value: unknown;
+    }>;
+};
+
+export type DisplaySettingsReset = {
+    context: DisplaySettingContext;
+    keys: Array<string>;
+};
+
 export type HealthResponse = {
     data: HealthData;
     meta: Meta;
+};
+
+export type DisplaySettingsRuntimeResponse = SuccessResponse & {
+    data?: DisplaySettingsRuntime;
+};
+
+export type DisplaySettingDefinitionsResponse = SuccessResponse & {
+    data?: Array<DisplaySettingDefinition>;
+};
+
+export type DisplaySettingValuesResponse = SuccessResponse & {
+    data?: Array<DisplaySettingValue>;
 };
 
 export type ProductGroup = {
@@ -998,6 +1081,10 @@ export type Filter = {
     [key: string]: string | Array<string>;
 };
 
+export type DisplayOrganizationId = PositiveBigInt;
+
+export type DisplayContextType = 'SYSTEM' | 'ORGANIZATION';
+
 export type ProvinceCreate2 = ProvinceCreate;
 
 export type ProvincePatch2 = ProvincePatch;
@@ -1102,6 +1189,10 @@ export type ComboItems = ComboItemsRequest;
 
 export type ProductImportStart2 = ProductImportStart;
 
+export type DisplaySettingsPatch2 = DisplaySettingsPatch;
+
+export type DisplaySettingsReset2 = DisplaySettingsReset;
+
 export type GetHealthData = {
     body?: never;
     headers?: {
@@ -1160,6 +1251,234 @@ export type GetHealthResponses = {
 };
 
 export type GetHealthResponse = GetHealthResponses[keyof GetHealthResponses];
+
+export type GetDisplaySettingsRuntimeData = {
+    body?: never;
+    headers?: {
+        /**
+         * Supported request language. Unsupported values fall back to vi.
+         */
+        'Accept-Language'?: 'vi' | 'en';
+        /**
+         * Client request correlation identifier; invalid or missing values are replaced by a generated UUID.
+         */
+        'X-Request-ID'?: RequestId;
+    };
+    path?: never;
+    query?: {
+        organization_id?: PositiveBigInt;
+    };
+    url: '/api/v1/display-settings/runtime';
+};
+
+export type GetDisplaySettingsRuntimeErrors = {
+    /**
+     * Unauthenticated or invalid authentication.
+     */
+    401: ErrorResponse;
+    /**
+     * Target not found or not visible.
+     */
+    404: ErrorResponse;
+    /**
+     * Semantically invalid request.
+     */
+    422: ErrorResponse;
+};
+
+export type GetDisplaySettingsRuntimeError = GetDisplaySettingsRuntimeErrors[keyof GetDisplaySettingsRuntimeErrors];
+
+export type GetDisplaySettingsRuntimeResponses = {
+    /**
+     * Presentation-only runtime snapshot.
+     */
+    200: DisplaySettingsRuntimeResponse;
+};
+
+export type GetDisplaySettingsRuntimeResponse = GetDisplaySettingsRuntimeResponses[keyof GetDisplaySettingsRuntimeResponses];
+
+export type ListDisplaySettingDefinitionsData = {
+    body?: never;
+    headers?: {
+        /**
+         * Supported request language. Unsupported values fall back to vi.
+         */
+        'Accept-Language'?: 'vi' | 'en';
+        /**
+         * Client request correlation identifier; invalid or missing values are replaced by a generated UUID.
+         */
+        'X-Request-ID'?: RequestId;
+    };
+    path?: never;
+    query?: never;
+    url: '/api/v1/display-settings/definitions';
+};
+
+export type ListDisplaySettingDefinitionsErrors = {
+    /**
+     * Unauthenticated or invalid authentication.
+     */
+    401: ErrorResponse;
+    /**
+     * Visible target but action denied.
+     */
+    403: ErrorResponse;
+};
+
+export type ListDisplaySettingDefinitionsError = ListDisplaySettingDefinitionsErrors[keyof ListDisplaySettingDefinitionsErrors];
+
+export type ListDisplaySettingDefinitionsResponses = {
+    /**
+     * Registered Display Settings definitions.
+     */
+    200: DisplaySettingDefinitionsResponse;
+};
+
+export type ListDisplaySettingDefinitionsResponse = ListDisplaySettingDefinitionsResponses[keyof ListDisplaySettingDefinitionsResponses];
+
+export type ListDisplaySettingValuesData = {
+    body?: never;
+    headers?: {
+        /**
+         * Supported request language. Unsupported values fall back to vi.
+         */
+        'Accept-Language'?: 'vi' | 'en';
+        /**
+         * Client request correlation identifier; invalid or missing values are replaced by a generated UUID.
+         */
+        'X-Request-ID'?: RequestId;
+    };
+    path?: never;
+    query: {
+        context_type: 'SYSTEM' | 'ORGANIZATION';
+        organization_id?: PositiveBigInt;
+    };
+    url: '/api/v1/display-settings/values';
+};
+
+export type ListDisplaySettingValuesErrors = {
+    /**
+     * Unauthenticated or invalid authentication.
+     */
+    401: ErrorResponse;
+    /**
+     * Visible target but action denied.
+     */
+    403: ErrorResponse;
+    /**
+     * Target not found or not visible.
+     */
+    404: ErrorResponse;
+    /**
+     * Semantically invalid request.
+     */
+    422: ErrorResponse;
+};
+
+export type ListDisplaySettingValuesError = ListDisplaySettingValuesErrors[keyof ListDisplaySettingValuesErrors];
+
+export type ListDisplaySettingValuesResponses = {
+    /**
+     * Display Settings values and effective source metadata.
+     */
+    200: DisplaySettingValuesResponse;
+};
+
+export type ListDisplaySettingValuesResponse = ListDisplaySettingValuesResponses[keyof ListDisplaySettingValuesResponses];
+
+export type UpdateDisplaySettingsData = {
+    body: DisplaySettingsPatch2;
+    headers?: {
+        /**
+         * Supported request language. Unsupported values fall back to vi.
+         */
+        'Accept-Language'?: 'vi' | 'en';
+        /**
+         * Client request correlation identifier; invalid or missing values are replaced by a generated UUID.
+         */
+        'X-Request-ID'?: RequestId;
+    };
+    path?: never;
+    query?: never;
+    url: '/api/v1/display-settings';
+};
+
+export type UpdateDisplaySettingsErrors = {
+    /**
+     * Unauthenticated or invalid authentication.
+     */
+    401: ErrorResponse;
+    /**
+     * Visible target but action denied.
+     */
+    403: ErrorResponse;
+    /**
+     * Target not found or not visible.
+     */
+    404: ErrorResponse;
+    /**
+     * Semantically invalid request.
+     */
+    422: ErrorResponse;
+};
+
+export type UpdateDisplaySettingsError = UpdateDisplaySettingsErrors[keyof UpdateDisplaySettingsErrors];
+
+export type UpdateDisplaySettingsResponses = {
+    /**
+     * Display Settings values and effective source metadata.
+     */
+    200: DisplaySettingValuesResponse;
+};
+
+export type UpdateDisplaySettingsResponse = UpdateDisplaySettingsResponses[keyof UpdateDisplaySettingsResponses];
+
+export type ResetDisplaySettingsData = {
+    body: DisplaySettingsReset2;
+    headers?: {
+        /**
+         * Supported request language. Unsupported values fall back to vi.
+         */
+        'Accept-Language'?: 'vi' | 'en';
+        /**
+         * Client request correlation identifier; invalid or missing values are replaced by a generated UUID.
+         */
+        'X-Request-ID'?: RequestId;
+    };
+    path?: never;
+    query?: never;
+    url: '/api/v1/display-settings/actions/reset';
+};
+
+export type ResetDisplaySettingsErrors = {
+    /**
+     * Unauthenticated or invalid authentication.
+     */
+    401: ErrorResponse;
+    /**
+     * Visible target but action denied.
+     */
+    403: ErrorResponse;
+    /**
+     * Target not found or not visible.
+     */
+    404: ErrorResponse;
+    /**
+     * Semantically invalid request.
+     */
+    422: ErrorResponse;
+};
+
+export type ResetDisplaySettingsError = ResetDisplaySettingsErrors[keyof ResetDisplaySettingsErrors];
+
+export type ResetDisplaySettingsResponses = {
+    /**
+     * Display Settings values and effective source metadata.
+     */
+    200: DisplaySettingValuesResponse;
+};
+
+export type ResetDisplaySettingsResponse = ResetDisplaySettingsResponses[keyof ResetDisplaySettingsResponses];
 
 export type ListProvincesData = {
     body?: never;

@@ -47,6 +47,67 @@ paths:
           $ref: '#/components/responses/UnprocessableEntity'
         '500':
           $ref: '#/components/responses/InternalServerError'
+  /api/v1/display-settings/runtime:
+    get:
+      operationId: getDisplaySettingsRuntime
+      summary: Get the authenticated presentation runtime snapshot
+      parameters:
+        - $ref: '#/components/parameters/AcceptLanguage'
+        - $ref: '#/components/parameters/RequestId'
+        - $ref: '#/components/parameters/DisplayOrganizationId'
+      responses:
+        '200': {$ref: '#/components/responses/DisplaySettingsRuntimeResponse'}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '404': {$ref: '#/components/responses/NotFound'}
+        '422': {$ref: '#/components/responses/UnprocessableEntity'}
+  /api/v1/display-settings/definitions:
+    get:
+      operationId: listDisplaySettingDefinitions
+      summary: List registered Display Settings definitions
+      parameters: [{$ref: '#/components/parameters/AcceptLanguage'}, {$ref: '#/components/parameters/RequestId'}]
+      responses:
+        '200': {$ref: '#/components/responses/DisplaySettingDefinitionsResponse'}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+  /api/v1/display-settings/values:
+    get:
+      operationId: listDisplaySettingValues
+      summary: List effective Display Settings values and sources
+      parameters:
+        - $ref: '#/components/parameters/AcceptLanguage'
+        - $ref: '#/components/parameters/RequestId'
+        - $ref: '#/components/parameters/DisplayContextType'
+        - $ref: '#/components/parameters/DisplayOrganizationId'
+      responses:
+        '200': {$ref: '#/components/responses/DisplaySettingValuesResponse'}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+        '404': {$ref: '#/components/responses/NotFound'}
+        '422': {$ref: '#/components/responses/UnprocessableEntity'}
+  /api/v1/display-settings:
+    patch:
+      operationId: updateDisplaySettings
+      summary: Set a batch of Display Settings overrides
+      parameters: [{$ref: '#/components/parameters/AcceptLanguage'}, {$ref: '#/components/parameters/RequestId'}]
+      requestBody: {$ref: '#/components/requestBodies/DisplaySettingsPatch'}
+      responses:
+        '200': {$ref: '#/components/responses/DisplaySettingValuesResponse'}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+        '404': {$ref: '#/components/responses/NotFound'}
+        '422': {$ref: '#/components/responses/UnprocessableEntity'}
+  /api/v1/display-settings/actions/reset:
+    post:
+      operationId: resetDisplaySettings
+      summary: Reset a batch of Display Settings overrides
+      parameters: [{$ref: '#/components/parameters/AcceptLanguage'}, {$ref: '#/components/parameters/RequestId'}]
+      requestBody: {$ref: '#/components/requestBodies/DisplaySettingsReset'}
+      responses:
+        '200': {$ref: '#/components/responses/DisplaySettingValuesResponse'}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+        '404': {$ref: '#/components/responses/NotFound'}
+        '422': {$ref: '#/components/responses/UnprocessableEntity'}
   /api/v1/provinces:
     get:
       operationId: listProvinces
@@ -820,6 +881,19 @@ components:
             - type: string
             - type: array
               items: {type: string}
+    DisplayOrganizationId:
+      name: organization_id
+      in: query
+      required: false
+      schema:
+        $ref: '#/components/schemas/PositiveBigInt'
+    DisplayContextType:
+      name: context_type
+      in: query
+      required: true
+      schema:
+        type: string
+        enum: [SYSTEM, ORGANIZATION]
   requestBodies:
     ProvinceCreate: {required: true, content: {application/json: {schema: {$ref: '#/components/schemas/ProvinceCreate'}}}}
     ProvincePatch: {required: true, content: {application/json: {schema: {$ref: '#/components/schemas/ProvincePatch'}}}}
@@ -877,6 +951,8 @@ components:
       content:
         multipart/form-data:
           schema: {$ref: '#/components/schemas/ProductImportStart'}
+    DisplaySettingsPatch: {required: true, content: {application/json: {schema: {$ref: '#/components/schemas/DisplaySettingsPatch'}}}}
+    DisplaySettingsReset: {required: true, content: {application/json: {schema: {$ref: '#/components/schemas/DisplaySettingsReset'}}}}
   securitySchemes:
     sessionAuth:
       type: http
@@ -893,6 +969,9 @@ components:
         enum: [vi, en]
   responses:
     Success: {description: Successful API response., content: {application/json: {schema: {$ref: '#/components/schemas/SuccessResponse'}}}}
+    DisplaySettingsRuntimeResponse: {description: Presentation-only runtime snapshot., content: {application/json: {schema: {$ref: '#/components/schemas/DisplaySettingsRuntimeResponse'}}}}
+    DisplaySettingDefinitionsResponse: {description: Registered Display Settings definitions., content: {application/json: {schema: {$ref: '#/components/schemas/DisplaySettingDefinitionsResponse'}}}}
+    DisplaySettingValuesResponse: {description: Display Settings values and effective source metadata., content: {application/json: {schema: {$ref: '#/components/schemas/DisplaySettingValuesResponse'}}}}
     NoContent: {description: Mutation completed successfully.}
     AuthorizationGroupResponse: {description: Authorization group response., content: {application/json: {schema: {$ref: '#/components/schemas/AuthorizationGroupResponse'}}}}
     AuthorizationGroupCollection: {description: Authorization group collection., content: {application/json: {schema: {$ref: '#/components/schemas/AuthorizationGroupCollection'}}}}
@@ -1167,6 +1246,105 @@ components:
         timestamp:
           type: string
           format: date-time
+    PositiveBigInt:
+      type: string
+      pattern: '^[1-9][0-9]*$'
+      description: Positive database BIGINT serialized as a JSON string.
+    DisplaySettingsRuntime:
+      type: object
+      required: [timezone, date, number, money]
+      properties:
+        timezone: {type: string}
+        date:
+          type: object
+          required: [format, date_time_format, time_format, first_day_of_week]
+          properties:
+            format: {type: string}
+            date_time_format: {type: string}
+            time_format: {type: string}
+            first_day_of_week: {type: string}
+        number:
+          type: object
+          required: [decimal_separator, group_separator, quantity_decimals, percentage_decimals, trailing_zeros]
+          properties:
+            decimal_separator: {type: string}
+            group_separator: {type: string}
+            quantity_decimals: {type: integer, minimum: 0}
+            percentage_decimals: {type: integer, minimum: 0}
+            trailing_zeros: {type: boolean}
+        money:
+          type: object
+          required: [decimal_separator, group_separator, symbol_mode, symbol_position, decimals_mode]
+          properties:
+            decimal_separator: {type: string}
+            group_separator: {type: string}
+            symbol_mode: {type: string}
+            symbol_position: {type: string}
+            decimals_mode: {type: string}
+    DisplaySettingDefinition:
+      type: object
+      required: [key, category, data_type, default, user_overridable]
+      properties:
+        key: {type: string}
+        category: {type: string}
+        data_type: {type: string, enum: [string, integer, boolean]}
+        default: {}
+        allowed_values: {type: array, items: {}}
+        min: {type: integer}
+        max: {type: integer}
+        user_overridable: {type: boolean}
+    DisplaySettingContext:
+      oneOf:
+        - type: object
+          required: [type]
+          additionalProperties: false
+          properties: {type: {type: string, const: SYSTEM}}
+        - type: object
+          required: [type, organization_id]
+          additionalProperties: false
+          properties:
+            type: {type: string, const: ORGANIZATION}
+            organization_id: {$ref: '#/components/schemas/PositiveBigInt'}
+    DisplaySettingValue:
+      type: object
+      required: [key, override_value, effective_value, source, inherited]
+      properties:
+        key: {type: string}
+        override_value: {}
+        effective_value: {}
+        source:
+          type: object
+          required: [type, organization_id]
+          properties:
+            type: {type: string, enum: [SYSTEM, ORGANIZATION]}
+            organization_id: {oneOf: [{$ref: '#/components/schemas/PositiveBigInt'}, {type: 'null'}]}
+        inherited: {type: boolean}
+    DisplaySettingsPatch:
+      type: object
+      required: [context, changes]
+      additionalProperties: false
+      properties:
+        context: {$ref: '#/components/schemas/DisplaySettingContext'}
+        changes:
+          type: array
+          minItems: 1
+          items:
+            type: object
+            required: [key, value]
+            additionalProperties: false
+            properties:
+              key: {type: string}
+              value: {}
+    DisplaySettingsReset:
+      type: object
+      required: [context, keys]
+      additionalProperties: false
+      properties:
+        context: {$ref: '#/components/schemas/DisplaySettingContext'}
+        keys:
+          type: array
+          minItems: 1
+          items: {type: string}
     HealthResponse:
       type: object
       required:
@@ -1177,6 +1355,9 @@ components:
           $ref: '#/components/schemas/HealthData'
         meta:
           $ref: '#/components/schemas/Meta'
+    DisplaySettingsRuntimeResponse: {allOf: [{$ref: '#/components/schemas/SuccessResponse'}], properties: {data: {$ref: '#/components/schemas/DisplaySettingsRuntime'}}}
+    DisplaySettingDefinitionsResponse: {allOf: [{$ref: '#/components/schemas/SuccessResponse'}], properties: {data: {type: array, items: {$ref: '#/components/schemas/DisplaySettingDefinition'}}}}
+    DisplaySettingValuesResponse: {allOf: [{$ref: '#/components/schemas/SuccessResponse'}], properties: {data: {type: array, items: {$ref: '#/components/schemas/DisplaySettingValue'}}}}
     ProductGroup:
       type: object
       required: [id, code, name, status]
