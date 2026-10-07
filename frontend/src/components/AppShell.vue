@@ -92,7 +92,6 @@ const navItems: NavigationItem[] = [
     labelKey: 'nav.displaySettings',
     to: '/system/display-settings',
     icon: SettingsOutline,
-    group: 'orgadmin',
   },
   { labelKey: 'nav.products', to: '/products', icon: CubeOutline },
   { labelKey: 'nav.sales', to: '/sales', icon: GridOutline },

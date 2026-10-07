@@ -31,17 +31,24 @@ function valueRows(overrides: Record<string, unknown> = {}) {
   }))
 }
 
-async function mockSession(page: Page): Promise<void> {
+async function mockSession(page: Page, groups = ['orgadmin']): Promise<void> {
   await page.route('**/api/v1/auth/me', (route) =>
     route.fulfill({
       status: 200,
       contentType: 'application/json',
       body: JSON.stringify({
-        data: { user: { id: 7, username: 'admin', email: 'a@test', groups: ['orgadmin'] } },
+        data: { user: { id: 7, username: 'admin', email: 'a@test', groups } },
       }),
     }),
   )
 }
+
+test('system mode exposes Display Settings without a frontend group guess', async ({ page }) => {
+  await mockSession(page, [])
+  await page.goto('/system/display-settings')
+  await page.getByRole('button', { name: 'Hệ thống' }).click()
+  await expect(page.getByRole('menuitem', { name: 'Cấu hình hiển thị' })).toBeVisible()
+})
 
 async function mockAdminApi(page: Page): Promise<{ calls: string[] }> {
   const calls: string[] = []
