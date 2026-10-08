@@ -85,6 +85,16 @@ const sidebarModes = [
 
 type NavigationItem = { labelKey: string; to: string; icon: object; permission?: string }
 
+const MAIN_MENU_HIDDEN_PATHS = new Set(['/organizations', '/system/display-settings'])
+const ORGANIZATION_NAV_PATHS = new Set([
+  '/organizations',
+  '/settings/locations/provinces',
+  '/settings/locations/wards',
+  '/people/departments',
+  '/people/positions',
+  '/people/employees',
+])
+
 const navItems: NavigationItem[] = [
   { labelKey: 'nav.dashboard', to: '/', icon: HomeOutline },
   { labelKey: 'nav.approvals', to: '/approvals', icon: CheckmarkCircleOutline },
@@ -239,14 +249,13 @@ const modeItems = computed(() => {
     )
   }
   if (activeMode.value === 'organization') {
-    return allowedNavItems.value.filter((item) =>
-      ['/organizations', '/settings/locations/provinces', '/settings/locations/wards'].includes(
-        item.to,
-      ),
-    )
+    return allowedNavItems.value.filter((item) => ORGANIZATION_NAV_PATHS.has(item.to))
   }
-  return allowedNavItems.value.filter((item) =>
-    t(item.labelKey).toLowerCase().includes(menuSearch.value.toLowerCase()),
+  return allowedNavItems.value.filter(
+    (item) =>
+      !MAIN_MENU_HIDDEN_PATHS.has(item.to) &&
+      !ORGANIZATION_NAV_PATHS.has(item.to) &&
+      t(item.labelKey).toLowerCase().includes(menuSearch.value.toLowerCase()),
   )
 })
 

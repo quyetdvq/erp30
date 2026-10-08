@@ -14,7 +14,16 @@ async function mockAuthenticatedSession(page: Page): Promise<void> {
             active: true,
             status: 'ACTIVE',
             groups: ['orgadmin'],
-            base_permissions: ['organization.view', 'province.view', 'product.view'],
+            base_permissions: [
+              'organization.view',
+              'province.view',
+              'ward.view',
+              'department.view',
+              'position.view',
+              'employee.view',
+              'display_setting.view',
+              'product.view',
+            ],
           },
         },
       }),
@@ -35,6 +44,28 @@ test('authenticated shell exposes five modes, deduplicated tabs, locale, and 404
   await page.goto('/missing-fe001-route')
   await expect(page.getByRole('main').getByText('Không tìm thấy tài nguyên')).toBeVisible()
   await expect(page.getByRole('button', { name: 'Về workspace' })).toBeVisible()
+})
+
+test('shell keeps organization structure routes in the Organization mode', async ({ page }) => {
+  await mockAuthenticatedSession(page)
+  await page.goto('/products')
+
+  const menu = page.locator('.shell-sider .n-menu')
+  await expect(menu.getByRole('menuitem', { name: 'Tổ chức và dữ liệu nền' })).toHaveCount(0)
+  await expect(menu.getByRole('menuitem', { name: 'Cấu hình hiển thị' })).toHaveCount(0)
+  await expect(menu.getByRole('menuitem', { name: 'Tỉnh, phường/xã' })).toHaveCount(0)
+  await expect(menu.getByRole('menuitem', { name: 'Phòng ban' })).toHaveCount(0)
+
+  await page.getByRole('button', { name: 'Cơ cấu tổ chức' }).click()
+  await expect(menu.getByRole('menuitem', { name: 'Tỉnh, phường/xã' })).toBeVisible()
+  await expect(menu.getByRole('menuitem', { name: 'Phường/Xã', exact: true })).toBeVisible()
+  await expect(menu.getByRole('menuitem', { name: 'Phòng ban' })).toBeVisible()
+  await expect(menu.getByRole('menuitem', { name: 'Chức danh' })).toBeVisible()
+  await expect(menu.getByRole('menuitem', { name: 'Nhân viên' })).toBeVisible()
+  await expect(menu.getByRole('menuitem', { name: 'Tổ chức và dữ liệu nền' })).toBeVisible()
+
+  await page.getByRole('button', { name: 'Hệ thống' }).click()
+  await expect(menu.getByRole('menuitem', { name: 'Cấu hình hiển thị' })).toBeVisible()
 })
 
 test('shell keeps the header full width and uses the official logo', async ({ page }) => {
