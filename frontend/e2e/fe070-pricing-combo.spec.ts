@@ -1,0 +1,319 @@
+import AxeBuilder from '@axe-core/playwright'
+import { expect, test, type Page } from '@playwright/test'
+
+const organization = {
+  id: '1',
+  code: 'GRP',
+  name: 'Demo Group',
+  type: 'GROUP',
+  status: 'ACTIVE',
+}
+const baseUom = { id: '20', code: 'PCS', name: 'Piece', status: 'ACTIVE' }
+const alternateUom = { id: '21', code: 'BOX', name: 'Box', status: 'ACTIVE' }
+const simple = {
+  id: '30',
+  product_code: 'PRD-SIMPLE',
+  sku: 'SKU-SIMPLE',
+  full_name: 'Simple product',
+  product_name: 'Simple product',
+  product_type: 'STANDARD',
+  role: 'SIMPLE',
+  base_uom_id: '20',
+  status: 'ACTIVE',
+  selectable: true,
+}
+const parent = {
+  ...simple,
+  id: '31',
+  product_code: 'PRD-PARENT',
+  full_name: 'Parent product',
+  product_name: 'Parent product',
+  role: 'PARENT',
+  base_uom_id: null,
+  status: 'ACTIVE',
+  selectable: false,
+}
+const combo = {
+  ...simple,
+  id: '32',
+  product_code: 'PRD-COMBO',
+  full_name: 'Combo product',
+  product_name: 'Combo product',
+  product_type: 'COMBO',
+  role: 'COMBO',
+}
+const priceList = {
+  id: '70',
+  code: 'RETAIL',
+  name: 'Retail prices',
+  organization_id: '1',
+  effective_from: '2026-10-01T00:00:00Z',
+  effective_to: null,
+  priority: 10,
+  status: 'ACTIVE',
+  description: null,
+}
+
+async function mockSession(
+  page: Page,
+  permissions = ['price_list.view', 'price_list.create', 'price_list.edit', 'price_list.setstate'],
+): Promise<void> {
+  await page.route('**/api/v1/auth/me', async (route) =>
+    route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify({
+        data: {
+          user: {
+            id: 7,
+            username: 'pricing-admin',
+            email: 'pricing@example.test',
+            active: true,
+            status: 'ACTIVE',
+            groups: [],
+            base_permissions: permissions,
+          },
+        },
+      }),
+    }),
+  )
+}
+
+async function mockCatalog(page: Page): Promise<{
+  createBody: Record<string, unknown> | null
+  patchBody: Record<string, unknown> | null
+  stateBody: Record<string, unknown> | null
+  itemBody: unknown
+}> {
+  let createBody: Record<string, unknown> | null = null
+  let patchBody: Record<string, unknown> | null = null
+  let stateBody: Record<string, unknown> | null = null
+  let itemBody: unknown = null
+  await page.route('**/api/v1/organizations*', (route) =>
+    route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify({ data: [organization], meta: { page: 1, page_size: 200, total: 1 } }),
+    }),
+  )
+  await page.route('**/api/v1/products/*/uom-conversions', (route) =>
+    route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify({
+        data: [
+          {
+            id: '90',
+            product_id: '30',
+            uom_id: '21',
+            conversion_factor: '12.0000',
+            usage_type: 'SALES',
+            status: 'ACTIVE',
+          },
+        ],
+      }),
+    }),
+  )
+  await page.route('**/api/v1/products*', (route) =>
+    route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify({
+        data: [simple, parent, combo],
+        meta: { page: 1, page_size: 200, total: 3 },
+      }),
+    }),
+  )
+  await page.route('**/api/v1/product-uoms*', (route) =>
+    route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify({
+        data: [baseUom, alternateUom],
+        meta: { page: 1, page_size: 200, total: 2 },
+      }),
+    }),
+  )
+  await page.route(/\/api\/v1\/price-lists(?:\/|\?|$)/, async (route) => {
+    const request = route.request()
+    const url = request.url()
+    if (request.method() === 'OPTIONS') {
+      return route.fulfill({
+        status: 204,
+        headers: {
+          'Access-Control-Allow-Origin': 'http://localhost:5173',
+          'Access-Control-Allow-Credentials': 'true',
+          'Access-Control-Allow-Methods': 'GET,POST,PATCH,PUT,OPTIONS',
+          'Access-Control-Allow-Headers': 'Accept, Accept-Language, Content-Type, X-Request-ID',
+        },
+      })
+    }
+    if (url.endsWith('/items') && request.method() === 'GET') {
+      return route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({
+          data: [
+            { id: '71', price_list_id: '70', product_id: '30', uom_id: '20', price: '125000.00' },
+          ],
+        }),
+      })
+    }
+    if (url.endsWith('/items') && request.method() === 'PUT') {
+      itemBody = request.postDataJSON()
+      return route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({
+          data: [
+            {
+              id: '71',
+              price_list_id: '70',
+              product_id: '32',
+              uom_id: '20',
+              price: '999999999999.0000',
+            },
+          ],
+        }),
+      })
+    }
+    if (url.includes('/actions/set-state')) {
+      stateBody = request.postDataJSON() as Record<string, unknown>
+      return route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({ data: { ...priceList, status: 'INACTIVE' } }),
+      })
+    }
+    if (request.method() === 'PATCH') {
+      patchBody = request.postDataJSON() as Record<string, unknown>
+      return route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({ data: priceList }),
+      })
+    }
+    if (request.method() === 'POST') {
+      createBody = request.postDataJSON() as Record<string, unknown>
+      return route.fulfill({
+        status: 201,
+        contentType: 'application/json',
+        body: JSON.stringify({ data: priceList }),
+      })
+    }
+    return route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify({ data: [priceList], meta: { page: 1, page_size: 50, total: 1 } }),
+    })
+  })
+  return {
+    get createBody() {
+      return createBody
+    },
+    get patchBody() {
+      return patchBody
+    },
+    get stateBody() {
+      return stateBody
+    },
+    get itemBody() {
+      return itemBody
+    },
+  }
+}
+
+test.describe('P1-FE-070 Pricing/COMBO UI', () => {
+  test('renders permission-aware Price List Table First screen and keeps critical axe clean', async ({
+    page,
+  }) => {
+    await mockSession(page)
+    await mockCatalog(page)
+    await page.goto('/products/price-lists')
+    await expect(page.getByRole('heading', { name: 'Chính sách giá' })).toBeVisible()
+    await expect(page.getByRole('columnheader', { name: 'Mã' })).toBeVisible()
+    await expect(page.getByRole('columnheader', { name: 'Phạm vi Organization' })).toBeVisible()
+    await expect(page.getByRole('cell', { name: 'RETAIL', exact: true })).toBeVisible()
+    await expect(page.getByRole('menuitem', { name: 'Chính sách giá' })).toBeVisible()
+    const accessibility = await new AxeBuilder({ page }).analyze()
+    expect(accessibility.violations.filter(({ impact }) => impact === 'critical')).toEqual([])
+  })
+
+  test('creates a Price List with the canonical organization scope fields', async ({ page }) => {
+    await mockSession(page)
+    const requests = await mockCatalog(page)
+    await page.goto('/products/price-lists')
+    await page.getByRole('button', { name: 'Tạo' }).click()
+    const dialog = page.getByRole('dialog', { name: 'Biểu mẫu Price List' })
+    await dialog.getByLabel('Mã').fill('WHOLESALE')
+    await dialog.getByLabel('Tên').fill('Wholesale prices')
+    await dialog.locator('.n-base-selection').click()
+    await page.getByText('GRP - Demo Group (GROUP)', { exact: true }).click()
+    await dialog.getByLabel('Hiệu lực từ').fill('2026-10-01T00:00')
+    await dialog.getByLabel('Độ ưu tiên').fill('20')
+    await dialog.getByRole('button', { name: 'Lưu' }).click()
+    await expect.poll(() => requests.createBody).not.toBeNull()
+    expect(requests.createBody).toMatchObject({
+      code: 'WHOLESALE',
+      name: 'Wholesale prices',
+      organization_id: '1',
+      priority: 20,
+      status: 'ACTIVE',
+    })
+  })
+
+  test('uses PATCH for editable fields, set-state action for status, and preserves item decimals', async ({
+    page,
+  }) => {
+    await mockSession(page)
+    const requests = await mockCatalog(page)
+    await page.goto('/products/price-lists')
+    const row = page.getByRole('row').filter({ hasText: 'RETAIL' })
+    await row.getByRole('button', { name: 'Sửa' }).click()
+    await page.getByRole('dialog').getByLabel('Tên').fill('Retail prices updated')
+    await page.getByRole('dialog').getByRole('button', { name: 'Lưu' }).click()
+    await expect.poll(() => requests.patchBody).not.toBeNull()
+    expect(requests.patchBody).not.toHaveProperty('status')
+    await row.getByRole('button', { name: 'Ngừng hoạt động' }).click()
+    await expect.poll(() => requests.stateBody).toEqual({ status: 'INACTIVE' })
+    await page
+      .getByRole('row')
+      .filter({ hasText: 'RETAIL' })
+      .getByRole('button', { name: 'Xem chi tiết' })
+      .click()
+    await expect(page.getByRole('dialog', { name: 'Product Price List Items' })).toBeVisible()
+    await expect(page.getByRole('cell', { name: '125000.00', exact: true })).toBeVisible()
+    await page.getByRole('button', { name: 'Thêm Product/UOM' }).click()
+    const itemDialog = page.getByRole('dialog', { name: 'Product Price List Items' })
+    const itemRow = itemDialog.locator('tbody tr').last()
+    const productSelect = itemRow.locator('.n-base-selection').first()
+    await productSelect.click()
+    await expect(page.getByText('Parent product (PARENT)', { exact: true })).toHaveCount(0)
+    await page.getByText('Combo product (COMBO)', { exact: true }).click()
+    const uomSelect = itemRow.locator('.n-base-selection').nth(1)
+    await uomSelect.click()
+    await expect(page.getByText('BOX', { exact: true })).toHaveCount(0)
+    await page.locator('.n-base-select-option').filter({ hasText: 'PCS' }).last().click()
+    await itemDialog.getByRole('textbox', { name: 'Giá' }).last().fill('999999999999.0000')
+    await itemDialog.getByRole('button', { name: 'Lưu' }).click()
+    await expect
+      .poll(() => requests.itemBody)
+      .toEqual([
+        { product_id: '30', uom_id: '20', price: '125000.00' },
+        { product_id: '32', uom_id: '20', price: '999999999999.0000' },
+      ])
+  })
+
+  test('hides create/edit/state actions without base permissions while retaining backend-authoritative list access', async ({
+    page,
+  }) => {
+    await mockSession(page, ['price_list.view'])
+    await mockCatalog(page)
+    await page.goto('/products/price-lists')
+    await expect(page.getByRole('button', { name: 'Tạo' })).toHaveCount(0)
+    const row = page.getByRole('row').filter({ hasText: 'RETAIL' })
+    await expect(row.getByRole('button', { name: 'Xem chi tiết' })).toBeVisible()
+    await expect(row.getByRole('button', { name: 'Sửa' })).toHaveCount(0)
+    await expect(row.getByRole('button', { name: 'Ngừng hoạt động' })).toHaveCount(0)
+  })
+})

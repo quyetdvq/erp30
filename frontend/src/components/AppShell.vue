@@ -230,7 +230,6 @@ const navItems: NavigationItem[] = [
         to: '/products/price-lists',
         icon: BusinessOutline,
         permission: 'price_list.view',
-        disabled: true,
       },
     ],
   },

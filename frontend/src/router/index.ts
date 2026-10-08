@@ -103,6 +103,12 @@ const router = createRouter({
           meta: { labelKey: 'nav.productUoms' },
         },
         {
+          path: 'products/price-lists',
+          name: 'products-price-lists',
+          component: () => import('@/views/PriceListsView.vue'),
+          meta: { labelKey: 'nav.productPricePolicies' },
+        },
+        {
           path: 'products/new',
           name: 'products-new',
           component: () => import('@/views/ProductEditorView.vue'),
