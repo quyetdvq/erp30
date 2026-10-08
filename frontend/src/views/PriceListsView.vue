@@ -1,6 +1,8 @@
 <script setup lang="ts">
 import { computed, onMounted, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
+import { NIcon } from 'naive-ui'
+import { CloseOutline, RefreshOutline, TrashOutline } from '@vicons/ionicons5'
 import type {
   Organization,
   PriceList,
@@ -17,10 +19,12 @@ import {
   ListQueryControls,
   ListShell,
   ListTable,
+  TableStatus,
   TableRowActions,
 } from '@/components/lists'
 import type { ListColumn, ListQuery } from '@/components/lists/listTypes'
 import { useBasePermission } from '@/composables/useBasePermission'
+import { useFormatters } from '@/composables/useFormatters'
 import { useListState } from '@/composables/useListState'
 import { listOrganizationPage } from '@/services/foundation'
 import { reportApiError } from '@/services/errorBoundary'
@@ -41,6 +45,7 @@ type ItemDraft = { product_id: string; uom_id: string; price: string }
 
 const { t } = useI18n()
 const { hasBasePermission } = useBasePermission()
+const formatters = useFormatters()
 const state = useListState<PriceList>((query) => listPriceListPage(query), { sort: 'priority' })
 const organizations = ref<Organization[]>([])
 const products = ref<Product[]>([])
@@ -65,16 +70,17 @@ const form = ref({
   status: 'ACTIVE' as PriceList['status'],
   description: '',
 })
+const listBusy = computed(() => state.isInitialLoading.value || state.isBackgroundRefreshing.value)
 
 const columns: readonly ListColumn<PriceList>[] = [
   { key: 'code', labelKey: 'pricing.code', sortable: true },
   { key: 'name', labelKey: 'pricing.name', sortable: true },
   { key: 'organization_id', labelKey: 'pricing.organizationScope' },
-  { key: 'effective_from', labelKey: 'pricing.effectiveFrom', sortable: true },
-  { key: 'effective_to', labelKey: 'pricing.effectiveTo' },
+  { key: 'effective_from', labelKey: 'pricing.effectiveFrom', sortable: true, format: 'datetime' },
+  { key: 'effective_to', labelKey: 'pricing.effectiveTo', format: 'datetime' },
   { key: 'priority', labelKey: 'pricing.priority', sortable: true },
-  { key: 'status', labelKey: 'pricing.status', sortable: true },
-  { key: 'actions', labelKey: 'pricing.actions' },
+  { key: 'status', labelKey: 'pricing.status', sortable: true, align: 'center' },
+  { key: 'actions', labelKey: 'pricing.actions', align: 'end' },
 ]
 
 const organizationOptions = computed(() =>
@@ -134,6 +140,15 @@ async function load(): Promise<void> {
   error.value = null
   try {
     await state.apply()
+  } catch (caught: unknown) {
+    error.value = caught
+    reportApiError(caught)
+  }
+}
+async function refresh(): Promise<void> {
+  error.value = null
+  try {
+    await state.refresh()
   } catch (caught: unknown) {
     error.value = caught
     reportApiError(caught)
@@ -325,30 +340,40 @@ onMounted(async () => {
     </button>
   </div>
   <section class="content-panel pricing-panel">
-    <ListQueryControls
-      :model-value="state.query"
-      :filters="[
-        {
-          key: 'status',
-          labelKey: 'pricing.status',
-          type: 'select',
-          options: [
-            { value: 'ACTIVE', labelKey: 'status.active' },
-            { value: 'INACTIVE', labelKey: 'status.inactive' },
-          ],
-        },
-      ]"
-      @apply="applyQuery"
-      @reset="resetQuery"
-    />
-    <p v-if="error && !state.queryState.hasData.value" class="inline-error" role="alert">
-      {{ t('pricing.requestError') }}
-    </p>
+    <div class="pricing-query-toolbar">
+      <ListQueryControls
+        :model-value="state.query"
+        :show-page-size="false"
+        :filters="[
+          {
+            key: 'status',
+            labelKey: 'pricing.status',
+            type: 'select',
+            options: [
+              { value: 'ACTIVE', labelKey: 'status.active' },
+              { value: 'INACTIVE', labelKey: 'status.inactive' },
+            ],
+          },
+        ]"
+        @apply="applyQuery"
+        @reset="resetQuery"
+      />
+      <button
+        type="button"
+        class="secondary-button pricing-refresh"
+        :disabled="listBusy"
+        :aria-label="t('common.refresh')"
+        @click="void refresh()"
+      >
+        <NIcon :component="RefreshOutline" aria-hidden="true" />
+        {{ t('common.refresh') }}
+      </button>
+    </div>
     <ListPagination
       :page="state.query.page"
       :page-size="state.query.page_size"
       :total="state.total.value"
-      :disabled="state.isInitialLoading.value"
+      :disabled="listBusy"
       :aria-label="t('pricing.topPagination')"
       @update:page="
         (value) => {
@@ -371,15 +396,17 @@ onMounted(async () => {
       :empty-filtered-result="state.isEmptyFilteredResult.value"
       :error="state.queryState.error.value"
     >
-      <ListTable :rows="state.rows.value" :columns="columns" :sort="state.query.sort">
+      <ListTable
+        :rows="state.rows.value"
+        :columns="columns"
+        :sort="state.query.sort"
+        :busy="state.isBackgroundRefreshing.value"
+      >
         <template #cell-organization_id="{ row }">{{
           organizationName(row.organization_id)
         }}</template>
-        <template #cell-effective_to="{ row }">{{
-          row.effective_to ?? t('list.noValue')
-        }}</template>
         <template #cell-status="{ row }">
-          {{ row.status === 'ACTIVE' ? t('status.active') : t('status.inactive') }}
+          <TableStatus :status="row.status" />
         </template>
         <template #cell-actions="{ row }">
           <TableRowActions
@@ -405,6 +432,7 @@ onMounted(async () => {
         :page="state.query.page"
         :page-size="state.query.page_size"
         :total="state.total.value"
+        :disabled="listBusy"
         :aria-label="t('pricing.bottomPagination')"
         @update:page="
           (value) => {
@@ -434,7 +462,7 @@ onMounted(async () => {
           :aria-label="t('common.close')"
           @click="modalOpen = false"
         >
-          ×
+          <NIcon :component="CloseOutline" aria-hidden="true" />
         </button>
       </header>
       <form class="modal-card__body" @submit.prevent="save">
@@ -511,7 +539,7 @@ onMounted(async () => {
           :aria-label="t('common.close')"
           @click="detailOpen = false"
         >
-          ×
+          <NIcon :component="CloseOutline" aria-hidden="true" />
         </button>
       </header>
       <div class="modal-card__body">
@@ -519,13 +547,19 @@ onMounted(async () => {
           <dt>{{ t('pricing.organizationScope') }}</dt>
           <dd>{{ organizationName(detailRow.organization_id) }}</dd>
           <dt>{{ t('pricing.effectiveFrom') }}</dt>
-          <dd>{{ detailRow.effective_from }}</dd>
+          <dd>{{ formatters.formatDateTime(detailRow.effective_from) }}</dd>
           <dt>{{ t('pricing.effectiveTo') }}</dt>
-          <dd>{{ detailRow.effective_to ?? t('list.noValue') }}</dd>
+          <dd>
+            {{
+              detailRow.effective_to
+                ? formatters.formatDateTime(detailRow.effective_to)
+                : t('list.noValue')
+            }}
+          </dd>
           <dt>{{ t('pricing.priority') }}</dt>
           <dd>{{ detailRow.priority }}</dd>
           <dt>{{ t('pricing.status') }}</dt>
-          <dd>{{ detailRow.status === 'ACTIVE' ? t('status.active') : t('status.inactive') }}</dd>
+          <dd><TableStatus :status="detailRow.status" /></dd>
         </dl>
         <section class="items-section">
           <header class="section-header">
@@ -587,7 +621,7 @@ onMounted(async () => {
                       :aria-label="t('common.delete')"
                       @click="removeItem(index)"
                     >
-                      {{ t('common.delete') }}
+                      <NIcon :component="TrashOutline" aria-hidden="true" />
                     </button>
                   </td>
                 </tr>
@@ -622,6 +656,21 @@ onMounted(async () => {
   display: grid;
   gap: 14px;
   padding: 18px 20px 20px;
+}
+.pricing-query-toolbar {
+  display: flex;
+  align-items: end;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+.pricing-query-toolbar :deep(.list-query-controls) {
+  flex: 1 1 auto;
+}
+.pricing-refresh {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  white-space: nowrap;
 }
 .inline-error {
   margin: 0;

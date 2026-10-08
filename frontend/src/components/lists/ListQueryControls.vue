@@ -11,12 +11,14 @@ const props = withDefaults(
     filters?: readonly ListFilterDefinition[]
     sortOptions?: readonly ListSortOption[]
     pageSizeOptions?: readonly number[]
+    showPageSize?: boolean
     disabled?: boolean
   }>(),
   {
     filters: () => [],
     sortOptions: () => [],
     pageSizeOptions: () => [50, 100, 200],
+    showPageSize: true,
     disabled: false,
   },
 )
@@ -180,7 +182,10 @@ function reset(): void {
         </option>
       </select>
     </label>
-    <label class="list-query-controls__field list-query-controls__page-size">
+    <label
+      v-if="props.showPageSize"
+      class="list-query-controls__field list-query-controls__page-size"
+    >
       <span>{{ t('list.pageSize') }}</span>
       <select v-model="pageSize" :disabled="props.disabled" :aria-label="t('list.pageSize')">
         <option v-for="size in props.pageSizeOptions" :key="size" :value="size">{{ size }}</option>
