@@ -124,7 +124,14 @@ test.describe('P1-FE-080 Product Import UI/report', () => {
       buffer: Buffer.from('product_code,name\n,Generated product\n'),
     })
     await page.getByRole('radio', { name: 'UPSERT' }).check()
+    const importRequest = page.waitForRequest(
+      (request) =>
+        request.url().includes('/api/v1/products/import-jobs') && request.method() === 'POST',
+    )
     await page.getByRole('button', { name: 'Bắt đầu import' }).click()
+    const submitted = await importRequest
+    expect(submitted.postData()).toContain('UPSERT')
+    expect(submitted.postData()).toContain('products.csv')
     await expect(page).toHaveURL(new RegExp(`/products/import-jobs/${job.id}$`))
     await expect(page.getByRole('heading', { name: 'Chi tiết import job' })).toBeVisible()
     await expect(page.getByRole('cell', { name: 'PRD-GENERATED-001', exact: true })).toBeVisible()
@@ -140,6 +147,25 @@ test.describe('P1-FE-080 Product Import UI/report', () => {
     await page.goto('/products/import-jobs')
     await expect(page.getByRole('heading', { name: 'Import jobs', exact: true })).toBeVisible()
     await expect(page.getByRole('cell', { name: 'products.csv', exact: true })).toBeVisible()
+  })
+
+  test('opens persisted job results from the Table First action by keyboard', async ({ page }) => {
+    await mockSession(page, ['import_job.view'])
+    await mockImportApi(page)
+
+    await page.goto('/products/import-jobs')
+    const viewAction = page.getByRole('button', { name: 'Xem' }).first()
+    await expect(viewAction).toBeVisible()
+    await viewAction.focus()
+    await page.keyboard.press('Enter')
+    await expect(page).toHaveURL(new RegExp(`/products/import-jobs/${job.id}$`))
+    await expect(page.getByRole('cell', { name: 'PRODUCT_INVALID', exact: true })).toBeVisible()
+    await expect(page.getByText('Name is required', { exact: true })).toBeVisible()
+    expect(
+      (await new AxeBuilder({ page }).analyze()).violations.filter(
+        ({ impact }) => impact === 'critical',
+      ),
+    ).toEqual([])
   })
 
   test('keeps the start action hidden/disabled without the Base Permission hint', async ({

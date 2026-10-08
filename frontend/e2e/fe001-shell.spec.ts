@@ -109,7 +109,7 @@ test('shell keeps organization structure routes in the Organization mode', async
 test('removed menu routes resolve to the not-found boundary', async ({ page }) => {
   await mockAuthenticatedSession(page)
 
-  for (const path of ['/approvals', '/products', '/sales']) {
+  for (const path of ['/approvals', '/sales']) {
     await page.goto(path)
     await expect(page.getByRole('main').getByText('Không tìm thấy tài nguyên')).toBeVisible()
   }

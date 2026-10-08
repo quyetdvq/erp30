@@ -194,7 +194,7 @@ test('Employee structure routes expose hierarchy, canonical gender, tabs, and as
   const contactDetail = page.getByRole('dialog', { name: 'Xem chi tiết - Liên hệ' })
   await expect(contactDetail.locator('dl dd').nth(5)).toHaveText('Hà Nội')
   await expect(contactDetail.locator('dl dd').nth(6)).toHaveText('Phường Ba Đình, Hà Nội')
-  await contactDetail.getByRole('button', { name: 'Đóng' }).click()
+  await contactDetail.locator('.table-detail-modal__close').click()
   await page.getByRole('tab', { name: 'Audit' }).click()
   const employeeDetail = page.getByRole('dialog', { name: 'Nguyen Van A' })
   await expect(employeeDetail.getByRole('heading', { name: 'Audit' })).toBeVisible()

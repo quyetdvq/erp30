@@ -47,4 +47,24 @@ describe('API error boundary', () => {
       code: 'POLICY_SCOPE_ALREADY_EXISTS',
     })
   })
+
+  it.each([401, 403, 404, 409, 422] as const)(
+    'normalizes protected API status %s without dropping the stable code',
+    (status) => {
+      const error = new axios.AxiosError(`HTTP ${status}`)
+      error.response = {
+        status,
+        statusText: 'API error',
+        headers: {},
+        config: error.config as never,
+        data: { code: `ERR_${status}`, message: 'localized detail' },
+      }
+
+      expect(normalizeApiError(error)).toMatchObject({
+        status,
+        code: `ERR_${status}`,
+        message: 'localized detail',
+      })
+    },
+  )
 })

@@ -7,11 +7,6 @@ import { normalizeSearchText, searchableSelectFilter } from '@/components/forms/
 
 describe('SearchableSelect', () => {
   it('matches option labels in real time without case sensitivity', () => {
-    const wrapper = mount(SearchableSelect, {
-      props: {
-        options: [{ value: '42', label: 'Organization North' }],
-      },
-    })
     expect(normalizeSearchText('  NORTH ')).toBe('north')
     expect(searchableSelectFilter('north', { label: 'Organization North' })).toBe(true)
     expect(searchableSelectFilter('south', { label: 'Organization North' })).toBe(false)

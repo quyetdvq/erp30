@@ -4,10 +4,10 @@ This ledger is lightweight operational evidence. It is not architecture
 authority and does not replace UR, FRS, DBD, the Implementation Contract, the
 Implementation Plan, API Design, or UI Design.
 
-The registry contains exactly 107 P1 tasks. Current ledger state records 97
+The registry contains exactly 107 P1 tasks. Current ledger state records 98
 completed tasks: Gate 0 is 10/10, Gate 1 is 14/14, Gate 2 is 8/8, Gate 3 is
 10/10, Gate 4 is 7/7, Gate 5 is 11/11, Gate 6 is 9/9, Gate 7 is 15/15,
-Gate 8 is 13/14, and Gate 9 is 0/9.
+Gate 8 is 14/14, and Gate 9 is 0/9.
 
 The Implementation Plan v1.8 retains a planning snapshot of `69/107`; the
 `80/107` value below is evidence-derived from the current Git/ledger history
@@ -20,7 +20,7 @@ registry.
 
 | Measure | Progress |
 |---|---:|
-| P1 tasks DONE | 97/107 |
+| P1 tasks DONE | 98/107 |
 | Gate 0 | 10/10 DONE |
 | Gate 1 | 14/14 DONE |
 | Gate 2 | 8/8 DONE |
@@ -29,7 +29,7 @@ registry.
 | Gate 5 | 11/11 DONE |
 | Gate 6 | 9/9 DONE |
 | Gate 7 | 15/15 DONE |
-| Gate 8 | 13/14 DONE |
+| Gate 8 | 14/14 DONE |
 | Gate 9 | 0/9 DONE |
 
 ## Task Ledger
@@ -127,13 +127,13 @@ registry.
 | P1-FE-003 | DONE | 0000000 | service-standard | Shared list shell/query controls/table/pagination/export plumbing using FE-002/API-003 contracts, DSP-005 formatters, canonical string preservation, state-transition coverage, and evidence: `docs/implementation/evidence/P1-FE-003/01_common_list_components_assessment.md`. |
 | P1-FE-010 | DONE | 0000000 | service-standard | Location/Organization/Contact Slice 1 UI; FE-003 list states, generated API-010 client boundary, canonical parent/type matrix, reusable Contact UI, critical Playwright and frontend/API validation. Evidence: `docs/implementation/evidence/P1-FE-010/01_slice1_ui_assessment.md`. |
 | P1-FE-020 | DONE | 0000000 | frontend | Employee/Assignment Slice 2 UI: Department hierarchy and Position master aligned to the Locations/Wards list pattern; Employee ListTable/detail/filter/form with constrained responsive modal; Contacts reused the FE-010 Wards-aligned list surface and resolves canonical Province/Ward IDs; Audit uses the matching detail summary without fabricated entries; canonical gender, manager guards, Assignment CRUD/history/Primary overlap handling, searchable large-option dropdowns with case-insensitive realtime filtering, accessibility and critical Playwright evidence. Evidence: `docs/implementation/evidence/P1-FE-020/01_employee_assignment_ui_assessment.md`. |
-| P1-FE-030 | DONE | 0447b80 | high-risk | Security/Authorization UI Table First/modal correction plus dedicated backend-aggregated `GET /api/v1/security/users` to remove per-group N+1 loading; complete group Members/Resource Action detail and validation evidence: `docs/implementation/evidence/P1-FE-030/01_security_authorization_ui_assessment.md`. Repository-wide Oxlint remains blocked by an untouched pre-existing `SearchableSelect.spec.ts` unused variable; scoped touched-file Oxlint passes. |
+| P1-FE-030 | DONE | 0447b80 | high-risk | Security/Authorization UI Table First/modal correction plus dedicated backend-aggregated `GET /api/v1/security/users` to remove per-group N+1 loading; complete group Members/Resource Action detail and validation evidence: `docs/implementation/evidence/P1-FE-030/01_security_authorization_ui_assessment.md`. The historical repository-wide Oxlint note is closed by P1-FE-090. |
 | P1-FE-040 | DONE | 0000000 | service-standard | Workflow State and Lifecycle UI at `/configuration/workflow-states` and `/configuration/lifecycles`; permission-aware CRUD/status controls, Overview/States/Transitions tabs, atomic nested Lifecycle API saves, one-initial/membership/duplicate-transition UX, vi/en/accessibility/Playwright evidence. Evidence: `docs/implementation/evidence/P1-FE-040/01_workflow_lifecycle_ui_assessment.md`. |
 | P1-FE-050 | DONE | 0000000 | high-risk | Auto Numbering configuration UI at `/configuration/auto-numbering`; System-tab permission-aware navigation, Table First resource/series list, modal CRUD/view/state actions, canonical pattern builder, non-consuming validation preview, issued-field lock handling, vi/en/accessibility/Playwright evidence. Evidence: `docs/implementation/evidence/P1-FE-050/01_auto_numbering_ui_assessment.md`. |
 | P1-FE-060 | DONE | 0000000 | high-risk | Product/UOM UI at `/products/groups`, `/products/uoms`, `/products`, and `/products/new`/`/products/:id`; Table First group/UOM/product lists, nested permission-aware Product menu, role-aware editor, string-preserving UOM conversions, vi/en and Chromium/axe evidence. Evidence: `docs/implementation/evidence/P1-FE-060/01_product_uom_ui_assessment.md`. |
 | P1-FE-070 | DONE | 0000000 | high-risk | Pricing/COMBO UI at `/products/price-lists`, permission-aware Price List CRUD/state/items, PARENT/COMBO/PURCHASE-only UOM UX filtering, decimal-safe payloads, vi/en, and Chromium/axe evidence. Evidence: `docs/implementation/evidence/P1-FE-070/01_pricing_combo_ui_assessment.md`. |
 | P1-FE-080 | DONE | 0000000 | high-risk | Product Import wizard/report at `/products/import`, `/products/import-jobs`, and `/products/import-jobs/:id`; generated API client, Product-only modes/template guidance, canonical persisted row DTO, permission/error/accessibility coverage. Evidence: `docs/implementation/evidence/P1-FE-080/01_product_import_ui_assessment.md`. |
-| P1-FE-090 | NOT_STARTED | — | high-risk | No accepted implementation evidence. |
+| P1-FE-090 | DONE | 0000000 | high-risk | Accessibility and critical Playwright regression closure across FE-010..080, Display Settings, permission/error/i18n/Table First checks, import wizard/job-result regressions, and repository lint correction. Evidence: `docs/implementation/evidence/P1-FE-090/01_accessibility_critical_playwright_closure.md`. |
 | P1-SYS-001 | NOT_STARTED | — | release | No accepted implementation evidence. |
 | P1-SYS-002 | NOT_STARTED | — | high-risk | No accepted implementation evidence. |
 | P1-SYS-003 | NOT_STARTED | — | high-risk | No accepted implementation evidence. |

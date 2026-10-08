@@ -184,7 +184,7 @@ test('Organization tree, parent matrix, contacts history, and accessibility', as
   await expect(page.getByRole('dialog', { name: /Xem chi tiết/ })).toContainText('Alice')
   await page
     .getByRole('dialog', { name: /Xem chi tiết/ })
-    .getByRole('button', { name: 'Đóng' })
+    .locator('.table-detail-modal__close')
     .click()
   await contactRegion.getByRole('button', { name: 'Sửa liên hệ' }).click()
   await page.locator('.modal-card input').first().fill('Alice Updated')
