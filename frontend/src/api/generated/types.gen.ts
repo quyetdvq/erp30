@@ -842,6 +842,48 @@ export type SecurityUserCollection = CollectionResponse & {
     data?: Array<SecurityUser>;
 };
 
+export type UserIdentity = {
+    id: BigInt;
+    username: string;
+    email: string;
+    active: boolean;
+    status: 'ACTIVE' | 'INACTIVE' | 'LOCKED' | 'SUSPENDED' | 'BANNED' | 'DISABLED';
+    created_at: string | null;
+};
+
+export type UserIdentityCreate = {
+    username: string;
+    email: string;
+    state: 'ACTIVE' | 'INACTIVE' | 'LOCKED' | 'SUSPENDED' | 'BANNED' | 'DISABLED';
+};
+
+export type UserIdentityPatch = {
+    username?: string;
+    email?: string;
+    row_version?: string;
+};
+
+export type UserIdentityState = {
+    state: 'ACTIVE' | 'INACTIVE' | 'LOCKED' | 'SUSPENDED' | 'BANNED' | 'DISABLED';
+    row_version?: string;
+};
+
+export type UserIdentityPasswordReset = {
+    row_version?: string;
+};
+
+export type UserPermissions = {
+    permissions: Array<string>;
+};
+
+export type UserIdentityResponse = SuccessResponse & {
+    data?: UserIdentity;
+};
+
+export type UserPermissionsResponse = SuccessResponse & {
+    data?: UserPermissions;
+};
+
 export type AuthorizationGroupCreate = {
     code: string;
     name: string;
@@ -894,6 +936,13 @@ export type ResourceActionCreate = {
 
 export type ResourceActionPatch = {
     description?: string | null;
+};
+
+export type ResourceAction = {
+    id: BigInt;
+    resource_id: BigInt;
+    code: string;
+    description: string | null;
 };
 
 export type NumberingSeries = {
@@ -1073,6 +1122,10 @@ export type ResourceCollection = CollectionResponse & {
     data?: Array<Resource>;
 };
 
+export type ResourceActionCollection = SuccessResponse & {
+    data?: Array<ResourceAction>;
+};
+
 export type NumberingSeriesResponse = SuccessResponse & {
     data?: NumberingSeries;
 };
@@ -1115,6 +1168,20 @@ export type LifecycleResponse = SuccessResponse & {
 
 export type LifecycleCollection = CollectionResponse & {
     data?: Array<Lifecycle>;
+};
+
+export type NullableBigIntWritable = BigInt | null;
+
+export type UserIdentityCreateWritable = {
+    username: string;
+    email: string;
+    password: string;
+    state: 'ACTIVE' | 'INACTIVE' | 'LOCKED' | 'SUSPENDED' | 'BANNED' | 'DISABLED';
+};
+
+export type UserIdentityPasswordResetWritable = {
+    new_password: string;
+    row_version?: string;
 };
 
 /**
@@ -1203,6 +1270,16 @@ export type AuthorizationGroupPatch2 = AuthorizationGroupPatch;
 export type AuthorizationGroupMembers2 = AuthorizationGroupMembers;
 
 export type AuthorizationGroupPermissions2 = AuthorizationGroupPermissions;
+
+export type UserIdentityCreate2 = UserIdentityCreateWritable;
+
+export type UserIdentityPatch2 = UserIdentityPatch;
+
+export type UserIdentityState2 = UserIdentityState;
+
+export type UserIdentityPasswordReset2 = UserIdentityPasswordResetWritable;
+
+export type UserPermissions2 = UserPermissions;
 
 export type ResourceCreate2 = ResourceCreate;
 
@@ -3439,6 +3516,250 @@ export type ListSecurityUsersResponses = {
 
 export type ListSecurityUsersResponse = ListSecurityUsersResponses[keyof ListSecurityUsersResponses];
 
+export type CreateUserData = {
+    body: UserIdentityCreate2;
+    path?: never;
+    query?: never;
+    url: '/api/v1/users';
+};
+
+export type CreateUserErrors = {
+    /**
+     * Unauthenticated or invalid authentication.
+     */
+    401: ErrorResponse;
+    /**
+     * Visible target but action denied.
+     */
+    403: ErrorResponse;
+    /**
+     * Conflict, concurrency, uniqueness, or current-state failure.
+     */
+    409: ErrorResponse;
+    /**
+     * Semantically invalid request.
+     */
+    422: ErrorResponse;
+};
+
+export type CreateUserError = CreateUserErrors[keyof CreateUserErrors];
+
+export type CreateUserResponses = {
+    /**
+     * Shield user identity response.
+     */
+    201: UserIdentityResponse;
+};
+
+export type CreateUserResponse = CreateUserResponses[keyof CreateUserResponses];
+
+export type UpdateUserData = {
+    body: UserIdentityPatch2;
+    path: {
+        id: BigInt;
+    };
+    query?: never;
+    url: '/api/v1/users/{id}';
+};
+
+export type UpdateUserErrors = {
+    /**
+     * Unauthenticated or invalid authentication.
+     */
+    401: ErrorResponse;
+    /**
+     * Visible target but action denied.
+     */
+    403: ErrorResponse;
+    /**
+     * Target not found or not visible.
+     */
+    404: ErrorResponse;
+    /**
+     * Conflict, concurrency, uniqueness, or current-state failure.
+     */
+    409: ErrorResponse;
+    /**
+     * Semantically invalid request.
+     */
+    422: ErrorResponse;
+};
+
+export type UpdateUserError = UpdateUserErrors[keyof UpdateUserErrors];
+
+export type UpdateUserResponses = {
+    /**
+     * Shield user identity response.
+     */
+    200: UserIdentityResponse;
+};
+
+export type UpdateUserResponse = UpdateUserResponses[keyof UpdateUserResponses];
+
+export type SetUserStateData = {
+    body: UserIdentityState2;
+    path: {
+        id: BigInt;
+    };
+    query?: never;
+    url: '/api/v1/users/{id}/actions/set-state';
+};
+
+export type SetUserStateErrors = {
+    /**
+     * Unauthenticated or invalid authentication.
+     */
+    401: ErrorResponse;
+    /**
+     * Visible target but action denied.
+     */
+    403: ErrorResponse;
+    /**
+     * Target not found or not visible.
+     */
+    404: ErrorResponse;
+    /**
+     * Conflict, concurrency, uniqueness, or current-state failure.
+     */
+    409: ErrorResponse;
+    /**
+     * Semantically invalid request.
+     */
+    422: ErrorResponse;
+};
+
+export type SetUserStateError = SetUserStateErrors[keyof SetUserStateErrors];
+
+export type SetUserStateResponses = {
+    /**
+     * Shield user identity response.
+     */
+    200: UserIdentityResponse;
+};
+
+export type SetUserStateResponse = SetUserStateResponses[keyof SetUserStateResponses];
+
+export type ResetUserPasswordData = {
+    body: UserIdentityPasswordReset2;
+    path: {
+        id: BigInt;
+    };
+    query?: never;
+    url: '/api/v1/users/{id}/actions/reset-password';
+};
+
+export type ResetUserPasswordErrors = {
+    /**
+     * Unauthenticated or invalid authentication.
+     */
+    401: ErrorResponse;
+    /**
+     * Visible target but action denied.
+     */
+    403: ErrorResponse;
+    /**
+     * Target not found or not visible.
+     */
+    404: ErrorResponse;
+    /**
+     * Conflict, concurrency, uniqueness, or current-state failure.
+     */
+    409: ErrorResponse;
+    /**
+     * Semantically invalid request.
+     */
+    422: ErrorResponse;
+};
+
+export type ResetUserPasswordError = ResetUserPasswordErrors[keyof ResetUserPasswordErrors];
+
+export type ResetUserPasswordResponses = {
+    /**
+     * Shield user identity response.
+     */
+    200: UserIdentityResponse;
+};
+
+export type ResetUserPasswordResponse = ResetUserPasswordResponses[keyof ResetUserPasswordResponses];
+
+export type GetUserPermissionsData = {
+    body?: never;
+    path: {
+        id: BigInt;
+    };
+    query?: never;
+    url: '/api/v1/users/{id}/permissions';
+};
+
+export type GetUserPermissionsErrors = {
+    /**
+     * Unauthenticated or invalid authentication.
+     */
+    401: ErrorResponse;
+    /**
+     * Visible target but action denied.
+     */
+    403: ErrorResponse;
+    /**
+     * Target not found or not visible.
+     */
+    404: ErrorResponse;
+};
+
+export type GetUserPermissionsError = GetUserPermissionsErrors[keyof GetUserPermissionsErrors];
+
+export type GetUserPermissionsResponses = {
+    /**
+     * Direct ALLOW permissions response.
+     */
+    200: UserPermissionsResponse;
+};
+
+export type GetUserPermissionsResponse = GetUserPermissionsResponses[keyof GetUserPermissionsResponses];
+
+export type ReplaceUserPermissionsData = {
+    body: UserPermissions2;
+    path: {
+        id: BigInt;
+    };
+    query?: never;
+    url: '/api/v1/users/{id}/permissions';
+};
+
+export type ReplaceUserPermissionsErrors = {
+    /**
+     * Unauthenticated or invalid authentication.
+     */
+    401: ErrorResponse;
+    /**
+     * Visible target but action denied.
+     */
+    403: ErrorResponse;
+    /**
+     * Target not found or not visible.
+     */
+    404: ErrorResponse;
+    /**
+     * Conflict, concurrency, uniqueness, or current-state failure.
+     */
+    409: ErrorResponse;
+    /**
+     * Semantically invalid request.
+     */
+    422: ErrorResponse;
+};
+
+export type ReplaceUserPermissionsError = ReplaceUserPermissionsErrors[keyof ReplaceUserPermissionsErrors];
+
+export type ReplaceUserPermissionsResponses = {
+    /**
+     * Direct ALLOW permissions response.
+     */
+    200: UserPermissionsResponse;
+};
+
+export type ReplaceUserPermissionsResponse = ReplaceUserPermissionsResponses[keyof ReplaceUserPermissionsResponses];
+
 export type ListAuthorizationGroupsData = {
     body?: never;
     headers?: {
@@ -4028,6 +4349,35 @@ export type CreateResourceActionResponses = {
 };
 
 export type CreateResourceActionResponse = CreateResourceActionResponses[keyof CreateResourceActionResponses];
+
+export type ListResourceActionCatalogData = {
+    body?: never;
+    path?: never;
+    query?: never;
+    url: '/api/v1/resource-actions';
+};
+
+export type ListResourceActionCatalogErrors = {
+    /**
+     * Unauthenticated or invalid authentication.
+     */
+    401: ErrorResponse;
+    /**
+     * Visible target but action denied.
+     */
+    403: ErrorResponse;
+};
+
+export type ListResourceActionCatalogError = ListResourceActionCatalogErrors[keyof ListResourceActionCatalogErrors];
+
+export type ListResourceActionCatalogResponses = {
+    /**
+     * Visible resource action catalog.
+     */
+    200: ResourceActionCollection;
+};
+
+export type ListResourceActionCatalogResponse = ListResourceActionCatalogResponses[keyof ListResourceActionCatalogResponses];
 
 export type DeleteResourceActionData = {
     body?: never;

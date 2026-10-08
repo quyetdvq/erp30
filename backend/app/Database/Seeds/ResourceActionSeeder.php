@@ -31,7 +31,7 @@ final class ResourceActionSeeder extends Seeder
         'position' => ['view', 'create', 'edit', 'setstate', 'export'],
         'employee' => ['view', 'create', 'edit', 'setstate', 'export'],
         'employee_assignment' => ['view', 'create', 'edit', 'setstate'],
-        'user' => ['view', 'create', 'edit', 'setstate', 'assign_permission'],
+        'user' => ['view', 'create', 'edit', 'setstate', 'reset_password', 'assign_permission'],
         'authorization_group' => ['view', 'create', 'edit', 'setstate', 'assign_member', 'assign_permission'],
         'resource' => ['view', 'create', 'edit', 'delete', 'configure_numbering'],
         'policy' => ['view', 'create', 'edit', 'delete'],

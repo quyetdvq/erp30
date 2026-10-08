@@ -69,6 +69,10 @@ export const messages = {
       active: 'Đang hoạt động',
       inactive: 'Ngừng hoạt động',
       closed: 'Đã đóng',
+      locked: 'Đã khóa',
+      suspended: 'Tạm ngưng',
+      banned: 'Bị cấm',
+      disabled: 'Đã vô hiệu hóa',
     },
     locations: {
       actions: 'Thao tác',
@@ -348,6 +352,7 @@ export const messages = {
       view: 'Xem chi tiết',
     },
     users: {
+      user: 'Người dùng',
       detailTitle: 'Chi tiết người dùng',
       email: 'Email',
       groups: 'Nhóm quyền',
@@ -358,8 +363,7 @@ export const messages = {
     },
     security: {
       usersTitle: 'Người dùng',
-      usersDescription:
-        'Đọc danh tính Shield trong phạm vi API hiện hành; không tạo hoặc sửa User tại đây.',
+      usersDescription: 'Quản lý danh tính Shield và quyền truy cập theo phân quyền hiện hành.',
       groupsTitle: 'Nhóm phân quyền',
       groupsDescription: 'Quản lý nhóm quyền, thành viên và Resource Action được gán.',
       resourcesTitle: 'Resource và Action',
@@ -402,7 +406,18 @@ export const messages = {
         overview: 'Tổng quan',
         groups: 'Authorization Groups',
         direct: 'Direct Permissions',
+        permissions: 'Direct Permissions',
       },
+      userDetailTabs: 'Các tab chi tiết User',
+      userForm: 'Biểu mẫu người dùng',
+      userIdentitySourceNote: 'Danh tính và mật khẩu được lưu và xác thực bởi CodeIgniter Shield.',
+      password: 'Mật khẩu',
+      newPassword: 'Mật khẩu mới',
+      resetPassword: 'Đặt lại mật khẩu',
+      passwordResetNote:
+        'Mật khẩu mới được kiểm tra theo chính sách Shield và không bao giờ hiển thị lại.',
+      activate: 'Kích hoạt',
+      inactivate: 'Vô hiệu hóa',
       userTabsLabel: 'Các tab chi tiết User',
       groupIdentityHint: 'Nhóm quyền Shield canonical',
       noDescription: 'Chưa có mô tả.',
@@ -448,12 +463,12 @@ export const messages = {
       requestError:
         'Không thể tải hoặc lưu dữ liệu. Phản hồi 403/404 của backend vẫn là thẩm quyền.',
       userReadOnlyNote:
-        'Shield User create/edit/state và direct-permission mutation chưa có trong API hiện hành; màn hình này chỉ hiển thị dữ liệu đọc được.',
+        'Danh tính Shield, trạng thái, thành viên nhóm và direct permission được kiểm tra lại bởi backend.',
       userGroups: 'Authorization Groups',
       directPermissions: 'Direct Permissions',
       directPermissionCount: 'Số direct permission',
       directPermissionsUnavailable:
-        'API hiện hành chưa cung cấp danh sách hoặc mutation Direct Permissions cho User; không có control giả lập.',
+        'Direct Permissions là ALLOW addition; Policy và ABSOLUTE_DENY vẫn được áp dụng.',
       noGroups: 'User chưa có Authorization Group được trả về.',
     },
     workflow: {
@@ -574,7 +589,15 @@ export const messages = {
       positions: 'Positions',
       employees: 'Employees',
     },
-    status: { active: 'Active', inactive: 'Inactive', closed: 'Closed' },
+    status: {
+      active: 'Active',
+      inactive: 'Inactive',
+      closed: 'Closed',
+      locked: 'Locked',
+      suspended: 'Suspended',
+      banned: 'Banned',
+      disabled: 'Disabled',
+    },
     locations: {
       actions: 'Actions',
       code: 'Code',
@@ -853,6 +876,7 @@ export const messages = {
       view: 'View details',
     },
     users: {
+      user: 'User',
       detailTitle: 'User details',
       email: 'Email',
       groups: 'Permission groups',
@@ -864,7 +888,7 @@ export const messages = {
     security: {
       usersTitle: 'Users',
       usersDescription:
-        'Read Shield identity within the current API surface; User writes are not exposed here.',
+        'Manage Shield identities and access according to the current permission scope.',
       groupsTitle: 'Authorization Groups',
       groupsDescription: 'Manage groups, members, and assigned Resource Actions.',
       resourcesTitle: 'Resources and Actions',
@@ -907,7 +931,18 @@ export const messages = {
         overview: 'Overview',
         groups: 'Authorization Groups',
         direct: 'Direct Permissions',
+        permissions: 'Direct Permissions',
       },
+      userDetailTabs: 'User detail tabs',
+      userForm: 'User form',
+      userIdentitySourceNote:
+        'Identity and passwords are stored and validated by CodeIgniter Shield.',
+      password: 'Password',
+      newPassword: 'New password',
+      resetPassword: 'Reset password',
+      passwordResetNote: 'The new password is checked by Shield policy and is never shown again.',
+      activate: 'Activate',
+      inactivate: 'Inactivate',
       userTabsLabel: 'User detail tabs',
       groupIdentityHint: 'Canonical Shield permission group',
       noDescription: 'No description.',
@@ -953,12 +988,12 @@ export const messages = {
       logDetail: 'Authorization Log details',
       requestError: 'Unable to load or save data. Backend 403/404 responses remain authoritative.',
       userReadOnlyNote:
-        'Shield User create/edit/state and direct-permission mutations are not exposed by the current API; this screen is read-only.',
+        'Shield identity, state, group membership, and direct permissions are rechecked by the backend.',
       userGroups: 'Authorization Groups',
       directPermissions: 'Direct Permissions',
       directPermissionCount: 'Direct permission count',
       directPermissionsUnavailable:
-        'The current API does not expose User Direct Permission listing or mutation; no fabricated controls are shown.',
+        'Direct Permissions are ALLOW additions; Policy and ABSOLUTE_DENY still apply.',
       noGroups: 'No Authorization Groups were returned for this User.',
     },
     workflow: {

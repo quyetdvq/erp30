@@ -258,6 +258,34 @@ final class Api030AuthorizationWorkflowService
         return $this->resourceRepository()->findResourceActions($resourceId);
     }
 
+    /** @return list<array{id: int, resource_id: int, code: string, description: string|null}> */
+    public function resourceActionCatalog(): array
+    {
+        $operation = $this->operation();
+        $visibleResourceIds = [];
+        foreach ($this->resourceRepository()->findResources() as $resource) {
+            try {
+                $this->authorize('resource', 'view', $resource, [], $operation);
+                $visibleResourceIds[] = (int) $resource['id'];
+            } catch (DomainException $exception) {
+                if (! $this->isVisibilityDenial($exception)) {
+                    throw $exception;
+                }
+            }
+        }
+
+        $rows = $this->resourceRepository()->findResourceActionsForResources($visibleResourceIds);
+        return array_map(
+            static fn (array $row): array => [
+                'id' => (int) $row['id'],
+                'resource_id' => (int) $row['resource_id'],
+                'code' => (string) $row['code'],
+                'description' => isset($row['description']) ? (string) $row['description'] : null,
+            ],
+            $rows,
+        );
+    }
+
     /**
      * @param array<string, mixed> $payload
      * @return array<string, mixed>

@@ -142,6 +142,7 @@ function reset(): void {
         :value="valueFor(definition.key)"
         :multiple="definition.multiple"
         :disabled="props.disabled"
+        :aria-label="t(definition.labelKey)"
         @change="
           setFilter(
             definition.key,
@@ -172,7 +173,7 @@ function reset(): void {
     </label>
     <label v-if="props.sortOptions.length" class="list-query-controls__field">
       <span>{{ t('list.sort') }}</span>
-      <select v-model="sort" :disabled="props.disabled">
+      <select v-model="sort" :disabled="props.disabled" :aria-label="t('list.sort')">
         <option value="">{{ t('list.defaultSort') }}</option>
         <option v-for="option in props.sortOptions" :key="option.value" :value="option.value">
           {{ t(option.labelKey) }}
@@ -181,7 +182,7 @@ function reset(): void {
     </label>
     <label class="list-query-controls__field list-query-controls__page-size">
       <span>{{ t('list.pageSize') }}</span>
-      <select v-model="pageSize" :disabled="props.disabled">
+      <select v-model="pageSize" :disabled="props.disabled" :aria-label="t('list.pageSize')">
         <option v-for="size in props.pageSizeOptions" :key="size" :value="size">{{ size }}</option>
       </select>
     </label>

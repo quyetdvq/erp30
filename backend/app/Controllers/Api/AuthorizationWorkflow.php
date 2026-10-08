@@ -6,6 +6,7 @@ namespace App\Controllers\Api;
 
 use App\Infrastructure\Api\ApiTransport;
 use App\Services\Api030AuthorizationWorkflowService;
+use App\Services\ShieldUserIdentityService;
 use CodeIgniter\HTTP\ResponseInterface;
 
 /** Thin HTTP adapter for the CONTRACT_READY P1-API-030 resources. */
@@ -21,6 +22,36 @@ final class AuthorizationWorkflow extends ApiController
     {
         $result = $this->service()->securityUsers($this->request->getGet());
         return ApiTransport::collection($this->response, $result->data, $result->query->page, $result->query->pageSize, $result->total);
+    }
+
+    public function createUser(): ResponseInterface
+    {
+        return $this->respondData((new ShieldUserIdentityService())->create($this->jsonPayload()), 201);
+    }
+
+    public function updateUser(int $id): ResponseInterface
+    {
+        return $this->respondData((new ShieldUserIdentityService())->update($id, $this->jsonPayload()));
+    }
+
+    public function setUserState(int $id): ResponseInterface
+    {
+        return $this->respondData((new ShieldUserIdentityService())->setState($id, $this->jsonPayload()));
+    }
+
+    public function resetUserPassword(int $id): ResponseInterface
+    {
+        return $this->respondData((new ShieldUserIdentityService())->resetPassword($id, $this->jsonPayload()));
+    }
+
+    public function userPermissions(int $id): ResponseInterface
+    {
+        return $this->respondData((new ShieldUserIdentityService())->permissions($id));
+    }
+
+    public function replaceUserPermissions(int $id): ResponseInterface
+    {
+        return $this->respondData((new ShieldUserIdentityService())->replacePermissions($id, $this->jsonPayload()));
     }
 
     public function create(string $resource): ResponseInterface
@@ -82,6 +113,11 @@ final class AuthorizationWorkflow extends ApiController
     public function actions(int $id): ResponseInterface
     {
         return $this->respondData($this->service()->resourceActions($id));
+    }
+
+    public function resourceActionCatalog(): ResponseInterface
+    {
+        return $this->respondData($this->service()->resourceActionCatalog());
     }
 
     public function createAction(int $id): ResponseInterface

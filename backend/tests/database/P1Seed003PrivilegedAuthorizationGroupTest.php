@@ -23,14 +23,14 @@ final class P1Seed003PrivilegedAuthorizationGroupTest extends CIUnitTestCase
         $this->seedPrivilegedGroup();
         $second = $this->permissionSnapshot();
 
-        $this->assertSame(92, PrivilegedAuthorizationGroupSeeder::approvedActionCount());
+        $this->assertSame(93, PrivilegedAuthorizationGroupSeeder::approvedActionCount());
         $this->assertSame($first, $second);
         $this->assertCount(1, $this->db->table('groups')->where('code', 'SYSTEM_ADMIN')->get()->getResultArray());
         $group = $this->db->table('groups')->where('code', 'SYSTEM_ADMIN')->get()->getRowArray();
         $this->assertSame('System Admin', $group['name']);
         $this->assertNull($group['description']);
         $this->assertSame('ACTIVE', $group['status']);
-        $this->assertSame(92, count($first));
+        $this->assertSame(93, count($first));
         $this->assertSame([
             'policies' => 0,
             'auto_numbering_series' => 0,
@@ -104,7 +104,7 @@ final class P1Seed003PrivilegedAuthorizationGroupTest extends CIUnitTestCase
         $groups = $adapter->resolveActiveAuthorizationGroups($identity);
         $permissions = $adapter->resolveGroupBasePermissions($groups);
         $this->assertContains('SYSTEM_ADMIN', array_map(static fn ($group): string => $group->code, $groups));
-        $this->assertCount(92, $permissions);
+        $this->assertCount(93, $permissions);
     }
 
     private function seedCatalog(): void

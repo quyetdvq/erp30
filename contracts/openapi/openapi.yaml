@@ -399,6 +399,44 @@ paths:
       summary: List authorized Shield users for Security Users
       parameters: [{$ref: '#/components/parameters/AcceptLanguage'}, {$ref: '#/components/parameters/RequestId'}, {$ref: '#/components/parameters/Q'}, {$ref: '#/components/parameters/Page'}, {$ref: '#/components/parameters/PageSize'}, {$ref: '#/components/parameters/Sort'}, {$ref: '#/components/parameters/Filter'}]
       responses: {'200': {$ref: '#/components/responses/SecurityUserCollection'}, '401': {$ref: '#/components/responses/Unauthorized'}, '403': {$ref: '#/components/responses/Forbidden'}}
+  /api/v1/users:
+    post:
+      operationId: createUser
+      summary: Create a Shield user identity
+      requestBody: {$ref: '#/components/requestBodies/UserIdentityCreate'}
+      responses: {'201': {$ref: '#/components/responses/UserIdentityResponse'}, '401': {$ref: '#/components/responses/Unauthorized'}, '403': {$ref: '#/components/responses/Forbidden'}, '409': {$ref: '#/components/responses/Conflict'}, '422': {$ref: '#/components/responses/UnprocessableEntity'}}
+  /api/v1/users/{id}:
+    parameters: [{$ref: '#/components/parameters/Id'}]
+    patch:
+      operationId: updateUser
+      summary: Update a Shield user identity
+      requestBody: {$ref: '#/components/requestBodies/UserIdentityPatch'}
+      responses: {'200': {$ref: '#/components/responses/UserIdentityResponse'}, '401': {$ref: '#/components/responses/Unauthorized'}, '403': {$ref: '#/components/responses/Forbidden'}, '404': {$ref: '#/components/responses/NotFound'}, '409': {$ref: '#/components/responses/Conflict'}, '422': {$ref: '#/components/responses/UnprocessableEntity'}}
+  /api/v1/users/{id}/actions/set-state:
+    parameters: [{$ref: '#/components/parameters/Id'}]
+    post:
+      operationId: setUserState
+      summary: Set a Shield user state
+      requestBody: {$ref: '#/components/requestBodies/UserIdentityState'}
+      responses: {'200': {$ref: '#/components/responses/UserIdentityResponse'}, '401': {$ref: '#/components/responses/Unauthorized'}, '403': {$ref: '#/components/responses/Forbidden'}, '404': {$ref: '#/components/responses/NotFound'}, '409': {$ref: '#/components/responses/Conflict'}, '422': {$ref: '#/components/responses/UnprocessableEntity'}}
+  /api/v1/users/{id}/actions/reset-password:
+    parameters: [{$ref: '#/components/parameters/Id'}]
+    post:
+      operationId: resetUserPassword
+      summary: Reset a Shield user password
+      requestBody: {$ref: '#/components/requestBodies/UserIdentityPasswordReset'}
+      responses: {'200': {$ref: '#/components/responses/UserIdentityResponse'}, '401': {$ref: '#/components/responses/Unauthorized'}, '403': {$ref: '#/components/responses/Forbidden'}, '404': {$ref: '#/components/responses/NotFound'}, '409': {$ref: '#/components/responses/Conflict'}, '422': {$ref: '#/components/responses/UnprocessableEntity'}}
+  /api/v1/users/{id}/permissions:
+    parameters: [{$ref: '#/components/parameters/Id'}]
+    get:
+      operationId: getUserPermissions
+      summary: List direct ALLOW permissions for a Shield user
+      responses: {'200': {$ref: '#/components/responses/UserPermissionsResponse'}, '401': {$ref: '#/components/responses/Unauthorized'}, '403': {$ref: '#/components/responses/Forbidden'}, '404': {$ref: '#/components/responses/NotFound'}}
+    put:
+      operationId: replaceUserPermissions
+      summary: Replace direct ALLOW permissions for a Shield user
+      requestBody: {$ref: '#/components/requestBodies/UserPermissions'}
+      responses: {'200': {$ref: '#/components/responses/UserPermissionsResponse'}, '401': {$ref: '#/components/responses/Unauthorized'}, '403': {$ref: '#/components/responses/Forbidden'}, '404': {$ref: '#/components/responses/NotFound'}, '409': {$ref: '#/components/responses/Conflict'}, '422': {$ref: '#/components/responses/UnprocessableEntity'}}
   /api/v1/authorization-groups:
     get:
       operationId: listAuthorizationGroups
@@ -487,6 +525,11 @@ paths:
       summary: Create resource action
       requestBody: {$ref: '#/components/requestBodies/ResourceActionCreate'}
       responses: {'201': {$ref: '#/components/responses/Success'}, '401': {$ref: '#/components/responses/Unauthorized'}, '403': {$ref: '#/components/responses/Forbidden'}, '422': {$ref: '#/components/responses/UnprocessableEntity'}}
+  /api/v1/resource-actions:
+    get:
+      operationId: listResourceActionCatalog
+      summary: List visible resource actions
+      responses: {'200': {$ref: '#/components/responses/ResourceActionCollection'}, '401': {$ref: '#/components/responses/Unauthorized'}, '403': {$ref: '#/components/responses/Forbidden'}}
   /api/v1/resources/{id}/actions/{action_id}:
     parameters: [{$ref: '#/components/parameters/Id'}, {name: action_id, in: path, required: true, schema: {$ref: '#/components/schemas/BigInt'}}]
     patch:
@@ -966,6 +1009,11 @@ components:
     AuthorizationGroupPatch: {required: true, content: {application/json: {schema: {$ref: '#/components/schemas/AuthorizationGroupPatch'}}}}
     AuthorizationGroupMembers: {required: true, content: {application/json: {schema: {$ref: '#/components/schemas/AuthorizationGroupMembers'}}}}
     AuthorizationGroupPermissions: {required: true, content: {application/json: {schema: {$ref: '#/components/schemas/AuthorizationGroupPermissions'}}}}
+    UserIdentityCreate: {required: true, content: {application/json: {schema: {$ref: '#/components/schemas/UserIdentityCreate'}}}}
+    UserIdentityPatch: {required: true, content: {application/json: {schema: {$ref: '#/components/schemas/UserIdentityPatch'}}}}
+    UserIdentityState: {required: true, content: {application/json: {schema: {$ref: '#/components/schemas/UserIdentityState'}}}}
+    UserIdentityPasswordReset: {required: true, content: {application/json: {schema: {$ref: '#/components/schemas/UserIdentityPasswordReset'}}}}
+    UserPermissions: {required: true, content: {application/json: {schema: {$ref: '#/components/schemas/UserPermissions'}}}}
     ResourceCreate: {required: true, content: {application/json: {schema: {$ref: '#/components/schemas/ResourceCreate'}}}}
     ResourcePatch: {required: true, content: {application/json: {schema: {$ref: '#/components/schemas/ResourcePatch'}}}}
     ResourceActionCreate: {required: true, content: {application/json: {schema: {$ref: '#/components/schemas/ResourceActionCreate'}}}}
@@ -1022,8 +1070,11 @@ components:
     AuthorizationGroupResponse: {description: Authorization group response., content: {application/json: {schema: {$ref: '#/components/schemas/AuthorizationGroupResponse'}}}}
     AuthorizationGroupCollection: {description: Authorization group collection., content: {application/json: {schema: {$ref: '#/components/schemas/AuthorizationGroupCollection'}}}}
     SecurityUserCollection: {description: Authorized Shield user collection for the Security Users screen., content: {application/json: {schema: {$ref: '#/components/schemas/SecurityUserCollection'}}}}
+    UserIdentityResponse: {description: Shield user identity response., content: {application/json: {schema: {$ref: '#/components/schemas/UserIdentityResponse'}}}}
+    UserPermissionsResponse: {description: Direct ALLOW permissions response., content: {application/json: {schema: {$ref: '#/components/schemas/UserPermissionsResponse'}}}}
     ResourceResponse: {description: Resource response., content: {application/json: {schema: {$ref: '#/components/schemas/ResourceResponse'}}}}
     ResourceCollection: {description: Resource collection., content: {application/json: {schema: {$ref: '#/components/schemas/ResourceCollection'}}}}
+    ResourceActionCollection: {description: Visible resource action catalog., content: {application/json: {schema: {$ref: '#/components/schemas/ResourceActionCollection'}}}}
     NumberingSeriesResponse: {description: Numbering series response., content: {application/json: {schema: {$ref: '#/components/schemas/NumberingSeriesResponse'}}}}
     NumberingSeriesCollection: {description: Numbering series collection., content: {application/json: {schema: {$ref: '#/components/schemas/NumberingSeriesCollection'}}}}
     NumberingSeriesValidationResponse: {description: Non-consuming numbering configuration validation response., content: {application/json: {schema: {$ref: '#/components/schemas/NumberingSeriesValidationResponse'}}}}
@@ -2034,6 +2085,14 @@ components:
     SecurityUserGroup: {type: object, required: [id, code, name, status], properties: {id: {$ref: '#/components/schemas/NullableBigInt'}, code: {type: string}, name: {type: [string, 'null']}, status: {type: [string, 'null']}}}
     SecurityUser: {type: object, required: [id, username, name, email, active, status, created_at, groups, direct_permission_count], properties: {id: {$ref: '#/components/schemas/BigInt'}, username: {type: string}, name: {type: [string, 'null']}, email: {type: [string, 'null']}, active: {type: boolean}, status: {type: [string, 'null']}, created_at: {type: [string, 'null'], format: date-time}, groups: {type: array, items: {$ref: '#/components/schemas/SecurityUserGroup'}}, direct_permission_count: {type: integer, minimum: 0}}}
     SecurityUserCollection: {allOf: [{$ref: '#/components/schemas/CollectionResponse'}], properties: {data: {type: array, items: {$ref: '#/components/schemas/SecurityUser'}}}}
+    UserIdentity: {type: object, required: [id, username, email, active, status, created_at], properties: {id: {$ref: '#/components/schemas/BigInt'}, username: {type: string}, email: {type: string, format: email}, active: {type: boolean}, status: {type: string, enum: [ACTIVE, INACTIVE, LOCKED, SUSPENDED, BANNED, DISABLED]}, created_at: {type: [string, 'null'], format: date-time}}}
+    UserIdentityCreate: {type: object, required: [username, email, password, state], additionalProperties: false, properties: {username: {type: string, minLength: 1, maxLength: 30}, email: {type: string, format: email}, password: {type: string, minLength: 1, writeOnly: true}, state: {type: string, enum: [ACTIVE, INACTIVE, LOCKED, SUSPENDED, BANNED, DISABLED]}}}
+    UserIdentityPatch: {type: object, additionalProperties: false, minProperties: 1, properties: {username: {type: string, minLength: 1, maxLength: 30}, email: {type: string, format: email}, row_version: {type: string}}}
+    UserIdentityState: {type: object, required: [state], additionalProperties: false, properties: {state: {type: string, enum: [ACTIVE, INACTIVE, LOCKED, SUSPENDED, BANNED, DISABLED]}, row_version: {type: string}}}
+    UserIdentityPasswordReset: {type: object, required: [new_password], additionalProperties: false, properties: {new_password: {type: string, minLength: 1, writeOnly: true}, row_version: {type: string}}}
+    UserPermissions: {type: object, required: [permissions], additionalProperties: false, properties: {permissions: {type: array, items: {type: string, pattern: '^[a-z0-9_]+\\.[a-z0-9_]+$'}}}}
+    UserIdentityResponse: {allOf: [{$ref: '#/components/schemas/SuccessResponse'}], properties: {data: {$ref: '#/components/schemas/UserIdentity'}}}
+    UserPermissionsResponse: {allOf: [{$ref: '#/components/schemas/SuccessResponse'}], properties: {data: {$ref: '#/components/schemas/UserPermissions'}}}
     AuthorizationGroupCreate: {type: object, required: [code, name], properties: {code: {type: string}, name: {type: string}, description: {type: string}, status: {type: string, enum: [ACTIVE, INACTIVE]}}}
     AuthorizationGroupPatch: {type: object, properties: {code: {type: string}, name: {type: string}, description: {type: [string, 'null']}, status: {type: string, enum: [ACTIVE, INACTIVE]}}}
     AuthorizationGroupMembers: {type: object, required: [user_ids], properties: {user_ids: {type: array, items: {$ref: '#/components/schemas/BigInt'}}}}
@@ -2043,6 +2102,7 @@ components:
     ResourcePatch: {type: object, properties: {name: {type: string}, lifecycle_id: {$ref: '#/components/schemas/BigInt'}}}
     ResourceActionCreate: {type: object, required: [code], properties: {code: {type: string}, description: {type: string}}}
     ResourceActionPatch: {type: object, properties: {description: {type: [string, 'null']}}}
+    ResourceAction: {type: object, required: [id, resource_id, code, description], additionalProperties: false, properties: {id: {$ref: '#/components/schemas/BigInt'}, resource_id: {$ref: '#/components/schemas/BigInt'}, code: {type: string}, description: {type: [string, 'null']}}}
     NumberingSeries: {type: object, required: [id, resource_id, series_code, name, scope_type, pattern, reset_policy, generation_mode, start_number, increment_by, is_default, status], properties: {id: {$ref: '#/components/schemas/BigInt'}, resource_id: {$ref: '#/components/schemas/BigInt'}, series_code: {type: string}, name: {type: string}, scope_type: {type: string, enum: [GROUP, COMPANY, ORGANIZATION]}, pattern: {type: string}, reset_policy: {type: string, enum: [NEVER, YEARLY, MONTHLY, DAILY]}, generation_mode: {type: string, enum: [AUTO_REQUIRED, AUTO_IF_EMPTY]}, start_number: {$ref: '#/components/schemas/BigInt'}, increment_by: {type: integer, minimum: 1}, is_default: {type: boolean}, status: {type: string, enum: [ACTIVE, INACTIVE]}}}
     NumberingSeriesCreate: {type: object, required: [series_code, name, scope_type, pattern, reset_policy, generation_mode, start_number, increment_by, is_default, status], properties: {series_code: {type: string}, name: {type: string}, scope_type: {type: string, enum: [GROUP, COMPANY, ORGANIZATION]}, pattern: {type: string}, reset_policy: {type: string, enum: [NEVER, YEARLY, MONTHLY, DAILY]}, generation_mode: {type: string, enum: [AUTO_REQUIRED, AUTO_IF_EMPTY]}, start_number: {$ref: '#/components/schemas/BigInt'}, increment_by: {type: integer, minimum: 1}, is_default: {type: boolean}, status: {type: string, enum: [ACTIVE, INACTIVE]}}}
     NumberingSeriesPatch: {type: object, properties: {resource_id: {$ref: '#/components/schemas/BigInt'}, series_code: {type: string}, name: {type: string}, scope_type: {type: string, enum: [GROUP, COMPANY, ORGANIZATION]}, pattern: {type: string}, reset_policy: {type: string, enum: [NEVER, YEARLY, MONTHLY, DAILY]}, generation_mode: {type: string, enum: [AUTO_REQUIRED, AUTO_IF_EMPTY]}, start_number: {$ref: '#/components/schemas/BigInt'}, increment_by: {type: integer, minimum: 1}, is_default: {type: boolean}, status: {type: string, enum: [ACTIVE, INACTIVE]}}}
@@ -2064,6 +2124,7 @@ components:
     AuthorizationGroupCollection: {allOf: [{$ref: '#/components/schemas/CollectionResponse'}], properties: {data: {type: array, items: {$ref: '#/components/schemas/AuthorizationGroup'}}}}
     ResourceResponse: {allOf: [{$ref: '#/components/schemas/SuccessResponse'}], properties: {data: {$ref: '#/components/schemas/Resource'}}}
     ResourceCollection: {allOf: [{$ref: '#/components/schemas/CollectionResponse'}], properties: {data: {type: array, items: {$ref: '#/components/schemas/Resource'}}}}
+    ResourceActionCollection: {allOf: [{$ref: '#/components/schemas/SuccessResponse'}], properties: {data: {type: array, items: {$ref: '#/components/schemas/ResourceAction'}}}}
     NumberingSeriesResponse: {allOf: [{$ref: '#/components/schemas/SuccessResponse'}], properties: {data: {$ref: '#/components/schemas/NumberingSeries'}}}
     NumberingSeriesCollection: {allOf: [{$ref: '#/components/schemas/CollectionResponse'}], properties: {data: {type: array, items: {$ref: '#/components/schemas/NumberingSeries'}}}}
     NumberingSeriesValidationResponse: {allOf: [{$ref: '#/components/schemas/SuccessResponse'}], properties: {data: {$ref: '#/components/schemas/NumberingSeriesValidation'}}}

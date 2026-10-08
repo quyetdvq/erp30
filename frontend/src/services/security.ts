@@ -3,6 +3,7 @@ import {
   createPolicy,
   createResource,
   createResourceAction,
+  createUser,
   deletePolicy,
   deleteResource,
   deleteResourceAction,
@@ -10,6 +11,7 @@ import {
   getAuthorizationLog,
   getPolicy,
   getResource,
+  getUserPermissions,
   listAuthorizationGroupMembers,
   listAuthorizationGroupPermissions,
   listAuthorizationGroups,
@@ -19,16 +21,21 @@ import {
   listOrganizations,
   listPolicies,
   listPositions,
+  listResourceActionCatalog as listResourceActionCatalogRequest,
   listResourceActions,
   listResources,
   listWorkflowStates,
   replaceAuthorizationGroupMembers,
   replaceAuthorizationGroupPermissions,
+  replaceUserPermissions,
   updateAuthorizationGroup,
   updatePolicy,
   updateResource,
   updateResourceAction,
+  updateUser,
   setAuthorizationGroupState,
+  setUserState,
+  resetUserPassword,
 } from '@/api/generated/sdk.gen'
 import type {
   AuthorizationGroup,
@@ -42,9 +49,14 @@ import type {
   PolicyPatch,
   Position,
   Resource,
+  ResourceAction,
   ResourceActionCreate,
   ResourceActionPatch,
   SecurityUser,
+  UserIdentity,
+  UserIdentityCreateWritable,
+  UserIdentityPatch,
+  UserIdentityPasswordResetWritable,
   WorkflowState,
 } from '@/api/generated/types.gen'
 import { withTypedClient } from '@/api/client'
@@ -76,6 +88,8 @@ export type SecurityPermission = {
   effect?: 'ALLOW' | 'DENY' | 'ABSOLUTE_DENY'
   code?: string
 }
+
+export type UserState = 'ACTIVE' | 'INACTIVE' | 'LOCKED' | 'SUSPENDED' | 'BANNED' | 'DISABLED'
 
 function headers() {
   return { 'Accept-Language': i18n.global.locale.value as 'vi' | 'en' }
@@ -150,6 +164,61 @@ export async function listSecurityUserPage(query: ListQuery): Promise<ListRespon
       return { ...page, data: page.data.map(mapSecurityUser) }
     }),
   )
+}
+
+export async function saveSecurityUser(
+  payload: UserIdentityCreateWritable | UserIdentityPatch,
+  id?: string,
+): Promise<UserIdentity> {
+  return resource(
+    await withTypedClient((client) =>
+      id
+        ? updateUser({
+            client,
+            path: { id },
+            body: payload as UserIdentityPatch,
+            throwOnError: true,
+          })
+        : createUser({ client, body: payload as UserIdentityCreateWritable, throwOnError: true }),
+    ),
+  )
+}
+
+export async function changeSecurityUserState(id: string, state: UserState): Promise<UserIdentity> {
+  return resource(
+    await withTypedClient((client) =>
+      setUserState({ client, path: { id }, body: { state }, throwOnError: true }),
+    ),
+  )
+}
+
+export async function resetSecurityUserPassword(
+  id: string,
+  newPassword: string,
+): Promise<UserIdentity> {
+  const body: UserIdentityPasswordResetWritable = { new_password: newPassword }
+  return resource(
+    await withTypedClient((client) =>
+      resetUserPassword({ client, path: { id }, body, throwOnError: true }),
+    ),
+  )
+}
+
+export async function getSecurityUserPermissions(id: string): Promise<string[]> {
+  const response = await withTypedClient((client) =>
+    getUserPermissions({ client, path: { id }, throwOnError: true }),
+  )
+  return response.data.data?.permissions ?? []
+}
+
+export async function saveSecurityUserPermissions(
+  id: string,
+  permissions: string[],
+): Promise<string[]> {
+  const response = await withTypedClient((client) =>
+    replaceUserPermissions({ client, path: { id }, body: { permissions }, throwOnError: true }),
+  )
+  return response.data.data?.permissions ?? []
 }
 
 export async function saveAuthorizationGroup(
@@ -276,6 +345,18 @@ export async function getResourceActions(id: string): Promise<SecurityAction[]> 
       listResourceActions({ client, path: { id }, throwOnError: true }),
     ),
   )
+}
+
+export async function listResourceActionCatalog(): Promise<SecurityAction[]> {
+  const response = await withTypedClient((client) =>
+    listResourceActionCatalogRequest({ client, throwOnError: true }),
+  )
+  return (response.data.data ?? []).map((action: ResourceAction) => ({
+    id: action.id,
+    resource_id: action.resource_id,
+    code: action.code,
+    description: action.description,
+  }))
 }
 
 export async function saveResourceAction(

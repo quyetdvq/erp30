@@ -19,6 +19,7 @@ async function mockSession(page: Page): Promise<void> {
               'user.view',
               'user.create',
               'user.edit',
+              'user.setstate',
               'authorization_group.view',
               'authorization_group.create',
               'authorization_group.edit',
@@ -84,6 +85,13 @@ test.describe('P1-FE-030 security surfaces', () => {
         }),
       }),
     )
+    await page.route('**/api/v1/users/7/permissions', async (route) =>
+      route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({ data: { permissions: [] } }),
+      }),
+    )
     await page.route('**/api/v1/authorization-groups*', async (route) =>
       route.fulfill({
         status: 200,
@@ -106,6 +114,16 @@ test.describe('P1-FE-030 security surfaces', () => {
             { id: '8', username: 'linhpt', active: true, status: 'ACTIVE' },
           ],
           meta: { request_id: 'test-members' },
+        }),
+      }),
+    )
+    await page.route('**/api/v1/resource-actions', async (route) =>
+      route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({
+          data: [{ id: '20', resource_id: '2', code: 'view', description: null }],
+          meta: { request_id: 'test-resource-actions' },
         }),
       }),
     )
@@ -261,33 +279,78 @@ test.describe('P1-FE-030 security surfaces', () => {
     )
   })
 
-  test('users is a complete read-only table with modal details and one aggregate request', async ({
+  test('users exposes permission-aware mutation controls and canonical detail tabs', async ({
     page,
   }) => {
     let memberRequests = 0
     let securityUserRequests = 0
+    let resourceActionRequests = 0
+    let resourceActionCatalogRequests = 0
     page.on('request', (request) => {
       if (request.url().includes('/api/v1/authorization-groups/1/members')) memberRequests += 1
       if (request.url().includes('/api/v1/security/users')) securityUserRequests += 1
+      if (/\/api\/v1\/resources\/[^/]+\/actions$/.test(new URL(request.url()).pathname))
+        resourceActionRequests += 1
+      if (new URL(request.url()).pathname.endsWith('/api/v1/resource-actions'))
+        resourceActionCatalogRequests += 1
     })
     await page.goto('/security/users')
     await expect(page.getByRole('heading', { name: 'Người dùng' })).toBeVisible()
+    const userQuery = page.getByRole('search')
+    await expect(userQuery.getByRole('searchbox', { name: 'Tìm kiếm' })).toBeVisible()
+    await expect(userQuery.getByLabel('Trạng thái', { exact: true })).toBeVisible()
+    await expect(userQuery.getByLabel('Sắp xếp', { exact: true })).toBeVisible()
+    await expect(userQuery.getByLabel('Số dòng mỗi trang', { exact: true })).toBeVisible()
+    await expect(page.getByRole('navigation', { name: 'Phân trang danh sách' })).toBeVisible()
     await expect(page.getByRole('cell', { name: 'quyetdv', exact: true })).toBeVisible()
     await expect(page.getByRole('cell', { name: 'Quyet Do Van', exact: true })).toBeVisible()
     await expect(page.getByRole('cell', { name: 'linhpt', exact: true })).toBeVisible()
     await expect(
       page.getByRole('table', { name: 'Danh sách dữ liệu' }).getByRole('row'),
     ).toHaveCount(3)
-    await expect(page.getByRole('button', { name: /Tạo|Create|Sửa|Edit/ })).toHaveCount(0)
+    const headers = await page
+      .getByRole('table', { name: 'Danh sách dữ liệu' })
+      .getByRole('columnheader')
+      .allTextContents()
+    expect(headers.map((header) => header.trim()).slice(-2)).toEqual(['Trạng thái', 'Thao tác'])
+    const tableAccessibility = await new AxeBuilder({ page })
+      .include('.security-list-panel')
+      .analyze()
+    expect(tableAccessibility.violations).toEqual([])
+    const createButton = page.getByRole('button', { name: /Tạo|Create/ })
+    await expect(createButton).toHaveCount(1)
+    await createButton.click()
+    const createDialog = page.getByRole('dialog', { name: 'Biểu mẫu người dùng' })
+    await expect(createDialog).toBeVisible()
+    await expect(createDialog.locator('.modal-card__header')).toHaveCount(1)
+    await expect(createDialog.locator('.modal-card__body')).toHaveCount(1)
+    await expect(createDialog.locator('.modal-card__footer')).toHaveCount(1)
+    await page.getByRole('button', { name: 'Đóng' }).click()
+    const firstUserRow = page.getByRole('row', { name: /7 quyetdv/ })
+    await expect(firstUserRow.getByRole('button', { name: 'Sửa' })).toBeVisible()
+    await expect(firstUserRow.getByRole('button', { name: 'Vô hiệu hóa' })).toBeVisible()
     await page
       .getByRole('row', { name: /7 quyetdv/ })
       .getByRole('button', { name: 'Xem chi tiết' })
       .click()
-    await expect(page.getByRole('dialog', { name: /Chi tiết người dùng/ })).toBeVisible()
-    await expect(
-      page.getByRole('dialog', { name: /Chi tiết người dùng/ }).getByText('quyetdv@example.test'),
-    ).toBeVisible()
-    expect(memberRequests).toBe(0)
+    const detailDialog = page.getByRole('dialog', { name: /Chi tiết người dùng/ })
+    await expect(detailDialog).toBeVisible()
+    await expect(detailDialog.locator('.modal-card__header')).toHaveCount(1)
+    await expect(detailDialog.locator('.modal-card__body')).toHaveCount(1)
+    await expect(detailDialog.locator('.modal-card__footer')).toHaveCount(1)
+    await expect(detailDialog.getByText('quyetdv@example.test')).toBeVisible()
+    expect(resourceActionRequests).toBe(0)
+    expect(resourceActionCatalogRequests).toBe(0)
+    await detailDialog.getByRole('button', { name: 'Direct Permissions' }).click()
+    await expect.poll(() => resourceActionCatalogRequests).toBe(1)
+    expect(resourceActionRequests).toBe(0)
+    await detailDialog.getByRole('button', { name: 'Tổng quan' }).click()
+    await detailDialog.getByRole('button', { name: 'Direct Permissions' }).click()
+    expect(resourceActionCatalogRequests).toBe(1)
+    expect(resourceActionRequests).toBe(0)
+    const detailAccessibility = await new AxeBuilder({ page }).include('.modal-card').analyze()
+    expect(detailAccessibility.violations).toEqual([])
+    expect(memberRequests).toBeGreaterThan(0)
     expect(securityUserRequests).toBe(1)
   })
 

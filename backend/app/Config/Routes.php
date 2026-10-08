@@ -44,6 +44,12 @@ $routes->group('api/v1', ['filter' => 'cors'], static function (RouteCollection 
     $routes->get('organizations/tree', 'Api\\FoundationOrganizationContact::tree');
 
     $routes->get('security/users', 'Api\\AuthorizationWorkflow::securityUsers');
+    $routes->post('users', 'Api\\AuthorizationWorkflow::createUser');
+    $routes->patch('users/(:num)', 'Api\\AuthorizationWorkflow::updateUser/$1');
+    $routes->post('users/(:num)/actions/set-state', 'Api\\AuthorizationWorkflow::setUserState/$1');
+    $routes->post('users/(:num)/actions/reset-password', 'Api\\AuthorizationWorkflow::resetUserPassword/$1');
+    $routes->get('users/(:num)/permissions', 'Api\\AuthorizationWorkflow::userPermissions/$1');
+    $routes->put('users/(:num)/permissions', 'Api\\AuthorizationWorkflow::replaceUserPermissions/$1');
 
     foreach (['authorization-groups' => 'authorization_group', 'resources' => 'resource', 'policies' => 'policy', 'authorization-logs' => 'authorization_log', 'workflow-states' => 'workflow_state', 'lifecycles' => 'lifecycle'] as $path => $resource) {
         $routes->get($path, 'Api\\AuthorizationWorkflow::list/' . $resource);
@@ -73,6 +79,7 @@ $routes->group('api/v1', ['filter' => 'cors'], static function (RouteCollection 
     $routes->get('authorization-groups/(:num)/permissions', 'Api\\AuthorizationWorkflow::permissions/$1');
     $routes->put('authorization-groups/(:num)/permissions', 'Api\\AuthorizationWorkflow::replacePermissions/$1');
     $routes->get('resources/(:num)/actions', 'Api\\AuthorizationWorkflow::actions/$1');
+    $routes->get('resource-actions', 'Api\\AuthorizationWorkflow::resourceActionCatalog');
     $routes->post('resources/(:num)/actions', 'Api\\AuthorizationWorkflow::createAction/$1');
     $routes->patch('resources/(:num)/actions/(:num)', 'Api\\AuthorizationWorkflow::updateAction/$1/$2');
     $routes->delete('resources/(:num)/actions/(:num)', 'Api\\AuthorizationWorkflow::deleteAction/$1/$2');

@@ -347,6 +347,71 @@ final class ShieldIdentityAdapter
         return true;
     }
 
+    /** @return list<string> */
+    public function directPermissionTokens(int $userId): array
+    {
+        $table = config('Auth')->tables['permissions_users'];
+        $result = $this->db->table($table)->select('permission')->where('user_id', $userId)->orderBy('permission', 'ASC')->get();
+        if ($result === false) {
+            throw new PersistenceException(self::ERROR_PERSISTENCE_FAILED, 'directPermissionTokens');
+        }
+
+        $catalog = $this->loadCatalog();
+        $tokens = [];
+        foreach ($result->getResultArray() as $row) {
+            $token = strtolower(trim((string) ($row['permission'] ?? '')));
+            if ($token !== '' && isset($catalog[$token])) {
+                $tokens[$token] = true;
+            }
+        }
+
+        return array_keys($tokens);
+    }
+
+    /** @param list<string> $permissions */
+    public function replaceDirectPermissions(int $userId, array $permissions, OperationContext $operation): bool
+    {
+        $catalog = $this->loadCatalog();
+        foreach ($permissions as $permission) {
+            if (! isset($catalog[$permission])) {
+                throw new DomainException(self::ERROR_PERMISSION_MAPPING_INVALID, ['field' => 'permissions']);
+            }
+        }
+        if (! $this->db instanceof \CodeIgniter\Database\BaseConnection) {
+            throw new DomainException(self::ERROR_PERSISTENCE_FAILED, ['operation' => 'replaceDirectPermissions']);
+        }
+
+        $table = config('Auth')->tables['permissions_users'];
+        $this->db->transBegin();
+        try {
+            if ($this->db->table($table)->where('user_id', $userId)->delete() === false) {
+                throw new PersistenceException(self::ERROR_PERSISTENCE_FAILED, 'replaceDirectPermissions.delete');
+            }
+            foreach (array_values(array_unique($permissions)) as $permission) {
+                if (! $this->db->table($table)->insert([
+                    'user_id' => $userId,
+                    'permission' => $permission,
+                    'created_at' => $operation->evaluationTime->utc()->format('Y-m-d H:i:s'),
+                ])) {
+                    throw new PersistenceException(self::ERROR_PERSISTENCE_FAILED, 'replaceDirectPermissions.insert');
+                }
+            }
+            if (! $this->db->transStatus()) {
+                throw new PersistenceException(self::ERROR_PERSISTENCE_FAILED, 'replaceDirectPermissions');
+            }
+            $this->db->transCommit();
+        } catch (\Throwable $exception) {
+            $this->db->transRollback();
+            $this->db->resetTransStatus();
+            if ($exception instanceof DomainException) {
+                throw $exception;
+            }
+            throw new PersistenceException(self::ERROR_PERSISTENCE_FAILED, 'replaceDirectPermissions', $exception);
+        }
+
+        return true;
+    }
+
     /** @return array<string, BasePermission> */
     private function loadCatalog(): array
     {

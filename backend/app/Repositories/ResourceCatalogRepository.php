@@ -75,6 +75,25 @@ final class ResourceCatalogRepository
         return $this->findMany('findResourceActions', fn () => $this->db->table('resource_actions')->where('resource_id', $resourceId)->orderBy('id', 'ASC')->get());
     }
 
+    /** @param list<int> $resourceIds
+     *  @return list<array<string, mixed>>
+     */
+    public function findResourceActionsForResources(array $resourceIds): array
+    {
+        if ($resourceIds === []) {
+            return [];
+        }
+
+        return $this->findMany(
+            'findResourceActionsForResources',
+            fn () => $this->db->table('resource_actions')
+                ->whereIn('resource_id', $resourceIds)
+                ->orderBy('resource_id', 'ASC')
+                ->orderBy('id', 'ASC')
+                ->get(),
+        );
+    }
+
     /** @return array<string, mixed>|null */
     public function findResourceAction(int $resourceId, int $actionId): ?array
     {

@@ -25,7 +25,10 @@ final class ShieldSecurityUserRepository
         $tables = config('Auth')->tables;
         try {
             $result = $this->db->table($tables['users'] . ' u')
-                ->select('u.id, u.username, u.active, u.status, u.created_at, ai.name, ai.secret AS email')
+                // Shield stores the display identity in `name` and the email
+                // identity in `secret`; `secret2` is the password hash and
+                // must never enter an application payload.
+                ->select('u.id, u.username, u.active, u.status, u.created_at, ai.name AS name, ai.secret AS email')
                 ->join($tables['identities'] . ' ai', "ai.user_id = u.id AND ai.type = 'email_password'", 'left')
                 ->where('u.deleted_at', null)
                 ->orderBy('u.id', 'ASC')

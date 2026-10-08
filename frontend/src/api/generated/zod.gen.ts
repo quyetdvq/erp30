@@ -951,6 +951,69 @@ export const zSecurityUserCollection = zCollectionResponse.and(z.object({
     data: z.array(zSecurityUser).optional()
 }));
 
+export const zUserIdentity = z.object({
+    id: zBigInt,
+    username: z.string(),
+    email: z.email(),
+    active: z.boolean(),
+    status: z.enum([
+        'ACTIVE',
+        'INACTIVE',
+        'LOCKED',
+        'SUSPENDED',
+        'BANNED',
+        'DISABLED'
+    ]),
+    created_at: z.iso.datetime().nullable()
+});
+
+export const zUserIdentityCreate = z.object({
+    username: z.string().min(1).max(30),
+    email: z.email(),
+    state: z.enum([
+        'ACTIVE',
+        'INACTIVE',
+        'LOCKED',
+        'SUSPENDED',
+        'BANNED',
+        'DISABLED'
+    ])
+});
+
+export const zUserIdentityPatch = z.object({
+    username: z.string().min(1).max(30).optional(),
+    email: z.email().optional(),
+    row_version: z.string().optional()
+});
+
+export const zUserIdentityState = z.object({
+    state: z.enum([
+        'ACTIVE',
+        'INACTIVE',
+        'LOCKED',
+        'SUSPENDED',
+        'BANNED',
+        'DISABLED'
+    ]),
+    row_version: z.string().optional()
+});
+
+export const zUserIdentityPasswordReset = z.object({
+    row_version: z.string().optional()
+});
+
+export const zUserPermissions = z.object({
+    permissions: z.array(z.string().regex(/^[a-z0-9_]+\\.[a-z0-9_]+$/))
+});
+
+export const zUserIdentityResponse = zSuccessResponse.and(z.object({
+    data: zUserIdentity.optional()
+}));
+
+export const zUserPermissionsResponse = zSuccessResponse.and(z.object({
+    data: zUserPermissions.optional()
+}));
+
 export const zAuthorizationGroupCreate = z.object({
     code: z.string(),
     name: z.string(),
@@ -1009,6 +1072,13 @@ export const zResourceActionCreate = z.object({
 
 export const zResourceActionPatch = z.object({
     description: z.string().nullish()
+});
+
+export const zResourceAction = z.object({
+    id: zBigInt,
+    resource_id: zBigInt,
+    code: z.string(),
+    description: z.string().nullable()
 });
 
 export const zNumberingSeries = z.object({
@@ -1224,6 +1294,10 @@ export const zResourceCollection = zCollectionResponse.and(z.object({
     data: z.array(zResource).optional()
 }));
 
+export const zResourceActionCollection = zSuccessResponse.and(z.object({
+    data: z.array(zResourceAction).optional()
+}));
+
 export const zNumberingSeriesResponse = zSuccessResponse.and(z.object({
     data: zNumberingSeries.optional()
 }));
@@ -1267,6 +1341,27 @@ export const zLifecycleResponse = zSuccessResponse.and(z.object({
 export const zLifecycleCollection = zCollectionResponse.and(z.object({
     data: z.array(zLifecycle).optional()
 }));
+
+export const zNullableBigIntWritable = zBigInt.nullable();
+
+export const zUserIdentityCreateWritable = z.object({
+    username: z.string().min(1).max(30),
+    email: z.email(),
+    password: z.string().min(1),
+    state: z.enum([
+        'ACTIVE',
+        'INACTIVE',
+        'LOCKED',
+        'SUSPENDED',
+        'BANNED',
+        'DISABLED'
+    ])
+});
+
+export const zUserIdentityPasswordResetWritable = z.object({
+    new_password: z.string().min(1),
+    row_version: z.string().optional()
+});
 
 /**
  * Supported request language. Unsupported values fall back to vi.
@@ -1355,6 +1450,16 @@ export const zAuthorizationGroupPatch2 = zAuthorizationGroupPatch;
 export const zAuthorizationGroupMembers2 = zAuthorizationGroupMembers;
 
 export const zAuthorizationGroupPermissions2 = zAuthorizationGroupPermissions;
+
+export const zUserIdentityCreate2 = zUserIdentityCreateWritable;
+
+export const zUserIdentityPatch2 = zUserIdentityPatch;
+
+export const zUserIdentityState2 = zUserIdentityState;
+
+export const zUserIdentityPasswordReset2 = zUserIdentityPasswordResetWritable;
+
+export const zUserPermissions2 = zUserPermissions;
 
 export const zResourceCreate2 = zResourceCreate;
 
@@ -2043,6 +2148,66 @@ export const zListSecurityUsersQuery = z.object({
  */
 export const zListSecurityUsersResponse = zSecurityUserCollection;
 
+export const zCreateUserBody = zUserIdentityCreate2;
+
+/**
+ * Shield user identity response.
+ */
+export const zCreateUserResponse = zUserIdentityResponse;
+
+export const zUpdateUserBody = zUserIdentityPatch2;
+
+export const zUpdateUserPath = z.object({
+    id: zBigInt
+});
+
+/**
+ * Shield user identity response.
+ */
+export const zUpdateUserResponse = zUserIdentityResponse;
+
+export const zSetUserStateBody = zUserIdentityState2;
+
+export const zSetUserStatePath = z.object({
+    id: zBigInt
+});
+
+/**
+ * Shield user identity response.
+ */
+export const zSetUserStateResponse = zUserIdentityResponse;
+
+export const zResetUserPasswordBody = zUserIdentityPasswordReset2;
+
+export const zResetUserPasswordPath = z.object({
+    id: zBigInt
+});
+
+/**
+ * Shield user identity response.
+ */
+export const zResetUserPasswordResponse = zUserIdentityResponse;
+
+export const zGetUserPermissionsPath = z.object({
+    id: zBigInt
+});
+
+/**
+ * Direct ALLOW permissions response.
+ */
+export const zGetUserPermissionsResponse = zUserPermissionsResponse;
+
+export const zReplaceUserPermissionsBody = zUserPermissions2;
+
+export const zReplaceUserPermissionsPath = z.object({
+    id: zBigInt
+});
+
+/**
+ * Direct ALLOW permissions response.
+ */
+export const zReplaceUserPermissionsResponse = zUserPermissionsResponse;
+
 export const zListAuthorizationGroupsHeaders = z.object({
     'Accept-Language': z.enum(['vi', 'en']).optional().default('vi'),
     'X-Request-ID': zRequestId.optional()
@@ -2218,6 +2383,11 @@ export const zCreateResourceActionPath = z.object({
  * Successful API response.
  */
 export const zCreateResourceActionResponse = zSuccessResponse;
+
+/**
+ * Visible resource action catalog.
+ */
+export const zListResourceActionCatalogResponse = zResourceActionCollection;
 
 export const zDeleteResourceActionPath = z.object({
     id: zBigInt,
