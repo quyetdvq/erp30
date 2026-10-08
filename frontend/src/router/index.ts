@@ -85,6 +85,12 @@ const router = createRouter({
           meta: { labelKey: 'nav.lifecycles' },
         },
         {
+          path: 'configuration/auto-numbering',
+          name: 'configuration-auto-numbering',
+          component: () => import('@/views/AutoNumberingView.vue'),
+          meta: { labelKey: 'nav.autoNumbering' },
+        },
+        {
           path: 'organizations',
           name: 'organizations',
           component: () => import('@/views/OrganizationsView.vue'),

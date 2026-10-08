@@ -91,6 +91,7 @@ const SYSTEM_NAV_PATHS = new Set([
   '/security/authorization-logs',
   '/configuration/workflow-states',
   '/configuration/lifecycles',
+  '/configuration/auto-numbering',
 ])
 const MAIN_MENU_HIDDEN_PATHS = new Set(['/organizations', ...SYSTEM_NAV_PATHS])
 const ORGANIZATION_NAV_PATHS = new Set([
@@ -187,6 +188,12 @@ const navItems: NavigationItem[] = [
     to: '/configuration/lifecycles',
     icon: TimeOutline,
     permission: 'lifecycle.view',
+  },
+  {
+    labelKey: 'nav.autoNumbering',
+    to: '/configuration/auto-numbering',
+    icon: SettingsOutline,
+    permission: 'resource.configure_numbering',
   },
 ]
 

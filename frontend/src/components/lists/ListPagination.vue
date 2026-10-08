@@ -9,6 +9,7 @@ const props = withDefaults(
     total: number
     pageSizeOptions?: readonly number[]
     disabled?: boolean
+    ariaLabel?: string
   }>(),
   { pageSizeOptions: () => [50, 100, 200], disabled: false },
 )
@@ -28,7 +29,7 @@ function goTo(page: number): void {
 </script>
 
 <template>
-  <nav class="list-pagination" :aria-label="t('list.pagination')">
+  <nav class="list-pagination" :aria-label="props.ariaLabel ?? t('list.pagination')">
     <div class="list-pagination__summary" aria-live="polite">
       {{ t('list.pageSummary', { page: currentPage, pages: pageCount, total: props.total }) }}
     </div>
