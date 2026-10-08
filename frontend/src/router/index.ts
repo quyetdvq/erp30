@@ -121,33 +121,6 @@ const router = createRouter({
           meta: { labelKey: 'nav.employees' },
         },
         {
-          path: 'approvals',
-          name: 'approvals',
-          component: () => import('@/views/PlaceholderView.vue'),
-          meta: { labelKey: 'nav.approvals' },
-          props: { title: 'Phê duyệt của tôi', description: 'Các yêu cầu đang chờ bạn xử lý.' },
-        },
-        {
-          path: 'products',
-          name: 'products',
-          component: () => import('@/views/PlaceholderView.vue'),
-          props: {
-            title: 'Sản phẩm và vòng đời',
-            description: 'Danh mục sản phẩm và lifecycle của doanh nghiệp.',
-          },
-          meta: { labelKey: 'nav.products' },
-        },
-        {
-          path: 'sales',
-          name: 'sales',
-          component: () => import('@/views/PlaceholderView.vue'),
-          props: {
-            title: 'Bán hàng và khách hàng',
-            description: 'Không gian quản lý bán hàng và quan hệ khách hàng.',
-          },
-          meta: { labelKey: 'nav.sales' },
-        },
-        {
           path: ':pathMatch(.*)*',
           name: 'not-found',
           component: () => import('@/views/NotFoundView.vue'),

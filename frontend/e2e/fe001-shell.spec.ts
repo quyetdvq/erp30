@@ -22,6 +22,13 @@ async function mockAuthenticatedSession(page: Page): Promise<void> {
               'position.view',
               'employee.view',
               'display_setting.view',
+              'user.view',
+              'authorization_group.view',
+              'resource.view',
+              'policy.view',
+              'authorization_log.view',
+              'workflow_state.view',
+              'lifecycle.view',
               'product.view',
             ],
           },
@@ -35,11 +42,13 @@ test('authenticated shell exposes five modes, deduplicated tabs, locale, and 404
   page,
 }) => {
   await mockAuthenticatedSession(page)
-  await page.goto('/products')
+  await page.goto('/organizations')
 
   await expect(page.locator('.mode-switcher button')).toHaveCount(5)
-  await expect(page.getByText('Sản phẩm và vòng đời').first()).toBeVisible()
-  await expect(page.locator('.workspace-tabs-wrap').getByText('Sản phẩm và vòng đời')).toBeVisible()
+  await expect(page.getByText('Tổ chức và dữ liệu nền').first()).toBeVisible()
+  await expect(
+    page.locator('.workspace-tabs-wrap').getByText('Tổ chức và dữ liệu nền'),
+  ).toBeVisible()
 
   await page.goto('/missing-fe001-route')
   await expect(page.getByRole('main').getByText('Không tìm thấy tài nguyên')).toBeVisible()
@@ -48,11 +57,19 @@ test('authenticated shell exposes five modes, deduplicated tabs, locale, and 404
 
 test('shell keeps organization structure routes in the Organization mode', async ({ page }) => {
   await mockAuthenticatedSession(page)
-  await page.goto('/products')
+  await page.setViewportSize({ width: 1280, height: 420 })
+  await page.goto('/organizations')
 
   const menu = page.locator('.shell-sider .n-menu')
   await expect(menu.getByRole('menuitem', { name: 'Tổ chức và dữ liệu nền' })).toHaveCount(0)
   await expect(menu.getByRole('menuitem', { name: 'Cấu hình hiển thị' })).toHaveCount(0)
+  await expect(menu.getByRole('menuitem', { name: 'Người dùng và quyền trực tiếp' })).toHaveCount(0)
+  await expect(menu.getByRole('menuitem', { name: 'Nhóm phân quyền' })).toHaveCount(0)
+  await expect(menu.getByRole('menuitem', { name: 'Resource và Action' })).toHaveCount(0)
+  await expect(menu.getByRole('menuitem', { name: 'Policy PBAC' })).toHaveCount(0)
+  await expect(menu.getByRole('menuitem', { name: 'Nhật ký phân quyền' })).toHaveCount(0)
+  await expect(menu.getByRole('menuitem', { name: 'Workflow State' })).toHaveCount(0)
+  await expect(menu.getByRole('menuitem', { name: 'Lifecycles' })).toHaveCount(0)
   await expect(menu.getByRole('menuitem', { name: 'Tỉnh, phường/xã' })).toHaveCount(0)
   await expect(menu.getByRole('menuitem', { name: 'Phòng ban' })).toHaveCount(0)
 
@@ -64,8 +81,38 @@ test('shell keeps organization structure routes in the Organization mode', async
   await expect(menu.getByRole('menuitem', { name: 'Nhân viên' })).toBeVisible()
   await expect(menu.getByRole('menuitem', { name: 'Tổ chức và dữ liệu nền' })).toBeVisible()
 
+  const menuScroll = page.locator('.sider-menu-scroll')
+  await expect(menuScroll).toBeVisible()
+  const scrollMetrics = await menuScroll.evaluate((element) => {
+    const style = getComputedStyle(element)
+    return {
+      overflowX: style.overflowX,
+      overflowY: style.overflowY,
+      scrollable: element.scrollHeight > element.clientHeight,
+    }
+  })
+  expect(scrollMetrics.overflowX).toBe('hidden')
+  expect(scrollMetrics.overflowY).toBe('auto')
+  expect(scrollMetrics.scrollable).toBe(true)
+
   await page.getByRole('button', { name: 'Hệ thống' }).click()
   await expect(menu.getByRole('menuitem', { name: 'Cấu hình hiển thị' })).toBeVisible()
+  await expect(menu.getByRole('menuitem', { name: 'Người dùng và quyền trực tiếp' })).toBeVisible()
+  await expect(menu.getByRole('menuitem', { name: 'Nhóm phân quyền' })).toBeVisible()
+  await expect(menu.getByRole('menuitem', { name: 'Resource và Action' })).toBeVisible()
+  await expect(menu.getByRole('menuitem', { name: 'Policy PBAC' })).toBeVisible()
+  await expect(menu.getByRole('menuitem', { name: 'Nhật ký phân quyền' })).toBeVisible()
+  await expect(menu.getByRole('menuitem', { name: 'Workflow State' })).toBeVisible()
+  await expect(menu.getByRole('menuitem', { name: 'Lifecycles' })).toBeVisible()
+})
+
+test('removed menu routes resolve to the not-found boundary', async ({ page }) => {
+  await mockAuthenticatedSession(page)
+
+  for (const path of ['/approvals', '/products', '/sales']) {
+    await page.goto(path)
+    await expect(page.getByRole('main').getByText('Không tìm thấy tài nguyên')).toBeVisible()
+  }
 })
 
 test('shell keeps the header full width and uses the official logo', async ({ page }) => {

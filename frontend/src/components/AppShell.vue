@@ -23,13 +23,10 @@ import {
   AddOutline,
   AlertCircleOutline,
   BusinessOutline,
-  CheckmarkCircleOutline,
   ChevronBackOutline,
   ChevronDownOutline,
   ChevronForwardOutline,
   CloseOutline,
-  CubeOutline,
-  GridOutline,
   HomeOutline,
   InformationCircleOutline,
   MenuOutline,
@@ -85,7 +82,17 @@ const sidebarModes = [
 
 type NavigationItem = { labelKey: string; to: string; icon: object; permission?: string }
 
-const MAIN_MENU_HIDDEN_PATHS = new Set(['/organizations', '/system/display-settings'])
+const SYSTEM_NAV_PATHS = new Set([
+  '/system/display-settings',
+  '/security/users',
+  '/security/authorization-groups',
+  '/security/resources',
+  '/security/policies',
+  '/security/authorization-logs',
+  '/configuration/workflow-states',
+  '/configuration/lifecycles',
+])
+const MAIN_MENU_HIDDEN_PATHS = new Set(['/organizations', ...SYSTEM_NAV_PATHS])
 const ORGANIZATION_NAV_PATHS = new Set([
   '/organizations',
   '/settings/locations/provinces',
@@ -97,7 +104,6 @@ const ORGANIZATION_NAV_PATHS = new Set([
 
 const navItems: NavigationItem[] = [
   { labelKey: 'nav.dashboard', to: '/', icon: HomeOutline },
-  { labelKey: 'nav.approvals', to: '/approvals', icon: CheckmarkCircleOutline },
   {
     labelKey: 'nav.organizations',
     to: '/organizations',
@@ -140,8 +146,6 @@ const navItems: NavigationItem[] = [
     icon: SettingsOutline,
     permission: 'display_setting.view',
   },
-  { labelKey: 'nav.products', to: '/products', icon: CubeOutline },
-  { labelKey: 'nav.sales', to: '/sales', icon: GridOutline },
   {
     labelKey: 'nav.securityUsers',
     to: '/security/users',
@@ -235,18 +239,7 @@ const modeItems = computed(() => {
     return tabItems.length > 0 ? tabItems : allowedNavItems.value
   }
   if (activeMode.value === 'system') {
-    return allowedNavItems.value.filter((item) =>
-      [
-        '/system/display-settings',
-        '/security/users',
-        '/security/authorization-groups',
-        '/security/resources',
-        '/security/policies',
-        '/security/authorization-logs',
-        '/configuration/workflow-states',
-        '/configuration/lifecycles',
-      ].includes(item.to),
-    )
+    return allowedNavItems.value.filter((item) => SYSTEM_NAV_PATHS.has(item.to))
   }
   if (activeMode.value === 'organization') {
     return allowedNavItems.value.filter((item) => ORGANIZATION_NAV_PATHS.has(item.to))
@@ -536,15 +529,16 @@ onBeforeUnmount(() => resizeEnd?.())
             <div v-if="!workspace.sidebarCollapsed && !mobileMenuOpen" class="sider-heading">
               {{ activeModeLabel }}
             </div>
-            <NMenu
-              v-if="!workspace.sidebarCollapsed"
-              :value="route.path"
-              :options="menuOptions"
-              :collapsed="workspace.sidebarCollapsed"
-              :collapsed-width="72"
-              :collapsed-icon-size="20"
-              @update:value="handleMenuSelect"
-            />
+            <div v-if="!workspace.sidebarCollapsed" class="sider-menu-scroll">
+              <NMenu
+                :value="route.path"
+                :options="menuOptions"
+                :collapsed="workspace.sidebarCollapsed"
+                :collapsed-width="72"
+                :collapsed-icon-size="20"
+                @update:value="handleMenuSelect"
+              />
+            </div>
             <div v-if="!workspace.sidebarCollapsed && !mobileMenuOpen" class="sider-footer">
               <NIcon><InformationCircleOutline /></NIcon
               ><span>{{ t('shell.filteredByPermission') }}</span>
@@ -740,6 +734,7 @@ onBeforeUnmount(() => resizeEnd?.())
 }
 .shell-sider {
   position: relative;
+  min-width: 0;
   background: #fff;
 }
 .shell-sider :deep(.n-layout-sider-scroll-container) {
@@ -749,9 +744,11 @@ onBeforeUnmount(() => resizeEnd?.())
   position: relative;
   display: flex;
   height: 100%;
+  min-width: 0;
   flex-direction: column;
   gap: 14px;
   padding: 16px 12px 12px;
+  overflow: hidden;
 }
 .mode-switcher {
   display: grid;
@@ -766,8 +763,26 @@ onBeforeUnmount(() => resizeEnd?.())
   letter-spacing: 0.06em;
   text-transform: uppercase;
 }
-.sider-content :deep(.n-menu) {
+.sider-menu-scroll {
   flex: 1;
+  min-width: 0;
+  min-height: 0;
+  overflow-x: hidden;
+  overflow-y: auto;
+  scrollbar-gutter: stable;
+}
+.sider-menu-scroll :deep(.n-menu) {
+  width: 100%;
+  min-width: 0;
+}
+.sider-menu-scroll :deep(.n-menu-item-content) {
+  min-width: 0;
+}
+.sider-menu-scroll :deep(.n-menu-item-content-header) {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 .sider-footer {
   display: flex;

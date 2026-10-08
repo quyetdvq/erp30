@@ -45,10 +45,7 @@ export const messages = {
     },
     nav: {
       dashboard: 'Tổng quan',
-      approvals: 'Phê duyệt của tôi',
       organizations: 'Tổ chức và dữ liệu nền',
-      products: 'Sản phẩm và vòng đời',
-      sales: 'Bán hàng và khách hàng',
       securityUsers: 'Người dùng và quyền trực tiếp',
       authorizationGroups: 'Nhóm phân quyền',
       resources: 'Resource và Action',
@@ -332,7 +329,6 @@ export const messages = {
       profile: 'Chỉnh sửa profile',
       users: 'Quản lý người dùng và phân quyền',
       organizations: 'Quản trị tổ chức',
-      products: 'Sản phẩm và vòng đời',
     },
     common: {
       brandSubtitle: 'ERP Workspace',
@@ -569,10 +565,7 @@ export const messages = {
     },
     nav: {
       dashboard: 'Overview',
-      approvals: 'My approvals',
       organizations: 'Organizations and foundation data',
-      products: 'Products and lifecycle',
-      sales: 'Sales and customers',
       securityUsers: 'Users and direct permissions',
       authorizationGroups: 'Authorization Groups',
       resources: 'Resources and Actions',
@@ -856,7 +849,6 @@ export const messages = {
       profile: 'Edit profile',
       users: 'Manage users and permissions',
       organizations: 'Manage organizations',
-      products: 'Products and lifecycle',
     },
     common: {
       brandSubtitle: 'ERP Workspace',

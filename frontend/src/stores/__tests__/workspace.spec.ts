@@ -33,14 +33,24 @@ describe('workspace shell state', () => {
   it('deduplicates tabs and protects dirty close', () => {
     const store = useWorkspaceStore()
     store.activateUser(7)
-    store.openTab({ key: 'products', path: '/products', labelKey: 'nav.products', closable: true })
-    store.openTab({ key: 'products', path: '/products', labelKey: 'nav.products', closable: true })
+    store.openTab({
+      key: 'organizations',
+      path: '/organizations',
+      labelKey: 'nav.organizations',
+      closable: true,
+    })
+    store.openTab({
+      key: 'organizations',
+      path: '/organizations',
+      labelKey: 'nav.organizations',
+      closable: true,
+    })
     expect(store.tabs).toHaveLength(1)
 
-    store.markDirty('products')
-    expect(store.closeTab('products', () => false)).toBeNull()
+    store.markDirty('organizations')
+    expect(store.closeTab('organizations', () => false)).toBeNull()
     expect(store.tabs).toHaveLength(1)
-    expect(store.closeTab('products', () => true)).toBeNull()
+    expect(store.closeTab('organizations', () => true)).toBeNull()
     expect(store.tabs).toHaveLength(1)
   })
 })
