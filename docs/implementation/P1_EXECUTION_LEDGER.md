@@ -4,10 +4,10 @@ This ledger is lightweight operational evidence. It is not architecture
 authority and does not replace UR, FRS, DBD, the Implementation Contract, the
 Implementation Plan, API Design, or UI Design.
 
-The registry contains exactly 107 P1 tasks. Current ledger state records 94
+The registry contains exactly 107 P1 tasks. Current ledger state records 95
 completed tasks: Gate 0 is 10/10, Gate 1 is 14/14, Gate 2 is 8/8, Gate 3 is
 10/10, Gate 4 is 7/7, Gate 5 is 11/11, Gate 6 is 9/9, Gate 7 is 15/15,
-Gate 8 is 10/14, and Gate 9 is 0/9.
+Gate 8 is 11/14, and Gate 9 is 0/9.
 
 The Implementation Plan v1.8 retains a planning snapshot of `69/107`; the
 `80/107` value below is evidence-derived from the current Git/ledger history
@@ -20,7 +20,7 @@ registry.
 
 | Measure | Progress |
 |---|---:|
-| P1 tasks DONE | 94/107 |
+| P1 tasks DONE | 95/107 |
 | Gate 0 | 10/10 DONE |
 | Gate 1 | 14/14 DONE |
 | Gate 2 | 8/8 DONE |
@@ -29,7 +29,7 @@ registry.
 | Gate 5 | 11/11 DONE |
 | Gate 6 | 9/9 DONE |
 | Gate 7 | 15/15 DONE |
-| Gate 8 | 10/14 DONE |
+| Gate 8 | 11/14 DONE |
 | Gate 9 | 0/9 DONE |
 
 ## Task Ledger
@@ -130,7 +130,7 @@ registry.
 | P1-FE-030 | DONE | 0447b80 | high-risk | Security/Authorization UI Table First/modal correction plus dedicated backend-aggregated `GET /api/v1/security/users` to remove per-group N+1 loading; complete group Members/Resource Action detail and validation evidence: `docs/implementation/evidence/P1-FE-030/01_security_authorization_ui_assessment.md`. Repository-wide Oxlint remains blocked by an untouched pre-existing `SearchableSelect.spec.ts` unused variable; scoped touched-file Oxlint passes. |
 | P1-FE-040 | DONE | 0000000 | service-standard | Workflow State and Lifecycle UI at `/configuration/workflow-states` and `/configuration/lifecycles`; permission-aware CRUD/status controls, Overview/States/Transitions tabs, atomic nested Lifecycle API saves, one-initial/membership/duplicate-transition UX, vi/en/accessibility/Playwright evidence. Evidence: `docs/implementation/evidence/P1-FE-040/01_workflow_lifecycle_ui_assessment.md`. |
 | P1-FE-050 | DONE | 0000000 | high-risk | Auto Numbering configuration UI at `/configuration/auto-numbering`; System-tab permission-aware navigation, Table First resource/series list, modal CRUD/view/state actions, canonical pattern builder, non-consuming validation preview, issued-field lock handling, vi/en/accessibility/Playwright evidence. Evidence: `docs/implementation/evidence/P1-FE-050/01_auto_numbering_ui_assessment.md`. |
-| P1-FE-060 | NOT_STARTED | — | high-risk | No accepted implementation evidence. |
+| P1-FE-060 | DONE | 0000000 | high-risk | Product/UOM UI at `/products/groups`, `/products/uoms`, `/products`, and `/products/new`/`/products/:id`; Table First group/UOM/product lists, nested permission-aware Product menu, role-aware editor, string-preserving UOM conversions, vi/en and Chromium/axe evidence. Evidence: `docs/implementation/evidence/P1-FE-060/01_product_uom_ui_assessment.md`. |
 | P1-FE-070 | NOT_STARTED | — | high-risk | No accepted implementation evidence. |
 | P1-FE-080 | NOT_STARTED | — | high-risk | No accepted implementation evidence. |
 | P1-FE-090 | NOT_STARTED | — | high-risk | No accepted implementation evidence. |

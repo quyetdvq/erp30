@@ -91,6 +91,36 @@ const router = createRouter({
           meta: { labelKey: 'nav.autoNumbering' },
         },
         {
+          path: 'products/groups',
+          name: 'products-groups',
+          component: () => import('@/views/ProductGroupsView.vue'),
+          meta: { labelKey: 'nav.productGroups' },
+        },
+        {
+          path: 'products/uoms',
+          name: 'products-uoms',
+          component: () => import('@/views/ProductUomsView.vue'),
+          meta: { labelKey: 'nav.productUoms' },
+        },
+        {
+          path: 'products/new',
+          name: 'products-new',
+          component: () => import('@/views/ProductEditorView.vue'),
+          meta: { labelKey: 'nav.productCreate' },
+        },
+        {
+          path: 'products/:id',
+          name: 'products-edit',
+          component: () => import('@/views/ProductEditorView.vue'),
+          meta: { labelKey: 'nav.productEdit' },
+        },
+        {
+          path: 'products',
+          name: 'products',
+          component: () => import('@/views/ProductsView.vue'),
+          meta: { labelKey: 'nav.products' },
+        },
+        {
           path: 'organizations',
           name: 'organizations',
           component: () => import('@/views/OrganizationsView.vue'),

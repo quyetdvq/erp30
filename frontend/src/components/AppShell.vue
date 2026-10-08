@@ -80,7 +80,14 @@ const sidebarModes = [
   { key: 'organization', labelKey: 'shell.modes.organization', icon: BusinessOutline },
 ] as const
 
-type NavigationItem = { labelKey: string; to: string; icon: object; permission?: string }
+type NavigationItem = {
+  labelKey: string
+  to: string
+  icon: object
+  permission?: string
+  children?: NavigationItem[]
+  disabled?: boolean
+}
 
 const SYSTEM_NAV_PATHS = new Set([
   '/system/display-settings',
@@ -195,6 +202,38 @@ const navItems: NavigationItem[] = [
     icon: SettingsOutline,
     permission: 'resource.configure_numbering',
   },
+  {
+    labelKey: 'nav.products',
+    to: '/products',
+    icon: BusinessOutline,
+    children: [
+      {
+        labelKey: 'nav.productGroups',
+        to: '/products/groups',
+        icon: BusinessOutline,
+        permission: 'product_group.view',
+      },
+      {
+        labelKey: 'nav.products',
+        to: '/products',
+        icon: BusinessOutline,
+        permission: 'product.view',
+      },
+      {
+        labelKey: 'nav.productUoms',
+        to: '/products/uoms',
+        icon: BusinessOutline,
+        permission: 'product_uom.view',
+      },
+      {
+        labelKey: 'nav.productPricePolicies',
+        to: '/products/price-lists',
+        icon: BusinessOutline,
+        permission: 'price_list.view',
+        disabled: true,
+      },
+    ],
+  },
 ]
 
 const localeOptions = [
@@ -234,9 +273,16 @@ const activeModeLabel = computed(() => {
   return t(mode.labelKey)
 })
 
-const allowedNavItems = computed(() =>
-  navItems.filter((item) => !item.permission || hasBasePermissionKey(item.permission)),
-)
+function visibleNavItems(items: NavigationItem[]): NavigationItem[] {
+  return items.flatMap((item) => {
+    const children = item.children ? visibleNavItems(item.children) : undefined
+    if (item.children && children?.length) return [{ ...item, children }]
+    if (item.children) return []
+    return !item.permission || hasBasePermissionKey(item.permission) ? [item] : []
+  })
+}
+
+const allowedNavItems = computed(() => visibleNavItems(navItems))
 
 const modeItems = computed(() => {
   if (activeMode.value === 'favorites' || activeMode.value === 'recent') {
@@ -259,13 +305,21 @@ const modeItems = computed(() => {
   )
 })
 
-const menuOptions = computed<MenuOption[]>(() =>
-  modeItems.value.map((item) => ({ key: item.to, label: t(item.labelKey), icon: icon(item.icon) })),
-)
+function toMenuOption(item: NavigationItem): MenuOption {
+  return {
+    key: item.to,
+    label: t(item.labelKey),
+    icon: icon(item.icon),
+    disabled: item.disabled,
+    children: item.children?.map(toMenuOption),
+  }
+}
+
+const menuOptions = computed<MenuOption[]>(() => modeItems.value.map(toMenuOption))
 
 const commandOptions = computed(() =>
-  navItems
-    .filter((item) => !item.permission || hasBasePermissionKey(item.permission))
+  visibleNavItems(navItems)
+    .flatMap((item) => item.children ?? [item])
     .filter((item) => t(item.labelKey).toLowerCase().includes(commandSearch.value.toLowerCase()))
     .map((item) => ({ key: item.to, label: t(item.labelKey), icon: icon(item.icon) })),
 )
