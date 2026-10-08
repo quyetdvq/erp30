@@ -50,6 +50,18 @@ test('authenticated shell exposes five modes, deduplicated tabs, locale, and 404
     page.locator('.workspace-tabs-wrap').getByText('Tổ chức và dữ liệu nền'),
   ).toBeVisible()
 
+  await page.getByRole('button', { name: 'Ngôn ngữ' }).click()
+  await page.getByText('English', { exact: true }).click()
+  await expect(page.getByText('Organizations and foundation data').first()).toBeVisible()
+  await expect(page.getByRole('button', { name: 'quyetdv' })).toBeVisible()
+  await expect(page).toHaveURL(/\/organizations$/)
+  await expect.poll(() => page.evaluate(() => localStorage.getItem('ui.locale'))).toBe('en')
+
+  await page.getByRole('button', { name: 'Language' }).click()
+  await page.getByText('Tiếng Việt', { exact: true }).click()
+  await expect(page.getByText('Tổ chức và dữ liệu nền').first()).toBeVisible()
+  await expect.poll(() => page.evaluate(() => localStorage.getItem('ui.locale'))).toBe('vi')
+
   await page.goto('/missing-fe001-route')
   await expect(page.getByRole('main').getByText('Không tìm thấy tài nguyên')).toBeVisible()
   await expect(page.getByRole('button', { name: 'Về workspace' })).toBeVisible()

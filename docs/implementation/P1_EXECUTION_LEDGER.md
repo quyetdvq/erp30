@@ -4,10 +4,10 @@ This ledger is lightweight operational evidence. It is not architecture
 authority and does not replace UR, FRS, DBD, the Implementation Contract, the
 Implementation Plan, API Design, or UI Design.
 
-The registry contains exactly 107 P1 tasks. Current ledger state records 98
+The registry contains exactly 107 P1 tasks. Current ledger state records 99
 completed tasks: Gate 0 is 10/10, Gate 1 is 14/14, Gate 2 is 8/8, Gate 3 is
 10/10, Gate 4 is 7/7, Gate 5 is 11/11, Gate 6 is 9/9, Gate 7 is 15/15,
-Gate 8 is 14/14, and Gate 9 is 0/9.
+Gate 8 is 14/14, and Gate 9 is 1/9.
 
 The Implementation Plan v1.8 retains a planning snapshot of `69/107`; the
 `80/107` value below is evidence-derived from the current Git/ledger history
@@ -20,7 +20,7 @@ registry.
 
 | Measure | Progress |
 |---|---:|
-| P1 tasks DONE | 98/107 |
+| P1 tasks DONE | 99/107 |
 | Gate 0 | 10/10 DONE |
 | Gate 1 | 14/14 DONE |
 | Gate 2 | 8/8 DONE |
@@ -30,7 +30,7 @@ registry.
 | Gate 6 | 9/9 DONE |
 | Gate 7 | 15/15 DONE |
 | Gate 8 | 14/14 DONE |
-| Gate 9 | 0/9 DONE |
+| Gate 9 | 1/9 DONE |
 
 ## Task Ledger
 
@@ -134,7 +134,7 @@ registry.
 | P1-FE-070 | DONE | 0000000 | high-risk | Pricing/COMBO UI at `/products/price-lists`, permission-aware Price List CRUD/state/items, PARENT/COMBO/PURCHASE-only UOM UX filtering, decimal-safe payloads, vi/en, and Chromium/axe evidence. Evidence: `docs/implementation/evidence/P1-FE-070/01_pricing_combo_ui_assessment.md`. |
 | P1-FE-080 | DONE | 0000000 | high-risk | Product Import wizard/report at `/products/import`, `/products/import-jobs`, and `/products/import-jobs/:id`; generated API client, Product-only modes/template guidance, canonical persisted row DTO, permission/error/accessibility coverage. Evidence: `docs/implementation/evidence/P1-FE-080/01_product_import_ui_assessment.md`. |
 | P1-FE-090 | DONE | 0000000 | high-risk | Accessibility and critical Playwright regression closure across FE-010..080, Display Settings, permission/error/i18n/Table First checks, import wizard/job-result regressions, and repository lint correction. Evidence: `docs/implementation/evidence/P1-FE-090/01_accessibility_critical_playwright_closure.md`. |
-| P1-SYS-001 | NOT_STARTED | — | release | No accepted implementation evidence. |
+| P1-SYS-001 | DONE | 0000000 | release | Full 135-case FRS catalog PASS; backend 440/440, frontend 40 Vitest, production build/OpenAPI drift gates, and full 123-test Chromium/Firefox/WebKit Playwright profile pass. Root-cause evidence and matrix: `docs/implementation/evidence/P1-SYS-001/01_frs_acceptance_catalog_run.md`. |
 | P1-SYS-002 | NOT_STARTED | — | high-risk | No accepted implementation evidence. |
 | P1-SYS-003 | NOT_STARTED | — | high-risk | No accepted implementation evidence. |
 | P1-SYS-004 | NOT_STARTED | — | release | No accepted implementation evidence. |

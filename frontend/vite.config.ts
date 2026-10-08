@@ -21,7 +21,6 @@ export default defineConfig({
             {
               name: 'naive-ui',
               test: /[\\/]node_modules[\\/]naive-ui[\\/]/,
-              maxSize: 500 * 1024,
             },
             { name: 'vue-runtime', test: /[\\/]node_modules[\\/](?:vue|@vue|vue-router|pinia)[\\/]/ },
             { name: 'icons', test: /[\\/]node_modules[\\/]@vicons[\\/]/ },
