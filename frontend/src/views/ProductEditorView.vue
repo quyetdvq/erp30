@@ -117,7 +117,7 @@ async function load(): Promise<void> {
     const [groupResult, uomResult, productResult] = await Promise.all([
       listProductGroupPage({ q: '', page: 1, page_size: 200, sort: 'name', filter: {} }),
       listProductUomPage({ q: '', page: 1, page_size: 200, sort: 'code', filter: {} }),
-      listProductPage({ q: '', page: 1, page_size: 200, sort: 'full_name', filter: {} }),
+      listProductPage({ q: '', page: 1, page_size: 200, sort: 'product_name', filter: {} }),
     ])
     groups.value = groupResult.data
     uoms.value = uomResult.data

@@ -66,9 +66,14 @@ async function mockSession(page: Page): Promise<void> {
   )
 }
 
-async function mockCatalog(page: Page): Promise<{ groupCreates: number; uomCreates: number }> {
+async function mockCatalog(page: Page): Promise<{
+  groupCreates: number
+  uomCreates: number
+  productListUrls: string[]
+}> {
   let groupCreates = 0
   let uomCreates = 0
+  const productListUrls: string[] = []
   await page.route('**/api/v1/product-groups*', async (route) => {
     if (route.request().method() === 'POST') {
       groupCreates += 1
@@ -111,6 +116,8 @@ async function mockCatalog(page: Page): Promise<{ groupCreates: number; uomCreat
         contentType: 'application/json',
         body: JSON.stringify({ data: simple }),
       })
+    if (route.request().url().includes('/api/v1/products?'))
+      productListUrls.push(route.request().url())
     return route.fulfill({
       status: 200,
       contentType: 'application/json',
@@ -124,6 +131,7 @@ async function mockCatalog(page: Page): Promise<{ groupCreates: number; uomCreat
     get uomCreates() {
       return uomCreates
     },
+    productListUrls,
   }
 }
 
@@ -173,7 +181,7 @@ test.describe('P1-FE-060 Product/UOM UI', () => {
 
   test('keeps SIMPLE conversion scope and COMBO serial UX bounded', async ({ page }) => {
     await mockSession(page)
-    await mockCatalog(page)
+    const requests = await mockCatalog(page)
     await page.route('**/api/v1/products/30/uom-conversions', async (route) =>
       route.fulfill({
         status: 200,
@@ -207,6 +215,11 @@ test.describe('P1-FE-060 Product/UOM UI', () => {
     await expect(page.getByRole('textbox', { name: 'Giá bán' })).toHaveValue('140000.00')
     await page.goto('/products/new')
     await expect(page.getByRole('heading', { name: 'Tạo sản phẩm' })).toBeVisible()
+    expect(
+      requests.productListUrls.some(
+        (url) => new URL(url).searchParams.get('sort') === 'product_name',
+      ),
+    ).toBe(true)
     await page.getByRole('combobox', { name: 'Type' }).selectOption('COMBO')
     await expect(page.getByRole('heading', { name: 'Quy đổi UOM' })).toHaveCount(0)
     await expect(page.getByText('COMBO luôn tắt quản lý Serial.')).toBeVisible()
