@@ -377,7 +377,7 @@ onMounted(() => void load())
         ><label
           ><span>{{ t('product.description') }}</span
           ><textarea v-model="form.description" rows="3" /></label
-        ><label
+        ><label v-if="!editingId"
           ><span>{{ t('product.status') }}</span
           ><select v-model="form.status">
             <option value="ACTIVE">{{ t('status.active') }}</option>

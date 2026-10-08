@@ -360,7 +360,7 @@ onMounted(() => void load())
       <fieldset :disabled="!canEdit || busy">
         <legend>{{ t('product.operational') }}</legend>
         <div class="form-grid">
-          <label
+          <label v-if="!editing"
             ><span>{{ t('product.status') }}</span
             ><select v-model="form.status">
               <option value="ACTIVE">{{ t('status.active') }}</option>
