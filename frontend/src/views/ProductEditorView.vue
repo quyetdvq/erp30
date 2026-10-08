@@ -62,6 +62,7 @@ const error = ref<unknown | null>(null)
 const conversionError = ref<unknown | null>(null)
 const comboError = ref<unknown | null>(null)
 const validationError = ref<string | null>(null)
+const showLegacyRelations = false
 const conversionEditorOpen = ref(false)
 const conversionEditorIndex = ref<number | null>(null)
 const form = ref({
@@ -116,7 +117,7 @@ const comboCandidates = computed(() =>
       row.status === 'ACTIVE',
   ),
 )
-const isChild = computed(() => Boolean(form.value.parent_product_id))
+const isChild = computed(() => editing.value && Boolean(form.value.parent_product_id))
 const isCombo = computed(() => form.value.product_type === 'COMBO')
 const role = computed(
   () => product.value?.role ?? (isCombo.value ? 'COMBO' : isChild.value ? 'CHILD' : 'SIMPLE'),
@@ -244,8 +245,7 @@ async function load(): Promise<void> {
       product.value = await getProductById(id.value)
       resetFromRow(product.value)
       await Promise.all([loadConversions(), loadChildren(), loadComboItems()])
-    } else if (typeof route.query.parent_product_id === 'string')
-      form.value.parent_product_id = route.query.parent_product_id
+    }
   } catch (caught: unknown) {
     error.value = caught
     reportApiError(caught)
@@ -253,6 +253,21 @@ async function load(): Promise<void> {
 }
 function optionalString(value: string): string | undefined {
   return value === '' ? undefined : value
+}
+function comboPayload(): ComboItemsRequest {
+  return comboItems.value.map((row) => ({
+    component_product_id: row.component_product_id,
+    quantity: row.quantity,
+  }))
+}
+function validateComboItems(): boolean {
+  validationError.value = null
+  if (comboItems.value.some((row) => !row.component_product_id)) {
+    validationError.value = t('product.componentRequired')
+  } else if (comboItems.value.some((row) => !decimalIsPositive(row.quantity))) {
+    validationError.value = t('product.quantityRequired')
+  }
+  return !validationError.value
 }
 function payload(): ProductCreate | ProductPatch {
   const base: ProductCreate = {
@@ -299,12 +314,20 @@ async function save(): Promise<void> {
     validationError.value = t('product.nameRequired')
   else if (!isParentRole.value && !form.value.base_uom_id)
     validationError.value = t('product.baseUomRequired')
+  else if (!editing.value && isCombo.value && !validateComboItems()) return
   if (validationError.value) return
   busy.value = true
   error.value = null
   try {
     const saved = await saveProduct(payload(), id.value)
     product.value = saved
+    if (
+      !id.value &&
+      form.value.product_type === 'COMBO' &&
+      hasBasePermission('product', 'edit') &&
+      comboItems.value.length > 0
+    )
+      await replaceProductComboItems(String(saved.id), comboPayload())
     if (!id.value && typeof route.query.return_parent_id === 'string') {
       await router.replace(`/products/${route.query.return_parent_id}`)
       product.value = await getProductById(route.query.return_parent_id)
@@ -412,23 +435,11 @@ function removeComboItem(index: number): void {
 }
 async function saveComboItems(): Promise<void> {
   if (!id.value) return
-  validationError.value = null
-  if (comboItems.value.some((row) => !row.component_product_id)) {
-    validationError.value = t('product.componentRequired')
-    return
-  }
-  if (comboItems.value.some((row) => !decimalIsPositive(row.quantity))) {
-    validationError.value = t('product.quantityRequired')
-    return
-  }
+  if (!validateComboItems()) return
   comboBusy.value = true
   comboError.value = null
   try {
-    const body: ComboItemsRequest = comboItems.value.map((row) => ({
-      component_product_id: row.component_product_id,
-      quantity: row.quantity,
-    }))
-    await replaceProductComboItems(id.value, body)
+    await replaceProductComboItems(id.value, comboPayload())
     await loadComboItems()
   } catch (caught: unknown) {
     comboError.value = caught
@@ -608,7 +619,10 @@ watch(
     </form>
     <section
       v-if="
-        editing && (role === 'SIMPLE' || role === 'PARENT') && hasBasePermission('product', 'view')
+        showLegacyRelations &&
+        editing &&
+        (role === 'SIMPLE' || role === 'PARENT') &&
+        hasBasePermission('product', 'view')
       "
       class="relationship-section"
     >
@@ -684,7 +698,10 @@ watch(
         </table>
       </div>
     </section>
-    <section v-if="editing && role === 'CHILD'" class="relationship-section parent-summary">
+    <section
+      v-if="showLegacyRelations && editing && role === 'CHILD'"
+      class="relationship-section parent-summary"
+    >
       <header>
         <h2>{{ t('product.parentProduct') }}</h2>
         <button
@@ -702,7 +719,10 @@ watch(
     </section>
     <section
       v-if="
-        editing && (role === 'SIMPLE' || role === 'CHILD') && hasBasePermission('product', 'view')
+        showLegacyRelations &&
+        editing &&
+        (role === 'SIMPLE' || role === 'CHILD') &&
+        hasBasePermission('product', 'view')
       "
       class="relationship-section"
     >
@@ -802,18 +822,23 @@ watch(
       </button>
     </section>
     <section
-      v-if="editing && role === 'COMBO' && hasBasePermission('product', 'view')"
+      v-if="
+        ((!editing && isCombo) || (showLegacyRelations && editing && role === 'COMBO')) &&
+        (hasBasePermission('product', 'view') || hasBasePermission('product', 'create'))
+      "
       class="relationship-section"
     >
       <header>
         <div>
           <h2>{{ t('product.comboComponents') }}</h2>
           <p class="field-note">{{ t('product.comboComponentsDescription') }}</p>
+          <p v-if="!editing" class="field-note">{{ t('product.saveBeforeComponents') }}</p>
         </div>
         <button
-          v-if="hasBasePermission('product', 'edit')"
+          v-if="hasBasePermission('product', editing ? 'edit' : 'create')"
           type="button"
           class="secondary-button"
+          :disabled="!hasBasePermission('product', 'edit')"
           @click="addComboItem"
         >
           {{ t('product.addComponent') }}
@@ -873,13 +898,13 @@ watch(
               </td>
             </tr>
             <tr v-if="comboItems.length === 0">
-              <td colspan="5">{{ t('product.saveBeforeComponents') }}</td>
+              <td colspan="5">{{ t('list.noResults') }}</td>
             </tr>
           </tbody>
         </table>
       </div>
       <button
-        v-if="hasBasePermission('product', 'edit')"
+        v-if="editing && hasBasePermission('product', 'edit')"
         type="button"
         class="primary-button"
         :disabled="comboBusy"
@@ -888,9 +913,6 @@ watch(
         {{ comboBusy ? t('common.saving') : t('common.save') }}
       </button>
     </section>
-    <p v-else-if="!editing && isCombo" class="field-note">
-      {{ t('product.saveBeforeComponents') }}
-    </p>
   </section>
   <div v-if="conversionEditorOpen" class="modal-backdrop" role="presentation">
     <section

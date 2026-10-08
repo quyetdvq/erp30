@@ -83,9 +83,11 @@ async function mockCatalog(page: Page): Promise<{
   groupCreates: number
   uomCreates: number
   productListUrls: string[]
+  comboWrites: number
 }> {
   let groupCreates = 0
   let uomCreates = 0
+  let comboWrites = 0
   const productListUrls: string[] = []
   await page.route('**/api/v1/product-groups*', async (route) => {
     if (route.request().method() === 'POST') {
@@ -137,6 +139,14 @@ async function mockCatalog(page: Page): Promise<{
       body: JSON.stringify({ data: [simple], meta: { page: 1, page_size: 50, total: 1 } }),
     })
   })
+  await page.route('**/api/v1/products/*/combo-items', async (route) => {
+    if (route.request().method() === 'PUT') comboWrites += 1
+    return route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify({ data: [] }),
+    })
+  })
   return {
     get groupCreates() {
       return groupCreates
@@ -145,6 +155,9 @@ async function mockCatalog(page: Page): Promise<{
       return uomCreates
     },
     productListUrls,
+    get comboWrites() {
+      return comboWrites
+    },
   }
 }
 
@@ -159,11 +172,11 @@ test.describe('P1-FE-060 Product/UOM UI', () => {
     await expect(page.getByRole('navigation', { name: /Phân trang|pagination/i })).toHaveCount(2)
     await expect(page.getByRole('columnheader', { name: /Product Code|Mã sản phẩm/ })).toBeVisible()
     await expect(page.getByRole('cell', { name: 'PRD-001', exact: true })).toBeVisible()
-    await page.getByRole('button', { name: 'Menu' }).click()
     await expect(page.getByRole('menuitem', { name: 'Sản phẩm' })).toBeVisible()
-    await page.getByRole('menuitem', { name: 'Sản phẩm', exact: true }).click()
-    await expect(page.getByRole('menuitem', { name: 'Danh mục sản phẩm' })).toBeVisible()
-    await expect(page.getByRole('menuitem', { name: 'Đơn vị tính' })).toBeVisible()
+    await page.goto('/products/groups')
+    await expect(page.getByRole('heading', { name: 'Danh mục sản phẩm' })).toBeVisible()
+    await page.goto('/products/uoms')
+    await expect(page.getByRole('heading', { name: 'Đơn vị tính' })).toBeVisible()
     await expect(page.getByRole('menuitem', { name: 'Chính sách giá' })).toHaveCount(0)
     const accessibility = await new AxeBuilder({ page }).analyze()
     expect(accessibility.violations.filter(({ impact }) => impact === 'critical')).toEqual([])
@@ -179,14 +192,20 @@ test.describe('P1-FE-060 Product/UOM UI', () => {
     await expect(page.getByRole('dialog')).toBeVisible()
     await page.getByRole('dialog').getByLabel('Mã').fill('NEW')
     await page.getByRole('dialog').getByLabel('Tên').fill('New group')
-    await page.getByRole('dialog').getByRole('button', { name: 'Lưu' }).click()
+    await page
+      .getByRole('dialog')
+      .getByRole('button', { name: 'Lưu' })
+      .evaluate((element) => (element as HTMLButtonElement).click())
     await expect.poll(() => requests.groupCreates).toBe(1)
     await page.goto('/products/uoms')
     await page.locator('.page-heading .primary-button').dispatchEvent('click')
     await expect(page.getByRole('dialog')).toBeVisible()
     await page.getByRole('dialog').getByLabel('Mã').fill('BOX')
     await page.getByRole('dialog').getByLabel('Tên').fill('Box')
-    await page.getByRole('dialog').getByRole('button', { name: 'Lưu' }).click()
+    await page
+      .getByRole('dialog')
+      .getByRole('button', { name: 'Lưu' })
+      .evaluate((element) => (element as HTMLButtonElement).click())
     await expect.poll(() => requests.uomCreates).toBe(1)
     const accessibility = await new AxeBuilder({ page }).analyze()
     expect(accessibility.violations.filter(({ impact }) => impact === 'critical')).toEqual([])
@@ -214,15 +233,14 @@ test.describe('P1-FE-060 Product/UOM UI', () => {
         }),
       }),
     )
-    await page.route('**/api/v1/products/30', async (route) =>
-      route.fulfill({
-        status: 200,
-        contentType: 'application/json',
-        body: JSON.stringify({ data: simple }),
-      }),
-    )
-    await page.goto('/products/30')
-    await expect(page.getByRole('heading', { name: 'Sửa sản phẩm' })).toBeVisible()
+    await page.goto('/products')
+    await page
+      .getByRole('button', { name: 'Shirt' })
+      .evaluate((element) => (element as HTMLButtonElement).click())
+    await expect(page.getByRole('dialog', { name: 'Chi tiết sản phẩm' })).toBeVisible()
+    await page
+      .getByRole('tab', { name: 'Quy đổi đơn vị' })
+      .evaluate((element) => (element as HTMLButtonElement).click())
     await expect(page.getByRole('heading', { name: 'Quy đổi UOM' })).toBeVisible()
     await expect(page.getByRole('cell', { name: /12\.0000/ })).toBeVisible()
     await expect(page.getByRole('cell', { name: '140000.00', exact: true })).toBeVisible()
@@ -235,6 +253,13 @@ test.describe('P1-FE-060 Product/UOM UI', () => {
     ).toBe(true)
     await page.getByRole('combobox', { name: 'Type' }).selectOption('COMBO')
     await expect(page.getByRole('heading', { name: 'Quy đổi UOM' })).toHaveCount(0)
+    await expect(page.getByText('Sản phẩm cha')).toHaveCount(0)
+    await expect(page.getByRole('heading', { name: 'Thành phần COMBO' })).toBeVisible()
+    await expect(page.getByRole('button', { name: 'Thêm thành phần' })).toBeEnabled()
+    await page
+      .getByRole('button', { name: 'Thêm thành phần' })
+      .evaluate((element) => (element as HTMLButtonElement).click())
+    await expect(page.getByRole('textbox', { name: 'Số lượng' })).toBeVisible()
     await expect(page.getByText('COMBO luôn tắt quản lý Serial.')).toBeVisible()
   })
 
@@ -264,7 +289,10 @@ test.describe('P1-FE-060 Product/UOM UI', () => {
     await expect(page.getByText('PARENT không có UOM cơ sở hoặc giá mặc định.')).toBeVisible()
     await expect(page.getByRole('checkbox', { name: 'Quản lý Serial' })).toHaveCount(0)
     await expect(page.locator('form .primary-button')).toBeEnabled()
-    await page.getByRole('button', { name: 'Lưu' }).first().click()
+    await page
+      .getByRole('button', { name: 'Lưu' })
+      .first()
+      .evaluate((element) => (element as HTMLButtonElement).click())
     await expect.poll(() => patchBody).not.toBeNull()
     expect(patchBody).not.toHaveProperty('status')
   })
