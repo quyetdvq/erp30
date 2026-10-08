@@ -21,6 +21,7 @@ import {
   listResourcePage,
   listSecurityUserPage,
   savePolicy,
+  type ManagedUser,
   type SecurityAction,
 } from '@/services/security'
 import { withTypedClient } from '@/api/client'
@@ -65,6 +66,9 @@ const duplicateScopeConflict = ref(false)
 const organizations = ref<Organization[]>([])
 const resources = ref<Resource[]>([])
 const groups = ref<AuthorizationGroup[]>([])
+const users = ref<ManagedUser[]>([])
+const departments = ref<Department[]>([])
+const positions = ref<Position[]>([])
 const workflowStates = ref<WorkflowState[]>([])
 const actions = ref<SecurityAction[]>([])
 const actionCatalog = ref<SecurityAction[]>([])
@@ -133,9 +137,19 @@ function labelForParticipant(policy: Policy): string {
 function participantOptionsFor(type: ParticipantType, id: string): string {
   if (type === 'GROUP') {
     const group = groups.value.find((candidate) => String(candidate.id) === id)
-    return group ? `${group.code} · ${group.name}` : ''
+    return group?.name ?? ''
   }
-  return participantOptions.value.find((candidate) => candidate.id === id)?.label ?? ''
+  if (type === 'USER') {
+    const user = users.value.find((candidate) => String(candidate.id) === id)
+    return user?.name || user?.username || ''
+  }
+  if (type === 'POSITION') {
+    return positions.value.find((candidate) => String(candidate.id) === id)?.name ?? ''
+  }
+  if (type === 'DEPARTMENT') {
+    return departments.value.find((candidate) => String(candidate.id) === id)?.name ?? ''
+  }
+  return organizations.value.find((candidate) => String(candidate.id) === id)?.name ?? ''
 }
 function effectsSummary(policy: Policy): string {
   return policy.actions
@@ -199,6 +213,32 @@ async function loadReferences(): Promise<void> {
     groups.value = groupPage.data
     organizations.value = organizationPage.data as Organization[]
     workflowStates.value = statePage.data as WorkflowState[]
+    const [userResult, departmentResult, positionResult] = await Promise.allSettled([
+      listSecurityUserPage({ ...emptyQuery, sort: 'username' }),
+      withTypedClient((client) =>
+        listDepartments({
+          client,
+          headers,
+          query: { page: 1, page_size: 200, sort: 'name', filter: {} },
+          throwOnError: true,
+        }),
+      ).then((response) => ({ data: response.data.data ?? [] })),
+      withTypedClient((client) =>
+        listPositions({
+          client,
+          headers,
+          query: { page: 1, page_size: 200, sort: 'name', filter: {} },
+          throwOnError: true,
+        }),
+      ).then((response) => ({ data: response.data.data ?? [] })),
+    ])
+    if (userResult.status === 'fulfilled') users.value = userResult.value.data
+    if (departmentResult.status === 'fulfilled') {
+      departments.value = departmentResult.value.data as Department[]
+    }
+    if (positionResult.status === 'fulfilled') {
+      positions.value = positionResult.value.data as Position[]
+    }
   } catch (caught: unknown) {
     error.value = caught
     reportApiError(caught)
@@ -239,56 +279,84 @@ async function loadParticipantOptions(
     let options: ParticipantOption[]
     switch (type) {
       case 'USER': {
-        const page = await listSecurityUserPage({ ...listQuery, sort: 'username' })
-        options = page.data.map((user) => ({
-          id: String(user.id),
-          label: `${user.username}${user.name ? ` · ${user.name}` : ''}`,
-        }))
+        if (!query) {
+          options = users.value.map((user) => ({
+            id: String(user.id),
+            label: user.name || user.username,
+          }))
+        } else {
+          const page = await listSecurityUserPage({ ...listQuery, sort: 'username' })
+          options = page.data.map((user) => ({
+            id: String(user.id),
+            label: `${user.username}${user.name ? ` · ${user.name}` : ''}`,
+          }))
+        }
         break
       }
       case 'POSITION': {
-        const response = await withTypedClient((client) =>
-          listPositions({
-            client,
-            headers: { 'Accept-Language': i18n.global.locale.value as 'vi' | 'en' },
-            query: { ...listQuery, filter: {} },
-            throwOnError: true,
-          }),
-        )
-        options = (response.data.data ?? []).map((item: Position) => ({
-          id: String(item.id),
-          label: `${item.code} · ${item.name}`,
-        }))
+        if (!query) {
+          options = positions.value.map((item) => ({
+            id: String(item.id),
+            label: `${item.code} · ${item.name}`,
+          }))
+        } else {
+          const response = await withTypedClient((client) =>
+            listPositions({
+              client,
+              headers: { 'Accept-Language': i18n.global.locale.value as 'vi' | 'en' },
+              query: { ...listQuery, filter: {} },
+              throwOnError: true,
+            }),
+          )
+          options = (response.data.data ?? []).map((item: Position) => ({
+            id: String(item.id),
+            label: `${item.code} · ${item.name}`,
+          }))
+        }
         break
       }
       case 'DEPARTMENT': {
-        const response = await withTypedClient((client) =>
-          listDepartments({
-            client,
-            headers: { 'Accept-Language': i18n.global.locale.value as 'vi' | 'en' },
-            query: { ...listQuery, filter: {} },
-            throwOnError: true,
-          }),
-        )
-        options = (response.data.data ?? []).map((item: Department) => ({
-          id: String(item.id),
-          label: `${item.code} · ${item.name}`,
-        }))
+        if (!query) {
+          options = departments.value.map((item) => ({
+            id: String(item.id),
+            label: `${item.code} · ${item.name}`,
+          }))
+        } else {
+          const response = await withTypedClient((client) =>
+            listDepartments({
+              client,
+              headers: { 'Accept-Language': i18n.global.locale.value as 'vi' | 'en' },
+              query: { ...listQuery, filter: {} },
+              throwOnError: true,
+            }),
+          )
+          options = (response.data.data ?? []).map((item: Department) => ({
+            id: String(item.id),
+            label: `${item.code} · ${item.name}`,
+          }))
+        }
         break
       }
       case 'ORGANIZATION': {
-        const response = await withTypedClient((client) =>
-          listOrganizations({
-            client,
-            headers: { 'Accept-Language': i18n.global.locale.value as 'vi' | 'en' },
-            query: { ...listQuery, filter: {} },
-            throwOnError: true,
-          }),
-        )
-        options = (response.data.data ?? []).map((item: Organization) => ({
-          id: String(item.id),
-          label: `${item.code} · ${item.name}`,
-        }))
+        if (!query) {
+          options = organizations.value.map((item) => ({
+            id: String(item.id),
+            label: `${item.code} · ${item.name}`,
+          }))
+        } else {
+          const response = await withTypedClient((client) =>
+            listOrganizations({
+              client,
+              headers: { 'Accept-Language': i18n.global.locale.value as 'vi' | 'en' },
+              query: { ...listQuery, filter: {} },
+              throwOnError: true,
+            }),
+          )
+          options = (response.data.data ?? []).map((item: Organization) => ({
+            id: String(item.id),
+            label: `${item.code} · ${item.name}`,
+          }))
+        }
         break
       }
       case 'GROUP':

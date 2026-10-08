@@ -478,6 +478,7 @@ test.describe('P1-FE-030 security surfaces', () => {
 
     await page.goto('/security/policies')
     await expect(page.getByRole('heading', { name: 'Policy PBAC' })).toBeVisible()
+    await expect(page.getByRole('cell', { name: 'Security administrators' })).toBeVisible()
     await expect(page.getByText('ABSOLUTE_DENY:view')).toBeVisible()
     await page.getByRole('button', { name: /Tạo|Create/ }).click()
     await expect(page.locator('#policy-organization-scope')).toBeVisible()
