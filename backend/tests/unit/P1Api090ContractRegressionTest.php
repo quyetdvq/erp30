@@ -130,7 +130,16 @@ final class P1Api090ContractRegressionTest extends CIUnitTestCase
         $this->assertIsString($routes);
         $this->assertIsString($openapi);
 
-        $this->assertDoesNotMatchRegularExpression('#/api/v1/(?:users?|shield/users?)(?:/|[\'"\s])#i', $routes . "\n" . $openapi);
+        foreach ([
+            '/api/v1/users',
+            '/api/v1/users/{id}',
+            '/api/v1/users/{id}/actions/set-state',
+            '/api/v1/users/{id}/actions/reset-password',
+            '/api/v1/users/{id}/permissions',
+        ] as $approvedUserRoute) {
+            $this->assertStringContainsString($approvedUserRoute, $openapi);
+        }
+        $this->assertStringNotContainsString('/api/v1/shield/users', $routes . "\n" . $openapi);
         $this->assertDoesNotMatchRegularExpression('#^\s{2}/api/v1/[^:]*export[^:]*:#im', $openapi);
         $this->assertDoesNotMatchRegularExpression('#/export(?:[\'"\s])#i', $routes);
         $this->assertDoesNotMatchRegularExpression('#price[-_]?resolution|resolvePrice#i', $routes . "\n" . $openapi);

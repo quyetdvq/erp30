@@ -59,7 +59,7 @@ final class P1Seed003PrivilegedAuthorizationGroupTest extends CIUnitTestCase
         $this->assertSame(1, $this->db->table('group_permissions')->where([
             'group_id' => $groupId, 'resource_action_id' => $futureActionId,
         ])->countAllResults());
-        $this->assertSame(93, $this->db->table('group_permissions')->where('group_id', $groupId)->countAllResults());
+        $this->assertSame(94, $this->db->table('group_permissions')->where('group_id', $groupId)->countAllResults());
     }
 
     public function testMissingApprovedActionRollsBackTheWholeBootstrap(): void

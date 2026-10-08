@@ -23,7 +23,7 @@ final class P1Seed001ResourceActionSeedTest extends CIUnitTestCase
         'position' => ['view', 'create', 'edit', 'setstate', 'export'],
         'employee' => ['view', 'create', 'edit', 'setstate', 'export'],
         'employee_assignment' => ['view', 'create', 'edit', 'setstate'],
-        'user' => ['view', 'create', 'edit', 'setstate', 'assign_permission'],
+        'user' => ['view', 'create', 'edit', 'setstate', 'reset_password', 'assign_permission'],
         'authorization_group' => ['view', 'create', 'edit', 'setstate', 'assign_member', 'assign_permission'],
         'resource' => ['view', 'create', 'edit', 'delete', 'configure_numbering'],
         'policy' => ['view', 'create', 'edit', 'delete'],
@@ -63,7 +63,7 @@ final class P1Seed001ResourceActionSeedTest extends CIUnitTestCase
         $this->assertSame($this->normalizedMatrix(), $second);
         $this->assertSame($beforeSideEffects, $this->sideEffectCounts());
         $this->assertSame(21, count($second));
-        $this->assertSame(94, array_sum(array_map('count', $second)));
+        $this->assertSame(95, array_sum(array_map('count', $second)));
         $expectedDomains = self::DOMAINS;
         ksort($expectedDomains);
         $this->assertSame($expectedDomains, $this->domainSnapshot());
