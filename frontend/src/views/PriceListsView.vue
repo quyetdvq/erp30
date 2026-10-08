@@ -677,14 +677,87 @@ onMounted(async () => {
   color: #b64444;
   font-size: 12px;
 }
+.modal-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  display: grid;
+  place-items: center;
+  padding: 20px;
+  background: rgb(18 38 54 / 45%);
+}
+.modal-card {
+  width: min(100%, 680px);
+  max-height: calc(100vh - 40px);
+  overflow: hidden;
+  border-radius: 7px;
+  background: #fff;
+  box-shadow: 0 20px 60px rgb(18 42 62 / 24%);
+}
+.modal-card__header,
+.modal-card__footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 16px 22px;
+  border-bottom: 1px solid #e4ebef;
+}
+.modal-card__header h2 {
+  margin: 0;
+}
 .modal-card__body {
   display: grid;
   gap: 12px;
+  max-height: calc(100vh - 150px);
+  overflow: auto;
+  padding: 22px;
+}
+.modal-card__body label {
+  display: grid;
+  gap: 5px;
+  color: #536b7b;
+  font-size: 12px;
+  font-weight: 600;
+}
+.modal-card__body input,
+.modal-card__body select,
+.modal-card__body textarea {
+  min-height: 34px;
+  border: 1px solid #c7d6df;
+  border-radius: 4px;
+  padding: 7px 9px;
+  color: #183b57;
+  font: inherit;
+}
+.modal-card__footer {
+  justify-content: flex-end;
+  margin: 0;
+  border-top: 1px solid #e4ebef;
+  border-bottom: 0;
+}
+.icon-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: #536b7b;
+  cursor: pointer;
+}
+.icon-button:hover,
+.icon-button:focus-visible {
+  color: #1876a8;
 }
 .price-items-modal {
   width: min(1060px, 100%);
   max-height: calc(100vh - 36px);
-  overflow: auto;
+}
+.price-items-modal .modal-card__body {
+  max-height: calc(100vh - 160px);
 }
 .eyebrow {
   margin: 0 0 3px;
