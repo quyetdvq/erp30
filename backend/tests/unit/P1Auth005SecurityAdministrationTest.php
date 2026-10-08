@@ -318,6 +318,9 @@ final class P1Auth005SecurityAdministrationTest extends CIUnitTestCase
         ]);
         $this->assertNull($repository->find($policyId)['state_id']);
 
+        // A generated scope key is database-only and must not enter the PATCH payload.
+        $this->assertTrue($service->update($policyId, ['state_id' => null]));
+
         try {
             $service->create($policy, [[
                 'resource_action_id' => $this->resourceActionId('organization', 'view'),

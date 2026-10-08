@@ -35,6 +35,9 @@ final class PolicyRepository
         'participant_ref_id', 'created_by', 'updated_by', 'created_at', 'updated_at',
     ];
 
+    /** Keep generated database-only scope columns out of policy rows returned to callers. */
+    private const POLICY_SELECT = 'id, organization_id, resource_id, state_id, participant_type, participant_ref_id, created_by, updated_by, created_at, updated_at';
+
     /** @var list<string> */
     private const ACTION_FIELDS = [
         'policy_id', 'resource_action_id', 'effect', 'created_by', 'updated_by',
@@ -62,7 +65,10 @@ final class PolicyRepository
     public function find(int $id): ?array
     {
         try {
-            $result = $this->db->table('policies')->where('id', $id)->get();
+            $result = $this->db->table('policies')
+                ->select(self::POLICY_SELECT)
+                ->where('id', $id)
+                ->get();
         } catch (\Throwable $exception) {
             throw new PersistenceException(self::ERROR_PERSISTENCE_FAILED, 'find', $exception);
         }
@@ -83,7 +89,9 @@ final class PolicyRepository
         }
 
         try {
-            $builder = $this->db->table('policies')->where('id', $id);
+            $builder = $this->db->table('policies')
+                ->select(self::POLICY_SELECT)
+                ->where('id', $id);
             $result = $this->db->query($builder->getCompiledSelect() . ' FOR UPDATE');
         } catch (\Throwable $exception) {
             throw new PersistenceException(self::ERROR_PERSISTENCE_FAILED, 'findForUpdate', $exception);
@@ -104,7 +112,9 @@ final class PolicyRepository
     public function findAll(array $filters = []): array
     {
         try {
-            $builder = $this->db->table('policies')->orderBy('id', 'ASC');
+            $builder = $this->db->table('policies')
+                ->select(self::POLICY_SELECT)
+                ->orderBy('id', 'ASC');
             foreach (['organization_id', 'resource_id', 'participant_type', 'participant_ref_id'] as $field) {
                 if (array_key_exists($field, $filters)) {
                     $builder->where($field, $filters[$field]);

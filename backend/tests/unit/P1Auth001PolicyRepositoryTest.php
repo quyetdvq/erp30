@@ -82,6 +82,27 @@ final class P1Auth001PolicyRepositoryTest extends CIUnitTestCase
         $this->assertCount(1, $repository->findAll(['state_id' => null]));
     }
 
+    public function testGeneratedScopeColumnIsNotExposedByPolicyReads(): void
+    {
+        $this->seedCatalog();
+        $refs = $this->insertReferences();
+        $repository = new PolicyRepository($this->db);
+        $policyId = $repository->insert([
+            'organization_id' => $refs['ORGANIZATION'],
+            'resource_id' => $this->resourceId('product'),
+            'participant_type' => 'USER',
+            'participant_ref_id' => $refs['USER'],
+        ]);
+
+        $row = $repository->find($policyId);
+        $lockedRow = $repository->findForUpdate($policyId);
+        $this->assertNotNull($row);
+        $this->assertNotNull($lockedRow);
+        $this->assertArrayNotHasKey('normalized_state_id', $row);
+        $this->assertArrayNotHasKey('normalized_state_id', $lockedRow);
+        $this->assertArrayNotHasKey('normalized_state_id', $repository->findAll()[0]);
+    }
+
     public function testPolicyActionMustBelongToPolicyResource(): void
     {
         $this->seedCatalog();
