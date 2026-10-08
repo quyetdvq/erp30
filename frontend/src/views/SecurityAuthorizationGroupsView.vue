@@ -57,8 +57,8 @@ const detailOpen = ref(false)
 const columns: readonly ListColumn<AuthorizationGroup>[] = [
   { key: 'code', labelKey: 'security.code', sortable: true },
   { key: 'name', labelKey: 'security.name', sortable: true },
-  { key: 'status', labelKey: 'security.status', sortable: true },
-  { key: 'actions', labelKey: 'security.actions' },
+  { key: 'status', labelKey: 'security.status', sortable: true, align: 'center' },
+  { key: 'actions', labelKey: 'security.actions', align: 'end' },
 ]
 
 const actionGroups = computed(() => {
@@ -346,39 +346,22 @@ onMounted(() => void load())
           }
         "
       />
-      <ListPagination
-        :page="state.query.page"
-        :page-size="state.query.page_size"
-        :total="state.total.value"
-        @update:page="
-          (page) => {
-            state.setPage(page)
-            void load()
-          }
-        "
-        @update:page-size="
-          (size) => {
-            state.setPageSize(size)
-            void load()
-          }
-        "
-      />
     </ListShell>
   </section>
 
   <div v-if="detailOpen && selected" class="modal-backdrop" @click.self="detailOpen = false">
     <section
-      class="modal-card modal-card--wide"
+      class="modal-card modal-card--wide authorization-group-modal"
       role="dialog"
       aria-modal="true"
       :aria-label="`${t('security.authorizationGroup')}: ${selected.name}`"
     >
-      <header class="security-detail-heading">
-        <div>
+      <header class="modal-card__header authorization-group-modal__header">
+        <div class="authorization-group-modal__identity">
           <h2>{{ selected.name }}</h2>
           <small>{{ selected.code }} · {{ t('security.groupIdentityHint') }}</small>
         </div>
-        <div class="detail-heading-actions">
+        <div class="authorization-group-modal__header-actions">
           <TableStatus :status="selected.status" />
           <button
             type="button"
@@ -495,7 +478,10 @@ onMounted(() => void load())
           </div>
         </div>
       </div>
-      <footer v-if="tab !== 'overview'" class="modal-card__footer">
+      <footer class="modal-card__footer">
+        <button type="button" class="secondary-button" @click="detailOpen = false">
+          {{ t('common.close') }}
+        </button>
         <button
           v-if="tab === 'members'"
           type="button"
@@ -510,7 +496,7 @@ onMounted(() => void load())
           {{ busy ? t('common.saving') : t('security.saveMembers') }}
         </button>
         <button
-          v-else
+          v-else-if="tab === 'permissions'"
           type="button"
           class="primary-button"
           :disabled="
@@ -528,7 +514,7 @@ onMounted(() => void load())
 
   <div v-if="modalOpen" class="modal-backdrop" @click.self="modalOpen = false">
     <section
-      class="modal-card"
+      class="modal-card authorization-group-form-modal"
       role="dialog"
       aria-modal="true"
       :aria-label="t('security.groupForm')"
@@ -594,34 +580,36 @@ onMounted(() => void load())
   gap: 10px;
   flex-wrap: wrap;
 }
-.security-detail-heading {
-  display: flex;
-  justify-content: space-between;
-  align-items: start;
-  gap: 12px;
+.authorization-group-modal__identity {
+  min-width: 0;
 }
-.detail-heading-actions {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-}
-.security-detail-heading h2 {
+.authorization-group-modal__identity h2 {
   margin: 0;
   color: #153956;
-  font-size: 18px;
+  font-size: 20px;
+  line-height: 1.25;
 }
-.security-detail-heading small {
+.authorization-group-modal__identity small {
   display: block;
-  margin-top: 5px;
+  margin-top: 6px;
   color: #8191a0;
+  font-size: 12px;
+}
+.authorization-group-modal__header-actions {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
 }
 .security-tabs {
   display: flex;
-  gap: 6px;
+  flex: 0 0 auto;
+  gap: 24px;
+  padding: 0 24px;
   border-bottom: 1px solid #e3ebef;
 }
 .security-tabs button {
-  padding: 9px 12px;
+  padding: 13px 2px 11px;
   border: 0;
   border-bottom: 2px solid transparent;
   background: transparent;
@@ -722,13 +710,17 @@ onMounted(() => void load())
 .modal-card {
   width: min(100%, 620px);
   max-height: calc(100vh - 40px);
-  overflow: auto;
+  overflow: hidden;
   border-radius: 7px;
   background: #fff;
   box-shadow: 0 20px 60px rgb(18 42 62 / 24%);
 }
 .modal-card--wide {
   width: min(100%, 900px);
+}
+.authorization-group-modal {
+  display: flex;
+  flex-direction: column;
 }
 .modal-card__header,
 .modal-card__footer {
@@ -739,10 +731,20 @@ onMounted(() => void load())
   padding: 15px 18px;
   border-bottom: 1px solid #e4ebef;
 }
+.authorization-group-modal__header {
+  flex: 0 0 auto;
+  padding: 20px 24px 16px;
+  border-bottom: 0;
+}
 .modal-card__body {
   display: grid;
   gap: 12px;
   padding: 18px;
+}
+.authorization-group-modal .modal-card__body {
+  min-height: 0;
+  overflow: auto;
+  padding: 22px 24px;
 }
 .modal-card__body label {
   display: grid;
@@ -757,11 +759,25 @@ onMounted(() => void load())
 }
 .modal-card__footer {
   justify-content: flex-end;
-  margin: 5px -18px -18px;
+  margin: 0;
+  padding: 14px 24px 18px;
   border-top: 1px solid #e4ebef;
   border-bottom: 0;
 }
+.authorization-group-form-modal .modal-card__body {
+  overflow: auto;
+}
+.authorization-group-form-modal .modal-card__body .modal-card__footer {
+  margin: 5px -18px -18px;
+  padding: 14px 18px 0;
+}
 .icon-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  padding: 0;
   border: 0;
   background: transparent;
   color: #536b7b;
@@ -785,6 +801,19 @@ onMounted(() => void load())
   .security-list-panel,
   .security-detail-panel {
     padding: 15px 12px;
+  }
+  .authorization-group-modal__header,
+  .authorization-group-modal .modal-card__body {
+    padding-right: 18px;
+    padding-left: 18px;
+  }
+  .authorization-group-modal .security-tabs {
+    gap: 14px;
+    padding: 0 18px;
+  }
+  .authorization-group-modal .modal-card__footer {
+    padding-right: 18px;
+    padding-left: 18px;
   }
 }
 </style>
