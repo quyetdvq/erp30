@@ -443,6 +443,7 @@ test.describe('P1-FE-030 security surfaces', () => {
     })
     await page.goto('/security/resources')
     await expect(page.getByRole('heading', { name: 'Resource và Action' })).toBeVisible()
+    await expect(page.getByRole('cell', { name: 'Product flow' })).toBeVisible()
     await expect(page.getByRole('navigation', { name: 'Phân trang danh sách' })).toHaveCount(1)
     await page.getByRole('button', { name: 'Xem chi tiết' }).click()
     const resourceDialog = page.getByRole('dialog', { name: /Resource:/ })
@@ -456,6 +457,9 @@ test.describe('P1-FE-030 security surfaces', () => {
       .click()
     await page.getByRole('button', { name: 'Sửa' }).click()
     const resourceEditDialog = page.getByRole('dialog', { name: 'Biểu mẫu Resource' })
+    await expect(resourceEditDialog.locator('.modal-card__header')).toHaveCount(1)
+    await expect(resourceEditDialog.locator('.modal-card__body')).toHaveCount(1)
+    await expect(resourceEditDialog.locator('.modal-card__footer')).toHaveCount(1)
     const lifecycleSelect = resourceEditDialog
       .locator('select')
       .filter({ has: page.locator('option[value="50"]') })

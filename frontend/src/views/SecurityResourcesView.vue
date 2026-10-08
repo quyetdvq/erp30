@@ -50,6 +50,10 @@ const columns: readonly ListColumn<Resource>[] = [
   { key: 'action_count', labelKey: 'security.actionCount', align: 'center' },
   { key: 'actions', labelKey: 'security.actions', align: 'end' },
 ]
+function lifecycleLabel(id: unknown): string {
+  if (id === null || id === undefined || id === '') return t('list.noValue')
+  return lifecycles.value.find((lifecycle) => String(lifecycle.id) === String(id))?.name ?? `#${id}`
+}
 function applyQuery(query: ListQuery): void {
   state.setSearch(query.q)
   state.setFilters(query.filter)
@@ -262,6 +266,7 @@ onMounted(() => {
         "
         ><template #cell-domain="{ row }"
           ><code>{{ row.domain }}</code></template
+        ><template #cell-lifecycle_id="{ row }">{{ lifecycleLabel(row.lifecycle_id) }}</template
         ><template #cell-action_count="{ row }">{{ row.actions?.length ?? 0 }}</template
         ><template #cell-actions="{ row }"
           ><TableRowActions
@@ -344,7 +349,7 @@ onMounted(() => {
           </div>
           <div>
             <dt>{{ t('security.lifecycle') }}</dt>
-            <dd>{{ selected.lifecycle_id ?? t('list.noValue') }}</dd>
+            <dd>{{ lifecycleLabel(selected.lifecycle_id) }}</dd>
           </div>
         </dl>
         <p class="security-note">{{ t('security.resourceDomainNote') }}</p>
@@ -404,7 +409,7 @@ onMounted(() => {
       aria-modal="true"
       :aria-label="t('security.resourceForm')"
     >
-      <header class="modal-card__header">
+      <header class="modal-card__header resource-form-modal__header">
         <h2>
           {{ editingId ? t('common.edit') : t('common.create') }} {{ t('security.resource') }}
         </h2>
@@ -417,7 +422,11 @@ onMounted(() => {
           ×
         </button>
       </header>
-      <form class="modal-card__body" @submit.prevent="save">
+      <form
+        id="resource-form"
+        class="modal-card__body resource-form-modal__body"
+        @submit.prevent="save"
+      >
         <label
           ><span>{{ t('security.type') }}</span
           ><input
@@ -450,14 +459,15 @@ onMounted(() => {
             </option>
           </select></label
         >
-        <footer class="modal-card__footer">
-          <button type="button" class="secondary-button" @click="modalOpen = false">
-            {{ t('common.cancel') }}</button
-          ><button type="submit" class="primary-button" :disabled="busy">
-            {{ busy ? t('common.saving') : t('common.save') }}
-          </button>
-        </footer>
       </form>
+      <footer class="modal-card__footer resource-form-modal__footer">
+        <button type="button" class="secondary-button" @click="modalOpen = false">
+          {{ t('common.cancel') }}
+        </button>
+        <button type="submit" form="resource-form" class="primary-button" :disabled="busy">
+          {{ busy ? t('common.saving') : t('common.save') }}
+        </button>
+      </footer>
     </section>
   </div>
   <div v-if="actionModalOpen" class="modal-backdrop" @click.self="actionModalOpen = false">
@@ -467,7 +477,7 @@ onMounted(() => {
       aria-modal="true"
       :aria-label="t('security.actionForm')"
     >
-      <header class="modal-card__header">
+      <header class="modal-card__header resource-action-form-modal__header">
         <h2>
           {{ editingActionId ? t('common.edit') : t('common.create') }} {{ t('security.action') }}
         </h2>
@@ -480,7 +490,11 @@ onMounted(() => {
           ×
         </button>
       </header>
-      <form class="modal-card__body" @submit.prevent="saveAction">
+      <form
+        id="resource-action-form"
+        class="modal-card__body resource-action-form-modal__body"
+        @submit.prevent="saveAction"
+      >
         <label
           ><span>{{ t('security.actionCode') }}</span
           ><input
@@ -492,14 +506,15 @@ onMounted(() => {
           ><span>{{ t('security.description') }}</span
           ><textarea v-model="actionForm.description" class="field-input" rows="3" />
         </label>
-        <footer class="modal-card__footer">
-          <button type="button" class="secondary-button" @click="actionModalOpen = false">
-            {{ t('common.cancel') }}</button
-          ><button type="submit" class="primary-button" :disabled="busy">
-            {{ busy ? t('common.saving') : t('common.save') }}
-          </button>
-        </footer>
       </form>
+      <footer class="modal-card__footer resource-action-form-modal__footer">
+        <button type="button" class="secondary-button" @click="actionModalOpen = false">
+          {{ t('common.cancel') }}
+        </button>
+        <button type="submit" form="resource-action-form" class="primary-button" :disabled="busy">
+          {{ busy ? t('common.saving') : t('common.save') }}
+        </button>
+      </footer>
     </section>
   </div>
 </template>
@@ -707,12 +722,29 @@ onMounted(() => {
 }
 .resource-form-modal .modal-card__body,
 .resource-action-form-modal .modal-card__body {
+  min-height: 0;
+  max-height: calc(100vh - 170px);
   overflow: auto;
+  padding: 22px 24px;
 }
-.resource-form-modal .modal-card__body .modal-card__footer,
-.resource-action-form-modal .modal-card__body .modal-card__footer {
-  margin: 5px -18px -18px;
-  padding: 14px 18px 0;
+.resource-form-modal,
+.resource-action-form-modal {
+  display: flex;
+  flex-direction: column;
+}
+.resource-detail-modal__header {
+  padding: 20px 24px 16px;
+  border-bottom: 0;
+}
+.resource-form-modal__header,
+.resource-action-form-modal__header {
+  flex: 0 0 auto;
+  padding: 20px 24px 16px;
+}
+.resource-form-modal__footer,
+.resource-action-form-modal__footer {
+  flex: 0 0 auto;
+  padding: 14px 24px 18px;
 }
 .icon-button {
   display: inline-flex;
@@ -743,7 +775,11 @@ code {
     padding: 15px 12px;
   }
   .resource-detail-modal__header,
-  .resource-detail-modal .modal-card__body {
+  .resource-detail-modal .modal-card__body,
+  .resource-form-modal__header,
+  .resource-form-modal .modal-card__body,
+  .resource-action-form-modal__header,
+  .resource-action-form-modal .modal-card__body {
     padding-right: 18px;
     padding-left: 18px;
   }
@@ -752,6 +788,11 @@ code {
     padding: 0 18px;
   }
   .resource-detail-modal .modal-card__footer {
+    padding-right: 18px;
+    padding-left: 18px;
+  }
+  .resource-form-modal__footer,
+  .resource-action-form-modal__footer {
     padding-right: 18px;
     padding-left: 18px;
   }
