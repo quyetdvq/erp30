@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { onMounted, ref } from 'vue'
+import { computed, onMounted, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useRouter } from 'vue-router'
 import type { ComboItem, Product, ProductGroup, ProductUom } from '@/api/generated/types.gen'
@@ -30,12 +30,23 @@ const { hasBasePermission } = useBasePermission()
 const state = useListState<Product>((query) => listProductPage(query), { sort: 'product_code' })
 const groups = ref<ProductGroup[]>([])
 const uoms = ref<ProductUom[]>([])
+const productLookup = ref<Product[]>([])
 const relations = ref<Record<string, RelationState>>({})
 const expandedRows = ref<Record<string, boolean>>({})
 const detailProduct = ref<Product | null>(null)
 const detailOpen = ref(false)
 const busy = ref(false)
 const error = ref<unknown | null>(null)
+const productsForDetail = computed(() => {
+  const byId = new Map<string, Product>()
+  for (const row of [
+    ...state.rows.value,
+    ...productLookup.value,
+    ...Object.values(relations.value).flatMap((item) => [...item.children, ...item.components]),
+  ])
+    byId.set(String(row.id), row)
+  return [...byId.values()]
+})
 
 const filters = () => [
   {
@@ -197,6 +208,11 @@ onMounted(async () => {
     listProductUomPage({ q: '', page: 1, page_size: 200, sort: 'code', filter: {} })
       .then((result) => {
         uoms.value = result.data
+      })
+      .catch(() => undefined),
+    listProductPage({ q: '', page: 1, page_size: 200, sort: 'product_name', filter: {} })
+      .then((result) => {
+        productLookup.value = result.data
       })
       .catch(() => undefined),
   ])
@@ -390,7 +406,7 @@ onMounted(async () => {
     :product="detailProduct"
     :groups="groups"
     :uoms="uoms"
-    :products="state.rows.value"
+    :products="productsForDetail"
     @close="detailOpen = false"
     @edit="(row) => router.push(`/products/${row.id}`)"
   />
