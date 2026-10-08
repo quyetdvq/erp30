@@ -14,7 +14,6 @@ import { useListState } from '@/composables/useListState'
 import {
   deleteResourceActionById,
   deleteResourceById,
-  getResourceActions,
   listResourcePage,
   saveResource,
   saveResourceAction,
@@ -25,7 +24,7 @@ import { useBasePermission } from '@/composables/useBasePermission'
 
 const { t } = useI18n()
 const { hasBasePermission } = useBasePermission()
-const state = useListState<Resource>((query) => listResourcePage(query), { sort: 'type' })
+const state = useListState<Resource>((query) => listResourcePage(query, true), { sort: 'type' })
 const selectedId = ref<string | null>(null)
 const selected = computed(
   () => state.rows.value.find((row) => String(row.id) === selectedId.value) ?? null,
@@ -34,6 +33,7 @@ const actions = ref<SecurityAction[]>([])
 const tab = ref<'resource' | 'actions'>('resource')
 const modalOpen = ref(false)
 const actionModalOpen = ref(false)
+const detailOpen = ref(false)
 const editingId = ref<string | undefined>()
 const editingActionId = ref<string | undefined>()
 const busy = ref(false)
@@ -66,25 +66,28 @@ async function load(): Promise<void> {
     if (!selectedId.value && state.rows.value[0]) selectedId.value = String(state.rows.value[0].id)
     if (selectedId.value && !selected.value)
       selectedId.value = state.rows.value[0] ? String(state.rows.value[0].id) : null
-    if (selected.value) await loadActions()
+    if (selected.value) actions.value = actionsFor(selected.value)
   } catch (caught: unknown) {
     error.value = caught
     reportApiError(caught)
   }
 }
 async function loadActions(): Promise<void> {
-  if (!selected.value) return
-  try {
-    actions.value = await getResourceActions(String(selected.value.id))
-  } catch (caught: unknown) {
-    error.value = caught
-    reportApiError(caught)
-  }
+  if (selected.value) actions.value = actionsFor(selected.value)
+}
+function actionsFor(resource: Resource): SecurityAction[] {
+  return (resource.actions ?? []).map((action) => ({
+    id: String(action.id),
+    resource_id: String(resource.id),
+    code: action.code,
+    description: action.description,
+  }))
 }
 function selectResource(row: Resource): void {
   selectedId.value = String(row.id)
   tab.value = 'resource'
-  void loadActions()
+  actions.value = actionsFor(row)
+  detailOpen.value = true
 }
 function openActionsTab(): void {
   tab.value = 'actions'
@@ -159,7 +162,7 @@ async function saveAction(): Promise<void> {
       editingActionId.value,
     )
     actionModalOpen.value = false
-    await loadActions()
+    await load()
   } catch (caught: unknown) {
     error.value = caught
     reportApiError(caught)
@@ -177,7 +180,7 @@ async function removeAction(action: SecurityAction): Promise<void> {
   error.value = null
   try {
     await deleteResourceActionById(String(selected.value.id), action.id)
-    await loadActions()
+    await load()
   } catch (caught: unknown) {
     error.value = caught
     reportApiError(caught)
@@ -233,9 +236,7 @@ onMounted(() => void load())
         "
         ><template #cell-domain="{ row }"
           ><code>{{ row.domain }}</code></template
-        ><template #cell-action_count="{ row }">{{
-          row.id === selected?.id ? actions.length : t('list.noValue')
-        }}</template
+        ><template #cell-action_count="{ row }">{{ row.actions?.length ?? 0 }}</template
         ><template #cell-actions="{ row }"
           ><TableRowActions
             :busy="busy"
@@ -250,8 +251,9 @@ onMounted(() => void load())
             :delete-label="t('common.delete')"
             @view="selectResource(row)"
             @edit="openEdit(row)"
-            @delete="remove(row)" /></template></ListTable
-      ><ListPagination
+            @delete="remove(row)" /></template
+      ></ListTable>
+      <ListPagination
         :page="state.query.page"
         :page-size="state.query.page_size"
         :total="state.total.value"
@@ -267,86 +269,124 @@ onMounted(() => void load())
             void load()
           }
         "
-    /></ListShell>
+      /><ListPagination
+        :page="state.query.page"
+        :page-size="state.query.page_size"
+        :total="state.total.value"
+        @update:page="
+          (page) => {
+            state.setPage(page)
+            void load()
+          }
+        "
+        @update:page-size="
+          (size) => {
+            state.setPageSize(size)
+            void load()
+          }
+        "
+      />
+    </ListShell>
   </section>
-  <section v-if="selected" class="content-panel security-detail-panel">
-    <header class="security-detail-heading">
-      <div>
-        <h2>{{ selected.name }}</h2>
-        <small
-          ><code>{{ selected.type }}</code> · {{ t('security.domain') }}:
-          {{ selected.domain }}</small
-        >
-      </div>
-    </header>
-    <nav class="security-tabs" aria-label="Resource detail tabs">
-      <button type="button" :class="{ active: tab === 'resource' }" @click="tab = 'resource'">
-        {{ t('security.tabs.resource') }}</button
-      ><button type="button" :class="{ active: tab === 'actions' }" @click="openActionsTab">
-        {{ t('security.tabs.actions') }}
-      </button>
-    </nav>
-    <div v-if="tab === 'resource'" class="security-detail-copy">
-      <dl class="security-definition-list">
+  <div v-if="detailOpen && selected" class="modal-backdrop" @click.self="detailOpen = false">
+    <section
+      class="modal-card modal-card--wide"
+      role="dialog"
+      aria-modal="true"
+      :aria-label="`${t('security.resource')}: ${selected.name}`"
+    >
+      <header class="modal-card__header security-detail-heading">
         <div>
-          <dt>{{ t('security.type') }}</dt>
-          <dd>{{ selected.type }}</dd>
-        </div>
-        <div>
-          <dt>{{ t('security.domain') }}</dt>
-          <dd>
-            <code>{{ selected.domain }}</code
-            ><small>{{ t('security.domainImmutable') }}</small>
-          </dd>
-        </div>
-        <div>
-          <dt>{{ t('security.lifecycle') }}</dt>
-          <dd>{{ selected.lifecycle_id ?? t('list.noValue') }}</dd>
-        </div>
-      </dl>
-      <p class="security-note">{{ t('security.resourceDomainNote') }}</p>
-      <p class="security-note">{{ t('security.numberingExcluded') }}</p>
-    </div>
-    <div v-else class="security-editor">
-      <div class="detail-actions">
-        <h3>{{ t('security.resourceActions') }}</h3>
-        <button
-          v-if="hasBasePermission('resource', 'edit')"
-          type="button"
-          class="primary-button"
-          @click="openActionCreate"
-        >
-          ＋ {{ t('common.create') }}
-        </button>
-      </div>
-      <div class="action-list">
-        <div v-for="action in actions" :key="action.id" class="action-row">
-          <div>
-            <strong>{{ action.code }}</strong
-            ><small>{{ action.description || t('security.noDescription') }}</small>
-          </div>
-          <span
-            ><button
-              v-if="hasBasePermission('resource', 'edit')"
-              type="button"
-              class="secondary-button"
-              @click="openActionEdit(action)"
-            >
-              {{ t('common.edit') }}</button
-            ><button
-              v-if="hasBasePermission('resource', 'edit')"
-              type="button"
-              class="secondary-button"
-              @click="removeAction(action)"
-            >
-              {{ t('common.delete') }}
-            </button></span
+          <h2>{{ selected.name }}</h2>
+          <small
+            ><code>{{ selected.type }}</code> · {{ selected.domain }}</small
           >
         </div>
-        <p v-if="actions.length === 0" class="empty-state">{{ t('security.noActions') }}</p>
+        <button
+          type="button"
+          class="icon-button"
+          :aria-label="t('common.close')"
+          @click="detailOpen = false"
+        >
+          ×
+        </button>
+      </header>
+      <nav class="security-tabs" :aria-label="t('security.resourceDetailTabs')">
+        <button type="button" :class="{ active: tab === 'resource' }" @click="tab = 'resource'">
+          {{ t('security.tabs.resource') }}
+        </button>
+        <button type="button" :class="{ active: tab === 'actions' }" @click="openActionsTab">
+          {{ t('security.tabs.actions') }}
+        </button>
+      </nav>
+      <div v-if="tab === 'resource'" class="modal-card__body security-detail-copy">
+        <dl class="security-definition-list">
+          <div>
+            <dt>{{ t('security.type') }}</dt>
+            <dd>{{ selected.type }}</dd>
+          </div>
+          <div>
+            <dt>{{ t('security.domain') }}</dt>
+            <dd>
+              <code>{{ selected.domain }}</code>
+              <small>{{ t('security.domainImmutable') }}</small>
+            </dd>
+          </div>
+          <div>
+            <dt>{{ t('security.lifecycle') }}</dt>
+            <dd>{{ selected.lifecycle_id ?? t('list.noValue') }}</dd>
+          </div>
+        </dl>
+        <p class="security-note">{{ t('security.resourceDomainNote') }}</p>
+        <p class="security-note">{{ t('security.numberingExcluded') }}</p>
       </div>
-    </div>
-  </section>
+      <div v-else class="modal-card__body security-editor">
+        <div class="detail-actions">
+          <h3>{{ t('security.resourceActions') }}</h3>
+          <button
+            v-if="hasBasePermission('resource', 'edit')"
+            type="button"
+            class="primary-button"
+            @click="openActionCreate"
+          >
+            ＋ {{ t('common.create') }}
+          </button>
+        </div>
+        <div class="action-list">
+          <div v-for="action in actions" :key="action.id" class="action-row">
+            <div>
+              <strong>{{ action.code }}</strong>
+              <small>{{ action.description || t('security.noDescription') }}</small>
+            </div>
+            <span>
+              <button
+                v-if="hasBasePermission('resource', 'edit')"
+                type="button"
+                class="secondary-button"
+                @click="openActionEdit(action)"
+              >
+                {{ t('common.edit') }}
+              </button>
+              <button
+                v-if="hasBasePermission('resource', 'edit')"
+                type="button"
+                class="secondary-button"
+                @click="removeAction(action)"
+              >
+                {{ t('common.delete') }}
+              </button>
+            </span>
+          </div>
+          <p v-if="actions.length === 0" class="empty-state">{{ t('security.noActions') }}</p>
+        </div>
+      </div>
+      <footer class="modal-card__footer">
+        <button type="button" class="secondary-button" @click="detailOpen = false">
+          {{ t('common.close') }}
+        </button>
+      </footer>
+    </section>
+  </div>
   <div v-if="modalOpen" class="modal-backdrop" @click.self="modalOpen = false">
     <section
       class="modal-card"

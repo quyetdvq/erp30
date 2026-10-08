@@ -370,6 +370,21 @@ test.describe('P1-FE-030 security surfaces', () => {
   test('authorization groups show all members and resource/action permissions in a modal', async ({
     page,
   }) => {
+    let resourceActionRequests = 0
+    let resourceWithActionsRequests = 0
+    let resourceWithActionsUrl = ''
+    page.on('request', (request) => {
+      const requestUrl = new URL(request.url())
+      if (/\/api\/v1\/resources\/[^/]+\/actions$/.test(requestUrl.pathname))
+        resourceActionRequests += 1
+      if (
+        requestUrl.pathname.endsWith('/api/v1/resources') &&
+        requestUrl.searchParams.get('include') === 'actions'
+      ) {
+        resourceWithActionsRequests += 1
+        resourceWithActionsUrl = requestUrl.toString()
+      }
+    })
     await page.goto('/security/authorization-groups')
     await expect(page.getByRole('heading', { name: 'Nhóm phân quyền' })).toBeVisible()
     await page.getByRole('button', { name: 'Xem chi tiết' }).click()
@@ -383,6 +398,11 @@ test.describe('P1-FE-030 security surfaces', () => {
     await expect(dialog.getByRole('cell', { name: 'Policy' })).toBeVisible()
     await expect(dialog.getByRole('cell', { name: 'view' })).toBeVisible()
     await expect(dialog.getByText('ALLOW')).toBeVisible()
+    expect(resourceWithActionsRequests).toBe(1)
+    expect(resourceActionRequests).toBe(0)
+    expect(new URL(resourceWithActionsUrl).searchParams.get('page')).toBe('1')
+    expect(new URL(resourceWithActionsUrl).searchParams.get('page_size')).toBe('200')
+    expect(new URL(resourceWithActionsUrl).searchParams.get('sort')).toBe('type')
   })
 
   test('resources expose canonical Domain values and policies expose exact PBAC vocabularies', async ({

@@ -125,12 +125,6 @@ const navItems: NavigationItem[] = [
     permission: 'employee.view',
   },
   {
-    labelKey: 'nav.groups',
-    to: '/admin/groups',
-    icon: PeopleOutline,
-    permission: 'authorization_group.view',
-  },
-  {
     labelKey: 'nav.displaySettings',
     to: '/system/display-settings',
     icon: SettingsOutline,
@@ -138,7 +132,6 @@ const navItems: NavigationItem[] = [
   },
   { labelKey: 'nav.products', to: '/products', icon: CubeOutline },
   { labelKey: 'nav.sales', to: '/sales', icon: GridOutline },
-  { labelKey: 'nav.users', to: '/admin/users', icon: SettingsOutline, permission: 'user.view' },
   {
     labelKey: 'nav.securityUsers',
     to: '/security/users',
@@ -234,8 +227,6 @@ const modeItems = computed(() => {
   if (activeMode.value === 'system') {
     return allowedNavItems.value.filter((item) =>
       [
-        '/admin/users',
-        '/admin/groups',
         '/system/display-settings',
         '/security/users',
         '/security/authorization-groups',

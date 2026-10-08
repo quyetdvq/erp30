@@ -33,7 +33,7 @@ import {
   type UserState,
 } from '@/services/security'
 import { reportApiError } from '@/services/errorBoundary'
-import type { ManagedUser } from '@/services/admin'
+import type { ManagedUser } from '@/services/security'
 import type { AuthorizationGroup, Resource } from '@/api/generated/types.gen'
 
 const { t } = useI18n()

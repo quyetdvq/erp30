@@ -16,7 +16,6 @@ import {
   changeAuthorizationGroupState,
   getGroupMembers,
   getGroupPermissions,
-  getResourceActions,
   listSecurityUserPage,
   listResourcePage,
   listAuthorizationGroupPage,
@@ -28,7 +27,7 @@ import {
   type SecurityPermission,
 } from '@/services/security'
 import { reportApiError } from '@/services/errorBoundary'
-import type { ManagedUser } from '@/services/admin'
+import type { ManagedUser } from '@/services/security'
 import { useBasePermission } from '@/composables/useBasePermission'
 
 const { t } = useI18n()
@@ -59,15 +58,14 @@ const columns: readonly ListColumn<AuthorizationGroup>[] = [
   { key: 'code', labelKey: 'security.code', sortable: true },
   { key: 'name', labelKey: 'security.name', sortable: true },
   { key: 'status', labelKey: 'security.status', sortable: true },
-  { key: 'member_count', labelKey: 'security.memberCount' },
-  { key: 'permission_count', labelKey: 'security.permissionCount' },
   { key: 'actions', labelKey: 'security.actions' },
 ]
 
 const actionGroups = computed(() => {
   const groups = new Map<string, SecurityAction[]>()
-  for (const action of allActions.value)
+  for (const action of allActions.value) {
     groups.set(action.resource_id, [...(groups.get(action.resource_id) ?? []), action])
+  }
   return [...groups.entries()].map(([resourceId, actions]) => ({ resourceId, actions }))
 })
 const permissionRows = computed(() =>
@@ -119,15 +117,19 @@ async function loadDetail(): Promise<void> {
     const [nextMembers, nextPermissions, resourcePage] = await Promise.all([
       getGroupMembers(String(selected.value.id)),
       getGroupPermissions(String(selected.value.id)),
-      listResourcePage({ q: '', page: 1, page_size: 200, sort: 'type', filter: {} }),
+      listResourcePage({ q: '', page: 1, page_size: 200, sort: 'type', filter: {} }, true),
     ])
-    const actions = await Promise.all(
-      resourcePage.data.map((resource) => getResourceActions(String(resource.id))),
-    )
     members.value = nextMembers
     permissions.value = nextPermissions
     resources.value = resourcePage.data
-    allActions.value = actions.flat()
+    allActions.value = resourcePage.data.flatMap((resource) =>
+      (resource.actions ?? []).map((action) => ({
+        id: String(action.id),
+        resource_id: String(resource.id),
+        code: action.code,
+        description: action.description,
+      })),
+    )
     memberDraft.value = nextMembers.map((member) => String(member.id))
     permissionDraft.value = nextPermissions.map((permission) =>
       String(permission.resource_action_id),
@@ -308,12 +310,6 @@ onMounted(() => void load())
         "
       >
         <template #cell-status="{ row }"><TableStatus :status="row.status" /></template>
-        <template #cell-member_count="{ row }">{{
-          row.id === selected?.id ? members.length : t('list.noValue')
-        }}</template>
-        <template #cell-permission_count="{ row }">{{
-          row.id === selected?.id ? permissions.length : t('list.noValue')
-        }}</template>
         <template #cell-actions="{ row }"
           ><TableRowActions
             :active="row.status === 'ACTIVE'"
@@ -333,6 +329,23 @@ onMounted(() => void load())
             @toggle="toggle(row)"
         /></template>
       </ListTable>
+      <ListPagination
+        :page="state.query.page"
+        :page-size="state.query.page_size"
+        :total="state.total.value"
+        @update:page="
+          (page) => {
+            state.setPage(page)
+            void load()
+          }
+        "
+        @update:page-size="
+          (size) => {
+            state.setPageSize(size)
+            void load()
+          }
+        "
+      />
       <ListPagination
         :page="state.query.page"
         :page-size="state.query.page_size"
@@ -377,7 +390,7 @@ onMounted(() => void load())
           </button>
         </div>
       </header>
-      <nav class="security-tabs" aria-label="Authorization Group detail tabs">
+      <nav class="security-tabs" :aria-label="t('security.groupDetailTabs')">
         <button
           v-for="item in ['overview', 'members', 'permissions'] as const"
           :key="item"
@@ -388,11 +401,11 @@ onMounted(() => void load())
           {{ t(`security.tabs.${item}`) }}
         </button>
       </nav>
-      <div v-if="tab === 'overview'" class="security-detail-copy">
+      <div v-if="tab === 'overview'" class="modal-card__body security-detail-copy">
         <p>{{ selected.description || t('security.noDescription') }}</p>
         <p class="security-note">{{ t('security.basePermissionNote') }}</p>
       </div>
-      <div v-else-if="tab === 'members'" class="security-editor">
+      <div v-else-if="tab === 'members'" class="modal-card__body security-editor">
         <p class="security-note">{{ t('security.memberSourceNote') }}</p>
         <div v-if="members.length" class="detail-table-wrap">
           <table class="detail-table">
@@ -430,20 +443,8 @@ onMounted(() => void load())
           </label>
         </div>
         <p v-else class="empty-state">{{ t('security.noUsersForMembers') }}</p>
-        <button
-          type="button"
-          class="primary-button"
-          :disabled="
-            busy ||
-            selected.status !== 'ACTIVE' ||
-            !hasBasePermission('authorization_group', 'assign_member')
-          "
-          @click="saveMembers"
-        >
-          {{ busy ? t('common.saving') : t('security.saveMembers') }}
-        </button>
       </div>
-      <div v-else class="security-editor">
+      <div v-else class="modal-card__body security-editor">
         <p class="security-note">{{ t('security.permissionSourceNote') }}</p>
         <div v-if="permissionRows.length" class="detail-table-wrap">
           <table class="detail-table">
@@ -493,7 +494,23 @@ onMounted(() => void load())
             </label>
           </div>
         </div>
+      </div>
+      <footer v-if="tab !== 'overview'" class="modal-card__footer">
         <button
+          v-if="tab === 'members'"
+          type="button"
+          class="primary-button"
+          :disabled="
+            busy ||
+            selected.status !== 'ACTIVE' ||
+            !hasBasePermission('authorization_group', 'assign_member')
+          "
+          @click="saveMembers"
+        >
+          {{ busy ? t('common.saving') : t('security.saveMembers') }}
+        </button>
+        <button
+          v-else
           type="button"
           class="primary-button"
           :disabled="
@@ -505,7 +522,7 @@ onMounted(() => void load())
         >
           {{ busy ? t('common.saving') : t('security.savePermissions') }}
         </button>
-      </div>
+      </footer>
     </section>
   </div>
 

@@ -43,12 +43,6 @@ const router = createRouter({
           meta: { labelKey: 'nav.displaySettings' },
         },
         {
-          path: 'admin/users',
-          name: 'users',
-          component: () => import('@/views/UsersView.vue'),
-          meta: { labelKey: 'nav.users' },
-        },
-        {
           path: 'security/users',
           name: 'security-users',
           component: () => import('@/views/SecurityUsersView.vue'),
@@ -89,12 +83,6 @@ const router = createRouter({
           name: 'configuration-lifecycles',
           component: () => import('@/views/LifecyclesView.vue'),
           meta: { labelKey: 'nav.lifecycles' },
-        },
-        {
-          path: 'admin/groups',
-          name: 'groups',
-          component: () => import('@/views/GroupsView.vue'),
-          meta: { labelKey: 'nav.groups' },
         },
         {
           path: 'organizations',

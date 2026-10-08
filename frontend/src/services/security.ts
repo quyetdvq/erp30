@@ -60,8 +60,19 @@ import type {
 import { withTypedClient } from '@/api/client'
 import { i18n } from '@/i18n'
 import type { ListQuery, ListResponse } from '@/components/lists/listTypes'
-import type { ManagedUser } from '@/services/admin'
 import { getCurrentUser, type AuthUser } from '@/services/auth'
+
+export type ManagedUser = {
+  id: number | string
+  username: string
+  name?: string | null
+  email: string | null
+  status: string | null
+  active: boolean
+  created_at: string | null
+  groups: string[]
+  direct_permission_count?: number
+}
 
 export type SecurityAction = {
   id: string
