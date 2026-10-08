@@ -90,11 +90,23 @@ try {
         echo "AUTHORITY_CACHE_STALE\n";
         exit(2);
     }
+    foreach (['validate-context-cache.php', 'validate-ledger.php'] as $validator) {
+        $command = escapeshellarg(PHP_BINARY) . ' ' . escapeshellarg(__DIR__ . DIRECTORY_SEPARATOR . $validator) . ' 2>&1';
+        $validationOutput = [];
+        $validationExit = 0;
+        exec($command, $validationOutput, $validationExit);
+        if ($validationExit !== 0) {
+            echo "AUTHORITY_CACHE_STALE\n";
+            fwrite(STDERR, "PRECHECK_FAILED ({$validator}): " . implode("\n", $validationOutput) . "\n");
+            exit(2);
+        }
+    }
     $taskCatalog = readJson($compiled . DIRECTORY_SEPARATOR . 'tasks.json');
     $moduleCatalog = readJson($compiled . DIRECTORY_SEPARATOR . 'module-map.json');
     $correctiveCatalog = readJson($compiled . DIRECTORY_SEPARATOR . 'corrective-tasks.json');
     $ruleCatalog = readJson($compiled . DIRECTORY_SEPARATOR . 'rules.json');
     $decisionCatalog = readJson($compiled . DIRECTORY_SEPARATOR . 'approved-decisions.json');
+    $changeCatalog = readJson($compiled . DIRECTORY_SEPARATOR . 'change-controls.json');
 } catch (Throwable $error) {
     fwrite(STDERR, $error->getMessage() . "\n");
     exit(1);
@@ -124,6 +136,26 @@ foreach (($decisionCatalog['decisions'] ?? []) as $decision) {
     }
 }
 $moduleMap = $moduleCatalog['mappings'] ?? [];
+$ledgerRelative = (string) ($manifest['ledger_source']['path'] ?? '');
+$ledgerPath = $root . DIRECTORY_SEPARATOR . str_replace('/', DIRECTORY_SEPARATOR, $ledgerRelative);
+$ledgerText = (string) file_get_contents($ledgerPath);
+$liveStatuses = [];
+preg_match_all('/^\|\s*(P1-[A-Z0-9-]+)\s*\|\s*(NOT_STARTED|READY|IN_PROGRESS|DONE|PARTIAL|BLOCKED|NEEDS_FIX)\s*\|/m', $ledgerText, $statusMatches, PREG_SET_ORDER);
+foreach ($statusMatches as $statusMatch) {
+    $liveStatuses[$statusMatch[1]] = $statusMatch[2];
+}
+if (count($liveStatuses) !== 107) {
+    fwrite(STDERR, "LIVE_LEDGER_TASK_COUNT_MISMATCH: " . count($liveStatuses) . "\n");
+    exit(2);
+}
+$doneCount = count(array_filter($liveStatuses, static fn(string $status): bool => $status === 'DONE'));
+$changesByTask = [];
+foreach (($changeCatalog['changes'] ?? []) as $change) {
+    foreach (($change['affected_task_ids'] ?? []) as $affected) {
+        $changesByTask[(string) $affected][] = $change;
+    }
+}
+
 
 $selected = [];
 $ruleIds = [];
@@ -167,12 +199,18 @@ foreach ($taskIds as $id) {
 
 $lines = [];
 $lines[] = 'AUTHORITY_CACHE: VALID';
-$lines[] = 'AUTHORITY_SOURCE_READ: HASH_ONLY';
+$lines[] = 'AUTHORITY_SOURCE_READ: HASH_CHECKED; CATALOG_AND_LEDGER_VALIDATORS: PASS';
+$lines[] = sprintf('P1 live ledger: %d/%d DONE', $doneCount, count($liveStatuses));
 $lines[] = 'Tasks:';
 foreach ($selected as $task) {
     $dependencies = (string) ($task['dependencies'] ?? 'none');
     $direct = $task['direct_source_verification'] ?? [];
     $lines[] = sprintf('- %s — %s', $task['id'], $task['title']);
+    $ledgerState = $liveStatuses[(string) $task['id']] ?? 'CORRECTIVE_OUTSIDE_P1_REGISTRY';
+    $lines[] = sprintf('  Live ledger status: %s', $ledgerState);
+    if ($ledgerState === 'DONE') {
+        $lines[] = '  Execution rule: DONE is evidence of a completed canonical Task ID; do not re-implement without a separate approved scoped retrofit.';
+    }
     $lines[] = sprintf('  Risk: %s', $task['risk']);
     $lines[] = sprintf('  Impact: %s', $task['impact']);
     $lines[] = sprintf('  Dependencies: %s', $dependencies === '' ? 'none' : $dependencies);
@@ -187,8 +225,27 @@ foreach ($selected as $task) {
     }
     if (isset($moduleMap[$task['id']])) {
         $mapping = $moduleMap[$task['id']];
-        $lines[] = sprintf('  Module mapping: %s -> %s (%s)', $mapping['module'], $mapping['path'], $mapping['status']);
+        $lines[] = sprintf('  Module ownership reference (not a completion state): %s -> %s', $mapping['module'], $mapping['path']);
     }
+}
+$lines[] = 'Approved change-control overlays (not proof of implementation; not new Task IDs):';
+$emittedChanges = [];
+foreach ($taskIds as $id) {
+    $applicable = $changesByTask[$id] ?? [];
+    if (preg_match('/^P1-(SYS|UAT|RC)-/', $id)) {
+        $applicable = $changeCatalog['changes'] ?? [];
+    }
+    foreach ($applicable as $change) {
+        $key = (string) $change['id'];
+        if (isset($emittedChanges[$key])) {
+            continue;
+        }
+        $emittedChanges[$key] = true;
+        $lines[] = sprintf('- %s [%s]: %s; source=%s; implementation=%s', $key, $change['approval'], $change['closure_scope'], $change['source'], $change['implementation_evidence']);
+    }
+}
+if ($emittedChanges === []) {
+    $lines[] = '- NONE for selected Task ID(s)';
 }
 $lines[] = 'Resolved rules:';
 foreach ($ruleIds as $ruleId) {

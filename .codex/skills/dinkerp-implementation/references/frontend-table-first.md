@@ -77,6 +77,10 @@ Do not apply Table First mechanically to:
 - tree-first navigation screens;
 - specialized visual editors explicitly approved by authority.
 
+## Table status and row-action primitives
+
+Read [ui-table-action-status.md](ui-table-action-status.md) for the Project operational rule. Every Vue data table status column uses accessible `TableStatus`; row actions use `TableRowActions` and only supported view/edit/toggle buttons; read-only view uses `TableDetailModal`. Keep all permission and mutation handlers authoritative on the backend.
+
 ## 3. Canonical List Management layout
 
 Every List Management page must follow this visual order.
@@ -482,7 +486,7 @@ Use permission-aware visibility for every protected action.
 
 ## 9. Action presentation
 
-For a small number of actions, use visible icon buttons when they remain understandable and accessible.
+Use the shared icon-only `TableRowActions` primitive for supported row view/edit/toggle actions. Keep readable accessible labels. Do not restore text or emoji action links.
 
 For many actions, use:
 

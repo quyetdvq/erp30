@@ -4,17 +4,17 @@ This protocol controls P1 task execution. It does not replace UR, FRS, DBD, the 
 
 ## Bounded reading
 
-1. Identify Task IDs and run `scripts/task-context.php` (`--batch` only for a declared batch); do not load compiled catalog files into model context.
-2. Require `AUTHORITY_CACHE: VALID`; stale hashes, missing provenance/rules, or cache/repository conflicts stop execution.
+1. Identify P1 Task IDs and run `scripts/task-context.php` (`--batch` only for a declared batch). It runs both validators before emitting context; do not load compiled catalogs into model context.
+2. Require `AUTHORITY_CACHE: VALID` plus `LEDGER_VALIDATION: PASS` and `CACHE_VALIDATION: PASS` (automatically enforced by task-context); stale hashes, Plan/task mismatch, missing decision/provenance, or cache/repository conflicts stop execution.
 3. Read `AGENTS.md` and the applicable `tasks-gate<N>.md` registry. LOW/MEDIUM tasks do not directly read architecture documents with a valid cache.
 4. For HIGH tasks, verify only exact critical authority pointers emitted by the context script. Expand only for dependency closure, contract status, source conflict, or debugging.
 5. Treat accepted implementation assessments as evidence, not authority.
 
 ## Task contract and readiness
 
-Before editing, record Task ID/title, dependency status, registry risk/profile, primary output, and only the task-specific DB/auth/context/transaction/API/UI/test deltas. Do not restate global invariants already resolved by compiled context.
+Before editing, record Task ID/title, **live ledger status** and dependency status, registry risk/profile, primary output, approved overlays and only the task-specific DB/auth/context/transaction/API/UI/test deltas. Do not restate global invariants already resolved by compiled context.
 
-A task is READY only when every dependency is DONE/VERIFIED or the Plan explicitly permits parallel opening. An unresolved authority conflict, missing decision, stale cache, or required `CONTRACT_PENDING` API surface is BLOCKED; do not invent a rule to proceed.
+A task is READY only when every dependency is DONE/VERIFIED or the Plan explicitly permits parallel opening. If the task is already DONE, default to review/evidence verification; corrections require their own approved scoped change and must not silently reopen the original task. An unresolved authority conflict, missing decision, stale cache, or required `CONTRACT_PENDING` API surface is BLOCKED; do not invent a rule to proceed.
 
 ## Risk and batching
 
@@ -60,3 +60,9 @@ After task-scoped gates pass and each task has its own commit, run the impact-aw
 ## High-risk minimums
 
 Retain the relevant deep/full checks: PBAC/context negative paths; same-session lock/race behavior; Auto Number rollback/no-reuse; Pricing fallback; acyclic COMBO and decimal allocation; Import parser/dependency/two-gate/row/reconciliation behavior; bootstrap no-bypass; public API serialization/locale/authorization/OpenAPI drift; and release evidence. Static checks alone cannot close HIGH risk.
+
+## Approved additive changes versus execution progress
+
+The 107-task registry remains fixed. Documents 08 (Base Permission snapshot), 09 (Policy Scope uniqueness), 10 (Shield User mutation) and 11 (Resource Actions bulk representation) are approved overlays. `compiled/change-controls.json` identifies affected completed task boundaries; treat approval as design authority only. Verify implementation, migration, API/OpenAPI, frontend and regressions in the actual repository before claiming closure. The runtime ledger is the only task-status source.
+
+`P1_DECISIONS.md` supplies PO decisions as operational decision support but never overrides the seven architecture baselines. `UI_TABLE_ACTION_STATUS_RULE.md` is bundled in `references/ui-table-action-status.md`; apply its shared icon/status primitives without inventing new business actions. Do not invent P2 Task IDs from the P1 registry; P2 needs a separately approved authority/task catalog.

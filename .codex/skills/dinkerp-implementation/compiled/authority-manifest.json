@@ -63,5 +63,19 @@
       "identity": "CHANGE-RESOURCE-ACTIONS-BULK-API-001 v1.1",
       "sha256": "E3AF5E175A5860FE0201BA21EF314BABA3CD8E33E35B277F431AC5EEB5049758"
     }
-  ]
+  ],
+  "decision_source": {
+    "path": "docs/implementation/P1_DECISIONS.md",
+    "sha256": "4BF79396C9A06AFE75756799050C7B09FBC97FDD2EDAC76BF9C4ED6C594FC872",
+    "role": "approved_operational_decisions_not_architecture_authority"
+  },
+  "ledger_source": {
+    "path": "docs/implementation/P1_EXECUTION_LEDGER.md",
+    "role": "live_unhashed_operational_progress"
+  },
+  "non_authoritative_ui_rule": {
+    "bundled_reference": "references/ui-table-action-status.md",
+    "source_filename": "UI_TABLE_ACTION_STATUS_RULE.md"
+  },
+  "note": "Twelve pinned architecture/change-control artifacts; approved decisions pinned separately; execution ledger read live and never pinned to a task-status hash."
 }

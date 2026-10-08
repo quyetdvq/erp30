@@ -928,7 +928,55 @@ P1-FE-050 unblocked: NO
 P1-FE-050 started: NO
 
 
+Organization
 
+
+Menu sản phẩm được hển thị trong Tab Menu với cấu trúc
+
+Sản phẩm
+- Danh mục sản phẩm
+- Sản phẩm
+- Đơn vị tính
+- Chính sách giá
+
+/api/v1/products?page=1&page_size=200&sort=full_name
+
+{
+    "error": {
+        "code": "MALFORMED_REQUEST",
+        "message": "The request is invalid.",
+        "details": []
+    },
+    "meta": {
+        "request_id": "fe-1791437930112-c1ad9e276cc608"
+    }
+}
+
+
+Nhiệm vụ P1-FE-060 chưa xong thì còn nhiều lỗi.
+
+Tôi đều xuất xử lý như sau:
+
+1. Giao diện tạo sản phẩm chính. Sẽ có 2 tuỳ chọn là sản phẩm STANDARD và COMBO. Các nhập nhiệu của 2 loại sản phẩm này hoàn toàn giống nhau. Chỉ khác nhau 1 điểm duy nhất là khi chọn sản phẩm là COMBO thì Có thêm ô nhập liệu để chọn các sản phẩm thành phần bên trong, Và khi lưu thì sẽ lưu sản phẩm COMBO trước sau đó lưu các thành phần theo ID của COMBO. Trong giao diện chính sẽ không có chức năng tạo sản phẩm con (gọi là biến thể) hoặc quy đổi đơn vị.
+
+2. Giao diện xem sản phẩm hiển thị dạng Modal có nhiều Tab
+2.1 Tab thông tin chung gồm các thông tin của sản phẩm như Tên, mã sản phẩm, .....
+
+2.2 Tab thành phần (với sản phẩm combo) các sản phẩm khác không có tab này.
+2.3 Tab sản phẩm con: Với Sản phẩm thường không có sản phẩm con thì tab này sẽ trống. Trong tab này cho phép người dùng thêm sản phẩm con hoặc chỉnh sửa sản phẩm con (Nếu sản phẩm đang xem là sản phẩm cha)
+2.4 Bảng quy đổi đơn vị. Bảng này chỉ có khi sản phẩm đang xem (Không phải là combo, hoặc không phải là sản phẩm cha)
+2.5 Tab thông tin vận chuyển gồm cân nặng khối lượng và giá bán mặc định.
+
+3. Khi Click vào sản phẩm con thì ra 1 modal với các tab Sau
+3.1 Tab thông tin chung 
+3.2 Tab bảng quy đổi đơn vị
+3.2 Tab thông tin khối lượng và giá bán mặc định
+
+
+4. Danh sách sản phẩm bảng master table.
+4.1 Hiển thị sản phẩm dạng bảng
+4.2 Nếu là sản phẩm combo thì hiển thị 2 sản phẩm thành phần đầu tiên và có nút xem thêm (dạn mở rộng ngay bên dưới) để xem toàn bộ thành phần bên trong. Khi Click vào sản phẩm Combo hoặc sản phẩm thành phần trong combo thì ra giao diện 2.
+4.3 Nếu là sản phẩm con thì hiển thị 2 sản phẩm con đầu tiên và có nút xem thêm (dạn mở rộng ngay bên dưới) để xem toàn bộ sản phẩm con bên trong, Và khi Click vào xem chi tiết sản phẩm con thì ra giao diện 3. Khi Click vào sản phẩm cha thì ra giao diện 2.
 
 
 Với màn hình /security/authorization-groups
@@ -939,3 +987,70 @@ GET /api/v1/resources/{id}/action hãy sử dụng /api/v1/resources?page=1&page
 Tương tự như màn hình /security/authorization-groups hãy chuẩn hoá lại màn hình /security/resources
 
 Bỏ 2 menu "Groups and permissions" (/admin/groups) và User (/admin/users) đồng thời xoá các thứ liên quan trên Frontend. Vì đây là code cũ của dự án cũ giờ không dùng đến. 
+
+
+Áp dụng tương tự cho các màn hình:
+/configuration/lifecycles
+/configuration/workflow-states
+/security/authorization-logs
+/security/policies
+
+Riêng màn hình /security/policies đang lỗi hiển thị action Dạng id, hãy chuyển thành code.
+
+
+Request URL
+http://api.monmin.net/api/v1/policies/5
+Request Method
+PATCH
+Status Code
+422 Unprocessable Content
+Remote Address
+127.0.0.1:80
+Referrer Policy
+strict-origin-when-cross-origin
+
+
+{
+    "error": {
+        "code": "POLICY_FIELD_UNSUPPORTED",
+        "message": "The submitted data is invalid.",
+        "details": [
+            {
+                "field": "normalized_state_id",
+                "code": "POLICY_FIELD_UNSUPPORTED",
+                "message": "The submitted data is invalid."
+            }
+        ]
+    },
+    "meta": {
+        "request_id": "fe-1791449495239-5ce841dfa139e"
+    }
+}
+
+Các modal hiện tại chỉ cần Click chuột ra khỏi phạm vi modal là modal tự đóng lại. Tôi muốn khi người dùng bắt buộc phải click vào nút Close hoặc biểu tượng X thì mới đóng
+
+
+
+Xử lý lỗi:
+
+Request URL http://api.monmin.net/api/v1/price-lists/1
+Request Method PATCH
+Status Code 422 Unprocessable Content
+
+
+{
+    "error": {
+        "code": "PRICE_LIST_INVALID_EFFECTIVE_INTERVAL",
+        "message": "The submitted data is invalid.",
+        "details": [
+            {
+                "field": "effective_from",
+                "code": "PRICE_LIST_INVALID_EFFECTIVE_INTERVAL",
+                "message": "The submitted data is invalid."
+            }
+        ]
+    },
+    "meta": {
+        "request_id": "fe-1791453014394-8c946c3f6095c"
+    }
+}

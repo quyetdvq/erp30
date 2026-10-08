@@ -1,6 +1,6 @@
 {
   "format": "META-CODEX-003",
-  "source": "CHANGE-ARCH-001, DEC-IMP-ARCH-001, and CHANGE-DISPLAY-SETTING-001 module boundaries",
+  "source": "Module ownership reference from approved DEC-ARCH-001 and current P1 code; execution status is never stored here.",
   "shared_infrastructure": {
     "P1-IMP-001": "App\\Infrastructure\\Import",
     "P1-IMP-002": "App\\Infrastructure\\Import",
@@ -15,142 +15,141 @@
     "P1-PRD-001": {
       "module": "Product",
       "path": "App\\Modules\\Product\\ProductGroup",
-      "status": "DONE"
+      "mapping_status": "REFERENCE_ONLY"
     },
     "P1-PRD-002": {
       "module": "Product",
       "path": "App\\Modules\\Product\\Uom",
-      "status": "DONE"
+      "mapping_status": "REFERENCE_ONLY"
     },
     "P1-PRD-003": {
       "module": "Product",
       "path": "App\\Modules\\Product\\Product",
-      "status": "DONE"
+      "mapping_status": "REFERENCE_ONLY"
     },
     "P1-PRD-004": {
       "module": "Product",
       "path": "App\\Modules\\Product\\Product",
-      "status": "DONE"
+      "mapping_status": "REFERENCE_ONLY"
     },
     "P1-UOM-001": {
       "module": "Product",
       "path": "App\\Modules\\Product\\Uom",
-      "status": "DONE"
+      "mapping_status": "REFERENCE_ONLY"
     },
     "P1-CMB-001": {
       "module": "Product",
       "path": "App\\Modules\\Product\\Combo",
-      "status": "DONE"
+      "mapping_status": "REFERENCE_ONLY"
     },
     "P1-CMB-002": {
       "module": "Product",
       "path": "App\\Modules\\Product\\Combo",
-      "status": "DONE"
+      "mapping_status": "REFERENCE_ONLY"
     },
     "P1-PRC-001": {
       "module": "Pricing",
       "path": "App\\Modules\\Pricing\\PriceList",
-      "status": "DONE"
+      "mapping_status": "REFERENCE_ONLY"
     },
     "P1-PRC-002": {
       "module": "Pricing",
       "path": "App\\Modules\\Pricing\\Resolution",
-      "status": "DONE"
+      "mapping_status": "REFERENCE_ONLY"
     },
     "P1-CMB-003": {
       "module": "Pricing",
       "path": "App\\Modules\\Pricing\\ComboAllocation",
-      "status": "DONE"
+      "mapping_status": "REFERENCE_ONLY"
     },
     "P1-PRD-090": {
       "module": "CrossModule",
       "path": "Product/Pricing regression",
-      "status": "DONE"
+      "mapping_status": "REFERENCE_ONLY"
     },
     "P1-IMP-001": {
       "module": "Product",
       "path": "App\\Modules\\Product\\Import",
-      "status": "DONE"
+      "mapping_status": "REFERENCE_ONLY"
     },
     "P1-IMP-002": {
       "module": "Product",
       "path": "App\\Modules\\Product\\Import",
-      "status": "DONE"
+      "mapping_status": "REFERENCE_ONLY"
     },
     "P1-IMP-003": {
       "module": "Product",
       "path": "App\\Modules\\Product\\Import",
-      "status": "DONE"
+      "mapping_status": "REFERENCE_ONLY"
     },
     "P1-IMP-004": {
       "module": "Product",
       "path": "App\\Modules\\Product\\Import",
-      "status": "DONE"
+      "mapping_status": "REFERENCE_ONLY"
     },
     "P1-IMP-005": {
       "module": "Product",
       "path": "App\\Modules\\Product\\Import",
-      "status": "DONE"
+      "mapping_status": "REFERENCE_ONLY"
     },
     "P1-IMP-006": {
       "module": "Product",
       "path": "App\\Modules\\Product\\Import",
-      "status": "DONE"
+      "mapping_status": "REFERENCE_ONLY"
     },
     "P1-IMP-007": {
       "module": "Product",
       "path": "App\\Modules\\Product\\Import",
-      "status": "DONE"
+      "mapping_status": "REFERENCE_ONLY"
     },
     "P1-IMP-008": {
       "module": "Product",
       "path": "App\\Modules\\Product\\Import",
-      "status": "DONE"
+      "mapping_status": "REFERENCE_ONLY"
     },
     "P1-IMP-090": {
       "module": "Product",
       "path": "App\\Modules\\Product\\Import",
-      "status": "PLANNED"
+      "mapping_status": "REFERENCE_ONLY"
     },
     "P1-DSP-001": {
       "module": "DisplaySettings",
       "path": "existing Settings integration / registry adapter",
-      "status": "PLANNED"
+      "mapping_status": "REFERENCE_ONLY"
     },
     "P1-DSP-002": {
       "module": "DisplaySettings",
       "path": "DisplaySettings effective resolver",
-      "status": "PLANNED"
+      "mapping_status": "REFERENCE_ONLY"
     },
     "P1-DSP-003": {
       "module": "DisplaySettings",
       "path": "DisplaySettings mutation/authorization service",
-      "status": "PLANNED"
+      "mapping_status": "REFERENCE_ONLY"
     },
     "P1-DSP-004": {
       "module": "DisplaySettings",
       "path": "DisplaySettings API/OpenAPI adapter",
-      "status": "PLANNED"
+      "mapping_status": "REFERENCE_ONLY"
     },
     "P1-DSP-005": {
       "module": "DisplaySettings",
       "path": "frontend display runtime/formatter",
-      "status": "PLANNED"
+      "mapping_status": "REFERENCE_ONLY"
     },
     "P1-DSP-006": {
       "module": "DisplaySettings",
       "path": "frontend Display Settings UI",
-      "status": "PLANNED"
+      "mapping_status": "REFERENCE_ONLY"
     },
     "P1-DSP-090": {
       "module": "CrossModule",
       "path": "Display Settings regression/E2E closure",
-      "status": "PLANNED"
+      "mapping_status": "REFERENCE_ONLY"
     }
   },
   "decision_ids": [
-    "CHANGE-ARCH-001",
-    "DEC-IMP-ARCH-001",
+    "DEC-ARCH-001",
     "CHANGE-DISPLAY-SETTING-001"
   ]
 }

@@ -136,7 +136,7 @@ Consult the current project docs for complete wording. These are compact guardra
 - Every protected endpoint declares Resource/Action, authoritative Evaluation Organization source, and visibility rule.
 - Collection authorization/data-scope filtering happens before `meta.total`; query/search/filter/sort fields are allowlisted.
 - Public API changes update OpenAPI in the same task, Redocly lint must pass, and typed frontend artifacts are regenerated; generated files are not hand-edited.
-- Only implement `CONTRACT_READY` surfaces. Current source-open/`CONTRACT_PENDING` items must not be invented, including Shield User write/state payloads, public Price Resolution authorization, optional COMBO preview endpoints, and exact export media type.
+- Only implement `CONTRACT_READY` surfaces. The v1.8 API Design §19 and approved Change 10 now provide the Shield User write/state/reset-password design; implementation must be verified in the real repository. Remaining source-open items include public Price Resolution authorization, optional COMBO preview endpoints, and exact export media type.
 
 ## Localization
 

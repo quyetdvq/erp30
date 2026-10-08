@@ -1,7 +1,7 @@
 <?php
 declare(strict_types=1);
 
-/** Validate META-CODEX-002 derived metadata against source files. */
+/** Validate DinkERP P1 derived metadata against pinned current sources and live project evidence. */
 
 $root = realpath(__DIR__ . '/../../../..');
 if ($root === false) {
@@ -41,6 +41,7 @@ try {
     $correctiveCatalog = readJsonFile($compiled . DIRECTORY_SEPARATOR . 'corrective-tasks.json');
     $rulesCatalog = readJsonFile($compiled . DIRECTORY_SEPARATOR . 'rules.json');
     $decisionsCatalog = readJsonFile($compiled . DIRECTORY_SEPARATOR . 'approved-decisions.json');
+    $changeCatalog = readJsonFile($compiled . DIRECTORY_SEPARATOR . 'change-controls.json');
 } catch (Throwable $error) {
     failValidation($error->getMessage());
 }
@@ -57,6 +58,32 @@ foreach (($manifest['authorities'] ?? []) as $authority) {
     }
 }
 
+// Pin the approved decision source independently; the execution ledger is live/unhashed.
+$decisionSource = $manifest['decision_source'] ?? null;
+$ledgerSource = $manifest['ledger_source'] ?? null;
+if (!is_array($decisionSource) || !is_array($ledgerSource)) {
+    failValidation('missing decision_source or ledger_source metadata');
+}
+$decisionRelative = (string) ($decisionSource['path'] ?? '');
+$decisionPath = $root . DIRECTORY_SEPARATOR . str_replace(['/', '\\'], DIRECTORY_SEPARATOR, $decisionRelative);
+$ledgerRelative = (string) ($ledgerSource['path'] ?? '');
+$ledgerPath = $root . DIRECTORY_SEPARATOR . str_replace(['/', '\\'], DIRECTORY_SEPARATOR, $ledgerRelative);
+if (!is_file($decisionPath) || !is_file($ledgerPath)) {
+    failValidation('missing P1 approved decisions or live execution ledger');
+}
+if (!hash_equals(strtoupper((string) ($decisionSource['sha256'] ?? '')), strtoupper((string) hash_file('sha256', $decisionPath)))) {
+    failValidation('decision-source hash mismatch; recompile P1 decision cache');
+}
+
+// Every rule's document provenance must identify a concrete source now present.
+$knownDocuments = ['AGENTS.md' => $root . DIRECTORY_SEPARATOR . 'AGENTS.md'];
+foreach (($manifest['authorities'] ?? []) as $authority) {
+    $relative = (string) ($authority['path'] ?? '');
+    $knownDocuments[$relative] = $root . DIRECTORY_SEPARATOR . str_replace('/', DIRECTORY_SEPARATOR, $relative);
+}
+$knownDocuments[$decisionRelative] = $decisionPath;
+$knownDocuments['references/ui-table-action-status.md'] = $skill . DIRECTORY_SEPARATOR . 'references' . DIRECTORY_SEPARATOR . 'ui-table-action-status.md';
+
 $ruleMap = [];
 foreach (($rulesCatalog['rules'] ?? []) as $rule) {
     $id = (string) ($rule['id'] ?? '');
@@ -65,6 +92,15 @@ foreach (($rulesCatalog['rules'] ?? []) as $rule) {
     }
     if (trim((string) ($rule['text'] ?? '')) === '' || count($rule['provenance'] ?? []) === 0) {
         failValidation("rule {$id} lacks text or provenance");
+    }
+    foreach (($rule['provenance'] ?? []) as $source) {
+        $document = (string) ($source['document'] ?? '');
+        if (!isset($knownDocuments[$document]) || !is_file($knownDocuments[$document])) {
+            failValidation("rule {$id} references missing/unpinned provenance {$document}");
+        }
+        if (trim((string) ($source['section'] ?? '')) === '') {
+            failValidation("rule {$id} has empty source section");
+        }
     }
     $ruleMap[$id] = $rule;
 }
@@ -75,6 +111,37 @@ foreach (($decisionsCatalog['decisions'] ?? []) as $decision) {
         failValidation("duplicate or empty decision id {$id}");
     }
     $decisionMap[$id] = $decision;
+}
+
+// The DEC-* collection must match the current Product Owner decision headings;
+// CHANGE-* entries are separately pinned approved change-control digests.
+preg_match_all('/^##\s+(DEC-[A-Z0-9-]+)\s+—/mu', (string) file_get_contents($decisionPath), $decisionHeaders);
+$sourceDecisionIds = array_values(array_unique($decisionHeaders[1] ?? []));
+$cachedDecisionIds = array_values(array_filter(array_keys($decisionMap), static fn(string $id): bool => str_starts_with($id, 'DEC-')));
+sort($sourceDecisionIds);
+sort($cachedDecisionIds);
+if ($sourceDecisionIds !== $cachedDecisionIds) {
+    failValidation('DEC-* IDs differ between approved-decisions cache and current P1_DECISIONS.md');
+}
+
+$manifestDocuments = array_fill_keys(array_map(
+    static fn(array $item): string => (string) ($item['path'] ?? ''),
+    $manifest['authorities'] ?? []
+), true);
+$changeSeen = [];
+foreach (($changeCatalog['changes'] ?? []) as $change) {
+    $changeId = (string) ($change['id'] ?? '');
+    $source = (string) ($change['source'] ?? '');
+    if ($changeId === '' || isset($changeSeen[$changeId]) || !isset($decisionMap[$changeId])) {
+        failValidation("unknown or duplicate approved change {$changeId}");
+    }
+    if (!isset($manifestDocuments[$source])) {
+        failValidation("approved change {$changeId} does not resolve to pinned architecture file {$source}");
+    }
+    $changeSeen[$changeId] = true;
+}
+if (count($changeSeen) !== 4 || ($changeCatalog['not_part_of_task_registry'] ?? false) !== true) {
+    failValidation('approved change-control overlay catalog is missing or trying to alter 107-task registry');
 }
 
 $tasks = $tasksCatalog['tasks'] ?? [];
@@ -133,6 +200,14 @@ foreach ($tasks as $task) {
     }
 }
 
+foreach (($changeCatalog['changes'] ?? []) as $change) {
+    foreach (($change['affected_task_ids'] ?? []) as $taskId) {
+        if (!isset($taskMap[(string) $taskId])) {
+            failValidation("approved change references unknown P1 Task ID {$taskId}");
+        }
+    }
+}
+
 foreach (($correctiveCatalog['tasks'] ?? []) as $task) {
     $id = (string) ($task['id'] ?? '');
     if (!preg_match('/^HARDEN-[A-Z0-9]+-[0-9]+$/', $id) || isset($taskMap[$id])) {
@@ -156,15 +231,22 @@ foreach ($moduleMappings as $taskId => $mapping) {
     if (!isset($taskMap[$taskId])) {
         failValidation("module mapping references unknown task {$taskId}");
     }
-    foreach (['module', 'path', 'status'] as $field) {
+    foreach (['module', 'path', 'mapping_status'] as $field) {
         if (trim((string) ($mapping[$field] ?? '')) === '') {
             failValidation("module mapping {$taskId} lacks {$field}");
         }
     }
+    if (array_key_exists('status', $mapping) || (string) $mapping['mapping_status'] !== 'REFERENCE_ONLY') {
+        failValidation("module mapping {$taskId} must not duplicate the live task status");
+    }
 }
 
 // Parse the authoritative Plan task tables (Task ID, title, depends, output).
-$planPath = $root . DIRECTORY_SEPARATOR . 'docs' . DIRECTORY_SEPARATOR . 'architecture' . DIRECTORY_SEPARATOR . '04_P1_Implementation_Plan_v1.9.md';
+$planSources = array_values(array_filter(($manifest['authorities'] ?? []), static fn(array $item): bool => str_starts_with(basename((string) ($item['path'] ?? '')), '04_P1_Implementation_Plan_')));
+if (count($planSources) !== 1) {
+    failValidation('expected exactly one pinned Implementation Plan document');
+}
+$planPath = $root . DIRECTORY_SEPARATOR . str_replace('/', DIRECTORY_SEPARATOR, (string) $planSources[0]['path']);
 $planRows = [];
 foreach (file($planPath, FILE_IGNORE_NEW_LINES) ?: [] as $line) {
     if (preg_match('/^\|\s*(P1-[A-Z]+-[0-9]+)\s*\|\s*(.*?)\s*\|\s*(.*?)\s*\|\s*(.*?)\s*\|/', $line, $match)) {
@@ -226,7 +308,20 @@ foreach (array_keys($edges) as $id) {
     $visit($id);
 }
 
-$architectureStatus = trim((string) shell_exec('git status --short -- docs/architecture'));
+// Resolve Git state against the verified repository root, not caller's cwd.
+$gitCommand = 'git -C ' . escapeshellarg($root);
+$gitOutput = [];
+$gitCode = 0;
+exec($gitCommand . ' rev-parse --is-inside-work-tree 2>&1', $gitOutput, $gitCode);
+if ($gitCode !== 0 || trim(implode("\n", $gitOutput)) !== 'true') {
+    failValidation('Git repository could not be verified at current project root');
+}
+$gitOutput = [];
+exec($gitCommand . ' status --short -- docs/architecture 2>&1', $gitOutput, $gitCode);
+if ($gitCode !== 0) {
+    failValidation('could not read Git architecture worktree status');
+}
+$architectureStatus = trim(implode("\n", $gitOutput));
 if ($architectureStatus !== '') {
     /** @var array<string, true> $canonicalAuthorities */
     $canonicalAuthorities = [];
@@ -264,4 +359,7 @@ echo "authority_count: " . count($manifest['authorities'] ?? []) . "\n";
 echo "task_count: " . count($taskMap) . "\n";
 echo "rule_count: " . count($ruleMap) . "\n";
 echo "decision_count: " . count($decisionMap) . "\n";
+echo "approved_change_overlays: " . count($changeSeen) . "\n";
+echo "decision_source: HASH_MATCH\n";
+echo "ledger_source: PRESENT_LIVE\n";
 echo "dependency_graph: ACYCLIC\n";

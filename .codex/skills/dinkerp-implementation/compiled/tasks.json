@@ -1,6 +1,6 @@
 {
   "format": "META-CODEX-003",
-  "source": "Implementation Plan v1.9 plus gate registries",
+  "source": "Implementation Plan v1.10 (107-task registry) + unchanged P1 gate registry; execution statuses resolve live from P1_EXECUTION_LEDGER.md",
   "task_count": 107,
   "tasks": [
     {
@@ -324,9 +324,12 @@
         "CTRL.AUTHORITY_ORDER",
         "CTRL.BOUNDED_SCOPE",
         "CTRL.FORWARD_ONLY",
-        "DB.BIGINT_DECIMAL"
+        "DB.BIGINT_DECIMAL",
+        "AUTH.POLICY_SCOPE_UNIQUE"
       ],
-      "approved_decision_ids": [],
+      "approved_decision_ids": [
+        "DEC-CHG-POLICY-001"
+      ],
       "direct_source_verification": [
         "FRS `FRS-P1-IAM-001..004`, `FRS-P1-PBAC-001..007`, `FRS-P1-NUM-001..003`",
         "DBD §§11,13",
@@ -740,9 +743,12 @@
         "CTRL.AUTHORITY_ORDER",
         "CTRL.BOUNDED_SCOPE",
         "AUTH.PBAC_PRECEDENCE",
-        "AUTH.NO_BYPASS"
+        "AUTH.NO_BYPASS",
+        "AUTH.SHIELD_USER_MUTATION"
       ],
-      "approved_decision_ids": [],
+      "approved_decision_ids": [
+        "DEC-CHG-IAM-001"
+      ],
       "direct_source_verification": [
         "FRS `FRS-P1-IAM-001..004`",
         "DBD Shield/Resource",
@@ -766,9 +772,12 @@
         "CTRL.AUTHORITY_ORDER",
         "CTRL.BOUNDED_SCOPE",
         "AUTH.PBAC_PRECEDENCE",
-        "AUTH.NO_BYPASS"
+        "AUTH.NO_BYPASS",
+        "UI.BASE_PERMISSION_SNAPSHOT"
       ],
-      "approved_decision_ids": [],
+      "approved_decision_ids": [
+        "DEC-CHG-IAM-001"
+      ],
       "direct_source_verification": [
         "FRS `FRS-P1-IAM-004`",
         "FRS `FRS-P1-PBAC-002..004`",
@@ -792,9 +801,12 @@
         "CTRL.AUTHORITY_ORDER",
         "CTRL.BOUNDED_SCOPE",
         "AUTH.PBAC_PRECEDENCE",
-        "AUTH.NO_BYPASS"
+        "AUTH.NO_BYPASS",
+        "AUTH.POLICY_SCOPE_UNIQUE"
       ],
-      "approved_decision_ids": [],
+      "approved_decision_ids": [
+        "DEC-CHG-POLICY-001"
+      ],
       "direct_source_verification": [
         "FRS `FRS-P1-PBAC-001..003`",
         "DBD Policy",
@@ -894,9 +906,14 @@
         "CTRL.AUTHORITY_ORDER",
         "CTRL.BOUNDED_SCOPE",
         "AUTH.PBAC_PRECEDENCE",
-        "AUTH.NO_BYPASS"
+        "AUTH.NO_BYPASS",
+        "AUTH.POLICY_SCOPE_UNIQUE",
+        "AUTH.SHIELD_USER_MUTATION"
       ],
-      "approved_decision_ids": [],
+      "approved_decision_ids": [
+        "DEC-CHG-POLICY-001",
+        "DEC-CHG-IAM-001"
+      ],
       "direct_source_verification": [
         "FRS `FRS-P1-IAM-003`, `FRS-P1-PBAC-001`",
         "Contract §6 admin mutation",
@@ -942,15 +959,18 @@
         "CTRL.AUTHORITY_ORDER",
         "CTRL.BOUNDED_SCOPE",
         "DB.ATOMIC_INVARIANTS",
-        "WF.CODE_IDENTITY"
+        "WF.CODE_IDENTITY",
+        "WF.TARGET_ADAPTER"
       ],
       "approved_decision_ids": [
-        "DEC-WF-001"
+        "DEC-WF-001",
+        "DEC-WF-002"
       ],
       "direct_source_verification": [
         "FRS `FRS-P1-WF-002..005`",
         "Contract §13 lifecycle",
-        "IMP Plan `P1-WF-002`"
+        "IMP Plan `P1-WF-002`",
+        "P1_DECISIONS.md DEC-WF-002 LifecycleTargetAdapter"
       ],
       "expected_output": "authorized deterministic transitions",
       "forbidden_scope": [
@@ -1190,7 +1210,7 @@
         "FRS-P1-UOM-001 Product Group hierarchy",
         "DBD v1.14 product_groups adjacency-list",
         "Implementation Contract v1.9 product-group-tree",
-        "Implementation Plan v1.9 P1-PRD-001"
+        "Implementation Plan v1.10 P1-PRD-001"
       ],
       "expected_output": "product-group hierarchy repository/service",
       "forbidden_scope": [
@@ -1456,11 +1476,11 @@
         "DB.ATOMIC_INVARIANTS",
         "IMP.PRODUCT_ONLY",
         "IMP.TWO_GATE",
-        "IMP.ROW_ATOMIC"
+        "IMP.ROW_ATOMIC",
+        "ARCH.MODULAR_BOUNDARY"
       ],
       "approved_decision_ids": [
-        "CHANGE-ARCH-001",
-        "DEC-IMP-ARCH-001"
+        "DEC-ARCH-001"
       ],
       "direct_source_verification": [],
       "expected_output": "import job service skeleton",
@@ -1482,11 +1502,11 @@
         "DB.ATOMIC_INVARIANTS",
         "IMP.PRODUCT_ONLY",
         "IMP.TWO_GATE",
-        "IMP.ROW_ATOMIC"
+        "IMP.ROW_ATOMIC",
+        "ARCH.MODULAR_BOUNDARY"
       ],
       "approved_decision_ids": [
-        "CHANGE-ARCH-001",
-        "DEC-IMP-ARCH-001"
+        "DEC-ARCH-001"
       ],
       "direct_source_verification": [],
       "expected_output": "strict CSV parser",
@@ -1508,11 +1528,11 @@
         "DB.ATOMIC_INVARIANTS",
         "IMP.PRODUCT_ONLY",
         "IMP.TWO_GATE",
-        "IMP.ROW_ATOMIC"
+        "IMP.ROW_ATOMIC",
+        "ARCH.MODULAR_BOUNDARY"
       ],
       "approved_decision_ids": [
-        "CHANGE-ARCH-001",
-        "DEC-IMP-ARCH-001"
+        "DEC-ARCH-001"
       ],
       "direct_source_verification": [],
       "expected_output": "strict XLSX parser",
@@ -1534,11 +1554,11 @@
         "DB.ATOMIC_INVARIANTS",
         "IMP.PRODUCT_ONLY",
         "IMP.TWO_GATE",
-        "IMP.ROW_ATOMIC"
+        "IMP.ROW_ATOMIC",
+        "ARCH.MODULAR_BOUNDARY"
       ],
       "approved_decision_ids": [
-        "CHANGE-ARCH-001",
-        "DEC-IMP-ARCH-001"
+        "DEC-ARCH-001"
       ],
       "direct_source_verification": [
         "FRS `FRS-P1-IMP-001..003`",
@@ -1564,11 +1584,11 @@
         "DB.ATOMIC_INVARIANTS",
         "IMP.PRODUCT_ONLY",
         "IMP.TWO_GATE",
-        "IMP.ROW_ATOMIC"
+        "IMP.ROW_ATOMIC",
+        "ARCH.MODULAR_BOUNDARY"
       ],
       "approved_decision_ids": [
-        "CHANGE-ARCH-001",
-        "DEC-IMP-ARCH-001"
+        "DEC-ARCH-001"
       ],
       "direct_source_verification": [
         "FRS `FRS-P1-IMP-004`",
@@ -1594,11 +1614,11 @@
         "DB.ATOMIC_INVARIANTS",
         "IMP.PRODUCT_ONLY",
         "IMP.TWO_GATE",
-        "IMP.ROW_ATOMIC"
+        "IMP.ROW_ATOMIC",
+        "ARCH.MODULAR_BOUNDARY"
       ],
       "approved_decision_ids": [
-        "CHANGE-ARCH-001",
-        "DEC-IMP-ARCH-001"
+        "DEC-ARCH-001"
       ],
       "direct_source_verification": [
         "FRS `FRS-P1-IMP-003..004`, `FRS-P1-NUM-003`",
@@ -1624,11 +1644,11 @@
         "DB.ATOMIC_INVARIANTS",
         "IMP.PRODUCT_ONLY",
         "IMP.TWO_GATE",
-        "IMP.ROW_ATOMIC"
+        "IMP.ROW_ATOMIC",
+        "ARCH.MODULAR_BOUNDARY"
       ],
       "approved_decision_ids": [
-        "CHANGE-ARCH-001",
-        "DEC-IMP-ARCH-001"
+        "DEC-ARCH-001"
       ],
       "direct_source_verification": [
         "FRS `FRS-P1-IMP-005`",
@@ -1655,11 +1675,11 @@
         "IMP.PRODUCT_ONLY",
         "IMP.TWO_GATE",
         "IMP.ROW_ATOMIC",
-        "IMP.RESULT_RECONCILE"
+        "IMP.RESULT_RECONCILE",
+        "ARCH.MODULAR_BOUNDARY"
       ],
       "approved_decision_ids": [
-        "CHANGE-ARCH-001",
-        "DEC-IMP-ARCH-001"
+        "DEC-ARCH-001"
       ],
       "direct_source_verification": [],
       "expected_output": "reconciled job/report result",
@@ -1682,11 +1702,11 @@
         "IMP.PRODUCT_ONLY",
         "IMP.TWO_GATE",
         "IMP.ROW_ATOMIC",
-        "IMP.RESULT_RECONCILE"
+        "IMP.RESULT_RECONCILE",
+        "ARCH.MODULAR_BOUNDARY"
       ],
       "approved_decision_ids": [
-        "CHANGE-ARCH-001",
-        "DEC-IMP-ARCH-001"
+        "DEC-ARCH-001"
       ],
       "direct_source_verification": [
         "FRS §26.11 / `FRS-P1-IMP-001..005`",
@@ -1864,14 +1884,23 @@
         "AUTH.PBAC_PRECEDENCE",
         "AUTH.EVALUATION_ORG",
         "AUTH.NO_BYPASS",
-        "HARDEN.APP_BOUNDARY"
+        "HARDEN.APP_BOUNDARY",
+        "AUTH.POLICY_SCOPE_UNIQUE",
+        "AUTH.SHIELD_USER_MUTATION",
+        "API.BULK_RESOURCE_ACTIONS",
+        "UI.BASE_PERMISSION_SNAPSHOT"
       ],
-      "approved_decision_ids": [],
+      "approved_decision_ids": [
+        "DEC-CHG-POLICY-001",
+        "DEC-CHG-IAM-001",
+        "CHANGE-RESOURCE-ACTIONS-BULK-API-001"
+      ],
       "direct_source_verification": [
         "API Design §9",
         "Contract §§4,6,13",
         "FRS `FRS-P1-IAM-001..004`, `FRS-P1-PBAC-001..007`, `FRS-P1-WF-001..005`",
-        "IMP Plan `P1-API-030`"
+        "IMP Plan `P1-API-030`",
+        "API Design v1.8 §19 change-control synchronization; approved Change 09/10/11 documents"
       ],
       "expected_output": "Slice 3 API",
       "forbidden_scope": [
@@ -1933,10 +1962,11 @@
         "PRD.COMBO_ACYCLIC",
         "PRC.FALLBACK",
         "PRC.COMBO_ALLOCATION",
-        "HARDEN.APP_BOUNDARY"
+        "HARDEN.APP_BOUNDARY",
+        "ARCH.MODULAR_BOUNDARY"
       ],
       "approved_decision_ids": [
-        "CHANGE-ARCH-001",
+        "DEC-ARCH-001",
         "DEC-PRD-001"
       ],
       "direct_source_verification": [
@@ -1971,11 +2001,11 @@
         "IMP.TWO_GATE",
         "IMP.ROW_ATOMIC",
         "IMP.RESULT_RECONCILE",
-        "HARDEN.APP_BOUNDARY"
+        "HARDEN.APP_BOUNDARY",
+        "ARCH.MODULAR_BOUNDARY"
       ],
       "approved_decision_ids": [
-        "CHANGE-ARCH-001",
-        "DEC-IMP-ARCH-001"
+        "DEC-ARCH-001"
       ],
       "direct_source_verification": [
         "API Design §13",
@@ -2032,7 +2062,9 @@
         "CTRL.BOUNDED_SCOPE",
         "DSP.PRESENTATION_BOUNDARY"
       ],
-      "approved_decision_ids": ["CHANGE-DISPLAY-SETTING-001"],
+      "approved_decision_ids": [
+        "CHANGE-DISPLAY-SETTING-001"
+      ],
       "direct_source_verification": [],
       "expected_output": "Display Settings registry/context foundation",
       "forbidden_scope": [
@@ -2058,7 +2090,9 @@
         "DSP.PRESENTATION_BOUNDARY",
         "DSP.CONTEXT_RESOLUTION"
       ],
-      "approved_decision_ids": ["CHANGE-DISPLAY-SETTING-001"],
+      "approved_decision_ids": [
+        "CHANGE-DISPLAY-SETTING-001"
+      ],
       "direct_source_verification": [
         "FRS `FRS-P1-DSP-001..002`",
         "Implementation Contract §3.6 Display Settings",
@@ -2085,7 +2119,9 @@
         "DSP.PRESENTATION_BOUNDARY",
         "DSP.ADMIN_AUTH"
       ],
-      "approved_decision_ids": ["CHANGE-DISPLAY-SETTING-001"],
+      "approved_decision_ids": [
+        "CHANGE-DISPLAY-SETTING-001"
+      ],
       "direct_source_verification": [
         "FRS `FRS-P1-DSP-003`",
         "Implementation Contract §3.6 and §10 Audit contract",
@@ -2114,7 +2150,9 @@
         "DSP.PRESENTATION_BOUNDARY",
         "DSP.ADMIN_AUTH"
       ],
-      "approved_decision_ids": ["CHANGE-DISPLAY-SETTING-001"],
+      "approved_decision_ids": [
+        "CHANGE-DISPLAY-SETTING-001"
+      ],
       "direct_source_verification": [
         "API Design v1.7 §6A",
         "Implementation Contract v1.9 §§3.6,4,6",
@@ -2140,7 +2178,9 @@
         "UI.CANONICAL_LOCALE",
         "DSP.PRESENTATION_BOUNDARY"
       ],
-      "approved_decision_ids": ["CHANGE-DISPLAY-SETTING-001"],
+      "approved_decision_ids": [
+        "CHANGE-DISPLAY-SETTING-001"
+      ],
       "direct_source_verification": [
         "UI Design v1.8 §4B.1–4B.4",
         "IMP Plan §14A P1-DSP-005"
@@ -2164,9 +2204,12 @@
         "CTRL.BOUNDED_SCOPE",
         "UI.CANONICAL_LOCALE",
         "DSP.PRESENTATION_BOUNDARY",
-        "DSP.ADMIN_AUTH"
+        "DSP.ADMIN_AUTH",
+        "UI.BASE_PERMISSION_SNAPSHOT"
       ],
-      "approved_decision_ids": ["CHANGE-DISPLAY-SETTING-001"],
+      "approved_decision_ids": [
+        "CHANGE-DISPLAY-SETTING-001"
+      ],
       "direct_source_verification": [
         "UI Design v1.8 §4B.5–4B.8",
         "IMP Plan §15 P1-DSP-006"
@@ -2193,7 +2236,9 @@
         "DSP.CONTEXT_RESOLUTION",
         "DSP.ADMIN_AUTH"
       ],
-      "approved_decision_ids": ["CHANGE-DISPLAY-SETTING-001"],
+      "approved_decision_ids": [
+        "CHANGE-DISPLAY-SETTING-001"
+      ],
       "direct_source_verification": [
         "API Design v1.7 §6A",
         "UI Design v1.8 §4B.9",
@@ -2216,7 +2261,8 @@
       "required_rule_ids": [
         "CTRL.AUTHORITY_ORDER",
         "CTRL.BOUNDED_SCOPE",
-        "UI.CANONICAL_LOCALE"
+        "UI.CANONICAL_LOCALE",
+        "UI.BASE_PERMISSION_SNAPSHOT"
       ],
       "approved_decision_ids": [],
       "direct_source_verification": [],
@@ -2236,7 +2282,8 @@
       "required_rule_ids": [
         "CTRL.AUTHORITY_ORDER",
         "CTRL.BOUNDED_SCOPE",
-        "UI.CANONICAL_LOCALE"
+        "UI.CANONICAL_LOCALE",
+        "UI.BASE_PERMISSION_SNAPSHOT"
       ],
       "approved_decision_ids": [],
       "direct_source_verification": [],
@@ -2276,7 +2323,9 @@
       "required_rule_ids": [
         "CTRL.AUTHORITY_ORDER",
         "CTRL.BOUNDED_SCOPE",
-        "UI.CANONICAL_LOCALE"
+        "UI.CANONICAL_LOCALE",
+        "UI.BASE_PERMISSION_SNAPSHOT",
+        "UI.TABLE_ACTION_STATUS"
       ],
       "approved_decision_ids": [],
       "direct_source_verification": [],
@@ -2296,9 +2345,13 @@
       "required_rule_ids": [
         "CTRL.AUTHORITY_ORDER",
         "CTRL.BOUNDED_SCOPE",
-        "UI.CANONICAL_LOCALE"
+        "UI.CANONICAL_LOCALE",
+        "UI.BASE_PERMISSION_SNAPSHOT",
+        "UI.TABLE_ACTION_STATUS"
       ],
-      "approved_decision_ids": ["DEC-P1-001"],
+      "approved_decision_ids": [
+        "DEC-P1-001"
+      ],
       "direct_source_verification": [
         "UI Design Employee/Assignment sections",
         "FRS `EMP-*`",
@@ -2320,13 +2373,22 @@
       "required_rule_ids": [
         "CTRL.AUTHORITY_ORDER",
         "CTRL.BOUNDED_SCOPE",
-        "UI.CANONICAL_LOCALE"
+        "UI.CANONICAL_LOCALE",
+        "UI.BASE_PERMISSION_SNAPSHOT",
+        "UI.TABLE_ACTION_STATUS",
+        "AUTH.POLICY_SCOPE_UNIQUE",
+        "AUTH.SHIELD_USER_MUTATION",
+        "API.BULK_RESOURCE_ACTIONS"
       ],
-      "approved_decision_ids": [],
+      "approved_decision_ids": [
+        "DEC-CHG-POLICY-001",
+        "DEC-CHG-IAM-001"
+      ],
       "direct_source_verification": [
         "UI Design IAM/PBAC sections",
         "FRS `IAM-*`, `PBAC-*`",
-        "IMP Plan `P1-FE-030`"
+        "IMP Plan `P1-FE-030`",
+        "UI Design v1.9 Security/PBAC and permission-aware UI; Change 08/09/10/11 scoped overlays"
       ],
       "expected_output": "security admin UI",
       "forbidden_scope": [
@@ -2344,7 +2406,8 @@
       "required_rule_ids": [
         "CTRL.AUTHORITY_ORDER",
         "CTRL.BOUNDED_SCOPE",
-        "UI.CANONICAL_LOCALE"
+        "UI.CANONICAL_LOCALE",
+        "UI.TABLE_ACTION_STATUS"
       ],
       "approved_decision_ids": [],
       "direct_source_verification": [],
@@ -2364,7 +2427,8 @@
       "required_rule_ids": [
         "CTRL.AUTHORITY_ORDER",
         "CTRL.BOUNDED_SCOPE",
-        "UI.CANONICAL_LOCALE"
+        "UI.CANONICAL_LOCALE",
+        "UI.TABLE_ACTION_STATUS"
       ],
       "approved_decision_ids": [],
       "direct_source_verification": [
@@ -2388,7 +2452,8 @@
       "required_rule_ids": [
         "CTRL.AUTHORITY_ORDER",
         "CTRL.BOUNDED_SCOPE",
-        "UI.CANONICAL_LOCALE"
+        "UI.CANONICAL_LOCALE",
+        "UI.TABLE_ACTION_STATUS"
       ],
       "approved_decision_ids": [],
       "direct_source_verification": [
@@ -2412,7 +2477,8 @@
       "required_rule_ids": [
         "CTRL.AUTHORITY_ORDER",
         "CTRL.BOUNDED_SCOPE",
-        "UI.CANONICAL_LOCALE"
+        "UI.CANONICAL_LOCALE",
+        "UI.TABLE_ACTION_STATUS"
       ],
       "approved_decision_ids": [],
       "direct_source_verification": [
@@ -2436,13 +2502,21 @@
       "required_rule_ids": [
         "CTRL.AUTHORITY_ORDER",
         "CTRL.BOUNDED_SCOPE",
-        "UI.CANONICAL_LOCALE"
+        "UI.CANONICAL_LOCALE",
+        "UI.TABLE_ACTION_STATUS",
+        "IMP.PRODUCT_ONLY",
+        "IMP.TWO_GATE",
+        "IMP.RESULT_RECONCILE",
+        "UI.BASE_PERMISSION_SNAPSHOT",
+        "API.CONTRACT_STATUS",
+        "DSP.PRESENTATION_BOUNDARY"
       ],
       "approved_decision_ids": [],
       "direct_source_verification": [
         "UI Design `UI-P1-IMP-001..003`",
         "FRS `IMP-*`",
-        "IMP Plan `P1-FE-080`"
+        "IMP Plan `P1-FE-080`",
+        "UI Design v1.9 UI-P1-IMP-001..003; API Design v1.8 §13; Plan v1.10 P1-FE-080"
       ],
       "expected_output": "import wizard/report UI",
       "forbidden_scope": [
@@ -2460,12 +2534,17 @@
       "required_rule_ids": [
         "CTRL.AUTHORITY_ORDER",
         "CTRL.BOUNDED_SCOPE",
-        "UI.CANONICAL_LOCALE"
+        "UI.CANONICAL_LOCALE",
+        "UI.TABLE_ACTION_STATUS",
+        "UI.BASE_PERMISSION_SNAPSHOT",
+        "AUTH.POLICY_SCOPE_UNIQUE",
+        "API.OPENAPI_SYNC"
       ],
       "approved_decision_ids": [],
       "direct_source_verification": [
         "UI Design §21 accessibility/critical flows",
-        "IMP Plan `P1-FE-090`"
+        "IMP Plan `P1-FE-090`",
+        "UI Design v1.9 accessibility/critical journeys; Plan v1.10 P1-FE-090"
       ],
       "expected_output": "critical UI/accessibility evidence",
       "forbidden_scope": [
@@ -2482,12 +2561,17 @@
       "validation_profile": "release",
       "required_rule_ids": [
         "CTRL.AUTHORITY_ORDER",
-        "CTRL.BOUNDED_SCOPE"
+        "CTRL.BOUNDED_SCOPE",
+        "AUTH.POLICY_SCOPE_UNIQUE",
+        "AUTH.SHIELD_USER_MUTATION",
+        "UI.BASE_PERMISSION_SNAPSHOT",
+        "API.BULK_RESOURCE_ACTIONS"
       ],
       "approved_decision_ids": [],
       "direct_source_verification": [
         "FRS §Acceptance Test Catalog",
-        "IMP Plan Gate 9 / `P1-SYS-001`"
+        "IMP Plan Gate 9 / `P1-SYS-001`",
+        "Change Control 08/09/10/11: verify scoped retrofit evidence independently of 107-task DONE status"
       ],
       "expected_output": "full acceptance evidence",
       "forbidden_scope": [
@@ -2506,13 +2590,18 @@
         "CTRL.AUTHORITY_ORDER",
         "CTRL.BOUNDED_SCOPE",
         "AUTH.PBAC_PRECEDENCE",
-        "AUTH.NO_BYPASS"
+        "AUTH.NO_BYPASS",
+        "AUTH.POLICY_SCOPE_UNIQUE",
+        "AUTH.SHIELD_USER_MUTATION",
+        "UI.BASE_PERMISSION_SNAPSHOT",
+        "API.BULK_RESOURCE_ACTIONS"
       ],
       "approved_decision_ids": [],
       "direct_source_verification": [
         "FRS `FRS-P1-PBAC-001..007`, `FRS-P1-IAM-001..004`",
         "Contract §§6,18",
-        "IMP Plan `P1-SYS-002`"
+        "IMP Plan `P1-SYS-002`",
+        "Change Control 08/09/10/11: verify scoped retrofit evidence independently of 107-task DONE status"
       ],
       "expected_output": "security regression evidence",
       "forbidden_scope": [
@@ -2597,13 +2686,18 @@
       "validation_profile": "release",
       "required_rule_ids": [
         "CTRL.AUTHORITY_ORDER",
-        "CTRL.BOUNDED_SCOPE"
+        "CTRL.BOUNDED_SCOPE",
+        "AUTH.POLICY_SCOPE_UNIQUE",
+        "AUTH.SHIELD_USER_MUTATION",
+        "UI.BASE_PERMISSION_SNAPSHOT",
+        "API.BULK_RESOURCE_ACTIONS"
       ],
       "approved_decision_ids": [],
       "direct_source_verification": [
         "API Design §§15–17",
         "UI Design typed integration",
-        "IMP Plan `P1-SYS-006`"
+        "IMP Plan `P1-SYS-006`",
+        "Change Control 08/09/10/11: verify scoped retrofit evidence independently of 107-task DONE status"
       ],
       "expected_output": "drift-free contract evidence",
       "forbidden_scope": [
@@ -2620,12 +2714,17 @@
       "validation_profile": "release",
       "required_rule_ids": [
         "CTRL.AUTHORITY_ORDER",
-        "CTRL.BOUNDED_SCOPE"
+        "CTRL.BOUNDED_SCOPE",
+        "AUTH.POLICY_SCOPE_UNIQUE",
+        "AUTH.SHIELD_USER_MUTATION",
+        "UI.BASE_PERMISSION_SNAPSHOT",
+        "API.BULK_RESOURCE_ACTIONS"
       ],
       "approved_decision_ids": [],
       "direct_source_verification": [
         "Contract §20 production config",
-        "IMP Plan `P1-SYS-007`"
+        "IMP Plan `P1-SYS-007`",
+        "Change Control 08/09/10/11: verify scoped retrofit evidence independently of 107-task DONE status"
       ],
       "expected_output": "production readiness review",
       "forbidden_scope": [
@@ -2642,13 +2741,18 @@
       "validation_profile": "release",
       "required_rule_ids": [
         "CTRL.AUTHORITY_ORDER",
-        "CTRL.BOUNDED_SCOPE"
+        "CTRL.BOUNDED_SCOPE",
+        "AUTH.POLICY_SCOPE_UNIQUE",
+        "AUTH.SHIELD_USER_MUTATION",
+        "UI.BASE_PERMISSION_SNAPSHOT",
+        "API.BULK_RESOURCE_ACTIONS"
       ],
       "approved_decision_ids": [],
       "direct_source_verification": [
         "UR business scope",
         "FRS acceptance catalog",
-        "IMP Plan `P1-UAT-001`"
+        "IMP Plan `P1-UAT-001`",
+        "Change Control 08/09/10/11: verify scoped retrofit evidence independently of 107-task DONE status"
       ],
       "expected_output": "UAT package/results",
       "forbidden_scope": [
@@ -2665,12 +2769,17 @@
       "validation_profile": "release",
       "required_rule_ids": [
         "CTRL.AUTHORITY_ORDER",
-        "CTRL.BOUNDED_SCOPE"
+        "CTRL.BOUNDED_SCOPE",
+        "AUTH.POLICY_SCOPE_UNIQUE",
+        "AUTH.SHIELD_USER_MUTATION",
+        "UI.BASE_PERMISSION_SNAPSHOT",
+        "API.BULK_RESOURCE_ACTIONS"
       ],
       "approved_decision_ids": [],
       "direct_source_verification": [
         "IMP Plan §16 RC evidence minimum",
-        "Contract §23 DoD"
+        "Contract §23 DoD",
+        "Change Control 08/09/10/11: verify scoped retrofit evidence independently of 107-task DONE status"
       ],
       "expected_output": "release candidate evidence pack",
       "forbidden_scope": [

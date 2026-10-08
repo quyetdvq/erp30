@@ -1,7 +1,7 @@
 {
   "format": "META-CODEX-003",
   "status": "product_owner_approved",
-  "note": "These implementation decisions supplement, and do not replace, upstream architecture authority.",
+  "note": "Nine DEC-* IDs mirror current P1_DECISIONS.md; separate CHANGE-* decisions summarize approved overlays. Both supplement but never replace the seven baseline documents. Historical alias CHANGE-ARCH-001/DEC-IMP-ARCH-001 superseded in the derived cache by DEC-ARCH-001.",
   "decisions": [
     {
       "id": "DEC-WF-001",
@@ -66,28 +66,6 @@
       ]
     },
     {
-      "id": "CHANGE-ARCH-001",
-      "title": "Product/Pricing modular-monolith ownership",
-      "approved_by": "Product Owner before Gate 5",
-      "rules": [
-        "Product root is App\\Modules\\Product and owns ProductGroup, Uom, Product, Combo structure/flattening, and Product integration boundaries",
-        "Pricing root is App\\Modules\\Pricing and owns PriceList, Resolution, and monetary ComboAllocation",
-        "Pricing may depend on Product; Product must not depend on Pricing",
-        "Do not introduce deeper Application/Domain/Infrastructure layering inside Product/Pricing unless architecture is explicitly reopened"
-      ]
-    },
-    {
-      "id": "DEC-IMP-ARCH-001",
-      "title": "Product Import shared infrastructure boundary",
-      "approved_by": "Product Owner before Gate 6",
-      "rules": [
-        "Generic import mechanics and persistence live in App\\Infrastructure\\Import",
-        "Product-specific import business logic lives in App\\Modules\\Product\\Import",
-        "Product Import may depend on shared Import infrastructure; shared Import infrastructure must not depend on Product or any business module",
-        "Do not create App\\Modules\\Import before a second approved import target establishes real shared business ownership"
-      ]
-    },
-    {
       "id": "DEC-P1-001",
       "title": "Canonical Employee gender catalog",
       "approved_by": "Product Owner",
@@ -119,10 +97,89 @@
       "rules": [
         "Display Settings are presentation-only and never business, authorization, workflow, pricing, effective-date, numbering, import, or calculation authority",
         "server scopes are SYSTEM and ORGANIZATION only; no server USER or COMPANY pseudo-scope",
-          "reuse CodeIgniter Settings persistence and the approved configuration_audit_events sink; do not invent a generic settings table",
+        "reuse CodeIgniter Settings persistence and the approved configuration_audit_events sink; do not invent a generic settings table",
         "display_setting is an ORGANIZATION Resource with view/edit actions through canonical AuthorizationService/PBAC",
         "Gate 7A foundation is P1-DSP-001..005; P1-DSP-006 and P1-DSP-090 execute as the early Gate 8 checkpoint",
         "P1-FE-003 and feature UI P1-FE-010..080 remain blocked until P1-DSP-090 is DONE"
+      ]
+    },
+    {
+      "id": "DEC-WF-002",
+      "title": "Canonical LifecycleTargetAdapter",
+      "approved_by": "Product Owner / P1_DECISIONS.md",
+      "rules": [
+        "LifecycleService must use explicitly registered target adapter, lock/re-read, resolve transition before authorization, and commit exact state change with audit",
+        "No generic Resource Instance/state table, client-as-authority state/context, or System Admin special path"
+      ]
+    },
+    {
+      "id": "DEC-ARCH-001",
+      "title": "Product/Pricing modular-monolith boundaries",
+      "approved_by": "Product Owner / P1_DECISIONS.md",
+      "rules": [
+        "Product module owns group/UOM/Product/role/structural COMBO and its numbering integration",
+        "Pricing module owns Price List/resolution and monetary COMBO allocation",
+        "Product never depends on Pricing; Pricing consumes stable public Product contracts, not concrete Product repositories",
+        "Import remains a separate shared-infrastructure / Product-specific implementation boundary; do not expand its scope implicitly"
+      ]
+    },
+    {
+      "id": "DEC-CHG-POLICY-001",
+      "title": "Unique normalized Policy scope",
+      "approved_by": "Product Owner / P1_DECISIONS.md",
+      "rules": [
+        "One Policy per organization_id + resource_id + normalized_state + participant_type + participant_ref_id",
+        "Generated normalized_state_id uses zero for state_id NULL; duplicate scope returns 409 POLICY_SCOPE_ALREADY_EXISTS",
+        "Reconcile only proven-equivalent legacy duplicates with precedence ABSOLUTE_DENY > ALLOW > DENY; block otherwise"
+      ]
+    },
+    {
+      "id": "DEC-CHG-IAM-001",
+      "title": "Canonical Shield User mutation",
+      "approved_by": "Product Owner / P1_DECISIONS.md",
+      "rules": [
+        "Shield only for User/Password, never local ERP identity persistence",
+        "Dedicated user.reset_password permission for admin reset; separate identity,state,membership,direct-ALLOW mutations",
+        "Group labels never infer rights and direct user permission does not bypass PBAC/ABSOLUTE_DENY"
+      ]
+    },
+    {
+      "id": "CHANGE-PERMISSION-AWARE-UI-001",
+      "title": "Authenticated Base Permission UX snapshot",
+      "approved_by": "Approved change control v1.0",
+      "rules": [
+        "Additive data.user.base_permissions on authenticated login/me/profile DTO, no new standalone route or persistence",
+        "Sorted catalog-backed Base Permission set is a UX hint only, never final authorization; conservative stale/missing behavior"
+      ]
+    },
+    {
+      "id": "CHANGE-POLICY-SCOPE-UNIQUENESS-001",
+      "title": "Policy Scope uniqueness additive retrofit",
+      "approved_by": "Approved change control v1.0",
+      "rules": [
+        "Forward-only generated-column unique key for normalized Policy scope; ensure 409 duplicate including concurrent attempts",
+        "Complete Policy Action/Effect mutation atomic; duplicate reconciliation must stop if equivalence not proven",
+        "Independent scoped change-control work, not an extra task in 107-task registry"
+      ]
+    },
+    {
+      "id": "CHANGE-USER-IDENTITY-MUTATION-001",
+      "title": "Shield User mutation additive retrofit",
+      "approved_by": "Approved change control v1.0",
+      "rules": [
+        "Shield identity only; dedicated User create/edit/state/password reset/direct-allow operations and PBAC guard",
+        "Dedicated user.reset_password action, no new local ERP password persistence",
+        "Independent scoped change-control work, not an extra task in 107-task registry"
+      ]
+    },
+    {
+      "id": "CHANGE-RESOURCE-ACTIONS-BULK-API-001",
+      "title": "Resource collection bulk Action representation",
+      "approved_by": "Approved change control v1.1 in filename v1.0",
+      "rules": [
+        "GET /api/v1/resources?include=actions optional additive representation without altering bare collection",
+        "Nested actions are loaded in one authorized bulk query; no /api/v1/resource-actions route",
+        "Documentation-only overlay paired with Shield User change implementation, not new task"
       ]
     }
   ]

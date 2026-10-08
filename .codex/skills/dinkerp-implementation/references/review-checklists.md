@@ -4,7 +4,7 @@ Use only the sections relevant to the task.
 
 ## Every task
 
-- Task ID, compiled context, and source pointers identified.
+- Task ID, live ledger status, approved change overlays, validated compiled context, and source pointers identified.
 - Existing code/conventions inspected before editing.
 - Scope/out-of-scope respected; no unrelated refactor.
 - No new requirement/schema/action/endpoint semantics invented.
@@ -56,12 +56,15 @@ Use only the sections relevant to the task.
 - Controller remains thin and does not call repositories directly.
 - OpenAPI source updated in the same public-contract task; Redocly lint passes.
 - Generated frontend client/types regenerated and not hand-edited; drift/smoke check passes.
-- Exact export media type is not invented while contract remains pending.
+- Exact export media type is not invented while contract remains pending. Approved API Design v1.8 §19 Shield admin endpoints are assessed separately from their runtime implementation evidence.
 - For P1-API-020, Department/Position/Employee stay MASTER/GROUP; Employee Assignment uses request/persisted row `organization_id` according to operation.
 - Employee Organization/Department/Position filters are data filters only; list scope decisions happen before total/pagination.
 - Employee gender uses only the DEC-P1-001 nullable catalog `MALE`, `FEMALE`, `OTHER`, or `null`.
 
 ## UI
+
+- Every table status uses `TableStatus`; row view/edit/toggle actions use shared `TableRowActions` icon primitives; read-only view uses `TableDetailModal`; accessible i18n labels are mandatory.
+- Base Permission snapshot is a conservative presentation hint, not PBAC/Workflow/ABSOLUTE_DENY authority.
 
 - Uses current API contract; no duplicate business rules.
 - Permission-aware UI is UX only, not security authority.
@@ -103,3 +106,11 @@ Use only the sections relevant to the task.
 - SUCCESS/ERROR/SKIPPED row persistence reconciles job counts from DB rows.
 - Reconciliation locks `import_jobs` `FOR UPDATE`; SKIPPED counts only toward total.
 - Same source hash does not auto-skip rerun; raw source payload is not persisted unnecessarily.
+
+## Approved 2026-10-08 change-control overlays
+
+- Policy scope uniqueness: generated normalized-state guard, duplicate 409, safe legacy reconciliation and atomic Action/Effect update (`CHANGE-POLICY-SCOPE-UNIQUENESS-001`).
+- Shield identity mutation: Shield-only storage, strict action separation, dedicated `user.reset_password`, no local password store (`CHANGE-USER-IDENTITY-MUTATION-001`).
+- Base Permission snapshot: auth DTO only, conservative staleness and refresh, no final authorization inference (`CHANGE-PERMISSION-AWARE-UI-001`).
+- Resource Actions bulk representation: only `GET /api/v1/resources?include=actions`, no new standalone route (`CHANGE-RESOURCE-ACTIONS-BULK-API-001`).
+- For each overlay distinguish approved document from actual migration/API/UI/test evidence. Do not increment 107 task registry or reopen DONE entries automatically.

@@ -2,7 +2,7 @@
 
 Pointers only. Gate 7 exposes existing service contracts; controllers stay thin. Only `CONTRACT_READY` API surfaces may be implemented. Every public contract change updates OpenAPI in the same task, passes Redocly lint, and regenerates typed frontend artifacts.
 
-Current source-open/`CONTRACT_PENDING` surfaces must not be invented: Shield User write/state payloads, public Price Resolution authorization, optional COMBO preview endpoints, and exact export media type. Employee gender is resolved by DEC-P1-001.
+Current v1.8 API Design §19 and approved CHANGE-USER-IDENTITY-MUTATION-001 now define the Shield User write/state/reset-password contract; do not reuse the historical v1.7 Shield-pending text. Exact export media type, public Price Resolution authorization, and optional COMBO preview endpoints remain `CONTRACT_PENDING` unless independently promoted. These approved overlays are not proof of runtime implementation or new P1 Task IDs. Employee gender remains DEC-P1-001.
 
 `P1-API-020` remains the Plan task title "Employee/Assignment endpoints", but API Design §8.1–8.4 makes the Slice 2 surface explicit: Department, Position, Employee, and Employee Assignment. Its CHANGE-AUTH-DOMAIN-001 precondition must be satisfied before implementation; the task must preserve MASTER/GROUP vs ORGANIZATION scope and use the DEC-P1-001 gender catalog while keeping export media type pending.
 

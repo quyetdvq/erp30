@@ -1,0 +1,61 @@
+{
+  "format": "META-CODEX-004",
+  "source": "Approved change-control overlays; runtime implementation state must be verified from repository/ledger, never inferred from document approval.",
+  "not_part_of_task_registry": true,
+  "changes": [
+    {
+      "id": "CHANGE-PERMISSION-AWARE-UI-001",
+      "source": "docs/architecture/08_CHANGE_PERMISSION_AWARE_UI_001_v1.0.md",
+      "approval": "approved-for-implementation",
+      "implementation_evidence": "VERIFY_CURRENT_REPO",
+      "affected_task_ids": [
+        "P1-FE-001",
+        "P1-FE-002",
+        "P1-DSP-006",
+        "P1-FE-010",
+        "P1-FE-020",
+        "P1-FE-030"
+      ],
+      "closure_scope": "Additive authenticated Base Permission DTO and permission-aware retrofit; no PBAC bypass or new route."
+    },
+    {
+      "id": "CHANGE-POLICY-SCOPE-UNIQUENESS-001",
+      "source": "docs/architecture/09_CHANGE_POLICY_SCOPE_UNIQUENESS_001_v1.0.md",
+      "approval": "approved",
+      "implementation_evidence": "VERIFY_CURRENT_REPO",
+      "affected_task_ids": [
+        "P1-DB-050",
+        "P1-AUTH-001",
+        "P1-AUTH-005",
+        "P1-API-030",
+        "P1-FE-030"
+      ],
+      "closure_scope": "Forward-only generated-column uniqueness, 409 duplicate, atomic effect set and safe reconciliation."
+    },
+    {
+      "id": "CHANGE-USER-IDENTITY-MUTATION-001",
+      "source": "docs/architecture/10_CHANGE_USER_IDENTITY_MUTATION_001_v1.0.md",
+      "approval": "approved",
+      "implementation_evidence": "VERIFY_CURRENT_REPO",
+      "affected_task_ids": [
+        "P1-IAM-001",
+        "P1-IAM-002",
+        "P1-AUTH-005",
+        "P1-API-030",
+        "P1-FE-030"
+      ],
+      "closure_scope": "Shield-only User writes/state/reset-password/direct-permission retrofit, with separate dedicated authorization."
+    },
+    {
+      "id": "CHANGE-RESOURCE-ACTIONS-BULK-API-001",
+      "source": "docs/architecture/11_CHANGE_RESOURCE_ACTIONS_BULK_API_001_v1.0.md",
+      "approval": "approved_v1.1_contents",
+      "implementation_evidence": "VERIFY_CURRENT_REPO",
+      "affected_task_ids": [
+        "P1-API-030",
+        "P1-FE-030"
+      ],
+      "closure_scope": "Optional GET /resources?include=actions representation, not a new public route or resource."
+    }
+  ]
+}
