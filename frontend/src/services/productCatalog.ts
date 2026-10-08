@@ -3,11 +3,13 @@ import {
   createProductGroup,
   createProductUom,
   getProduct,
+  listComboItems,
   listProductGroups,
   listProductUomConversions,
   listProductUoms,
   listProducts,
   replaceProductUomConversions,
+  replaceComboItems,
   setProductGroupState,
   setProductState,
   setProductUomState,
@@ -17,6 +19,8 @@ import {
 } from '@/api/generated/sdk.gen'
 import type {
   Product,
+  ComboItem,
+  ComboItemsRequest,
   ProductCreate,
   ProductGroup,
   ProductGroupCreate,
@@ -225,6 +229,32 @@ export function replaceProductConversions(
 ): Promise<ProductUomConversion[]> {
   return withTypedClient((client) =>
     replaceProductUomConversions({
+      client,
+      headers: headers(),
+      path: { id },
+      body,
+      throwOnError: true,
+    }).then((response) => response.data.data ?? []),
+  )
+}
+
+export function listProductComboItems(id: string): Promise<ComboItem[]> {
+  return withTypedClient((client) =>
+    listComboItems({
+      client,
+      headers: headers(),
+      path: { id },
+      throwOnError: true,
+    }).then((response) => response.data.data ?? []),
+  )
+}
+
+export function replaceProductComboItems(
+  id: string,
+  body: ComboItemsRequest,
+): Promise<ComboItem[]> {
+  return withTypedClient((client) =>
+    replaceComboItems({
       client,
       headers: headers(),
       path: { id },

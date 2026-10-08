@@ -30,6 +30,19 @@ const simple = {
   selectable: true,
   leaf_transactionable: true,
 }
+const parent = {
+  ...simple,
+  id: '31',
+  product_code: 'PRD-PARENT',
+  product_name: 'Shirt',
+  base_uom_id: null,
+  price: null,
+  serial_management_enabled: false,
+  role: 'PARENT',
+  full_name: 'Shirt',
+  selectable: false,
+  leaf_transactionable: false,
+}
 
 async function mockSession(page: Page): Promise<void> {
   await page.route('**/api/v1/auth/me', async (route) =>
@@ -211,8 +224,8 @@ test.describe('P1-FE-060 Product/UOM UI', () => {
     await page.goto('/products/30')
     await expect(page.getByRole('heading', { name: 'Sửa sản phẩm' })).toBeVisible()
     await expect(page.getByRole('heading', { name: 'Quy đổi UOM' })).toBeVisible()
-    await expect(page.getByRole('textbox', { name: 'Hệ số' })).toHaveValue('12.0000')
-    await expect(page.getByRole('textbox', { name: 'Giá bán' })).toHaveValue('140000.00')
+    await expect(page.getByRole('cell', { name: /12\.0000/ })).toBeVisible()
+    await expect(page.getByRole('cell', { name: '140000.00', exact: true })).toBeVisible()
     await page.goto('/products/new')
     await expect(page.getByRole('heading', { name: 'Tạo sản phẩm' })).toBeVisible()
     expect(
@@ -223,5 +236,36 @@ test.describe('P1-FE-060 Product/UOM UI', () => {
     await page.getByRole('combobox', { name: 'Type' }).selectOption('COMBO')
     await expect(page.getByRole('heading', { name: 'Quy đổi UOM' })).toHaveCount(0)
     await expect(page.getByText('COMBO luôn tắt quản lý Serial.')).toBeVisible()
+  })
+
+  test('keeps PARENT administrative edit available while locking operational fields', async ({
+    page,
+  }) => {
+    await mockSession(page)
+    await mockCatalog(page)
+    let patchBody: Record<string, unknown> | null = null
+    await page.route('**/api/v1/products/31', async (route) => {
+      if (route.request().method() === 'PATCH') {
+        patchBody = JSON.parse(route.request().postData() ?? '{}') as Record<string, unknown>
+        return route.fulfill({
+          status: 200,
+          contentType: 'application/json',
+          body: JSON.stringify({ data: parent }),
+        })
+      }
+      return route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({ data: parent }),
+      })
+    })
+    await page.goto('/products/31')
+    await expect(page.getByText('PARENT là vai trò dẫn xuất')).toBeVisible()
+    await expect(page.getByText('PARENT không có UOM cơ sở hoặc giá mặc định.')).toBeVisible()
+    await expect(page.getByRole('checkbox', { name: 'Quản lý Serial' })).toHaveCount(0)
+    await expect(page.locator('form .primary-button')).toBeEnabled()
+    await page.getByRole('button', { name: 'Lưu' }).first().click()
+    await expect.poll(() => patchBody).not.toBeNull()
+    expect(patchBody).not.toHaveProperty('status')
   })
 })
