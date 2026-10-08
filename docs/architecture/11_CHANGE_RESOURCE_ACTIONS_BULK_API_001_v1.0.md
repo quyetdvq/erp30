@@ -68,4 +68,3 @@ or System Admin semantics.
 The OpenAPI route and generated client are covered by the implementation
 commit `5c1dcbb`. This overlay is documentation/authority only. It does not
 create a P1 task, reopen a completed task, or start `P1-FE-050`.
-
