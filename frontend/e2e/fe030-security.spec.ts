@@ -454,6 +454,16 @@ test.describe('P1-FE-030 security surfaces', () => {
       .locator('.modal-card__footer')
       .getByRole('button', { name: 'Đóng' })
       .click()
+    await page.getByRole('button', { name: 'Sửa' }).click()
+    const resourceEditDialog = page.getByRole('dialog', { name: 'Biểu mẫu Resource' })
+    const lifecycleSelect = resourceEditDialog
+      .locator('select')
+      .filter({ has: page.locator('option[value="50"]') })
+    await expect(lifecycleSelect).toHaveValue('50')
+    await resourceEditDialog
+      .locator('.modal-card__footer')
+      .getByRole('button', { name: 'Hủy' })
+      .click()
     await page.getByRole('button', { name: /Tạo|Create/ }).click()
     const domain = page
       .locator('select')

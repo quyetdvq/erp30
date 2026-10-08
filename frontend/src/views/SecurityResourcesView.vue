@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed, onMounted, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
-import type { Resource } from '@/api/generated/types.gen'
+import type { Lifecycle, Resource } from '@/api/generated/types.gen'
 import {
   ListPagination,
   ListQueryControls,
@@ -21,6 +21,7 @@ import {
 } from '@/services/security'
 import { reportApiError } from '@/services/errorBoundary'
 import { useBasePermission } from '@/composables/useBasePermission'
+import { listLifecyclePage } from '@/services/workflow'
 
 const { t } = useI18n()
 const { hasBasePermission } = useBasePermission()
@@ -38,7 +39,8 @@ const editingId = ref<string | undefined>()
 const editingActionId = ref<string | undefined>()
 const busy = ref(false)
 const error = ref<unknown | null>(null)
-const form = ref({ type: '', name: '', domain: 'SYSTEM' as Resource['domain'] })
+const lifecycles = ref<Lifecycle[]>([])
+const form = ref({ type: '', name: '', domain: 'SYSTEM' as Resource['domain'], lifecycle_id: '' })
 const actionForm = ref({ code: '', description: '' })
 const columns: readonly ListColumn<Resource>[] = [
   { key: 'type', labelKey: 'security.type', sortable: true },
@@ -95,12 +97,17 @@ function openActionsTab(): void {
 }
 function openCreate(): void {
   editingId.value = undefined
-  form.value = { type: '', name: '', domain: 'SYSTEM' }
+  form.value = { type: '', name: '', domain: 'SYSTEM', lifecycle_id: '' }
   modalOpen.value = true
 }
 function openEdit(row: Resource): void {
   editingId.value = String(row.id)
-  form.value = { type: row.type, name: row.name, domain: row.domain }
+  form.value = {
+    type: row.type,
+    name: row.name,
+    domain: row.domain,
+    lifecycle_id: row.lifecycle_id ? String(row.lifecycle_id) : '',
+  }
   modalOpen.value = true
 }
 async function save(): Promise<void> {
@@ -108,11 +115,18 @@ async function save(): Promise<void> {
   error.value = null
   try {
     const saved = editingId.value
-      ? await saveResource({ name: form.value.name }, editingId.value)
+      ? await saveResource(
+          {
+            name: form.value.name,
+            ...(form.value.lifecycle_id ? { lifecycle_id: form.value.lifecycle_id } : {}),
+          },
+          editingId.value,
+        )
       : await saveResource({
           type: form.value.type,
           name: form.value.name,
           domain: form.value.domain,
+          ...(form.value.lifecycle_id ? { lifecycle_id: form.value.lifecycle_id } : {}),
         })
     modalOpen.value = false
     selectedId.value = String(saved.id)
@@ -122,6 +136,16 @@ async function save(): Promise<void> {
     reportApiError(caught)
   } finally {
     busy.value = false
+  }
+}
+async function loadLifecycles(): Promise<void> {
+  try {
+    lifecycles.value = (
+      await listLifecyclePage({ q: '', page: 1, page_size: 200, sort: 'code', filter: {} })
+    ).data
+  } catch (caught: unknown) {
+    error.value = caught
+    reportApiError(caught)
   }
 }
 async function remove(row: Resource): Promise<void> {
@@ -188,7 +212,9 @@ async function removeAction(action: SecurityAction): Promise<void> {
     busy.value = false
   }
 }
-onMounted(() => void load())
+onMounted(() => {
+  void Promise.all([load(), loadLifecycles()])
+})
 </script>
 
 <template>
@@ -411,6 +437,18 @@ onMounted(() => void load())
           ><small class="security-note">{{
             editingId ? t('security.domainImmutable') : t('security.domainCreateNote')
           }}</small></label
+        ><label
+          ><span>{{ t('security.lifecycle') }}</span
+          ><select v-model="form.lifecycle_id" class="field-select">
+            <option value="">{{ t('list.noValue') }}</option>
+            <option
+              v-for="lifecycle in lifecycles"
+              :key="lifecycle.id"
+              :value="String(lifecycle.id)"
+            >
+              {{ lifecycle.code }} · {{ lifecycle.name }}
+            </option>
+          </select></label
         >
         <footer class="modal-card__footer">
           <button type="button" class="secondary-button" @click="modalOpen = false">
