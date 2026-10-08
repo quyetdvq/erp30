@@ -45,8 +45,8 @@ const columns: readonly ListColumn<Resource>[] = [
   { key: 'name', labelKey: 'security.name', sortable: true },
   { key: 'domain', labelKey: 'security.domain', sortable: true },
   { key: 'lifecycle_id', labelKey: 'security.lifecycle' },
-  { key: 'action_count', labelKey: 'security.actionCount' },
-  { key: 'actions', labelKey: 'security.actions' },
+  { key: 'action_count', labelKey: 'security.actionCount', align: 'center' },
+  { key: 'actions', labelKey: 'security.actions', align: 'end' },
 ]
 function applyQuery(query: ListQuery): void {
   state.setSearch(query.q)
@@ -269,34 +269,18 @@ onMounted(() => void load())
             void load()
           }
         "
-      /><ListPagination
-        :page="state.query.page"
-        :page-size="state.query.page_size"
-        :total="state.total.value"
-        @update:page="
-          (page) => {
-            state.setPage(page)
-            void load()
-          }
-        "
-        @update:page-size="
-          (size) => {
-            state.setPageSize(size)
-            void load()
-          }
-        "
       />
     </ListShell>
   </section>
   <div v-if="detailOpen && selected" class="modal-backdrop" @click.self="detailOpen = false">
     <section
-      class="modal-card modal-card--wide"
+      class="modal-card modal-card--wide resource-detail-modal"
       role="dialog"
       aria-modal="true"
       :aria-label="`${t('security.resource')}: ${selected.name}`"
     >
-      <header class="modal-card__header security-detail-heading">
-        <div>
+      <header class="modal-card__header resource-detail-modal__header">
+        <div class="resource-detail-modal__identity">
           <h2>{{ selected.name }}</h2>
           <small
             ><code>{{ selected.type }}</code> · {{ selected.domain }}</small
@@ -389,7 +373,7 @@ onMounted(() => void load())
   </div>
   <div v-if="modalOpen" class="modal-backdrop" @click.self="modalOpen = false">
     <section
-      class="modal-card"
+      class="modal-card resource-form-modal"
       role="dialog"
       aria-modal="true"
       :aria-label="t('security.resourceForm')"
@@ -440,7 +424,7 @@ onMounted(() => void load())
   </div>
   <div v-if="actionModalOpen" class="modal-backdrop" @click.self="actionModalOpen = false">
     <section
-      class="modal-card"
+      class="modal-card resource-action-form-modal"
       role="dialog"
       aria-modal="true"
       :aria-label="t('security.actionForm')"
@@ -496,29 +480,36 @@ onMounted(() => void load())
   gap: 10px;
   flex-wrap: wrap;
 }
-.security-detail-heading {
-  display: flex;
-  justify-content: space-between;
-  align-items: start;
-  gap: 12px;
+.resource-detail-modal__identity {
+  min-width: 0;
 }
-.security-detail-heading h2 {
+.resource-detail-modal__identity h2 {
   margin: 0;
   color: #153956;
-  font-size: 18px;
+  font-size: 20px;
+  line-height: 1.25;
 }
-.security-detail-heading small {
+.resource-detail-modal__identity small {
   display: block;
-  margin-top: 5px;
+  margin-top: 6px;
   color: #8191a0;
+  font-size: 12px;
+}
+.resource-detail-modal__header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
 }
 .security-tabs {
   display: flex;
-  gap: 6px;
+  flex: 0 0 auto;
+  gap: 24px;
+  padding: 0 24px;
   border-bottom: 1px solid #e3ebef;
 }
 .security-tabs button {
-  padding: 9px 12px;
+  padding: 13px 2px 11px;
   border: 0;
   border-bottom: 2px solid transparent;
   background: transparent;
@@ -625,10 +616,19 @@ onMounted(() => void load())
 .modal-card {
   width: min(100%, 620px);
   max-height: calc(100vh - 40px);
-  overflow: auto;
+  overflow: hidden;
   border-radius: 7px;
   background: #fff;
   box-shadow: 0 20px 60px rgb(18 42 62 / 24%);
+}
+.resource-detail-modal {
+  display: flex;
+  flex-direction: column;
+}
+.resource-detail-modal__header {
+  flex: 0 0 auto;
+  padding: 20px 24px 16px;
+  border-bottom: 0;
 }
 .modal-card__header,
 .modal-card__footer {
@@ -644,6 +644,11 @@ onMounted(() => void load())
   gap: 12px;
   padding: 18px;
 }
+.resource-detail-modal .modal-card__body {
+  min-height: 0;
+  overflow: auto;
+  padding: 22px 24px;
+}
 .modal-card__body label {
   display: grid;
   gap: 5px;
@@ -657,11 +662,27 @@ onMounted(() => void load())
 }
 .modal-card__footer {
   justify-content: flex-end;
-  margin: 5px -18px -18px;
+  margin: 0;
+  padding: 14px 24px 18px;
   border-top: 1px solid #e4ebef;
   border-bottom: 0;
 }
+.resource-form-modal .modal-card__body,
+.resource-action-form-modal .modal-card__body {
+  overflow: auto;
+}
+.resource-form-modal .modal-card__body .modal-card__footer,
+.resource-action-form-modal .modal-card__body .modal-card__footer {
+  margin: 5px -18px -18px;
+  padding: 14px 18px 0;
+}
 .icon-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  padding: 0;
   border: 0;
   background: transparent;
   color: #536b7b;
@@ -682,6 +703,19 @@ code {
   .security-list-panel,
   .security-detail-panel {
     padding: 15px 12px;
+  }
+  .resource-detail-modal__header,
+  .resource-detail-modal .modal-card__body {
+    padding-right: 18px;
+    padding-left: 18px;
+  }
+  .resource-detail-modal .security-tabs {
+    gap: 14px;
+    padding: 0 18px;
+  }
+  .resource-detail-modal .modal-card__footer {
+    padding-right: 18px;
+    padding-left: 18px;
   }
 }
 </style>

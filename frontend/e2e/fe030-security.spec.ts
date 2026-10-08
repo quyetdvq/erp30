@@ -418,6 +418,17 @@ test.describe('P1-FE-030 security surfaces', () => {
     })
     await page.goto('/security/resources')
     await expect(page.getByRole('heading', { name: 'Resource và Action' })).toBeVisible()
+    await expect(page.getByRole('navigation', { name: 'Phân trang danh sách' })).toHaveCount(1)
+    await page.getByRole('button', { name: 'Xem chi tiết' }).click()
+    const resourceDialog = page.getByRole('dialog', { name: /Resource:/ })
+    await expect(resourceDialog).toBeVisible()
+    await expect(resourceDialog.locator('.modal-card__header')).toHaveCount(1)
+    await expect(resourceDialog.locator('.modal-card__body')).toHaveCount(1)
+    await expect(resourceDialog.locator('.modal-card__footer')).toHaveCount(1)
+    await resourceDialog
+      .locator('.modal-card__footer')
+      .getByRole('button', { name: 'Đóng' })
+      .click()
     await page.getByRole('button', { name: /Tạo|Create/ }).click()
     const domain = page
       .locator('select')
