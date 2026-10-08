@@ -450,7 +450,7 @@ onMounted(async () => {
     </ListShell>
   </section>
 
-  <div v-if="modalOpen" class="modal-backdrop" @click.self="modalOpen = false">
+  <div v-if="modalOpen" class="modal-backdrop">
     <section class="modal-card" role="dialog" aria-modal="true" :aria-label="t('pricing.form')">
       <header class="modal-card__header">
         <h2>
@@ -521,7 +521,7 @@ onMounted(async () => {
     </section>
   </div>
 
-  <div v-if="detailOpen && detailRow" class="modal-backdrop" @click.self="detailOpen = false">
+  <div v-if="detailOpen && detailRow" class="modal-backdrop">
     <section
       class="modal-card price-items-modal"
       role="dialog"

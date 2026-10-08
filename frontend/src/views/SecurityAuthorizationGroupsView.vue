@@ -349,7 +349,7 @@ onMounted(() => void load())
     </ListShell>
   </section>
 
-  <div v-if="detailOpen && selected" class="modal-backdrop" @click.self="detailOpen = false">
+  <div v-if="detailOpen && selected" class="modal-backdrop">
     <section
       class="modal-card modal-card--wide authorization-group-modal"
       role="dialog"
@@ -512,7 +512,7 @@ onMounted(() => void load())
     </section>
   </div>
 
-  <div v-if="modalOpen" class="modal-backdrop" @click.self="modalOpen = false">
+  <div v-if="modalOpen" class="modal-backdrop">
     <section
       class="modal-card authorization-group-form-modal"
       role="dialog"

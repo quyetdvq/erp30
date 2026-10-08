@@ -361,7 +361,7 @@ watch(
 </script>
 
 <template>
-  <div v-if="props.open" class="detail-backdrop" @click.self="emit('close')">
+  <div v-if="props.open" class="detail-backdrop">
     <section
       class="detail-modal"
       role="dialog"

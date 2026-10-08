@@ -603,7 +603,7 @@ onBeforeUnmount(() => {
         "
     /></ListShell>
   </section>
-  <div v-if="modalOpen" class="modal-backdrop" @click.self="modalOpen = false">
+  <div v-if="modalOpen" class="modal-backdrop">
     <section
       class="modal-card policy-form-modal"
       role="dialog"

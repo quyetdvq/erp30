@@ -413,7 +413,7 @@ onMounted(() => void load())
       <div v-else class="empty-state">{{ t('organization.noSelection') }}</div>
     </section>
   </section>
-  <div v-if="modalOpen" class="modal-backdrop" @click.self="modalOpen = false">
+  <div v-if="modalOpen" class="modal-backdrop">
     <section
       class="modal-card"
       role="dialog"

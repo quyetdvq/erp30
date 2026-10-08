@@ -24,7 +24,7 @@ const { t } = useI18n()
 </script>
 
 <template>
-  <div v-if="props.open" class="table-detail-backdrop" @click.self="emit('close')">
+  <div v-if="props.open" class="table-detail-backdrop">
     <section class="table-detail-modal" role="dialog" aria-modal="true" :aria-label="props.title">
       <header class="table-detail-modal__header">
         <h2>{{ props.title }}</h2>

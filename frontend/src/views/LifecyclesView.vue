@@ -378,7 +378,7 @@ onMounted(() => void load())
     </ListShell>
   </section>
 
-  <div v-if="detailOpen && selected" class="modal-backdrop" @click.self="detailOpen = false">
+  <div v-if="detailOpen && selected" class="modal-backdrop">
     <section
       class="modal-card modal-card--wide lifecycle-detail-modal"
       role="dialog"
@@ -572,7 +572,7 @@ onMounted(() => void load())
     </section>
   </div>
 
-  <div v-if="modalOpen" class="modal-backdrop" @click.self="modalOpen = false">
+  <div v-if="modalOpen" class="modal-backdrop">
     <section
       class="modal-card workflow-form-modal"
       role="dialog"
@@ -623,7 +623,7 @@ onMounted(() => void load())
       </form>
     </section>
   </div>
-  <div v-if="stateModalOpen" class="modal-backdrop" @click.self="stateModalOpen = false">
+  <div v-if="stateModalOpen" class="modal-backdrop">
     <section
       class="modal-card workflow-form-modal"
       role="dialog"
@@ -686,7 +686,7 @@ onMounted(() => void load())
       </form>
     </section>
   </div>
-  <div v-if="transitionModalOpen" class="modal-backdrop" @click.self="transitionModalOpen = false">
+  <div v-if="transitionModalOpen" class="modal-backdrop">
     <section
       class="modal-card workflow-form-modal"
       role="dialog"

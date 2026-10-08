@@ -202,7 +202,7 @@ onMounted(() => void load())
       />
     </ListShell>
   </section>
-  <div v-if="modalOpen" class="modal-backdrop" @click.self="modalOpen = false">
+  <div v-if="modalOpen" class="modal-backdrop">
     <section
       class="modal-card workflow-form-modal"
       role="dialog"

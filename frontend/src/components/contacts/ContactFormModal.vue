@@ -103,7 +103,7 @@ function save(): void {
 </script>
 
 <template>
-  <div v-if="props.open" class="modal-backdrop" @click.self="emit('close')">
+  <div v-if="props.open" class="modal-backdrop">
     <section class="modal-card" role="dialog" aria-modal="true" :aria-label="title">
       <header class="modal-card__header">
         <div>

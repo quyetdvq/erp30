@@ -226,7 +226,7 @@ onMounted(() => void load())
     "
     @close="detailOpen = false"
   />
-  <div v-if="modalOpen" class="modal-backdrop" @click.self="modalOpen = false">
+  <div v-if="modalOpen" class="modal-backdrop">
     <section class="modal-card" role="dialog" aria-modal="true" :aria-label="t('product.uomForm')">
       <header class="modal-card__header">
         <h2>{{ editingId ? t('common.edit') : t('common.create') }} {{ t('product.uom') }}</h2>

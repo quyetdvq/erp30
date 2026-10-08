@@ -535,7 +535,7 @@ onMounted(() => {
     </ListShell>
   </section>
 
-  <div v-if="modalOpen" class="modal-backdrop" @click.self="closeModal">
+  <div v-if="modalOpen" class="modal-backdrop">
     <section
       ref="formCard"
       class="modal-card numbering-form-modal"
@@ -543,7 +543,6 @@ onMounted(() => {
       aria-modal="true"
       :aria-label="t('numbering.form')"
       tabindex="-1"
-      @keydown.esc="closeModal"
     >
       <header class="modal-card__header">
         <h2>{{ editingId ? t('numbering.edit') : t('numbering.create') }}</h2>

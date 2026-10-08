@@ -593,11 +593,7 @@ onMounted(async () => {
       />
     </ListShell>
   </section>
-  <div
-    v-if="employeeDetailOpen && selected"
-    class="employee-detail-backdrop"
-    @click.self="employeeDetailOpen = false"
-  >
+  <div v-if="employeeDetailOpen && selected" class="employee-detail-backdrop">
     <section
       class="employee-detail-modal"
       role="dialog"
@@ -777,7 +773,7 @@ onMounted(async () => {
       </div>
     </section>
   </div>
-  <div v-if="employeeModal" class="modal-backdrop" @click.self="employeeModal = false">
+  <div v-if="employeeModal" class="modal-backdrop">
     <section
       class="modal-card"
       role="dialog"
@@ -872,7 +868,7 @@ onMounted(async () => {
       </form>
     </section>
   </div>
-  <div v-if="assignmentModal" class="modal-backdrop" @click.self="assignmentModal = false">
+  <div v-if="assignmentModal" class="modal-backdrop">
     <section
       class="modal-card"
       role="dialog"

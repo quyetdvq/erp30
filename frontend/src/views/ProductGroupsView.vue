@@ -334,7 +334,7 @@ onMounted(() => void load())
     "
     @close="detailOpen = false"
   />
-  <div v-if="modalOpen" class="modal-backdrop" @click.self="modalOpen = false">
+  <div v-if="modalOpen" class="modal-backdrop">
     <section
       class="modal-card"
       role="dialog"

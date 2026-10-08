@@ -688,7 +688,13 @@ onBeforeUnmount(() => resizeEnd?.())
       </NLayout>
     </NLayout>
 
-    <NModal v-model:show="commandOpen" preset="card" class="command-modal">
+    <NModal
+      v-model:show="commandOpen"
+      preset="card"
+      class="command-modal"
+      :mask-closable="false"
+      :close-on-esc="false"
+    >
       <template #header>
         <div class="command-modal-header">
           <span class="command-modal-icon"
@@ -698,6 +704,17 @@ onBeforeUnmount(() => resizeEnd?.())
             <strong>{{ t('shell.commandPalette') }}</strong>
             <small>{{ t('shell.commandDescription') }}</small>
           </div>
+          <NButton
+            quaternary
+            circle
+            :aria-label="t('common.close')"
+            :title="t('common.close')"
+            @click="commandOpen = false"
+          >
+            <template #icon
+              ><NIcon><CloseOutline /></NIcon
+            ></template>
+          </NButton>
         </div>
       </template>
       <NInput
@@ -730,7 +747,7 @@ onBeforeUnmount(() => resizeEnd?.())
       <div v-else class="command-empty">{{ t('shell.noCommands') }}</div>
       <footer class="command-modal-footer">
         <span><kbd>↵</kbd> {{ t('shell.commandOpen') }}</span>
-        <span><kbd>Esc</kbd> {{ t('shell.commandClose') }}</span>
+        <span>{{ t('common.close') }}</span>
       </footer>
     </NModal>
   </div>
@@ -944,6 +961,9 @@ onBeforeUnmount(() => resizeEnd?.())
 .command-modal-header > div {
   display: grid;
   gap: 3px;
+}
+.command-modal-header > .n-button {
+  margin-left: auto;
 }
 .command-modal-header strong {
   color: #183b57;

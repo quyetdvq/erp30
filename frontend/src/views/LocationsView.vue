@@ -355,7 +355,7 @@ onMounted(async () => {
     :fields="detailFields"
     @close="detailOpen = false"
   />
-  <div v-if="modalOpen" class="modal-backdrop" @click.self="modalOpen = false">
+  <div v-if="modalOpen" class="modal-backdrop">
     <section class="modal-card" role="dialog" aria-modal="true" :aria-label="t('common.form')">
       <header>
         <div>

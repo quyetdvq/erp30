@@ -415,7 +415,7 @@ onMounted(() => void load())
         "
     /></ListShell>
   </section>
-  <div v-if="detailOpen && selected" class="modal-backdrop" @click.self="closeDetails">
+  <div v-if="detailOpen && selected" class="modal-backdrop">
     <section
       class="modal-card modal-card--wide"
       role="dialog"
@@ -560,7 +560,7 @@ onMounted(() => void load())
       </footer>
     </section>
   </div>
-  <div v-if="formOpen" class="modal-backdrop" @click.self="formOpen = false">
+  <div v-if="formOpen" class="modal-backdrop">
     <section
       class="modal-card"
       role="dialog"
@@ -612,7 +612,7 @@ onMounted(() => void load())
       </form>
     </section>
   </div>
-  <div v-if="passwordOpen" class="modal-backdrop" @click.self="passwordOpen = false">
+  <div v-if="passwordOpen" class="modal-backdrop">
     <section
       class="modal-card"
       role="dialog"

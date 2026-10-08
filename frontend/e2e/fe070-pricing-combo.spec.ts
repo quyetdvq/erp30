@@ -269,6 +269,23 @@ test.describe('P1-FE-070 Pricing/COMBO UI', () => {
     })
   })
 
+  test('keeps the Price List modal open for backdrop clicks and Escape', async ({ page }) => {
+    await mockSession(page)
+    await mockCatalog(page)
+    await page.goto('/products/price-lists')
+    await page.getByRole('button', { name: 'Tạo' }).click()
+
+    const dialog = page.getByRole('dialog', { name: 'Biểu mẫu Price List' })
+    const backdrop = page.locator('.modal-backdrop')
+    await expect(dialog).toBeVisible()
+    await backdrop.click({ position: { x: 8, y: 8 } })
+    await expect(dialog).toBeVisible()
+    await page.keyboard.press('Escape')
+    await expect(dialog).toBeVisible()
+    await dialog.getByRole('button', { name: 'Hủy' }).click()
+    await expect(dialog).toBeHidden()
+  })
+
   test('uses PATCH for editable fields, set-state action for status, and preserves item decimals', async ({
     page,
   }) => {
