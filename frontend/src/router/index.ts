@@ -109,6 +109,24 @@ const router = createRouter({
           meta: { labelKey: 'nav.productPricePolicies' },
         },
         {
+          path: 'products/import',
+          name: 'products-import',
+          component: () => import('@/views/ProductImportView.vue'),
+          meta: { labelKey: 'nav.productImport' },
+        },
+        {
+          path: 'products/import-jobs/:id',
+          name: 'products-import-job-detail',
+          component: () => import('@/views/ProductImportJobDetailView.vue'),
+          meta: { labelKey: 'nav.productImportJobDetail' },
+        },
+        {
+          path: 'products/import-jobs',
+          name: 'products-import-jobs',
+          component: () => import('@/views/ProductImportJobsView.vue'),
+          meta: { labelKey: 'nav.productImportJobs' },
+        },
+        {
           path: 'products/new',
           name: 'products-new',
           component: () => import('@/views/ProductEditorView.vue'),

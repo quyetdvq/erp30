@@ -231,6 +231,18 @@ const navItems: NavigationItem[] = [
         icon: BusinessOutline,
         permission: 'price_list.view',
       },
+      {
+        labelKey: 'nav.productImport',
+        to: '/products/import',
+        icon: BusinessOutline,
+        permission: 'product.import',
+      },
+      {
+        labelKey: 'nav.productImportJobs',
+        to: '/products/import-jobs',
+        icon: BusinessOutline,
+        permission: 'import_job.view',
+      },
     ],
   },
 ]
