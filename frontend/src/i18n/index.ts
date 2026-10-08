@@ -428,8 +428,8 @@ export const messages = {
       memberPickerNote: 'Chọn toàn bộ User cần thuộc nhóm; backend vẫn là nơi kiểm tra quyền.',
       permissionSourceNote:
         'Chỉ gán Resource Action canonical. Frontend không tự đánh giá PBAC hoặc effect.',
-      saveMembers: 'Lưu Members',
-      savePermissions: 'Lưu Permissions',
+      saveMembers: 'Lưu thành viên',
+      savePermissions: 'Lưu quyền',
       noUsersForMembers: 'Không tải được danh sách User để chỉnh sửa Members.',
       domainImmutable: 'Domain của Resource canonical hiện hữu là read-only.',
       domainCreateNote: 'Chỉ SYSTEM, MASTER hoặc ORGANIZATION; COMPANY không phải Domain hợp lệ.',

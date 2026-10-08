@@ -21,7 +21,6 @@ import {
   listOrganizations,
   listPolicies,
   listPositions,
-  listResourceActionCatalog as listResourceActionCatalogRequest,
   listResourceActions,
   listResources,
   listWorkflowStates,
@@ -49,7 +48,6 @@ import type {
   PolicyPatch,
   Position,
   Resource,
-  ResourceAction,
   ResourceActionCreate,
   ResourceActionPatch,
   SecurityUser,
@@ -68,6 +66,12 @@ import { getCurrentUser, type AuthUser } from '@/services/auth'
 export type SecurityAction = {
   id: string
   resource_id: string
+  code: string
+  description?: string | null
+}
+
+export type SecurityActionSummary = {
+  id: string
   code: string
   description?: string | null
 }
@@ -302,11 +306,17 @@ export async function saveGroupPermissions(
   )
 }
 
-export function listResourcePage(query: ListQuery): Promise<ListResponse<Resource>> {
+export function listResourcePage(
+  query: ListQuery,
+  includeActions = false,
+): Promise<ListResponse<Resource>> {
   return withTypedClient((client) =>
-    listResources({ client, headers: headers(), query: apiQuery(query), throwOnError: true }).then(
-      collection,
-    ),
+    listResources({
+      client,
+      headers: headers(),
+      query: { ...apiQuery(query), include: includeActions ? 'actions' : undefined },
+      throwOnError: true,
+    }).then(collection),
   )
 }
 
@@ -345,18 +355,6 @@ export async function getResourceActions(id: string): Promise<SecurityAction[]> 
       listResourceActions({ client, path: { id }, throwOnError: true }),
     ),
   )
-}
-
-export async function listResourceActionCatalog(): Promise<SecurityAction[]> {
-  const response = await withTypedClient((client) =>
-    listResourceActionCatalogRequest({ client, throwOnError: true }),
-  )
-  return (response.data.data ?? []).map((action: ResourceAction) => ({
-    id: action.id,
-    resource_id: action.resource_id,
-    code: action.code,
-    description: action.description,
-  }))
 }
 
 export async function saveResourceAction(

@@ -89,6 +89,7 @@ final class ResourceCatalogRepository
             fn () => $this->db->table('resource_actions')
                 ->whereIn('resource_id', $resourceIds)
                 ->orderBy('resource_id', 'ASC')
+                ->orderBy('code', 'ASC')
                 ->orderBy('id', 'ASC')
                 ->get(),
         );

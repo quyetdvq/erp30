@@ -20,6 +20,8 @@ async function mockSession(page: Page): Promise<void> {
               'user.create',
               'user.edit',
               'user.setstate',
+              'user.assign_permission',
+              'user.reset_password',
               'authorization_group.view',
               'authorization_group.create',
               'authorization_group.edit',
@@ -117,16 +119,6 @@ test.describe('P1-FE-030 security surfaces', () => {
         }),
       }),
     )
-    await page.route('**/api/v1/resource-actions', async (route) =>
-      route.fulfill({
-        status: 200,
-        contentType: 'application/json',
-        body: JSON.stringify({
-          data: [{ id: '20', resource_id: '2', code: 'view', description: null }],
-          meta: { request_id: 'test-resource-actions' },
-        }),
-      }),
-    )
     await page.route('**/api/v1/authorization-groups/1/permissions', async (route) =>
       route.fulfill({
         status: 200,
@@ -137,8 +129,10 @@ test.describe('P1-FE-030 security surfaces', () => {
         }),
       }),
     )
-    await page.route('**/api/v1/resources*', async (route) =>
-      route.fulfill({
+    await page.route('**/api/v1/resources*', async (route) => {
+      const includeActions =
+        new URL(route.request().url()).searchParams.get('include') === 'actions'
+      await route.fulfill({
         status: 200,
         contentType: 'application/json',
         body: JSON.stringify({
@@ -149,12 +143,15 @@ test.describe('P1-FE-030 security surfaces', () => {
               name: 'Policy',
               domain: 'ORGANIZATION',
               lifecycle_id: '50',
+              ...(includeActions
+                ? { actions: [{ id: '20', code: 'view', description: null }] }
+                : {}),
             },
           ],
           meta: { page: 1, page_size: 25, total: 1, request_id: 'test-resource' },
         }),
-      }),
-    )
+      })
+    })
     await page.route('**/api/v1/resources/2/actions', async (route) =>
       route.fulfill({
         status: 200,
@@ -286,13 +283,23 @@ test.describe('P1-FE-030 security surfaces', () => {
     let securityUserRequests = 0
     let resourceActionRequests = 0
     let resourceActionCatalogRequests = 0
+    let resourceWithActionsRequests = 0
+    let permissionPutRequests = 0
     page.on('request', (request) => {
       if (request.url().includes('/api/v1/authorization-groups/1/members')) memberRequests += 1
       if (request.url().includes('/api/v1/security/users')) securityUserRequests += 1
       if (/\/api\/v1\/resources\/[^/]+\/actions$/.test(new URL(request.url()).pathname))
         resourceActionRequests += 1
-      if (new URL(request.url()).pathname.endsWith('/api/v1/resource-actions'))
+      const requestUrl = new URL(request.url())
+      if (requestUrl.pathname.endsWith('/api/v1/resource-actions'))
         resourceActionCatalogRequests += 1
+      if (
+        requestUrl.pathname.endsWith('/api/v1/resources') &&
+        requestUrl.searchParams.get('include') === 'actions'
+      )
+        resourceWithActionsRequests += 1
+      if (request.method() === 'PUT' && requestUrl.pathname.endsWith('/api/v1/users/7/permissions'))
+        permissionPutRequests += 1
     })
     await page.goto('/security/users')
     await expect(page.getByRole('heading', { name: 'Người dùng' })).toBeVisible()
@@ -342,16 +349,22 @@ test.describe('P1-FE-030 security surfaces', () => {
     expect(resourceActionRequests).toBe(0)
     expect(resourceActionCatalogRequests).toBe(0)
     await detailDialog.getByRole('button', { name: 'Direct Permissions' }).click()
-    await expect.poll(() => resourceActionCatalogRequests).toBe(1)
+    await expect.poll(() => resourceWithActionsRequests).toBe(1)
+    expect(resourceActionCatalogRequests).toBe(0)
     expect(resourceActionRequests).toBe(0)
+    await detailDialog.locator('details').first().locator('summary').click()
+    await detailDialog.getByRole('checkbox').first().check()
+    await detailDialog.getByRole('button', { name: 'Lưu quyền' }).click()
+    await expect.poll(() => permissionPutRequests).toBe(1)
     await detailDialog.getByRole('button', { name: 'Tổng quan' }).click()
     await detailDialog.getByRole('button', { name: 'Direct Permissions' }).click()
-    expect(resourceActionCatalogRequests).toBe(1)
+    expect(resourceWithActionsRequests).toBe(1)
+    expect(resourceActionCatalogRequests).toBe(0)
     expect(resourceActionRequests).toBe(0)
     const detailAccessibility = await new AxeBuilder({ page }).include('.modal-card').analyze()
     expect(detailAccessibility.violations).toEqual([])
     expect(memberRequests).toBeGreaterThan(0)
-    expect(securityUserRequests).toBe(1)
+    expect(securityUserRequests).toBe(2)
   })
 
   test('authorization groups show all members and resource/action permissions in a modal', async ({

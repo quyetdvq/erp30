@@ -27,7 +27,8 @@ final class ResourceCatalogRepositoryBulkActionsTest extends CIUnitTestCase
 
         $result = $this->createMock(ResultInterface::class);
         $result->expects($this->once())->method('getResultArray')->willReturn([
-            ['id' => '30', 'resource_id' => '3', 'code' => 'view', 'description' => null],
+            ['id' => '30', 'resource_id' => '3', 'code' => 'edit', 'description' => 'Edit'],
+            ['id' => '31', 'resource_id' => '3', 'code' => 'view', 'description' => null],
             ['id' => '70', 'resource_id' => '7', 'code' => 'edit', 'description' => 'Edit'],
         ]);
         $builder->expects($this->once())->method('get')->willReturn($result);
@@ -37,9 +38,10 @@ final class ResourceCatalogRepositoryBulkActionsTest extends CIUnitTestCase
 
         $rows = (new ResourceCatalogRepository($db))->findResourceActionsForResources([3, 7, 11]);
 
-        $this->assertSame([['resource_id', 'ASC'], ['id', 'ASC']], $orderBys);
+        $this->assertSame([['resource_id', 'ASC'], ['code', 'ASC'], ['id', 'ASC']], $orderBys);
         $this->assertSame([
-            ['id' => '30', 'resource_id' => '3', 'code' => 'view', 'description' => null],
+            ['id' => '30', 'resource_id' => '3', 'code' => 'edit', 'description' => 'Edit'],
+            ['id' => '31', 'resource_id' => '3', 'code' => 'view', 'description' => null],
             ['id' => '70', 'resource_id' => '7', 'code' => 'edit', 'description' => 'Edit'],
         ], $rows);
     }

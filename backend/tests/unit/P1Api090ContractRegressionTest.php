@@ -140,6 +140,9 @@ final class P1Api090ContractRegressionTest extends CIUnitTestCase
             $this->assertStringContainsString($approvedUserRoute, $openapi);
         }
         $this->assertStringNotContainsString('/api/v1/shield/users', $routes . "\n" . $openapi);
+        $this->assertStringNotContainsString('/api/v1/resource-actions', $routes . "\n" . $openapi);
+        $this->assertStringContainsString('name: include', $openapi);
+        $this->assertStringContainsString('enum: [actions]', $openapi);
         $this->assertDoesNotMatchRegularExpression('#^\s{2}/api/v1/[^:]*export[^:]*:#im', $openapi);
         $this->assertDoesNotMatchRegularExpression('#/export(?:[\'"\s])#i', $routes);
         $this->assertDoesNotMatchRegularExpression('#price[-_]?resolution|resolvePrice#i', $routes . "\n" . $openapi);

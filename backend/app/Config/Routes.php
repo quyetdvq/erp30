@@ -79,7 +79,6 @@ $routes->group('api/v1', ['filter' => 'cors'], static function (RouteCollection 
     $routes->get('authorization-groups/(:num)/permissions', 'Api\\AuthorizationWorkflow::permissions/$1');
     $routes->put('authorization-groups/(:num)/permissions', 'Api\\AuthorizationWorkflow::replacePermissions/$1');
     $routes->get('resources/(:num)/actions', 'Api\\AuthorizationWorkflow::actions/$1');
-    $routes->get('resource-actions', 'Api\\AuthorizationWorkflow::resourceActionCatalog');
     $routes->post('resources/(:num)/actions', 'Api\\AuthorizationWorkflow::createAction/$1');
     $routes->patch('resources/(:num)/actions/(:num)', 'Api\\AuthorizationWorkflow::updateAction/$1/$2');
     $routes->delete('resources/(:num)/actions/(:num)', 'Api\\AuthorizationWorkflow::deleteAction/$1/$2');

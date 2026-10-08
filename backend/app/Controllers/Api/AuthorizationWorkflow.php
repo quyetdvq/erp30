@@ -115,11 +115,6 @@ final class AuthorizationWorkflow extends ApiController
         return $this->respondData($this->service()->resourceActions($id));
     }
 
-    public function resourceActionCatalog(): ResponseInterface
-    {
-        return $this->respondData($this->service()->resourceActionCatalog());
-    }
-
     public function createAction(int $id): ResponseInterface
     {
         return $this->respondData($this->service()->createResourceAction($id, $this->jsonPayload()), 201);

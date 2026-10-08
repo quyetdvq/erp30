@@ -912,9 +912,7 @@ export type Resource = {
     name: string;
     domain: 'SYSTEM' | 'MASTER' | 'ORGANIZATION';
     lifecycle_id?: BigInt;
-    actions?: Array<{
-        [key: string]: unknown;
-    }>;
+    actions?: Array<ResourceActionSummary>;
 };
 
 export type ResourceCreate = {
@@ -941,6 +939,12 @@ export type ResourceActionPatch = {
 export type ResourceAction = {
     id: BigInt;
     resource_id: BigInt;
+    code: string;
+    description: string | null;
+};
+
+export type ResourceActionSummary = {
+    id: BigInt;
     code: string;
     description: string | null;
 };
@@ -1120,10 +1124,6 @@ export type ResourceResponse = SuccessResponse & {
 
 export type ResourceCollection = CollectionResponse & {
     data?: Array<Resource>;
-};
-
-export type ResourceActionCollection = SuccessResponse & {
-    data?: Array<ResourceAction>;
 };
 
 export type NumberingSeriesResponse = SuccessResponse & {
@@ -4116,6 +4116,10 @@ export type ListResourcesData = {
         filter?: {
             [key: string]: string | Array<string>;
         };
+        /**
+         * Include nested Resource Actions for this page.
+         */
+        include?: 'actions';
     };
     url: '/api/v1/resources';
 };
@@ -4349,35 +4353,6 @@ export type CreateResourceActionResponses = {
 };
 
 export type CreateResourceActionResponse = CreateResourceActionResponses[keyof CreateResourceActionResponses];
-
-export type ListResourceActionCatalogData = {
-    body?: never;
-    path?: never;
-    query?: never;
-    url: '/api/v1/resource-actions';
-};
-
-export type ListResourceActionCatalogErrors = {
-    /**
-     * Unauthenticated or invalid authentication.
-     */
-    401: ErrorResponse;
-    /**
-     * Visible target but action denied.
-     */
-    403: ErrorResponse;
-};
-
-export type ListResourceActionCatalogError = ListResourceActionCatalogErrors[keyof ListResourceActionCatalogErrors];
-
-export type ListResourceActionCatalogResponses = {
-    /**
-     * Visible resource action catalog.
-     */
-    200: ResourceActionCollection;
-};
-
-export type ListResourceActionCatalogResponse = ListResourceActionCatalogResponses[keyof ListResourceActionCatalogResponses];
 
 export type DeleteResourceActionData = {
     body?: never;

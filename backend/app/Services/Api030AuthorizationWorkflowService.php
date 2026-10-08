@@ -23,6 +23,7 @@ use App\Repositories\ResourceCatalogRepository;
 use App\Repositories\ShieldSecurityUserRepository;
 use CodeIgniter\Database\ConnectionInterface;
 use CodeIgniter\Exceptions\PageNotFoundException;
+use CodeIgniter\HTTP\Exceptions\BadRequestException;
 use CodeIgniter\Shield\Entities\User;
 
 /** Application boundary for the CONTRACT_READY P1-API-030 surface. */
@@ -57,12 +58,13 @@ final class Api030AuthorizationWorkflowService
     public function list(string $resource, array $query): CommonListResult
     {
         $this->assertResource($resource);
+        $includeActions = $this->includeResourceActions($resource, $query);
         $operation = $this->operation();
         $rows = [];
         foreach ($this->rows($resource) as $row) {
             try {
                 $this->authorize($resource, 'view', $row, [], $operation);
-                $rows[] = $this->output($resource, $row);
+                $rows[] = $this->output($resource, $row, $resource !== 'resource');
             } catch (DomainException $exception) {
                 if ($this->isVisibilityDenial($exception)) {
                     continue;
@@ -72,11 +74,23 @@ final class Api030AuthorizationWorkflowService
         }
 
         $query = $this->applyListFilters($resource, $query, $rows);
-        return ($this->queryAdapter ?? new CommonListQueryAdapter())->paginate(
+        $result = ($this->queryAdapter ?? new CommonListQueryAdapter())->paginate(
             $query,
             $this->allowlist($resource),
             new AuthorizedArrayListSource($rows),
         );
+
+        if ($includeActions) {
+            /** @var list<array<string, mixed>> $pageRows */
+            $pageRows = iterator_to_array($result->data, false);
+            $result = new CommonListResult(
+                $this->attachResourceActions($pageRows),
+                $result->query,
+                $result->total,
+            );
+        }
+
+        return $result;
     }
 
     /** @param array<string, mixed> $query */
@@ -256,34 +270,6 @@ final class Api030AuthorizationWorkflowService
         $this->authorize('resource', 'view', $resource, [], $this->operation());
 
         return $this->resourceRepository()->findResourceActions($resourceId);
-    }
-
-    /** @return list<array{id: int, resource_id: int, code: string, description: string|null}> */
-    public function resourceActionCatalog(): array
-    {
-        $operation = $this->operation();
-        $visibleResourceIds = [];
-        foreach ($this->resourceRepository()->findResources() as $resource) {
-            try {
-                $this->authorize('resource', 'view', $resource, [], $operation);
-                $visibleResourceIds[] = (int) $resource['id'];
-            } catch (DomainException $exception) {
-                if (! $this->isVisibilityDenial($exception)) {
-                    throw $exception;
-                }
-            }
-        }
-
-        $rows = $this->resourceRepository()->findResourceActionsForResources($visibleResourceIds);
-        return array_map(
-            static fn (array $row): array => [
-                'id' => (int) $row['id'],
-                'resource_id' => (int) $row['resource_id'],
-                'code' => (string) $row['code'],
-                'description' => isset($row['description']) ? (string) $row['description'] : null,
-            ],
-            $rows,
-        );
     }
 
     /**
@@ -544,15 +530,65 @@ final class Api030AuthorizationWorkflowService
      * @param array<string, mixed> $row
      * @return array<string, mixed>
      */
-    private function output(string $resource, array $row): array
+    private function output(string $resource, array $row, bool $includeResourceActions = true): array
     {
         if ($resource === 'policy') {
             $row['actions'] = $this->policyRepository()->findPolicyActions((int) $row['id']);
         }
-        if ($resource === 'resource') {
+        if ($resource === 'resource' && $includeResourceActions) {
             $row['actions'] = $this->resourceRepository()->findResourceActions((int) $row['id']);
         }
         return $row;
+    }
+
+    /** @param array<string, mixed> $query */
+    private function includeResourceActions(string $resource, array &$query): bool
+    {
+        if (! array_key_exists('include', $query)) {
+            return false;
+        }
+        if ($resource !== 'resource') {
+            return false;
+        }
+        if (! is_string($query['include']) || $query['include'] !== 'actions') {
+            throw new BadRequestException('Malformed list query: include.');
+        }
+        unset($query['include']);
+
+        return true;
+    }
+
+    /** @param list<array<string, mixed>> $rows
+     *  @return list<array<string, mixed>>
+     */
+    private function attachResourceActions(array $rows): array
+    {
+        $resourceIds = [];
+        foreach ($rows as $row) {
+            $id = filter_var($row['id'] ?? null, FILTER_VALIDATE_INT, ['options' => ['min_range' => 1]]);
+            if ($id !== false) {
+                $resourceIds[] = (int) $id;
+            }
+        }
+
+        $actionsByResource = [];
+        foreach ($this->resourceRepository()->findResourceActionsForResources(array_values(array_unique($resourceIds))) as $action) {
+            $resourceId = (int) ($action['resource_id'] ?? 0);
+            $actionsByResource[$resourceId][] = [
+                'id' => (int) ($action['id'] ?? 0),
+                'code' => (string) ($action['code'] ?? ''),
+                'description' => array_key_exists('description', $action) && $action['description'] !== null
+                    ? (string) $action['description']
+                    : null,
+            ];
+        }
+
+        foreach ($rows as &$row) {
+            $row['actions'] = $actionsByResource[(int) ($row['id'] ?? 0)] ?? [];
+        }
+        unset($row);
+
+        return $rows;
     }
 
     /**

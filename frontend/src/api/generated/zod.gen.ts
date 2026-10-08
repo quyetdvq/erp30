@@ -1036,19 +1036,6 @@ export const zAuthorizationGroupPermissions = z.object({
     resource_action_ids: z.array(zBigInt)
 });
 
-export const zResource = z.object({
-    id: zBigInt,
-    type: z.string(),
-    name: z.string(),
-    domain: z.enum([
-        'SYSTEM',
-        'MASTER',
-        'ORGANIZATION'
-    ]),
-    lifecycle_id: zBigInt.optional(),
-    actions: z.array(z.record(z.string(), z.unknown())).optional()
-});
-
 export const zResourceCreate = z.object({
     type: z.string(),
     name: z.string(),
@@ -1079,6 +1066,25 @@ export const zResourceAction = z.object({
     resource_id: zBigInt,
     code: z.string(),
     description: z.string().nullable()
+});
+
+export const zResourceActionSummary = z.object({
+    id: zBigInt,
+    code: z.string(),
+    description: z.string().nullable()
+});
+
+export const zResource = z.object({
+    id: zBigInt,
+    type: z.string(),
+    name: z.string(),
+    domain: z.enum([
+        'SYSTEM',
+        'MASTER',
+        'ORGANIZATION'
+    ]),
+    lifecycle_id: zBigInt.optional(),
+    actions: z.array(zResourceActionSummary).optional()
 });
 
 export const zNumberingSeries = z.object({
@@ -1292,10 +1298,6 @@ export const zResourceResponse = zSuccessResponse.and(z.object({
 
 export const zResourceCollection = zCollectionResponse.and(z.object({
     data: z.array(zResource).optional()
-}));
-
-export const zResourceActionCollection = zSuccessResponse.and(z.object({
-    data: z.array(zResourceAction).optional()
 }));
 
 export const zNumberingSeriesResponse = zSuccessResponse.and(z.object({
@@ -2320,7 +2322,8 @@ export const zListResourcesQuery = z.object({
     filter: z.record(z.string(), z.union([
         z.string(),
         z.array(z.string())
-    ])).optional()
+    ])).optional(),
+    include: z.enum(['actions']).optional()
 });
 
 /**
@@ -2383,11 +2386,6 @@ export const zCreateResourceActionPath = z.object({
  * Successful API response.
  */
 export const zCreateResourceActionResponse = zSuccessResponse;
-
-/**
- * Visible resource action catalog.
- */
-export const zListResourceActionCatalogResponse = zResourceActionCollection;
 
 export const zDeleteResourceActionPath = z.object({
     id: zBigInt,

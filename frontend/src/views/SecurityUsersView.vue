@@ -22,14 +22,13 @@ import {
   getGroupMembers,
   getSecurityUserPermissions,
   listAuthorizationGroupPage,
-  listResourceActionCatalog,
   listResourcePage,
   listSecurityUserPage,
   resetSecurityUserPassword,
   saveGroupMembers,
   saveSecurityUser,
   saveSecurityUserPermissions,
-  type SecurityAction,
+  type SecurityActionSummary,
   type SecurityMember,
   type UserState,
 } from '@/services/security'
@@ -57,7 +56,7 @@ const form = ref({ username: '', email: '', password: '', state: 'ACTIVE' as Use
 const resetPassword = ref('')
 const groups = ref<AuthorizationGroup[]>([])
 const resources = ref<Resource[]>([])
-const resourceActions = ref<Record<string, SecurityAction[]>>({})
+const resourceActions = ref<Record<string, SecurityActionSummary[]>>({})
 const permissionCatalogLoaded = ref(false)
 const permissionCatalogLoading = ref(false)
 const membersByGroup = ref<Record<string, SecurityMember[]>>({})
@@ -122,13 +121,11 @@ async function load(): Promise<void> {
 async function loadDetail(): Promise<void> {
   if (!selected.value) return
   try {
-    const [groupPage, resourcePage, direct] = await Promise.all([
+    const [groupPage, direct] = await Promise.all([
       listAuthorizationGroupPage({ q: '', page: 1, page_size: 200, sort: 'name', filter: {} }),
-      listResourcePage({ q: '', page: 1, page_size: 200, sort: 'type', filter: {} }),
       getSecurityUserPermissions(String(selected.value.id)),
     ])
     groups.value = groupPage.data
-    resources.value = resourcePage.data
     permissionDraft.value = direct
     const entries = await Promise.all(
       groups.value.map(
@@ -148,12 +145,22 @@ async function loadPermissionCatalog(): Promise<void> {
   if (permissionCatalogLoaded.value || permissionCatalogLoading.value) return
   permissionCatalogLoading.value = true
   try {
-    const catalog = await listResourceActionCatalog()
-    resourceActions.value = catalog.reduce<Record<string, SecurityAction[]>>((result, action) => {
-      const resourceId = String(action.resource_id)
-      ;(result[resourceId] ??= []).push(action)
-      return result
-    }, {})
+    const resourcePage = await listResourcePage(
+      { q: '', page: 1, page_size: 200, sort: 'type', filter: {} },
+      true,
+    )
+    resources.value = resourcePage.data
+    resourceActions.value = resourcePage.data.reduce<Record<string, SecurityActionSummary[]>>(
+      (result, resource) => {
+        result[String(resource.id)] = (resource.actions ?? []).map((action) => ({
+          id: String(action.id),
+          code: action.code,
+          description: action.description,
+        }))
+        return result
+      },
+      {},
+    )
     permissionCatalogLoaded.value = true
   } catch (caught: unknown) {
     error.value = caught
@@ -162,7 +169,7 @@ async function loadPermissionCatalog(): Promise<void> {
     permissionCatalogLoading.value = false
   }
 }
-function permissionKey(resource: Resource, action: SecurityAction): string {
+function permissionKey(resource: Resource, action: SecurityActionSummary): string {
   return `${resource.type}.${action.code}`.toLowerCase()
 }
 function selectTab(nextTab: 'overview' | 'groups' | 'permissions'): void {
@@ -172,8 +179,17 @@ function selectTab(nextTab: 'overview' | 'groups' | 'permissions'): void {
 function openDetails(row: ManagedUser): void {
   selectedId.value = String(row.id)
   tab.value = 'overview'
+  permissionCatalogLoaded.value = false
+  resources.value = []
+  resourceActions.value = {}
   detailOpen.value = true
   void loadDetail()
+}
+function closeDetails(): void {
+  detailOpen.value = false
+  permissionCatalogLoaded.value = false
+  resources.value = []
+  resourceActions.value = {}
 }
 function openCreate(): void {
   editingId.value = undefined
@@ -190,7 +206,7 @@ function openEdit(row?: ManagedUser): void {
     password: '',
     state: (selected.value.status as UserState) || (selected.value.active ? 'ACTIVE' : 'INACTIVE'),
   }
-  detailOpen.value = false
+  closeDetails()
   formOpen.value = true
 }
 async function saveIdentity(): Promise<void> {
@@ -278,7 +294,6 @@ async function saveMembership(): Promise<void> {
       if (nextIds.join(',') !== previousIds.join(','))
         membersByGroup.value[groupId] = await saveGroupMembers(groupId, nextIds)
     }
-    permissionCatalogLoaded.value = false
     await refreshBasePermissions()
     await loadDetail()
     await load()
@@ -297,7 +312,6 @@ async function savePermissions(): Promise<void> {
       String(selected.value.id),
       permissionDraft.value,
     )
-    permissionCatalogLoaded.value = false
     await refreshBasePermissions()
     await load()
   } catch (caught: unknown) {
@@ -401,7 +415,7 @@ onMounted(() => void load())
         "
     /></ListShell>
   </section>
-  <div v-if="detailOpen && selected" class="modal-backdrop" @click.self="detailOpen = false">
+  <div v-if="detailOpen && selected" class="modal-backdrop" @click.self="closeDetails">
     <section
       class="modal-card modal-card--wide"
       role="dialog"
@@ -418,7 +432,7 @@ onMounted(() => void load())
             type="button"
             class="icon-button"
             :aria-label="t('common.close')"
-            @click="detailOpen = false"
+            @click="closeDetails"
           >
             ×
           </button>
@@ -530,7 +544,7 @@ onMounted(() => void load())
           type="button"
           class="primary-button"
           :disabled="busy || !hasBasePermission('authorization_group', 'assign_member')"
-          @click="void saveMembership"
+          @click="void saveMembership()"
         >
           {{ busy ? t('common.saving') : t('security.saveMembers') }}
         </button>
@@ -539,7 +553,7 @@ onMounted(() => void load())
           type="button"
           class="primary-button"
           :disabled="busy || !hasBasePermission('user', 'assign_permission')"
-          @click="void savePermissions"
+          @click="void savePermissions()"
         >
           {{ busy ? t('common.saving') : t('security.savePermissions') }}
         </button>
