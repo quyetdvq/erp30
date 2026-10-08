@@ -700,3 +700,242 @@ Sales Order
       └── external_status / status history
 ```
 Các file nằm trong mục “Nguồn” của project DinkERP.
+
+Resource organization_id
+
+COMPANY 
+
+Trong bảng Resource Có định nghĩ domain. Tôi đề nghị xét theo domain.
+
+Đồng ý với các phân tích của bạn và chốt Đổi domain thành ORGANIZATION. Bạn hãy check lại lần cuối xem hợp lý chưa và nên phân chia cụ thể các Resource và domain phù hợp để chốt luôn.
+
+
+
+P1-DSP-006 admin Display Settings + My Display Preferences UI
+P1-DSP-090 regression/E2E closure
+
+Nên để triển khai ở giữ Gate 8, sau:
+
+P1-FE-001	App shell/router/session/error boundary	P1-API-001, P1-API-002
+P1-FE-002	Typed API integration + common query state	P1-API-002
+ P1-DSP-001
+ 
+ COMPANY
+ 
+ Tính năng đăng nhập đã OK và không bị vỡ hình. Như ảnh bạn hãy sửa 1 số chỗ sau;
+ 
+ 1: Bỏ icon menu ba ghạch trước logo,
+ 2: Khi nhỏ Slide Bar bên trái, chỉ để hiển thị 5 icon đại diện cho 5 tab.
+ 3: Chức năng thông báo và thay đổi màu sắc chưa hoạt động.
+ 4: Khi thay đổi kích thước chiều ngang bị giật lag không mượt.
+ 5: Màn hình đăng nhập cho bé lại để không phải dùng đến con trượt lên xuống. Chỉ cho vừa 1 màn hình chiều cao.
+ 6: Command palette (Modal) chỉnh lại cho chuyên nghiệp theo ảnh mẫu.
+ 
+ 
+ Trong màn hình: http://erp.monmin.net/system/display-settings
+ 
+ Có 2 lỗi:
+ 
+ 1. Như ảnh: không thể lưu cấu hình.
+ 2. Khi chọn cấu hình cho Organization Thì không load được các Organization Bên trong
+ 
+ Hãy lấy màn hình settings/locations/wards làm chuẩn. Áp dụng cho các màn hình khác.
+ Áp dụng cho: /people/departments
+ /people/positions
+ /people/employees <-- Khi Click vào xem chi tiết thì hiển thị Modal như ảnh.
+ 
+ Đồng bộ /people/employees theo /settings/locations/wards
+ Tab Contact và Audit như ảnh cũng đồng bộ với /settings/locations/wards
+ 
+ Bạn hãy check các vấn để sau
+ 
+ 1. Màn hình /security/users
+- Hiện tại chưa tải đầy đủ danh sách người dùng.
+- Toàn bộ dữ liệu trên màn hình nên áp dụng mô hình Table First:
+  - Hiển thị danh sách người dùng dưới dạng bảng.
+  - Thông tin chi tiết của từng người dùng không hiển thị trực tiếp trong bảng mà mở trong Modal khi người dùng nhấn View Details hoặc click vào một dòng.
+2. Màn hình /security/authorization-groups
+- Cần chuyển giao diện sang mô hình Table First tương tự màn hình Users.
+- Khi mở chi tiết một Authorization Group, cần kiểm tra và sửa các vấn đề sau:
+  - Tab Members
+    - Danh sách thành viên đang tải không đúng.
+    - Chưa hiển thị đầy đủ toàn bộ thành viên thuộc nhóm.
+  - Tab Permissions
+    - Chưa hiển thị tên Resource.
+    - Cần hiển thị đầy đủ thông tin của từng quyền, bao gồm tối thiểu: Resource, Action, Effect (Allow/Deny/Absolute Deny) và các thông tin liên quan khác nếu có.
+
+Bạn hãy tham khảo cách trình bày trong ảnh	
+
+
+Bạn hãy tối ưu lại luồng gọi API. Khi truy cập màn hình: /security/users đã gọi quá nhiều api.
+
+Khi xem tất danh sách tất cả các user, bạn hãy tạo api mới thay vì việc bạn phải lấy danh sách tất cả các thành viên trong từng group. Như Api /api/v1/authorization-groups/1/members chưa tối ưu nên truy vấn toàn bộ thông tin user rồi render 1 lần sẽ đầy đủ và nhanh hơn.
+
+Trong màn hình /security/policies có cho phép lưu lặp như ảnh không?
+
+
+Tối ưu màn hình: /security/policies
+1. Organization scope -> Danh sách Organization theo cấu trúc cha con (đã sử dụng trong /system/display-settings đề nghị tái sử dụng)
+2. Workflow State hiện tại đang liệt kê tất cả các state. --> Chỉ liệt kê các Stage của Resource theo lifecycle Của Resource Đó.
+3. Participant Type khi chọn user đang lỗi không load toàn bộ user. --> Có chức năng tìm kiếm trong dropdown vì nhiều dữ liệu (USER, Position, Department, Organization)
+4. Thay buttom common.delete bằng icon xoá.
+
+Tôi đề nghị như sau:
+Bước 1 Thực hiện thay đổi tài liệu cho đồng thời cả 2: CHANGE-USER-IDENTITY-MUTATION-001 và CHANGE-POLICY-SCOPE-UNIQUENESS-001.
+Bước 2 triển khai codding lần lượt từng thay đổi.
+
+========
+
+Bạn hãy ghi nhớ nguyên tắc Table First: 
+
+Nguyên tắc trình bày giao diện: Table First
+Kể từ bây giờ, tất cả các màn hình quản lý danh sách (List Management) phải tuân thủ thống nhất nguyên tắc Table First.
+
+
+1. Bố cục chuẩn
+Mỗi màn hình quản lý dữ liệu phải có cấu trúc theo thứ tự sau:
+
+```
++----------------------------------------------------+
+| Title                [+ New] [+ Import nếu có]    |
++----------------------------------------------------+
+
+Search
+Filter
+Sort
+Apply
+Reset
+↻ Refresh
+
+Page Size & Pagination
+
+-------------------------------------------------------
+| Table                                               |
+-------------------------------------------------------
+| Code | Name | ... | Status | Actions               |
+-------------------------------------------------------
+
+Page Size & Pagination
+
+```
+
+Thông tin chi tiết của bản ghi không hiển thị trực tiếp trên màn hình danh sách, mà chỉ được mở khi người dùng thực hiện thao tác (Cột Actions):
+- View
+- Edit
+- History
+- Permission
+- ...
+Chi tiết được hiển thị bằng một trong các hình thức:
+- Modal (ưu tiên)
+- Drawer
+- Side Panel
+2. Quy tắc trình bày Table
+- Table luôn là thành phần trung tâm của màn hình.
+- Cột Actions (Thao tác) luôn là cột cuối cùng và căn lề phải.
+- Cột Status (Trạng thái) luôn đứng ngay trước cột Actions.
+- Thứ tự các cột phải được thiết kế nhất quán giữa các màn hình để tạo trải nghiệm sử dụng đồng bộ.
+3. Quy tắc trình bày Modal
+Tất cả các Modal trong hệ thống phải sử dụng cùng một chuẩn giao diện.
+Bao gồm:
+- Header được chuẩn hóa (Title, Close Button).
+- Body có khoảng cách (padding/margin) thống nhất.
+- Footer được chuẩn hóa.
+- Các nút thao tác (Save, Cancel, Close...) phải có cùng vị trí, kích thước, màu sắc và khoảng cách trên tất cả các Modal.
+- Khoảng cách lề (spacing), căn chỉnh (alignment) và typography phải đồng bộ với Design System của toàn hệ thống.
+
+=========
+
+Áp dụng cho màn hình /security/users
+Hãy chỉnh sửa màn hình /security/users theo các nguyên tắc trên.
+Danh sách User
+- Áp dụng đầy đủ nguyên tắc Table First.
+- Cột Thao tác phải luôn là cột cuối cùng và được căn lề phải.
+- Cột Trạng thái phải luôn đứng ngay trước cột Thao tác.
+Modal xem chi tiết User
+- Đồng bộ giao diện với các Modal khác trong hệ thống.
+- Chuẩn hóa Header, Body và Footer theo Design System.
+- Kiểm tra và đồng bộ:
+  - Padding và Margin.
+  - Khoảng cách giữa các thành phần.
+  - Căn lề.
+  - Kiểu hiển thị Label/Value.
+  - Vị trí và kiểu của các nút thao tác.
+  - Kích thước và khoảng cách giữa các nút.
+Mục tiêu: xây dựng một giao diện nhất quán trên toàn bộ hệ thống, để mọi màn hình quản lý dữ liệu đều có cùng cách trình bày, cùng trải nghiệm sử dụng và dễ bảo trì trong quá trình phát triển.
+
+
+Bạn có thấy file:
+.codex\skills\dinkerp-implementation\references\frontend-table-first.md
+
+
+Hãy chèn thêm đoạn nội dung sau vào SKILL.md
+
+## Frontend presentation
+
+For any frontend List Management implementation, modification, review, or
+closure task, read and enforce
+[references/frontend-table-first.md](references/frontend-table-first.md).
+
+Table First is mandatory unless current approved UI authority explicitly
+defines an exception.
+
+Do not close a frontend task that violates the mandatory Table First
+acceptance checklist.
+
+
+Tôi check và kết quả như sau: 
+
+Khi mở detail Overview, số request /api/v1/resources/{id}/actions là 0; 
+Khi bấm tab Direct Permissions mới có request /api/v1/resources/{id}/actions:
+Nó là n request Kiểu: /api/v1/resources/1/actions; /api/v1/resources/2/actions .....
+
+
+Tôi check và kết quả như sau: 
+Khi mở detail Overview, số request /api/v1/resources/{id}/actions là 0;
+Khi bấm tab Direct Permissions mới có request /api/v1/resources/{id}/actions:
+Nó là n request Kiểu: /api/v1/resources/1/actions; /api/v1/resources/2/actions .....
+
+Đúng, N request đó là dạng N+1 do API hiện chỉ có endpoint theo từng resource:
+GET /api/v1/resources/{id}/actions
+
+
+
+
+
+CHANGE-USER-IDENTITY-MUTATION-001
+Status: NEEDS_VERIFY / PARTIAL
+Implemented:
+- Shield-owned routes and service for create, edit, state, reset-password, and direct permissions.
+- user.reset_password catalog action and forward migration.
+- Shield persistence only; no local password store or credential output.
+- Permission-filtered /security/users UX with Overview, Authorization Groups, Direct Permissions, state/reset/edit/create controls.
+- Canonical group membership APIs and direct-permission refresh behavior.
+- OpenAPI and generated client updated.
+- i18n and accessibility-oriented E2E updates.
+Validation:
+- AUTHORITY_CACHE: VALID | PASS
+- PHPStan 8 | PASS
+- OpenAPI lint/codegen drift | PASS
+- TypeScript, ESLint, Prettier, frontend unit tests, production build | PASS
+- Chromium/WebKit security E2E | PASS
+- Firefox E2E | FAIL: 3 browser click timeouts
+- PHPUnit Shield/IAM regressions | BLOCKED by persistent erp_test migration/schema state
+- Oxlint | FAIL on unrelated existing unused test variable
+- git diff --check | PASS
+Commit: NOT CREATED because required backend/Firefox verification is incomplete.
+Worktree: task changes remain uncommitted; pre-existing favicon/docs changes were preserved.
+P1-FE-050 unblocked: NO
+P1-FE-050 started: NO
+
+
+
+
+
+Với màn hình /security/authorization-groups
+1. Chuẩn hoá lại giao diện theo .codex\skills\dinkerp-implementation\references\frontend-table-first.md
+2. Tab "Permissions" của modal thay vì N request đó là dạng N+1 do API hiện chỉ có endpoint theo từng resource:
+GET /api/v1/resources/{id}/action hãy sử dụng /api/v1/resources?page=1&page_size=200&sort=type&include=actions (tương tự /security/users)
+
+Tương tự như màn hình /security/authorization-groups hãy chuẩn hoá lại màn hình /security/resources
+
+Bỏ 2 menu "Groups and permissions" (/admin/groups) và User (/admin/users) đồng thời xoá các thứ liên quan trên Frontend. Vì đây là code cũ của dự án cũ giờ không dùng đến. 

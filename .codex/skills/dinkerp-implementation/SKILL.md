@@ -110,6 +110,18 @@ forward-only.
 - `references/review-checklists.md` — final self-review, including Gate 7 API.
 - `references/compact-prompts.md` — short Codex prompt template; use only in prompt-handoff mode.
 
+## Frontend presentation
+
+For any frontend List Management implementation, modification, review, or
+closure task, read and enforce
+[references/frontend-table-first.md](references/frontend-table-first.md).
+
+Table First is mandatory unless current approved UI authority explicitly
+defines an exception.
+
+Do not close a frontend task that violates the mandatory Table First
+acceptance checklist.
+
 ## Completion shape
 
 ```text
