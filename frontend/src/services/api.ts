@@ -2,6 +2,7 @@ import axios from 'axios'
 
 import { i18n } from '@/i18n'
 import { reportApiError } from '@/services/errorBoundary'
+import { useAuthStore } from '@/stores/auth'
 
 export const apiClient = axios.create({
   baseURL: import.meta.env.VITE_API_BASE_URL || 'http://api.monmin.net',
@@ -30,9 +31,7 @@ apiClient.interceptors.response.use(
     const url = axios.isAxiosError(error) ? error.config?.url || '' : ''
     const status = axios.isAxiosError(error) ? error.response?.status : undefined
     if (status === 403 || status === 404) {
-      void import('@/stores/auth').then(({ useAuthStore }) => {
-        useAuthStore().markPermissionSnapshotStale()
-      })
+      useAuthStore().markPermissionSnapshotStale()
     }
     if (!(url.includes('/auth/me') && status === 401)) reportApiError(error)
     return Promise.reject(error)
