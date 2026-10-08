@@ -36,6 +36,11 @@ async function mockSession(page: Page): Promise<void> {
               'policy.create',
               'policy.edit',
               'authorization_log.view',
+              'lifecycle.view',
+              'lifecycle.edit',
+              'lifecycle.setstate',
+              'workflow_state.edit',
+              'workflow_state.setstate',
             ],
           },
         },
@@ -180,6 +185,26 @@ test.describe('P1-FE-030 security surfaces', () => {
           meta: { request_id: 'test-lifecycle-state' },
         }),
       }),
+    )
+    await page.route(
+      (url) => url.pathname === '/api/v1/lifecycles',
+      async (route) =>
+        route.fulfill({
+          status: 200,
+          contentType: 'application/json',
+          body: JSON.stringify({
+            data: [
+              {
+                id: '50',
+                code: 'PRODUCT_FLOW',
+                name: 'Product flow',
+                description: 'Product lifecycle',
+                status: 'ACTIVE',
+              },
+            ],
+            meta: { page: 1, page_size: 25, total: 1, request_id: 'test-lifecycle' },
+          }),
+        }),
     )
     await page.route('**/api/v1/policies*', async (route) =>
       route.fulfill({
@@ -439,6 +464,7 @@ test.describe('P1-FE-030 security surfaces', () => {
 
     await page.goto('/security/policies')
     await expect(page.getByRole('heading', { name: 'Policy PBAC' })).toBeVisible()
+    await expect(page.getByText('ABSOLUTE_DENY:view')).toBeVisible()
     await page.getByRole('button', { name: /Tạo|Create/ }).click()
     await expect(page.locator('#policy-organization-scope')).toBeVisible()
     await expect(
@@ -465,5 +491,32 @@ test.describe('P1-FE-030 security surfaces', () => {
     )
     const accessibility = await new AxeBuilder({ page }).include('.security-list-panel').analyze()
     expect(accessibility.violations).toEqual([])
+  })
+
+  test('workflow management screens use one table-first pagination and modal detail surfaces', async ({
+    page,
+  }) => {
+    await page.goto('/configuration/lifecycles')
+    await expect(page.getByRole('heading', { name: /Lifecycle/i })).toBeVisible()
+    await expect(page.getByRole('navigation', { name: 'Phân trang danh sách' })).toHaveCount(1)
+    await page.getByRole('button', { name: 'Xem chi tiết' }).click()
+    const lifecycleDialog = page.getByRole('dialog', { name: /Product flow/ })
+    await expect(lifecycleDialog).toBeVisible()
+    await expect(lifecycleDialog.locator('.modal-card__header')).toHaveCount(1)
+    await expect(lifecycleDialog.locator('.modal-card__body')).toHaveCount(1)
+    await expect(lifecycleDialog.locator('.modal-card__footer')).toHaveCount(1)
+    await lifecycleDialog
+      .locator('.modal-card__footer')
+      .getByRole('button', { name: 'Đóng' })
+      .click()
+
+    await page.goto('/configuration/workflow-states')
+    await expect(page.getByRole('heading', { name: /Workflow State/i })).toBeVisible()
+    await expect(page.getByRole('navigation', { name: 'Phân trang danh sách' })).toHaveCount(1)
+    await page.getByRole('button', { name: 'Sửa' }).first().click()
+    const stateDialog = page.getByRole('dialog', { name: /Trạng thái quy trình|Workflow State/i })
+    await expect(stateDialog.locator('.modal-card__header')).toHaveCount(1)
+    await expect(stateDialog.locator('.modal-card__body')).toHaveCount(1)
+    await expect(stateDialog.locator('.modal-card__footer')).toHaveCount(1)
   })
 })

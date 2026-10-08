@@ -36,8 +36,8 @@ const columns: readonly ListColumn<WorkflowState>[] = [
   { key: 'code', labelKey: 'workflow.code', sortable: true },
   { key: 'name', labelKey: 'workflow.name', sortable: true },
   { key: 'description', labelKey: 'workflow.description' },
-  { key: 'status', labelKey: 'workflow.status', sortable: true },
-  { key: 'actions', labelKey: 'workflow.actions' },
+  { key: 'status', labelKey: 'workflow.status', sortable: true, align: 'center' },
+  { key: 'actions', labelKey: 'workflow.actions', align: 'end' },
 ]
 
 const errorMessage = computed(() => {
@@ -204,7 +204,7 @@ onMounted(() => void load())
   </section>
   <div v-if="modalOpen" class="modal-backdrop" @click.self="modalOpen = false">
     <section
-      class="modal-card"
+      class="modal-card workflow-form-modal"
       role="dialog"
       aria-modal="true"
       :aria-label="t('workflow.stateForm')"
@@ -287,7 +287,7 @@ onMounted(() => void load())
 .modal-card {
   width: min(100%, 680px);
   max-height: calc(100vh - 40px);
-  overflow: auto;
+  overflow: hidden;
   border-radius: 7px;
   background: #fff;
   box-shadow: 0 20px 60px rgb(18 42 62 / 24%);
@@ -298,13 +298,15 @@ onMounted(() => void load())
   align-items: center;
   justify-content: space-between;
   gap: 12px;
-  padding: 15px 18px;
+  padding: 16px 22px;
   border-bottom: 1px solid #e4ebef;
 }
 .modal-card__body {
   display: grid;
   gap: 12px;
-  padding: 18px;
+  max-height: calc(100vh - 170px);
+  overflow: auto;
+  padding: 22px;
 }
 .modal-card__body label {
   display: grid;
@@ -325,11 +327,22 @@ onMounted(() => void load())
 }
 .modal-card__footer {
   justify-content: flex-end;
-  margin: 6px -18px -18px;
+  margin: 0;
+  padding: 14px 22px 18px;
   border-top: 1px solid #e4ebef;
   border-bottom: 0;
 }
+.workflow-form-modal .modal-card__body .modal-card__footer {
+  margin: 4px -22px -22px;
+  padding: 14px 22px 0;
+}
 .icon-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  padding: 0;
   border: 0;
   background: transparent;
   color: #536b7b;

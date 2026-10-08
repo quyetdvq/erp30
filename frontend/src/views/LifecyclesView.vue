@@ -44,6 +44,7 @@ const workflowStates = ref<WorkflowState[]>([])
 const modalOpen = ref(false)
 const stateModalOpen = ref(false)
 const transitionModalOpen = ref(false)
+const detailOpen = ref(false)
 const editingId = ref<string | undefined>()
 const busy = ref(false)
 const detailBusy = ref(false)
@@ -62,8 +63,8 @@ const columns: readonly ListColumn<Lifecycle>[] = [
   { key: 'code', labelKey: 'workflow.code', sortable: true },
   { key: 'name', labelKey: 'workflow.name', sortable: true },
   { key: 'description', labelKey: 'workflow.description' },
-  { key: 'status', labelKey: 'workflow.status', sortable: true },
-  { key: 'actions', labelKey: 'workflow.actions' },
+  { key: 'status', labelKey: 'workflow.status', sortable: true, align: 'center' },
+  { key: 'actions', labelKey: 'workflow.actions', align: 'end' },
 ]
 
 const selected = computed(
@@ -182,6 +183,7 @@ async function loadDetails(): Promise<void> {
 function selectLifecycle(row: Lifecycle): void {
   selectedId.value = String(row.id)
   tab.value = 'overview'
+  detailOpen.value = true
   void loadDetails()
 }
 
@@ -376,183 +378,203 @@ onMounted(() => void load())
     </ListShell>
   </section>
 
-  <section
-    v-if="selected"
-    class="content-panel workflow-detail-panel"
-    aria-labelledby="lifecycle-detail-title"
-  >
-    <header class="workflow-detail-heading">
-      <div>
-        <h2 id="lifecycle-detail-title">{{ selected.name }}</h2>
-        <small
-          ><code>{{ selected.code }}</code> · {{ t('workflow.status') }}:
-          {{ t(`status.${selected.status.toLowerCase()}`) }}</small
-        >
-      </div>
-    </header>
-    <nav class="workflow-tabs" :aria-label="t('workflow.tabsLabel')" role="tablist">
-      <button
-        type="button"
-        role="tab"
-        :aria-selected="tab === 'overview'"
-        :class="{ active: tab === 'overview' }"
-        @click="tab = 'overview'"
-      >
-        {{ t('workflow.tabs.overview') }}
-      </button>
-      <button
-        type="button"
-        role="tab"
-        :aria-selected="tab === 'states'"
-        :class="{ active: tab === 'states' }"
-        @click="tab = 'states'"
-      >
-        {{ t('workflow.tabs.states') }}
-      </button>
-      <button
-        type="button"
-        role="tab"
-        :aria-selected="tab === 'transitions'"
-        :class="{ active: tab === 'transitions' }"
-        @click="tab = 'transitions'"
-      >
-        {{ t('workflow.tabs.transitions') }}
-      </button>
-    </nav>
-    <p v-if="detailError" class="inline-error" role="alert">{{ errorMessage(detailError) }}</p>
-    <div v-if="detailBusy" class="workflow-detail-state" role="status">{{ t('list.loading') }}</div>
-    <div v-else-if="tab === 'overview'" class="workflow-overview">
-      <dl>
-        <div>
-          <dt>{{ t('workflow.code') }}</dt>
-          <dd>
-            <code>{{ selected.code }}</code>
-          </dd>
+  <div v-if="detailOpen && selected" class="modal-backdrop" @click.self="detailOpen = false">
+    <section
+      class="modal-card modal-card--wide lifecycle-detail-modal"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="lifecycle-detail-title"
+    >
+      <header class="modal-card__header lifecycle-detail-modal__header">
+        <div class="lifecycle-detail-modal__identity">
+          <h2 id="lifecycle-detail-title">{{ selected.name }}</h2>
+          <small
+            ><code>{{ selected.code }}</code> · {{ t('workflow.status') }}:
+            {{ t(`status.${selected.status.toLowerCase()}`) }}</small
+          >
         </div>
-        <div>
-          <dt>{{ t('workflow.name') }}</dt>
-          <dd>{{ selected.name }}</dd>
-        </div>
-        <div>
-          <dt>{{ t('workflow.description') }}</dt>
-          <dd>{{ selected.description || t('list.noValue') }}</dd>
-        </div>
-        <div>
-          <dt>{{ t('workflow.memberCount') }}</dt>
-          <dd>{{ lifecycleStates.length }}</dd>
-        </div>
-        <div>
-          <dt>{{ t('workflow.transitionCount') }}</dt>
-          <dd>{{ lifecycleTransitions.length }}</dd>
-        </div>
-      </dl>
-    </div>
-    <div v-else-if="tab === 'states'" class="workflow-tab-content">
-      <div class="workflow-tab-toolbar">
-        <p>{{ t('workflow.statesMembershipNote') }}</p>
         <button
-          v-if="hasBasePermission('lifecycle', 'edit')"
           type="button"
-          class="primary-button"
-          :disabled="availableStates.length === 0"
-          @click="openStateCreate"
+          class="icon-button"
+          :aria-label="t('common.close')"
+          @click="detailOpen = false"
         >
-          ＋ {{ t('workflow.addState') }}
+          ×
         </button>
-      </div>
-      <table class="workflow-table">
-        <caption class="sr-only">
-          {{
-            t('workflow.statesTable')
-          }}
-        </caption>
-        <thead>
-          <tr>
-            <th>{{ t('workflow.state') }}</th>
-            <th>{{ t('workflow.sequence') }}</th>
-            <th>{{ t('workflow.initial') }}</th>
-            <th>{{ t('workflow.final') }}</th>
-            <th>{{ t('workflow.status') }}</th>
-          </tr>
-        </thead>
-        <tbody>
-          <tr v-for="membership in lifecycleStates" :key="membership.id">
-            <td>{{ stateLabel(String(membership.state_id)) }}</td>
-            <td>{{ membership.sequence }}</td>
-            <td>{{ flag(membership.is_initial) ? t('workflow.yes') : t('workflow.no') }}</td>
-            <td>{{ flag(membership.is_final) ? t('workflow.yes') : t('workflow.no') }}</td>
-            <td>
-              <span
-                :class="[
-                  'state-note',
-                  {
-                    'state-note--inactive':
-                      stateById.get(String(membership.state_id))?.status !== 'ACTIVE',
-                  },
-                ]"
-                >{{
-                  stateById.get(String(membership.state_id))?.status === 'ACTIVE'
-                    ? t('status.active')
-                    : t('status.inactive')
-                }}</span
-              >
-            </td>
-          </tr>
-          <tr v-if="lifecycleStates.length === 0">
-            <td colspan="5">{{ t('workflow.noStates') }}</td>
-          </tr>
-        </tbody>
-      </table>
-    </div>
-    <div v-else class="workflow-tab-content">
-      <div class="workflow-tab-toolbar">
-        <p>{{ t('workflow.transitionsNote') }}</p>
+      </header>
+      <nav class="workflow-tabs" :aria-label="t('workflow.tabsLabel')" role="tablist">
         <button
-          v-if="hasBasePermission('lifecycle', 'edit')"
           type="button"
-          class="primary-button"
-          :disabled="memberStateOptions.length < 1"
-          @click="openTransitionCreate"
+          role="tab"
+          :aria-selected="tab === 'overview'"
+          :class="{ active: tab === 'overview' }"
+          @click="tab = 'overview'"
         >
-          ＋ {{ t('workflow.addTransition') }}
+          {{ t('workflow.tabs.overview') }}
         </button>
+        <button
+          type="button"
+          role="tab"
+          :aria-selected="tab === 'states'"
+          :class="{ active: tab === 'states' }"
+          @click="tab = 'states'"
+        >
+          {{ t('workflow.tabs.states') }}
+        </button>
+        <button
+          type="button"
+          role="tab"
+          :aria-selected="tab === 'transitions'"
+          :class="{ active: tab === 'transitions' }"
+          @click="tab = 'transitions'"
+        >
+          {{ t('workflow.tabs.transitions') }}
+        </button>
+      </nav>
+      <div class="modal-card__body lifecycle-detail-modal__content">
+        <p v-if="detailError" class="inline-error" role="alert">{{ errorMessage(detailError) }}</p>
+        <div v-if="detailBusy" class="workflow-detail-state" role="status">
+          {{ t('list.loading') }}
+        </div>
+        <div v-else-if="tab === 'overview'" class="workflow-overview">
+          <dl>
+            <div>
+              <dt>{{ t('workflow.code') }}</dt>
+              <dd>
+                <code>{{ selected.code }}</code>
+              </dd>
+            </div>
+            <div>
+              <dt>{{ t('workflow.name') }}</dt>
+              <dd>{{ selected.name }}</dd>
+            </div>
+            <div>
+              <dt>{{ t('workflow.description') }}</dt>
+              <dd>{{ selected.description || t('list.noValue') }}</dd>
+            </div>
+            <div>
+              <dt>{{ t('workflow.memberCount') }}</dt>
+              <dd>{{ lifecycleStates.length }}</dd>
+            </div>
+            <div>
+              <dt>{{ t('workflow.transitionCount') }}</dt>
+              <dd>{{ lifecycleTransitions.length }}</dd>
+            </div>
+          </dl>
+        </div>
+        <div v-else-if="tab === 'states'" class="workflow-tab-content">
+          <div class="workflow-tab-toolbar">
+            <p>{{ t('workflow.statesMembershipNote') }}</p>
+            <button
+              v-if="hasBasePermission('lifecycle', 'edit')"
+              type="button"
+              class="primary-button"
+              :disabled="availableStates.length === 0"
+              @click="openStateCreate"
+            >
+              ＋ {{ t('workflow.addState') }}
+            </button>
+          </div>
+          <table class="workflow-table">
+            <caption class="sr-only">
+              {{
+                t('workflow.statesTable')
+              }}
+            </caption>
+            <thead>
+              <tr>
+                <th>{{ t('workflow.state') }}</th>
+                <th>{{ t('workflow.sequence') }}</th>
+                <th>{{ t('workflow.initial') }}</th>
+                <th>{{ t('workflow.final') }}</th>
+                <th>{{ t('workflow.status') }}</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr v-for="membership in lifecycleStates" :key="membership.id">
+                <td>{{ stateLabel(String(membership.state_id)) }}</td>
+                <td>{{ membership.sequence }}</td>
+                <td>{{ flag(membership.is_initial) ? t('workflow.yes') : t('workflow.no') }}</td>
+                <td>{{ flag(membership.is_final) ? t('workflow.yes') : t('workflow.no') }}</td>
+                <td>
+                  <span
+                    :class="[
+                      'state-note',
+                      {
+                        'state-note--inactive':
+                          stateById.get(String(membership.state_id))?.status !== 'ACTIVE',
+                      },
+                    ]"
+                    >{{
+                      stateById.get(String(membership.state_id))?.status === 'ACTIVE'
+                        ? t('status.active')
+                        : t('status.inactive')
+                    }}</span
+                  >
+                </td>
+              </tr>
+              <tr v-if="lifecycleStates.length === 0">
+                <td colspan="5">{{ t('workflow.noStates') }}</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+        <div v-else class="workflow-tab-content">
+          <div class="workflow-tab-toolbar">
+            <p>{{ t('workflow.transitionsNote') }}</p>
+            <button
+              v-if="hasBasePermission('lifecycle', 'edit')"
+              type="button"
+              class="primary-button"
+              :disabled="memberStateOptions.length < 1"
+              @click="openTransitionCreate"
+            >
+              ＋ {{ t('workflow.addTransition') }}
+            </button>
+          </div>
+          <table class="workflow-table">
+            <caption class="sr-only">
+              {{
+                t('workflow.transitionsTable')
+              }}
+            </caption>
+            <thead>
+              <tr>
+                <th>{{ t('workflow.fromState') }}</th>
+                <th>{{ t('workflow.action') }}</th>
+                <th>{{ t('workflow.toState') }}</th>
+                <th>{{ t('workflow.status') }}</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr v-for="transition in lifecycleTransitions" :key="transition.id">
+                <td>{{ stateLabel(String(transition.from_state_id)) }}</td>
+                <td>
+                  <code>{{ transition.action_code }}</code>
+                </td>
+                <td>{{ stateLabel(String(transition.to_state_id)) }}</td>
+                <td>
+                  {{ transition.status === 'ACTIVE' ? t('status.active') : t('status.inactive') }}
+                </td>
+              </tr>
+              <tr v-if="lifecycleTransitions.length === 0">
+                <td colspan="4">{{ t('workflow.noTransitions') }}</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
       </div>
-      <table class="workflow-table">
-        <caption class="sr-only">
-          {{
-            t('workflow.transitionsTable')
-          }}
-        </caption>
-        <thead>
-          <tr>
-            <th>{{ t('workflow.fromState') }}</th>
-            <th>{{ t('workflow.action') }}</th>
-            <th>{{ t('workflow.toState') }}</th>
-            <th>{{ t('workflow.status') }}</th>
-          </tr>
-        </thead>
-        <tbody>
-          <tr v-for="transition in lifecycleTransitions" :key="transition.id">
-            <td>{{ stateLabel(String(transition.from_state_id)) }}</td>
-            <td>
-              <code>{{ transition.action_code }}</code>
-            </td>
-            <td>{{ stateLabel(String(transition.to_state_id)) }}</td>
-            <td>
-              {{ transition.status === 'ACTIVE' ? t('status.active') : t('status.inactive') }}
-            </td>
-          </tr>
-          <tr v-if="lifecycleTransitions.length === 0">
-            <td colspan="4">{{ t('workflow.noTransitions') }}</td>
-          </tr>
-        </tbody>
-      </table>
-    </div>
-  </section>
+      <footer class="modal-card__footer">
+        <button type="button" class="secondary-button" @click="detailOpen = false">
+          {{ t('common.close') }}
+        </button>
+      </footer>
+    </section>
+  </div>
 
   <div v-if="modalOpen" class="modal-backdrop" @click.self="modalOpen = false">
     <section
-      class="modal-card"
+      class="modal-card workflow-form-modal"
       role="dialog"
       aria-modal="true"
       :aria-label="t('workflow.lifecycleForm')"
@@ -603,7 +625,7 @@ onMounted(() => void load())
   </div>
   <div v-if="stateModalOpen" class="modal-backdrop" @click.self="stateModalOpen = false">
     <section
-      class="modal-card"
+      class="modal-card workflow-form-modal"
       role="dialog"
       aria-modal="true"
       :aria-label="t('workflow.stateMembershipForm')"
@@ -666,7 +688,7 @@ onMounted(() => void load())
   </div>
   <div v-if="transitionModalOpen" class="modal-backdrop" @click.self="transitionModalOpen = false">
     <section
-      class="modal-card"
+      class="modal-card workflow-form-modal"
       role="dialog"
       aria-modal="true"
       :aria-label="t('workflow.transitionForm')"
@@ -738,15 +760,15 @@ onMounted(() => void load())
 </template>
 
 <style scoped>
-.workflow-panel,
-.workflow-detail-panel {
+.workflow-panel {
   display: grid;
   gap: 14px;
   padding: 18px 20px 20px;
 }
 .workflow-toolbar,
 .workflow-tab-toolbar,
-.workflow-detail-heading {
+.workflow-detail-heading,
+.lifecycle-detail-modal__header {
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -766,13 +788,14 @@ onMounted(() => void load())
 }
 .workflow-tabs {
   display: flex;
-  gap: 4px;
+  gap: 24px;
+  padding: 0 24px;
   border-bottom: 1px solid #dbe5ea;
 }
 .workflow-tabs button {
   border: 0;
   border-bottom: 2px solid transparent;
-  padding: 9px 13px;
+  padding: 13px 2px 11px;
   background: transparent;
   color: #536b7b;
   cursor: pointer;
@@ -851,7 +874,7 @@ onMounted(() => void load())
 .modal-card {
   width: min(100%, 680px);
   max-height: calc(100vh - 40px);
-  overflow: auto;
+  overflow: hidden;
   border-radius: 7px;
   background: #fff;
   box-shadow: 0 20px 60px rgb(18 42 62 / 24%);
@@ -862,13 +885,15 @@ onMounted(() => void load())
   align-items: center;
   justify-content: space-between;
   gap: 12px;
-  padding: 15px 18px;
+  padding: 16px 22px;
   border-bottom: 1px solid #e4ebef;
 }
 .modal-card__body {
   display: grid;
   gap: 12px;
-  padding: 18px;
+  max-height: calc(100vh - 170px);
+  overflow: auto;
+  padding: 22px;
 }
 .modal-card__body label {
   display: grid;
@@ -889,11 +914,66 @@ onMounted(() => void load())
 }
 .modal-card__footer {
   justify-content: flex-end;
-  margin: 6px -18px -18px;
+  margin: 0;
+  padding: 14px 22px 18px;
   border-top: 1px solid #e4ebef;
   border-bottom: 0;
 }
+.workflow-form-modal .modal-card__body .modal-card__footer {
+  margin: 4px -22px -22px;
+  padding: 14px 22px 0;
+}
+.lifecycle-detail-modal {
+  display: flex;
+  flex-direction: column;
+}
+.lifecycle-detail-modal__header {
+  flex: 0 0 auto;
+  padding: 20px 24px 16px;
+  border-bottom: 0;
+}
+.lifecycle-detail-modal__identity {
+  min-width: 0;
+}
+.lifecycle-detail-modal__identity h2 {
+  margin: 0;
+  color: #153956;
+  font-size: 20px;
+  line-height: 1.25;
+}
+.lifecycle-detail-modal__identity small {
+  display: block;
+  margin-top: 6px;
+  color: #8191a0;
+  font-size: 12px;
+}
+.lifecycle-detail-modal__content {
+  display: block;
+  padding: 0;
+  min-height: 0;
+  overflow: auto;
+}
+.lifecycle-detail-modal__content > .inline-error,
+.lifecycle-detail-modal__content > .workflow-detail-state,
+.lifecycle-detail-modal__content > .workflow-overview,
+.lifecycle-detail-modal__content > .workflow-tab-content {
+  margin-right: 24px;
+  margin-left: 24px;
+}
+.lifecycle-detail-modal__content > .inline-error {
+  margin-top: 18px;
+}
+.lifecycle-detail-modal__content > .workflow-overview,
+.lifecycle-detail-modal__content > .workflow-tab-content {
+  padding: 22px 0;
+}
 .icon-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  padding: 0;
   border: 0;
   background: transparent;
   color: #536b7b;
@@ -909,5 +989,24 @@ onMounted(() => void load())
   overflow: hidden;
   clip: rect(0, 0, 0, 0);
   white-space: nowrap;
+}
+@media (max-width: 700px) {
+  .workflow-tabs {
+    gap: 14px;
+    padding: 0 18px;
+  }
+  .lifecycle-detail-modal__header {
+    padding-right: 18px;
+    padding-left: 18px;
+  }
+  .lifecycle-detail-modal__content > .workflow-overview,
+  .lifecycle-detail-modal__content > .workflow-tab-content {
+    margin-right: 18px;
+    margin-left: 18px;
+  }
+  .lifecycle-detail-modal .modal-card__footer {
+    padding-right: 18px;
+    padding-left: 18px;
+  }
 }
 </style>

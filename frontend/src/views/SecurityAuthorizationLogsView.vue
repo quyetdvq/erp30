@@ -34,7 +34,7 @@ const columns: readonly ListColumn<AuthorizationLog>[] = [
   { key: 'decision', labelKey: 'security.decision' },
   { key: 'reason', labelKey: 'security.reason' },
   { key: 'request_id', labelKey: 'security.requestId' },
-  { key: 'row_actions', labelKey: 'security.actions' },
+  { key: 'row_actions', labelKey: 'security.actions', align: 'end' },
 ]
 const detailFields = computed<readonly TableDetailField[]>(() => {
   const row = selected.value

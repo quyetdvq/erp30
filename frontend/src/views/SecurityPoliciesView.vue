@@ -67,6 +67,7 @@ const resources = ref<Resource[]>([])
 const groups = ref<AuthorizationGroup[]>([])
 const workflowStates = ref<WorkflowState[]>([])
 const actions = ref<SecurityAction[]>([])
+const actionCatalog = ref<SecurityAction[]>([])
 const participantOptions = ref<ParticipantOption[]>([])
 const participantLoading = ref(false)
 const lifecycleStateMemberships = ref<LifecycleStateMembership[]>([])
@@ -90,10 +91,10 @@ const columns: readonly ListColumn<Policy>[] = [
   { key: 'participant_type', labelKey: 'security.participantType' },
   { key: 'participant_ref_id', labelKey: 'security.participant' },
   { key: 'actions', labelKey: 'security.effectsSummary' },
-  { key: 'row_actions', labelKey: 'security.actions' },
+  { key: 'row_actions', labelKey: 'security.actions', align: 'end' },
 ]
 const actionOptions = computed(() =>
-  actions.value.filter((action) => String(action.resource_id) === form.value.resource_id),
+  actionCatalog.value.filter((action) => String(action.resource_id) === form.value.resource_id),
 )
 const workflowStateOptions = computed(() =>
   lifecycleStateMemberships.value
@@ -122,6 +123,9 @@ function labelForOrganization(id: string): string {
 function labelForResource(id: string): string {
   return resources.value.find((item) => String(item.id) === id)?.type ?? `#${id}`
 }
+function actionCodeFor(id: string): string {
+  return actionCatalog.value.find((item) => String(item.id) === id)?.code ?? t('list.noValue')
+}
 function labelForParticipant(policy: Policy): string {
   const found = participantOptionsFor(policy.participant_type, String(policy.participant_ref_id))
   return found || `#${policy.participant_ref_id}`
@@ -134,7 +138,9 @@ function participantOptionsFor(type: ParticipantType, id: string): string {
   return participantOptions.value.find((candidate) => candidate.id === id)?.label ?? ''
 }
 function effectsSummary(policy: Policy): string {
-  return policy.actions.map((action) => `${action.effect}:${action.resource_action_id}`).join(', ')
+  return policy.actions
+    .map((action) => `${action.effect}:${actionCodeFor(String(action.resource_action_id))}`)
+    .join(', ')
 }
 function applyQuery(query: ListQuery): void {
   state.setSearch(query.q)
@@ -162,7 +168,7 @@ async function loadReferences(): Promise<void> {
   const headers = { 'Accept-Language': i18n.global.locale.value as 'vi' | 'en' }
   try {
     const [resourcePage, groupPage, organizationPage, statePage] = await Promise.all([
-      listResourcePage(emptyQuery),
+      listResourcePage(emptyQuery, true),
       listAuthorizationGroupPage(emptyQuery),
       withTypedClient((client) =>
         listOrganizations({
@@ -182,6 +188,14 @@ async function loadReferences(): Promise<void> {
       ).then((response) => ({ data: response.data.data ?? [] })),
     ])
     resources.value = resourcePage.data
+    actionCatalog.value = resourcePage.data.flatMap((resource) =>
+      (resource.actions ?? []).map((action) => ({
+        id: String(action.id),
+        resource_id: String(resource.id),
+        code: action.code,
+        description: action.description,
+      })),
+    )
     groups.value = groupPage.data
     organizations.value = organizationPage.data as Organization[]
     workflowStates.value = statePage.data as WorkflowState[]
@@ -191,7 +205,21 @@ async function loadReferences(): Promise<void> {
   }
 }
 async function loadActions(resourceId: string): Promise<void> {
-  actions.value = resourceId ? await getResourceActions(resourceId) : []
+  if (!resourceId) {
+    actions.value = []
+    return
+  }
+  const included = resources.value.find((resource) => String(resource.id) === resourceId)?.actions
+  if (included) {
+    actions.value = included.map((action) => ({
+      id: String(action.id),
+      resource_id: resourceId,
+      code: action.code,
+      description: action.description,
+    }))
+    return
+  }
+  actions.value = await getResourceActions(resourceId)
 }
 function preserveParticipantSelection(): void {
   const id = form.value.participant_ref_id
@@ -409,7 +437,8 @@ async function reloadAfterDuplicate(): Promise<void> {
   await load()
 }
 onMounted(async () => {
-  await Promise.all([load(), loadReferences()])
+  await loadReferences()
+  await load()
 })
 onBeforeUnmount(() => {
   if (participantSearchTimer) clearTimeout(participantSearchTimer)
@@ -508,7 +537,7 @@ onBeforeUnmount(() => {
   </section>
   <div v-if="modalOpen" class="modal-backdrop" @click.self="modalOpen = false">
     <section
-      class="modal-card"
+      class="modal-card policy-form-modal"
       role="dialog"
       aria-modal="true"
       :aria-label="t('security.policyForm')"
@@ -716,7 +745,7 @@ onBeforeUnmount(() => {
 .modal-card {
   width: min(100%, 760px);
   max-height: calc(100vh - 40px);
-  overflow: auto;
+  overflow: hidden;
   border-radius: 7px;
   background: #fff;
   box-shadow: 0 20px 60px rgb(18 42 62 / 24%);
@@ -727,13 +756,15 @@ onBeforeUnmount(() => {
   align-items: center;
   justify-content: space-between;
   gap: 12px;
-  padding: 15px 18px;
+  padding: 16px 22px;
   border-bottom: 1px solid #e4ebef;
 }
 .modal-card__body {
   display: grid;
   gap: 12px;
-  padding: 18px;
+  max-height: calc(100vh - 170px);
+  overflow: auto;
+  padding: 22px;
 }
 .modal-card__body label {
   display: grid;
@@ -744,9 +775,14 @@ onBeforeUnmount(() => {
 }
 .modal-card__footer {
   justify-content: flex-end;
-  margin: 5px -18px -18px;
+  margin: 0;
+  padding: 14px 22px 18px;
   border-top: 1px solid #e4ebef;
   border-bottom: 0;
+}
+.policy-form-modal .modal-card__body .modal-card__footer {
+  margin: 4px -22px -22px;
+  padding: 14px 22px 0;
 }
 .form-grid {
   display: grid;
@@ -773,6 +809,12 @@ onBeforeUnmount(() => {
   align-items: center;
 }
 .icon-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  padding: 0;
   border: 0;
   background: transparent;
   color: #536b7b;

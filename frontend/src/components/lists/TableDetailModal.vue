@@ -38,15 +38,22 @@ const { t } = useI18n()
           ×
         </button>
       </header>
-      <dl class="table-detail-modal__fields">
-        <template v-for="field in props.fields" :key="field.key">
-          <dt>{{ field.label }}</dt>
-          <dd>
-            <TableStatus v-if="field.status !== undefined" :status="field.status" />
-            <template v-else>{{ field.value || t('list.noValue') }}</template>
-          </dd>
-        </template>
-      </dl>
+      <div class="table-detail-modal__body">
+        <dl class="table-detail-modal__fields">
+          <template v-for="field in props.fields" :key="field.key">
+            <dt>{{ field.label }}</dt>
+            <dd>
+              <TableStatus v-if="field.status !== undefined" :status="field.status" />
+              <template v-else>{{ field.value || t('list.noValue') }}</template>
+            </dd>
+          </template>
+        </dl>
+      </div>
+      <footer class="table-detail-modal__footer">
+        <button type="button" class="secondary-button" @click="emit('close')">
+          {{ t('common.close') }}
+        </button>
+      </footer>
     </section>
   </div>
 </template>
@@ -104,6 +111,16 @@ const { t } = useI18n()
   gap: 0;
   margin: 0;
   padding: 8px 18px 18px;
+}
+.table-detail-modal__body {
+  max-height: calc(100vh - 180px);
+  overflow: auto;
+}
+.table-detail-modal__footer {
+  display: flex;
+  justify-content: flex-end;
+  padding: 14px 18px 18px;
+  border-top: 1px solid #e4ebef;
 }
 .table-detail-modal__fields dt,
 .table-detail-modal__fields dd {
