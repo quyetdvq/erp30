@@ -207,8 +207,7 @@ export const zProductGroupPatch = z.object({
     parent_id: zBigInt.nullish(),
     code: z.string().optional(),
     name: z.string().optional(),
-    description: z.string().nullish(),
-    status: z.enum(['ACTIVE', 'INACTIVE']).optional()
+    description: z.string().nullish()
 });
 
 export const zProductUom = z.object({
@@ -229,8 +228,7 @@ export const zProductUomCreate = z.object({
 export const zProductUomPatch = z.object({
     code: z.string().optional(),
     name: z.string().optional(),
-    description: z.string().nullish(),
-    status: z.enum(['ACTIVE', 'INACTIVE']).optional()
+    description: z.string().nullish()
 });
 
 export const zProduct = z.object({
@@ -305,8 +303,7 @@ export const zProductPatch = z.object({
     package_height_mm: zDecimal.optional(),
     description: z.string().nullish(),
     manual_standard_cost: zDecimal.optional(),
-    serial_management_enabled: z.boolean().optional(),
-    status: z.enum(['ACTIVE', 'INACTIVE']).optional()
+    serial_management_enabled: z.boolean().optional()
 });
 
 export const zPriceList = z.object({
@@ -339,7 +336,6 @@ export const zPriceListPatch = z.object({
     effective_from: z.iso.datetime().optional(),
     effective_to: z.iso.datetime().nullish(),
     priority: z.int().optional(),
-    status: z.enum(['ACTIVE', 'INACTIVE']).optional(),
     description: z.string().nullish()
 });
 

@@ -209,7 +209,6 @@ export type ProductGroupPatch = {
     code?: string;
     name?: string;
     description?: string | null;
-    status?: 'ACTIVE' | 'INACTIVE';
 };
 
 export type ProductUom = {
@@ -231,7 +230,6 @@ export type ProductUomPatch = {
     code?: string;
     name?: string;
     description?: string | null;
-    status?: 'ACTIVE' | 'INACTIVE';
 };
 
 export type Product = {
@@ -302,7 +300,6 @@ export type ProductPatch = {
     description?: string | null;
     manual_standard_cost?: Decimal;
     serial_management_enabled?: boolean;
-    status?: 'ACTIVE' | 'INACTIVE';
 };
 
 export type PriceList = {
@@ -335,7 +332,6 @@ export type PriceListPatch = {
     effective_from?: string;
     effective_to?: string | null;
     priority?: number;
-    status?: 'ACTIVE' | 'INACTIVE';
     description?: string | null;
 };
 

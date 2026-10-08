@@ -1517,7 +1517,6 @@ components:
         code: {type: string}
         name: {type: string}
         description: {type: [string, 'null']}
-        status: {type: string, enum: [ACTIVE, INACTIVE]}
     ProductUom:
       type: object
       required: [id, code, name, status]
@@ -1541,7 +1540,6 @@ components:
         code: {type: string}
         name: {type: string}
         description: {type: [string, 'null']}
-        status: {type: string, enum: [ACTIVE, INACTIVE]}
     Product:
       type: object
       required: [id, product_type, status, role, full_name, selectable, leaf_transactionable]
@@ -1613,7 +1611,6 @@ components:
         description: {type: [string, 'null']}
         manual_standard_cost: {$ref: '#/components/schemas/Decimal'}
         serial_management_enabled: {type: boolean}
-        status: {type: string, enum: [ACTIVE, INACTIVE]}
     PriceList:
       type: object
       required: [id, code, name, organization_id, effective_from, priority, status]
@@ -1648,7 +1645,6 @@ components:
         effective_from: {type: string, format: date-time}
         effective_to: {type: [string, 'null'], format: date-time}
         priority: {type: integer}
-        status: {type: string, enum: [ACTIVE, INACTIVE]}
         description: {type: [string, 'null']}
     ProductUomConversion:
       type: object

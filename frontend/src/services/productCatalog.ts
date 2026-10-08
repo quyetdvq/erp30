@@ -37,6 +37,13 @@ function headers() {
   return { 'Accept-Language': i18n.global.locale.value as 'vi' | 'en' }
 }
 
+/** State changes use the dedicated set-state endpoints, never PATCH. */
+function patchPayload<T extends object>(payload: T): Omit<T, 'status'> {
+  const next = { ...payload } as T & { status?: unknown }
+  delete next.status
+  return next as Omit<T, 'status'>
+}
+
 function apiQuery(query: ListQuery) {
   return {
     q: query.q || undefined,
@@ -84,7 +91,7 @@ export function saveProductGroup(
           client,
           headers: headers(),
           path: { id },
-          body: payload,
+          body: patchPayload(payload),
           throwOnError: true,
         }).then(resource)
       : createProductGroup({
@@ -132,7 +139,7 @@ export function saveProductUom(
           client,
           headers: headers(),
           path: { id },
-          body: payload,
+          body: patchPayload(payload),
           throwOnError: true,
         }).then(resource)
       : createProductUom({
@@ -177,7 +184,7 @@ export function saveProduct(payload: ProductCreate | ProductPatch, id?: string):
           client,
           headers: headers(),
           path: { id },
-          body: payload,
+          body: patchPayload(payload),
           throwOnError: true,
         }).then(resource)
       : createProduct({
