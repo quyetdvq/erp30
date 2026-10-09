@@ -265,3 +265,24 @@ Live results:
 SYS-007 therefore remains **BLOCKED**: Operations must inject a non-default
 secret-managed DSN with `DBDebug=false`, then rerun authenticated HTTPS auth
 checks. UAT remains **NOT AUTHORIZED**.
+
+## CI4 production DB configuration recheck (2026-10-09)
+
+The deployment `.env` now supplies a non-root application DB identity and
+explicit `database.default.DBDebug=false`. The previous CI4 `Database` guard
+exception is resolved without weakening the guard or exposing the credential in
+Git.
+
+Read-only/runtime results:
+
+- `php spark config:check Database`: PASS.
+- `php spark migrate:status`: PASS; migration `000013` remains pending and no
+  migration/write/reset was executed.
+- `GET /api/v1/auth/me`: `401 UNAUTHENTICATED` with the secure session cookie,
+  not `500`.
+- `GET /logout`: `302` to the HTTPS login URL.
+- `POST /api/v1/auth/logout`: `200` with the API envelope and HTTPS CORS.
+
+The remaining SYS-007 blockers are unchanged: CSRF bootstrap decision,
+production PHP host settings/retention decisions, reviewed SYSTEM_ADMIN
+reconciliation, and independent SYS-005 legacy evidence.
