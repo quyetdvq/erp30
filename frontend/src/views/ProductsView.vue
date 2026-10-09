@@ -4,7 +4,13 @@ import { useI18n } from 'vue-i18n'
 import { useRouter } from 'vue-router'
 import type { ComboItem, Product, ProductGroup, ProductUom } from '@/api/generated/types.gen'
 import ProductDetailModal from '@/components/products/ProductDetailModal.vue'
-import { ListPagination, ListQueryControls, ListShell, TableRowActions } from '@/components/lists'
+import {
+  ListPagination,
+  ListQueryControls,
+  ListShell,
+  TableRowActions,
+  TableStatus,
+} from '@/components/lists'
 import type { ListQuery } from '@/components/lists/listTypes'
 import { useListState } from '@/composables/useListState'
 import { useBasePermission } from '@/composables/useBasePermission'
@@ -346,7 +352,7 @@ onMounted(async () => {
                 <td>{{ uomName(row.base_uom_id) }}</td>
                 <td>{{ displayMoney(row.price) }}</td>
                 <td>{{ row.serial_management_enabled ? t('common.yes') : t('common.no') }}</td>
-                <td>{{ row.status === 'ACTIVE' ? t('status.active') : t('status.inactive') }}</td>
+                <td><TableStatus :status="row.status" /></td>
                 <td>
                   <TableRowActions
                     :active="row.status === 'ACTIVE'"

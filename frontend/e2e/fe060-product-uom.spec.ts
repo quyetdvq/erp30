@@ -180,6 +180,7 @@ test.describe('P1-FE-060 Product/UOM UI', () => {
     await expect(page.getByRole('navigation', { name: /Phân trang|pagination/i })).toHaveCount(2)
     await expect(page.getByRole('columnheader', { name: /Product Code|Mã sản phẩm/ })).toBeVisible()
     await expect(page.getByRole('cell', { name: 'PRD-001', exact: true })).toBeVisible()
+    await expect(page.getByRole('img', { name: 'Đang hoạt động' })).toBeVisible()
     await expect(page.getByRole('menuitem', { name: 'Sản phẩm' })).toBeVisible()
     await page.goto('/products/groups')
     await expect(page.getByRole('heading', { name: 'Danh mục sản phẩm' })).toBeVisible()
