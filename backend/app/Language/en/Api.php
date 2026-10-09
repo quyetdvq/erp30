@@ -13,4 +13,6 @@ return [
     'invalidCredentials' => 'The credentials are invalid.',
     'profileUpdateFailed' => 'The profile could not be updated.',
     'policyScopeAlreadyExists' => 'A Policy already exists for this organization, resource, state, participant scope.',
+    'importFileTooLarge' => 'The import file exceeds the configured 10 MiB limit.',
+    'importRowLimitExceeded' => 'The import file exceeds the configured 5,000-row limit.',
 ];

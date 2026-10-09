@@ -18,6 +18,7 @@ $routes->group('api/v1', ['filter' => 'cors'], static function (RouteCollection 
     $routes->post('display-settings/actions/reset', 'Api\\DisplaySettings::reset');
     $routes->post('auth/login', 'Api\\Auth::login');
     $routes->post('auth/logout', 'Api\\Auth::logout');
+    $routes->get('auth/csrf', 'Api\\Auth::csrf');
     $routes->get('auth/me', 'Api\\Auth::me');
     $routes->patch('auth/profile', 'Api\\Auth::profile');
     $routes->options('auth/(:any)', 'Api\\Auth::options');

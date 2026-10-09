@@ -13,7 +13,39 @@ export const apiClient = axios.create({
   },
 })
 
-apiClient.interceptors.request.use((config) => {
+let csrfToken: string | null = null
+let csrfBootstrap: Promise<string> | null = null
+
+function storeCsrfToken(response: { headers?: Record<string, unknown>; data?: unknown }): void {
+  const header = response.headers?.['x-csrf-token']
+  const payload = response.data as { data?: { csrf_token?: unknown } } | undefined
+  const token =
+    typeof header === 'string' && header !== ''
+      ? header
+      : typeof payload?.data?.csrf_token === 'string'
+        ? payload.data.csrf_token
+        : null
+  if (token) csrfToken = token
+}
+
+async function ensureCsrfToken(): Promise<string> {
+  if (csrfToken) return csrfToken
+  if (!csrfBootstrap) {
+    csrfBootstrap = apiClient
+      .get('/api/v1/auth/csrf')
+      .then((response) => {
+        storeCsrfToken(response)
+        if (!csrfToken) throw new Error('CSRF bootstrap did not return a token.')
+        return csrfToken
+      })
+      .finally(() => {
+        csrfBootstrap = null
+      })
+  }
+  return csrfBootstrap
+}
+
+apiClient.interceptors.request.use(async (config) => {
   config.headers.set('Accept-Language', i18n.global.locale.value)
   if (!config.headers.get('X-Request-ID')) {
     const requestId =
@@ -22,17 +54,27 @@ apiClient.interceptors.request.use((config) => {
         : `fe-${Date.now()}-${Math.random().toString(16).slice(2)}`
     config.headers.set('X-Request-ID', requestId)
   }
+  if (
+    import.meta.env.PROD &&
+    ['post', 'put', 'patch', 'delete'].includes((config.method || '').toLowerCase())
+  ) {
+    config.headers.set('X-CSRF-TOKEN', await ensureCsrfToken())
+  }
   return config
 })
 
 apiClient.interceptors.response.use(
-  (response) => response,
+  (response) => {
+    storeCsrfToken(response)
+    return response
+  },
   (error: unknown) => {
     const url = axios.isAxiosError(error) ? error.config?.url || '' : ''
     const status = axios.isAxiosError(error) ? error.response?.status : undefined
     if (status === 403 || status === 404) {
       useAuthStore().markPermissionSnapshotStale()
     }
+    if (status === 403 && url !== '/api/v1/auth/csrf') csrfToken = null
     if (!(url.includes('/auth/me') && status === 401)) reportApiError(error)
     return Promise.reject(error)
   },

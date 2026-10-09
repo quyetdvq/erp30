@@ -27,6 +27,7 @@ final class Api060ProductImportService
 {
     public const ERROR_FILE_REQUIRED = 'IMPORT_FILE_REQUIRED';
     public const ERROR_FILE_INVALID = 'IMPORT_FILE_INVALID';
+    public const ERROR_FILE_TOO_LARGE = 'IMPORT_FILE_TOO_LARGE';
 
     /** @param ConnectionInterface<mixed, mixed>|null $db */
     public function __construct(

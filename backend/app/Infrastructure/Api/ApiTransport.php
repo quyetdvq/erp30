@@ -108,6 +108,8 @@ final class ApiTransport
             'INVALID_CREDENTIALS' => 'invalidCredentials',
             'PROFILE_UPDATE_FAILED' => 'profileUpdateFailed',
             'POLICY_SCOPE_ALREADY_EXISTS' => 'policyScopeAlreadyExists',
+            'IMPORT_FILE_TOO_LARGE' => 'importFileTooLarge',
+            'IMPORT_ROW_LIMIT_EXCEEDED' => 'importRowLimitExceeded',
             default => match ($status) {
                 400 => 'invalidRequest',
                 401 => 'unauthenticated',

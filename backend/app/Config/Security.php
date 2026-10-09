@@ -6,6 +6,9 @@ use CodeIgniter\Config\BaseConfig;
 
 class Security extends BaseConfig
 {
+    /** Enable session CSRF verification for production browser traffic. */
+    public bool $csrfEnabled = ENVIRONMENT === 'production';
+
     /**
      * --------------------------------------------------------------------------
      * CSRF Protection Method
@@ -83,4 +86,18 @@ class Security extends BaseConfig
      * @see https://codeigniter4.github.io/userguide/libraries/security.html#redirection-on-failure
      */
     public bool $redirect = (ENVIRONMENT === 'production');
+
+    public function __construct()
+    {
+        parent::__construct();
+
+        $configured = env('security.csrfEnabled', null);
+        if ($configured !== null) {
+            $this->csrfEnabled = filter_var($configured, FILTER_VALIDATE_BOOLEAN);
+        }
+
+        if (ENVIRONMENT === 'production' && ! $this->csrfEnabled) {
+            throw new \RuntimeException('Production requires session CSRF protection.');
+        }
+    }
 }

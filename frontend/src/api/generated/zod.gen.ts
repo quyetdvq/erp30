@@ -1547,6 +1547,16 @@ export const zGetCurrentUserHeaders = z.object({
  */
 export const zGetCurrentUserResponse = zAuthUserResponse;
 
+export const zGetCsrfTokenHeaders = z.object({
+    'Accept-Language': z.enum(['vi', 'en']).optional().default('vi'),
+    'X-Request-ID': zRequestId.optional()
+});
+
+/**
+ * Successful API response.
+ */
+export const zGetCsrfTokenResponse = zSuccessResponse;
+
 export const zUpdateAuthProfileBody = zAuthProfilePatch2;
 
 export const zUpdateAuthProfileHeaders = z.object({

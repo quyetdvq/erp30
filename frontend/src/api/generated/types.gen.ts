@@ -1466,6 +1466,41 @@ export type GetCurrentUserResponses = {
 
 export type GetCurrentUserResponse = GetCurrentUserResponses[keyof GetCurrentUserResponses];
 
+export type GetCsrfTokenData = {
+    body?: never;
+    headers?: {
+        /**
+         * Supported request language. Unsupported values fall back to vi.
+         */
+        'Accept-Language'?: 'vi' | 'en';
+        /**
+         * Client request correlation identifier; invalid or missing values are replaced by a generated UUID.
+         */
+        'X-Request-ID'?: RequestId;
+    };
+    path?: never;
+    query?: never;
+    url: '/api/v1/auth/csrf';
+};
+
+export type GetCsrfTokenErrors = {
+    /**
+     * Malformed request or query.
+     */
+    400: ErrorResponse;
+};
+
+export type GetCsrfTokenError = GetCsrfTokenErrors[keyof GetCsrfTokenErrors];
+
+export type GetCsrfTokenResponses = {
+    /**
+     * Successful API response.
+     */
+    200: SuccessResponse;
+};
+
+export type GetCsrfTokenResponse = GetCsrfTokenResponses[keyof GetCsrfTokenResponses];
+
 export type UpdateAuthProfileData = {
     body: AuthProfilePatch2;
     headers?: {

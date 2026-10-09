@@ -13,4 +13,6 @@ return [
     'invalidCredentials' => 'Thông tin đăng nhập không hợp lệ.',
     'profileUpdateFailed' => 'Không thể cập nhật hồ sơ.',
     'policyScopeAlreadyExists' => 'Đã tồn tại Policy cho phạm vi Organization, Resource, State và participant này.',
+    'importFileTooLarge' => 'Tệp import vượt quá giới hạn 10 MiB đã cấu hình.',
+    'importRowLimitExceeded' => 'Tệp import vượt quá giới hạn 5.000 dòng đã cấu hình.',
 ];

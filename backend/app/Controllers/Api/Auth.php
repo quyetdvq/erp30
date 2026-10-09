@@ -17,6 +17,16 @@ final class Auth extends ApiController
         return $this->respondNoContent();
     }
 
+    public function csrf(): ResponseInterface
+    {
+        $security = service('security');
+
+        return $this->respondData([
+            'csrf_token' => $security->getHash(),
+            'header_name' => $security->getHeaderName(),
+        ]);
+    }
+
     public function login(): ResponseInterface
     {
         $payload = $this->jsonPayload();

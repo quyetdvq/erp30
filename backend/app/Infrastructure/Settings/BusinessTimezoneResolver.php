@@ -11,6 +11,8 @@ use InvalidArgumentException;
 
 final class BusinessTimezoneResolver implements BusinessTimezoneProvider
 {
+    public const DEFAULT_GROUP_TIMEZONE = 'Asia/Ho_Chi_Minh';
+
     public function __construct(private readonly Settings $settings)
     {
     }
@@ -34,6 +36,10 @@ final class BusinessTimezoneResolver implements BusinessTimezoneProvider
         $timezone = $this->readSetting();
         if (is_string($timezone) && $timezone !== '') {
             return $this->timezone($timezone);
+        }
+
+        if ($groupId !== null) {
+            return $this->timezone(self::DEFAULT_GROUP_TIMEZONE);
         }
 
         return null;

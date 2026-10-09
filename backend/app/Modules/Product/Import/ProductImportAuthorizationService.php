@@ -14,6 +14,7 @@ use App\Infrastructure\Import\Reader\CsvImportReader;
 use App\Infrastructure\Import\Reader\XlsxImportReader;
 use App\Infrastructure\Mutation\OperationContext;
 use CodeIgniter\Database\ConnectionInterface;
+use Config\Import;
 
 /** Product import application boundary for the start and row authorization gates. */
 final class ProductImportAuthorizationService
@@ -30,6 +31,7 @@ final class ProductImportAuthorizationService
         private readonly ?XlsxImportReader $xlsx = null,
         private readonly ?ProductImportTemplateValidator $validator = null,
         private readonly ?ProductImportModelBuilder $builder = null,
+        private readonly ?Import $limits = null,
         ?ConnectionInterface $db = null,
     ) {
         $this->db = $db ?? db_connect();
@@ -118,6 +120,7 @@ final class ProductImportAuthorizationService
         try {
             $this->jobs()->startProcessing($jobId, $operation);
             $document = $this->reader((string) ($jobData['source_format'] ?? ''))->read($source);
+            $this->limits()->assertRowCount(count($document->getRows()));
             $validated = $this->validator()->validate($document, strtoupper((string) ($jobData['mode'] ?? '')));
             $plan = $this->builder()->build($validated);
             $result = $this->rows()->execute($plan, $operation);
@@ -192,6 +195,11 @@ final class ProductImportAuthorizationService
     private function builder(): ProductImportModelBuilder
     {
         return $this->builder ?? new ProductImportModelBuilder(db: $this->db);
+    }
+
+    private function limits(): Import
+    {
+        return $this->limits ?? new Import();
     }
 
     private function persistRows(int $jobId, ProductImportMutationResult $result, OperationContext $operation): void

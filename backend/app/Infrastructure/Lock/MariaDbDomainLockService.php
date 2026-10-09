@@ -16,16 +16,31 @@ final class MariaDbDomainLockService implements DomainLockService
     /** @var ConnectionInterface<mixed, mixed> */
     private ConnectionInterface $db;
     private int $configuredTimeoutSeconds;
+    private int $configuredRetryCount;
 
     /** @param ConnectionInterface<mixed, mixed>|null $db */
     public function __construct(?ConnectionInterface $db = null, ?int $configuredTimeoutSeconds = null)
     {
         $this->db = $db ?? db_connect();
-        $configured = $configuredTimeoutSeconds ?? (int) (getenv('DINKERP_DOMAIN_LOCK_TIMEOUT') ?: self::DEFAULT_TIMEOUT_SECONDS);
+        $configured = $configuredTimeoutSeconds ?? (int) (env(
+            'lock.timeout_seconds',
+            getenv('DINKERP_DOMAIN_LOCK_TIMEOUT') ?: self::DEFAULT_TIMEOUT_SECONDS,
+        ));
         if ($configured < 0) {
             throw new \InvalidArgumentException('Domain lock timeout must be non-negative.');
         }
         $this->configuredTimeoutSeconds = $configured;
+
+        $retryCount = (int) env('lock.retry_count', 0);
+        if ($retryCount < 0 || $retryCount > 1) {
+            throw new \InvalidArgumentException('Domain lock retry count must be 0 or 1.');
+        }
+        $this->configuredRetryCount = $retryCount;
+    }
+
+    public function retryCount(): int
+    {
+        return $this->configuredRetryCount;
     }
 
     public function acquire(string $domainKey, int $timeoutSeconds = 5): void

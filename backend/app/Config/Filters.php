@@ -2,6 +2,7 @@
 
 namespace Config;
 
+use App\Filters\CsrfTokenResponse;
 use App\Filters\RequestContextFilter;
 use CodeIgniter\Config\Filters as BaseFilters;
 use CodeIgniter\Filters\Cors;
@@ -30,6 +31,11 @@ class Filters extends BaseFilters
 
         if (! $secureRuntime) {
             return;
+        }
+
+        if (config(Security::class)->csrfEnabled) {
+            $this->globals['before'][] = 'csrf';
+            $this->globals['after'][] = 'csrftoken';
         }
 
         $this->required['after'] = array_values(array_diff(
@@ -62,6 +68,7 @@ class Filters extends BaseFilters
         'pagecache'     => PageCache::class,
         'performance'   => PerformanceMetrics::class,
         'requestcontext' => RequestContextFilter::class,
+        'csrftoken'     => CsrfTokenResponse::class,
     ];
 
     /**
