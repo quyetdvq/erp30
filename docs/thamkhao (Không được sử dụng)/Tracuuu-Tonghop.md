@@ -1029,6 +1029,7 @@ strict-origin-when-cross-origin
 
 Các modal hiện tại chỉ cần Click chuột ra khỏi phạm vi modal là modal tự đóng lại. Tôi muốn khi người dùng bắt buộc phải click vào nút Close hoặc biểu tượng X thì mới đóng
 
+Bạn hãy liệt kê các vấn đề tồn đọng của P1-SYS-005 và P1-SYS-007
 
 
 Xử lý lỗi: Liên quan đến định dạng thời gian
@@ -1054,3 +1055,23 @@ Status Code 422 Unprocessable Content
         "request_id": "fe-1791453014394-8c946c3f6095c"
     }
 }
+
+xuất 365 ngày; chưa kích hoạt purge	Hoàn thiện chính sách; purge cần Security phê duyệt riêng
+SYSTEM_ADMIN	Chính xác 93 actions sau migration 000013; đối chiếu exact-set	Chuẩn bị và kiểm thử trên staging; không tự sửa erp
+Production host	Hoàn thiện PHP startup errors, timezone, OPcache, TLS và authenticated browser evidence	Kiểm thử staging thực tế; không thể giả lập PASS
+Decision register	Đối soát trạng thái theo kết quả recheck mới nhất	Có
+
+
+
+
+| Vấn đề | Phương án chốt |
+|---|---|
+| **SYS-005 thiếu legacy** | Đề xuất **P1 greenfield-only**, loại trừ upgrade legacy khỏi phạm vi phát hành; lập **Change Control** thay thế acceptance tương ứng. |
+| **SYS-007 CSRF** | Sử dụng **Session-based CSRF**, tích hợp SPA login/bootstrap, sử dụng header `X-CSRF-TOKEN`, đồng thời kiểm thử đầy đủ **token lifecycle**. |
+| **Product Import limits** | Giới hạn **10 MiB/file**, tối đa **5.000 data rows/file**. |
+| **Lock/retry** | **Timeout 5 giây**, số lần retry mặc định là **0**. |
+| **Business Timezone** | GROUP sử dụng `Asia/Ho_Chi_Minh`; Company sử dụng timezone theo **canonical configuration**; Database sử dụng **UTC**. |
+| **Retention** | Đề xuất thời gian retention **365 ngày**; **chưa kích hoạt cơ chế purge**. |
+| **SYSTEM_ADMIN** | Chính xác **93 actions** sau migration `000013`; thực hiện đối chiếu theo **exact-set**. |
+| **Production host** | Hoàn thiện **PHP startup errors, timezone, OPcache, TLS** và bổ sung **authenticated browser evidence**. |
+| **Decision register** | Đối soát trạng thái theo **kết quả recheck mới nhất**. |

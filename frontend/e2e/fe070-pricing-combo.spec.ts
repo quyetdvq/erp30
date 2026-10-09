@@ -58,6 +58,14 @@ async function mockSession(
   page: Page,
   permissions = ['price_list.view', 'price_list.create', 'price_list.edit', 'price_list.setstate'],
 ): Promise<void> {
+  await page.route('**/api/v1/auth/csrf', (route) =>
+    route.fulfill({
+      status: 200,
+      headers: { 'X-CSRF-TOKEN': 'csrf-e2e' },
+      contentType: 'application/json',
+      body: JSON.stringify({ data: { csrf_token: 'csrf-e2e', header_name: 'X-CSRF-TOKEN' } }),
+    }),
+  )
   await page.route('**/api/v1/auth/me', async (route) =>
     route.fulfill({
       status: 200,

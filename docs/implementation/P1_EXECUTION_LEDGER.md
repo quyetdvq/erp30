@@ -141,7 +141,7 @@ registry.
 | P1-SYS-005 | DONE | 0000000 | release | Approved greenfield-only scope replacement closes this release's legacy rehearsal acceptance; the historical legacy path remains NOT VERIFIED. Evidence: `docs/implementation/evidence/P1-SYS-005/03_greenfield_scope_change_approval.md`. |
 | P1-SYS-006 | DONE | 0000000 | release | OpenAPI/frontend drift check: 133/133 normalized runtime/OpenAPI operations and 133 generated SDK operations with zero drift; transport/envelope/string serialization, request ID/locale, 400/401/403/404/409/422, authorization-safe pagination, approved overlays, pending-surface exclusion, backend/frontend quality gates, and focused/full regressions passed. Evidence: `docs/implementation/evidence/P1-SYS-006/01_openapi_frontend_contract_drift_check.md`. |
 | P1-SYS-007 | DONE | 0000000 | release | Approved parameters/current-host runtime, retention decision, CSRF/CORS, PHP/UTC/OPcache/TLS, migration 000013, exact 93-action SYSTEM_ADMIN, and real authenticated browser journey all pass; evidence: `docs/implementation/evidence/P1-SYS-007/03_approved_parameter_recheck.md`. |
-| P1-UAT-001 | NOT_STARTED | — | release | No accepted implementation evidence. |
+| P1-UAT-001 | BLOCKED | — | release | UAT package created; 20 live API checks pass and Chromium support profile is 42/42 after CSRF fixture repair, but business reviewer/fixture sign-off and SYS-007 closure reconciliation remain outstanding. Evidence: `docs/implementation/evidence/P1-UAT-001/06_uat_summary_and_readiness.md`. |
 | P1-RC-001 | NOT_STARTED | — | release | No accepted implementation evidence. |
 
 ## Corrective / Operational Work
