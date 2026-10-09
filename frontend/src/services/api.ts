@@ -16,6 +16,17 @@ export const apiClient = axios.create({
 let csrfToken: string | null = null
 let csrfBootstrap: Promise<string> | null = null
 
+/** Drop the session-bound token after Shield rotates or destroys the session. */
+export function invalidateCsrfToken(): void {
+  csrfToken = null
+  csrfBootstrap = null
+}
+
+export async function refreshCsrfToken(): Promise<string> {
+  invalidateCsrfToken()
+  return ensureCsrfToken()
+}
+
 function storeCsrfToken(response: { headers?: Record<string, unknown>; data?: unknown }): void {
   const header = response.headers?.['x-csrf-token']
   const payload = response.data as { data?: { csrf_token?: unknown } } | undefined
@@ -74,7 +85,9 @@ apiClient.interceptors.response.use(
     if (status === 403 || status === 404) {
       useAuthStore().markPermissionSnapshotStale()
     }
-    if (status === 403 && url !== '/api/v1/auth/csrf') csrfToken = null
+    if ((status === 403 || status === 419) && url !== '/api/v1/auth/csrf') {
+      invalidateCsrfToken()
+    }
     if (!(url.includes('/auth/me') && status === 401)) reportApiError(error)
     return Promise.reject(error)
   },

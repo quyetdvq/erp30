@@ -1,4 +1,4 @@
-import { apiClient } from '@/services/api'
+import { apiClient, invalidateCsrfToken, refreshCsrfToken } from '@/services/api'
 
 type ApiEnvelope<T> = {
   data: T
@@ -31,11 +31,16 @@ export async function login(payload: {
   remember: boolean
 }): Promise<AuthUser> {
   const response = await apiClient.post<ApiEnvelope<AuthPayload>>('/api/v1/auth/login', payload)
+  if (import.meta.env.PROD) await refreshCsrfToken()
   return userFromResponse(response)
 }
 
 export async function logout(): Promise<void> {
-  await apiClient.post('/api/v1/auth/logout')
+  try {
+    await apiClient.post('/api/v1/auth/logout')
+  } finally {
+    invalidateCsrfToken()
+  }
 }
 
 export async function getCurrentUser(): Promise<AuthUser> {
