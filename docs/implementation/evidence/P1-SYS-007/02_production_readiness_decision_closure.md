@@ -286,3 +286,20 @@ Read-only/runtime results:
 The remaining SYS-007 blockers are unchanged: CSRF bootstrap decision,
 production PHP host settings/retention decisions, reviewed SYSTEM_ADMIN
 reconciliation, and independent SYS-005 legacy evidence.
+
+## Current-host approved-parameter recheck (2026-10-09)
+
+The latest evidence is recorded in
+`03_approved_parameter_recheck.md` and supersedes the earlier open findings
+where the local host was still on development defaults. The current API host
+is `https://api.monmin.net`; after Apache restart, runtime probes confirmed
+`display_errors`/`display_startup_errors` off, timezone `UTC`, OPcache enabled
+for Apache and disabled for CLI, HTTPS, secure headers/cookies, and exact
+HTTPS-only CORS. Migration `000013` is applied on the current database and the
+guarded reconciliation dry-run reports an exact 93-action `SYSTEM_ADMIN` set.
+
+The approved table is therefore implemented/rechecked. SYS-007 remains
+`BLOCKED` only because no approved authenticated browser session/credentials
+were available for the real CSRF/login/mutation/rotation/logout journey, and
+retention ownership/access-control/restore-expiry operational sign-off has not
+been supplied. No credentials were fabricated and purge remains disabled.

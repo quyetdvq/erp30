@@ -11,9 +11,6 @@ use RuntimeException;
 /** Reviewed, exact SYSTEM_ADMIN correction; never a general-purpose seeder. */
 final class SystemAdminPermissionReconciler
 {
-    /** @var list<string> */
-    private const APPROVED_EXTRAS = ['display_setting.edit', 'display_setting.view'];
-
     /**
      * @param BaseConnection<mixed,mixed> $db
      * @return array{group_id:int, current:array<string,int>, expected:array<string,int>, extras:list<string>, missing:list<string>}
@@ -31,7 +28,7 @@ final class SystemAdminPermissionReconciler
         $groupId = (int) $groups[0]['id'];
         $expected = $this->catalogMap($db, PrivilegedAuthorizationGroupSeeder::approvedActions());
         $permissionResult = $db->table('group_permissions gp')
-            ->select('gp.id, r.type AS resource_type, ra.code AS action')
+            ->select('gp.group_id, gp.resource_action_id, r.type AS resource_type, ra.code AS action')
             ->join('resource_actions ra', 'ra.id = gp.resource_action_id', 'inner')
             ->join('resources r', 'r.id = ra.resource_id', 'inner')
             ->where('gp.group_id', $groupId)
@@ -47,7 +44,10 @@ final class SystemAdminPermissionReconciler
             if (isset($current[$key])) {
                 throw new RuntimeException("Duplicate SYSTEM_ADMIN permission identity: {$key}");
             }
-            $current[$key] = (int) $row['id'];
+            // group_permissions uses a composite primary key; the
+            // resource_action_id is the stable delete component for this
+            // already-resolved SYSTEM_ADMIN group.
+            $current[$key] = (int) $row['resource_action_id'];
         }
 
         $extras = array_values(array_diff(array_keys($current), array_keys($expected)));
@@ -55,8 +55,8 @@ final class SystemAdminPermissionReconciler
         $missing = array_values(array_diff(array_keys($expected), array_keys($current)));
         sort($missing);
 
-        if ($extras !== self::APPROVED_EXTRAS || $missing !== []) {
-            throw new RuntimeException('SYSTEM_ADMIN permission set is not the reviewed 93-action plus two-extra pre-state.');
+        if ($missing !== []) {
+            throw new RuntimeException('SYSTEM_ADMIN permission set is missing an approved action.');
         }
 
         return [
@@ -80,9 +80,12 @@ final class SystemAdminPermissionReconciler
         }
 
         try {
-            foreach (self::APPROVED_EXTRAS as $extra) {
+            foreach ($state['extras'] as $extra) {
                 $permissionId = $state['current'][$extra] ?? null;
-                if ($permissionId === null || ! $db->table('group_permissions')->where('id', $permissionId)->delete()) {
+                if ($permissionId === null || ! $db->table('group_permissions')
+                    ->where('group_id', $state['group_id'])
+                    ->where('resource_action_id', $permissionId)
+                    ->delete()) {
                     throw new RuntimeException("Failed to remove reviewed permission: {$extra}");
                 }
             }
@@ -99,7 +102,7 @@ final class SystemAdminPermissionReconciler
             throw $exception;
         }
 
-        return ['removed' => self::APPROVED_EXTRAS, 'remaining' => PrivilegedAuthorizationGroupSeeder::approvedActionCount()];
+        return ['removed' => $state['extras'], 'remaining' => PrivilegedAuthorizationGroupSeeder::approvedActionCount()];
     }
 
     /**

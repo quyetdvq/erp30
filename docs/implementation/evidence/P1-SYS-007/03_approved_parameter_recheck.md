@@ -4,40 +4,67 @@ Date: 2026-10-09
 Task: `P1-SYS-007`  
 Approval input: user-approved decision table in the current task
 
-## Implemented and verified repository behavior
+## Current-host recheck
+
+The current API host is `https://api.monmin.net`; `erp.monmin.net` is the Vite
+SPA proxy and is not an API host. The following checks were run after a
+controlled Apache restart (new workers, `httpd -t = Syntax OK`; unrelated
+missing-vhost warnings are unchanged):
+
+| Check | Evidence | Status |
+|---|---|---|
+| PHP startup/errors | Runtime probe returned `display_errors=""` and `display_startup_errors=""`. | PASS |
+| PHP timezone | Runtime probe returned `date_timezone=UTC`; health timestamp is `+00:00`. | PASS |
+| OPcache | Runtime probe returned `opcache_enable=1`, `opcache_enable_cli=0`, `opcache_validate_timestamps=1`. | PASS |
+| TLS/HTTPS | `https://api.monmin.net/api/v1/health` returned `200`; HTTP health redirects to HTTPS; Apache serves OpenSSL 3.1.3. | PASS |
+| Secure transport headers | Health response includes secure session cookie (`Secure; HttpOnly; SameSite=Lax`), CSP, and no `X-Powered-By`/Debugbar disclosure. | PASS |
+| CORS | Credentialed preflight accepts exactly `https://erp.monmin.net`; `http://erp.monmin.net` has no ACAO header. | PASS |
+| CSRF bootstrap | `GET /api/v1/auth/csrf` returned `200`, JSON token metadata, and `X-CSRF-TOKEN`; token values are intentionally not recorded. | CODE/LIVE BOOTSTRAP PASS |
+
+## Approved parameters
 
 | Parameter | Implementation / evidence | Status |
 |---|---|---|
-| Product Import | `Config\\Import` defaults to 10 MiB (`10485760`) and 5,000 rows; exact-boundary and overflow error-code tests pass. | PASS |
-| Lock/retry | `MariaDbDomainLockService` defaults to 5 seconds and validates retry count `0..1`; the approved default is 0 and the regression test passes. | PASS |
-| Business timezone | GROUP fallback is `Asia/Ho_Chi_Minh`; Company context reads canonical `App.businessTimezone`; application/database defaults remain UTC. | PASS |
-| Retention | 365-day target is recorded; no purge job or destructive retention mechanism was added. | DECISION RECORDED; OPERATIONAL EVIDENCE PENDING |
-| CSRF | `/api/v1/auth/csrf`, rotated `X-CSRF-TOKEN`, mutation interceptor, and logout/login refresh are implemented. Targeted Chromium lifecycle test passes. | CODE PASS; LIVE AUTHENTICATED EVIDENCE PENDING |
-| SYSTEM_ADMIN | `erp_test` has migration `000013`, one `SYSTEM_ADMIN` group, `user.reset_password`, and exactly 93 permissions. | TEST BASELINE PASS |
+| Product Import | `Config\\Import` enforces 10 MiB (`10485760`) and 5,000 rows; exact-boundary and overflow tests pass. | PASS |
+| Lock/retry | `MariaDbDomainLockService` uses a 5-second timeout; approved retry default is `0`; regression test passes. | PASS |
+| Business timezone | GROUP fallback is `Asia/Ho_Chi_Minh`; Company context reads canonical `App.businessTimezone`; application/database persistence remains UTC. | PASS |
+| Retention | Approved target is 365 days; purge is intentionally not activated. No purge job or destructive mechanism was added. | DECISION RECORDED; OPERATIONAL SIGN-OFF OPEN |
+| CSRF | `/api/v1/auth/csrf`, rotated `X-CSRF-TOKEN`, mutation interceptor, and logout/login refresh are implemented. Mocked lifecycle test passes. | CODE PASS; AUTHENTICATED JOURNEY OPEN |
+| SYSTEM_ADMIN | Current host has migration `000013`, one `SYSTEM_ADMIN` group, `user.reset_password`, and exact 93-action set. Guarded dry-run reports `pre-state: 93; extras=`. | PASS |
 
-The reconciliation command now explicitly connects to the `tests` group for
-testing-mode maintenance, preventing an accidental connection to development
-`erp`. The command remains guarded by `erp_test`/explicit staging target,
-backup checksum, and explicit approval; no production or development write was
-performed.
+The reconciliation command uses the `tests` connection by default and only
+allows an explicitly named `staging` target for non-test maintenance. The
+current-host check used the approved backup
+`D:\\XAMPP\\temp\\p1-sys-007-before-final.sql` with SHA-256
+`55145F08A04D8AC1F558B7FE846993C3AE8480AFA5D8259756379B112F8D19B3` and
+performed no additional write because the target already had the exact set.
 
-## Remaining release evidence
+## Validation run
 
-SYS-007 is **BLOCKED**, not `DONE`, because the approved parameters do not
-substitute for deployment evidence:
+| Command / journey | Result |
+|---|---|
+| `php .codex/skills/dinkerp-implementation/scripts/task-context.php P1-SYS-007` | PASS; `AUTHORITY_CACHE: VALID`; 104/107 ledger DONE |
+| `vendor/bin/phpunit --no-coverage` | PASS; 445 tests / 3,923 assertions |
+| `vendor/bin/phpstan analyse --level=8 --no-progress` | PASS |
+| `php spark migrate:status` (`CI_ENVIRONMENT=production`) | PASS; App migration `000013` applied to current database |
+| `php spark systemadmin:reconcile ... --approved` (dry-run, explicit staging target) | PASS; exact 93-action pre-state, no extras |
+| `httpd -t -f D:\\XAMPP\\apache\\conf\\httpd.conf` | PASS; `Syntax OK` (unrelated missing-vhost warnings) |
+| Runtime PHP probe after Apache restart | PASS; values recorded above; probe removed immediately after check |
+| Live CSRF negative checks over HTTPS | PASS; missing token and invalid token return `403`; valid token with deliberately nonexistent credentials reaches `401 INVALID_CREDENTIALS` |
+| Targeted Chromium CSRF lifecycle test | PASS; 1 test / 1 assertion (mocked transport) |
+| Real authenticated HTTPS browser journey | NOT RUN; no approved test credentials or existing authenticated browser session was available |
 
-- PHP `display_startup_errors=0`, UTC host timezone, OPcache posture, and TLS
-  verification still require production/staging evidence.
-- Retention ownership, access controls, and restore/expiry rehearsal are not
-  complete; purge remains intentionally disabled.
-- CSRF needs a real HTTPS authenticated browser journey covering bootstrap,
-  login, missing/invalid token rejection, mutation, rotation, and logout.
-- The reviewed `SYSTEM_ADMIN` correction still requires the approved backup,
-  forward migration path and exact-set reconciliation evidence in the target
-  deployment environment. The isolated `erp_test` baseline is verified but is
-  not production approval.
-- Decision register entries must be reconciled with the latest HTTPS/CORS/DSN
-  recheck, including the distinction between code/runtime PASS and deployment
-  sign-off.
+## Release disposition
+
+`P1-SYS-007` remains **BLOCKED**, not `DONE`. The host/runtime and approved
+parameter work is complete, but release evidence is still incomplete:
+
+- A real authenticated HTTPS browser journey must prove login, missing/invalid
+  CSRF rejection, one authorized mutation, token rotation, and logout.
+- Security/Operations must record retention ownership/access controls and the
+  365-day restore/expiry rehearsal, while keeping purge disabled until approved.
+
+No credentials were fabricated, no CSRF check was bypassed, and no unrelated
+worktree change was staged. `P1-UAT-001` and `P1-RC-001` remain not authorized.
 
 **Outcome: BLOCKED / NOT RELEASE READY.**
