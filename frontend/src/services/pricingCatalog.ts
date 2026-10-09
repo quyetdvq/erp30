@@ -16,6 +16,7 @@ import type {
   State,
 } from '@/api/generated/types.gen'
 import { withTypedClient } from '@/api/client'
+import { jsonBodySerializer } from '@/api/generated/client'
 import { i18n } from '@/i18n'
 import type { ListQuery, ListResponse } from '@/components/lists/listTypes'
 
@@ -123,16 +124,25 @@ export function replacePriceListItemRows(
       client,
       headers: headers(),
       path: { id },
-      body,
+      body: { items: Array.isArray(body) ? body : body.items },
+      bodySerializer: jsonBodySerializer.bodySerializer,
       throwOnError: true,
     })
     // Re-read after replacement because deployed API revisions may return
     // 200 with an empty data array even when the set was persisted.
-    return listPriceListItems({
+    const response = await listPriceListItems({
       client,
       headers: headers(),
       path: { id },
       throwOnError: true,
-    }).then((response) => response.data.data ?? [])
+    })
+    const rows = response.data.data ?? []
+    const submitted = Array.isArray(body) ? body : body.items
+    if (submitted.length > 0 && rows.length === 0) {
+      throw new Error(
+        'Price List replacement was acknowledged but no rows were returned by the API.',
+      )
+    }
+    return rows
   })
 }

@@ -34,6 +34,7 @@ import type {
   State,
 } from '@/api/generated/types.gen'
 import { withTypedClient } from '@/api/client'
+import { jsonBodySerializer } from '@/api/generated/client'
 import { i18n } from '@/i18n'
 import type { ListQuery, ListResponse } from '@/components/lists/listTypes'
 
@@ -258,16 +259,23 @@ export function replaceProductComboItems(
       client,
       headers: headers(),
       path: { id },
-      body,
+      body: { items: Array.isArray(body) ? body : body.items },
+      bodySerializer: jsonBodySerializer.bodySerializer,
       throwOnError: true,
     })
     // Some deployed API revisions acknowledge the replacement with an empty
     // collection. Re-read the authoritative set instead of clearing the UI.
-    return listComboItems({
+    const response = await listComboItems({
       client,
       headers: headers(),
       path: { id },
       throwOnError: true,
-    }).then((response) => response.data.data ?? [])
+    })
+    const rows = response.data.data ?? []
+    const submitted = Array.isArray(body) ? body : body.items
+    if (submitted.length > 0 && rows.length === 0) {
+      throw new Error('COMBO replacement was acknowledged but no rows were returned by the API.')
+    }
+    return rows
   })
 }

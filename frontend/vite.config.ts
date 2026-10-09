@@ -44,9 +44,9 @@ export default defineConfig({
     strictPort: true,
 
     hmr: {
-      host: 'erp.monmin.net',
-      protocol: 'ws',
-      clientPort: 80,
+      host: process.env.VITE_HMR_HOST || 'erp.monmin.net',
+      protocol: (process.env.VITE_HMR_PROTOCOL as 'ws' | 'wss' | undefined) || 'wss',
+      clientPort: Number(process.env.VITE_HMR_PORT || 443),
     },
   },
 })
