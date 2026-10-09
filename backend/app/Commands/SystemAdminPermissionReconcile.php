@@ -27,7 +27,11 @@ final class SystemAdminPermissionReconcile extends BaseCommand
     /** @param array<string,mixed> $params */
     public function run(array $params): void
     {
-        $db = db_connect();
+        // CLI commands do not always inherit Config\Database::$defaultGroup;
+        // force the isolated test connection unless an explicitly named
+        // staging target was supplied.
+        $target = strtolower((string) env('DINKERP_SYSTEM_ADMIN_TARGET', ''));
+        $db = $target === 'staging' ? db_connect() : db_connect('tests');
         $this->assertGuard($db);
         $backup = (string) (CLI::getOption('backup') ?? '');
         $checksum = strtolower((string) (CLI::getOption('sha256') ?? ''));
