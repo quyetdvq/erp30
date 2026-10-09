@@ -1,10 +1,7 @@
 import { expect, test } from '@playwright/test'
 
-test.describe('production session CSRF lifecycle', () => {
-  /* eslint-disable playwright/no-conditional-in-test */
+test.describe('session CSRF lifecycle', () => {
   test('refreshes the CSRF token after logout before the next login', async ({ page }) => {
-    if (!process.env.CI) return
-
     let csrfRequests = 0
     const loginTokens: string[] = []
     let logoutToken = ''
@@ -80,5 +77,4 @@ test.describe('production session CSRF lifecycle', () => {
     expect(csrfRequests).toBe(4)
     expect(loginTokens).toEqual(['csrf-1', 'csrf-3'])
   })
-  /* eslint-enable playwright/no-conditional-in-test */
 })

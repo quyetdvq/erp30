@@ -31,7 +31,7 @@ export async function login(payload: {
   remember: boolean
 }): Promise<AuthUser> {
   const response = await apiClient.post<ApiEnvelope<AuthPayload>>('/api/v1/auth/login', payload)
-  if (import.meta.env.PROD) await refreshCsrfToken()
+  await refreshCsrfToken()
   return userFromResponse(response)
 }
 

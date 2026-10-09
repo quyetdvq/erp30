@@ -15,6 +15,7 @@ export const apiClient = axios.create({
 
 let csrfToken: string | null = null
 let csrfBootstrap: Promise<string> | null = null
+const mutationMethods = new Set(['post', 'put', 'patch', 'delete'])
 
 /** Drop the session-bound token after Shield rotates or destroys the session. */
 export function invalidateCsrfToken(): void {
@@ -65,10 +66,10 @@ apiClient.interceptors.request.use(async (config) => {
         : `fe-${Date.now()}-${Math.random().toString(16).slice(2)}`
     config.headers.set('X-Request-ID', requestId)
   }
-  if (
-    import.meta.env.PROD &&
-    ['post', 'put', 'patch', 'delete'].includes((config.method || '').toLowerCase())
-  ) {
+  // The API enforces session CSRF for browser mutations in every deployed mode.
+  // Do not key this security requirement off Vite's build mode: a misconfigured
+  // live server can still report MODE=development while serving production traffic.
+  if (mutationMethods.has((config.method || '').toLowerCase())) {
     config.headers.set('X-CSRF-TOKEN', await ensureCsrfToken())
   }
   return config

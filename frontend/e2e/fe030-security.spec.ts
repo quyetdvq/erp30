@@ -51,6 +51,17 @@ async function mockSession(page: Page): Promise<void> {
 
 test.describe('P1-FE-030 security surfaces', () => {
   test.beforeEach(async ({ page }) => {
+    await page.route('**/api/v1/auth/csrf', async (route) =>
+      route.fulfill({
+        status: 200,
+        headers: { 'X-CSRF-TOKEN': 'csrf-fe030' },
+        contentType: 'application/json',
+        body: JSON.stringify({
+          data: { csrf_token: 'csrf-fe030', header_name: 'X-CSRF-TOKEN' },
+          meta: {},
+        }),
+      }),
+    )
     await mockSession(page)
     await page.route('**/api/v1/security/users*', async (route) =>
       route.fulfill({
