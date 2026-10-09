@@ -107,6 +107,9 @@ class Filters extends BaseFilters
      */
     public array $globals = [
         'before' => [
+            // CORS must run before CSRF/auth failures so browser clients can
+            // read the stable 401/403 error envelope cross-origin.
+            'cors',
             'requestcontext',
             // 'honeypot',
             // 'csrf',

@@ -298,8 +298,9 @@ for Apache and disabled for CLI, HTTPS, secure headers/cookies, and exact
 HTTPS-only CORS. Migration `000013` is applied on the current database and the
 guarded reconciliation dry-run reports an exact 93-action `SYSTEM_ADMIN` set.
 
-The approved table is therefore implemented/rechecked. SYS-007 remains
-`BLOCKED` only because no approved authenticated browser session/credentials
-were available for the real CSRF/login/mutation/rotation/logout journey, and
-retention ownership/access-control/restore-expiry operational sign-off has not
-been supplied. No credentials were fabricated and purge remains disabled.
+The approved table is therefore implemented/rechecked. The user supplied an
+approved test account and explicitly marked the retention decision PASS, with
+purge remaining disabled. The real browser journey passed login, `/auth/me`,
+missing/invalid CSRF rejection, an authorized profile mutation, logout,
+relogin, token rotation, and final logout. `P1-SYS-007` is now `DONE`; no
+credentials were recorded and no CSRF check was bypassed.
