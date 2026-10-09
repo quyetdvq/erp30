@@ -78,6 +78,21 @@ final class P1Prc001PriceListServiceTest extends CIUnitTestCase
         $this->assertSame('2026-12-01 00:00:00', $updated['effective_to']);
     }
 
+    public function testApiDateTimeWithFractionalSecondsNormalizesToUtc(): void
+    {
+        [$service, $operation] = $this->fixture(['create']);
+        $companyId = $this->organization('COMPANY', $this->groupRoot());
+
+        $id = $service->create($this->header('RFC3339-FRACTION', $companyId, [
+            'effective_from' => '2026-10-01T00:00:00.123Z',
+            'effective_to' => '2026-11-01T03:00:00.999000+03:00',
+        ]), $operation);
+
+        $row = $service->findById($id);
+        $this->assertSame('2026-10-01 00:00:00', $row['effective_from']);
+        $this->assertSame('2026-11-01 00:00:00', $row['effective_to']);
+    }
+
     public function testAuthorizationAndAuditUsePriceListOwnerWithoutProductBypass(): void
     {
         [$service, $operation, $actorId] = $this->fixture(['create', 'edit', 'setstate']);

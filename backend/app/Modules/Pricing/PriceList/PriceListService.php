@@ -378,6 +378,21 @@ final class PriceListService
         }
 
         // API date-time values are RFC3339; persist all offset-bearing input as UTC SQL time.
+        // RFC3339 permits fractional seconds, while the database stores second precision.
+        if (preg_match('/\A(\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2})\.([0-9]{1,6})(Z|[+-]\d{2}:\d{2})\z/', $value, $matches) === 1) {
+            $offset = $matches[3] === 'Z' ? '+00:00' : $matches[3];
+            $normalized = $matches[1] . '.' . str_pad($matches[2], 6, '0') . $offset;
+            $parsed = DateTimeImmutable::createFromFormat('!Y-m-d\TH:i:s.uP', $normalized);
+            $errors = DateTimeImmutable::getLastErrors();
+            if ($parsed === false
+                || ($errors !== false && ($errors['warning_count'] !== 0 || $errors['error_count'] !== 0))
+                || $parsed->format('Y-m-d\TH:i:s.uP') !== $normalized) {
+                throw new DomainException(self::ERROR_INVALID_INTERVAL, ['field' => $field]);
+            }
+
+            return $parsed->setTimezone(new DateTimeZone('UTC'))->format('Y-m-d H:i:s');
+        }
+
         $parsed = DateTimeImmutable::createFromFormat(DateTimeInterface::ATOM, $value);
         $errors = DateTimeImmutable::getLastErrors();
         if ($parsed === false || ($errors !== false && ($errors['warning_count'] !== 0 || $errors['error_count'] !== 0))) {
