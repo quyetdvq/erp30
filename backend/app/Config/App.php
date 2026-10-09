@@ -159,7 +159,7 @@ class App extends BaseConfig
      * secure, the user will be redirected to a secure version of the page
      * and the HTTP Strict Transport Security (HSTS) header will be set.
      */
-    public bool $forceGlobalSecureRequests = false;
+    public bool $forceGlobalSecureRequests = ENVIRONMENT === 'production';
 
     /**
      * --------------------------------------------------------------------------
@@ -200,5 +200,21 @@ class App extends BaseConfig
      * @see http://www.html5rocks.com/en/tutorials/security/content-security-policy/
      * @see http://www.w3.org/TR/CSP/
      */
-    public bool $CSPEnabled = false;
+    public bool $CSPEnabled = ENVIRONMENT === 'production';
+
+    public function __construct()
+    {
+        parent::__construct();
+
+        if (ENVIRONMENT !== 'production') {
+            return;
+        }
+
+        $configuredBaseUrl = trim((string) env('app.baseURL', $this->baseURL));
+        if ($configuredBaseUrl === '' || ! str_starts_with(strtolower($configuredBaseUrl), 'https://')) {
+            throw new \RuntimeException('Production requires an HTTPS app.baseURL deployment setting.');
+        }
+
+        $this->baseURL = rtrim($configuredBaseUrl, '/') . '/';
+    }
 }

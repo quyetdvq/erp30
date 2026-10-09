@@ -36,6 +36,7 @@ class Cors extends BaseConfig
          */
         'allowedOrigins' => [
             'http://erp.dinktech.vn',
+            'https://erp.monmin.net/',
             'http://erp.monmin.net',
             'http://localhost:5174',
             'http://127.0.0.1:5174', 
@@ -125,4 +126,30 @@ class Cors extends BaseConfig
          */
         'maxAge' => 7200,
     ];
+
+    public function __construct()
+    {
+        parent::__construct();
+
+        // An explicit deployment allowlist takes precedence in every
+        // environment. This allows HTTPS staging without inheriting the
+        // development HTTP origins, while keeping the development defaults
+        // when no deployment setting is supplied.
+        $configuredOrigins = trim((string) env('cors.allowedOrigins', ''));
+        if ($configuredOrigins !== '') {
+            $this->default['allowedOrigins'] = array_values(array_filter(array_map(
+                static fn (string $origin): string => rtrim(trim($origin), '/'),
+                explode(',', $configuredOrigins),
+            )));
+
+            return;
+        }
+
+        // Production cross-origin access is deployment-owned. An empty
+        // setting intentionally denies cross-origin requests until the exact
+        // HTTPS SPA origin is supplied.
+        if (ENVIRONMENT === 'production') {
+            $this->default['allowedOrigins'] = [];
+        }
+    }
 }

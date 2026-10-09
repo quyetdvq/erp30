@@ -16,6 +16,32 @@ use CodeIgniter\Filters\SecureHeaders;
 
 class Filters extends BaseFilters
 {
+    public function __construct()
+    {
+        parent::__construct();
+
+        // Treat an explicitly enabled HTTPS runtime as production-like for
+        // response instrumentation, even when a deployment has not yet
+        // switched CI_ENVIRONMENT to production.
+        $secureRuntime = filter_var(
+            env('app.forceGlobalSecureRequests', ENVIRONMENT === 'production'),
+            FILTER_VALIDATE_BOOLEAN,
+        );
+
+        if (! $secureRuntime) {
+            return;
+        }
+
+        $this->required['after'] = array_values(array_diff(
+            $this->required['after'],
+            ['performance', 'toolbar'],
+        ));
+
+        if (! in_array('secureheaders', $this->globals['after'], true)) {
+            $this->globals['after'][] = 'secureheaders';
+        }
+    }
+
     /**
      * Configures aliases for Filter classes to
      * make reading things nicer and simpler.
@@ -57,9 +83,9 @@ class Filters extends BaseFilters
             'pagecache',  // Web Page Caching
         ],
         'after' => [
-            'pagecache',   // Web Page Caching
-            'performance', // Performance Metrics
-            'toolbar',     // Debug Toolbar
+            'pagecache', // Web Page Caching
+            // Debug-only response instrumentation must never run in production.
+            ...(ENVIRONMENT === 'production' ? [] : ['performance', 'toolbar']),
         ],
     ];
 
@@ -81,8 +107,8 @@ class Filters extends BaseFilters
         ],
         'after' => [
             'requestcontext',
+            ...(ENVIRONMENT === 'production' ? ['secureheaders'] : []),
             // 'honeypot',
-            // 'secureheaders',
         ],
     ];
 

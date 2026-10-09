@@ -3,6 +3,11 @@
 use CodeIgniter\Boot;
 use Config\Paths;
 
+// Do not disclose the PHP runtime through the default response header.
+if (function_exists('header_remove')) {
+    header_remove('X-Powered-By');
+}
+
 /*
  *---------------------------------------------------------------
  * CHECK PHP VERSION

@@ -47,3 +47,9 @@ Options -Indexes
 # Disable server signature start
 ServerSignature Off
 # Disable server signature end
+
+# PHP may add this response header unless it is disabled at the host level.
+# Removing it here is safe for development and prevents runtime disclosure.
+<IfModule mod_headers.c>
+	Header always unset X-Powered-By
+</IfModule>

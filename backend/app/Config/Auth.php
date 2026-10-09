@@ -158,7 +158,7 @@ class Auth extends ShieldAuth
      * --------------------------------------------------------------------
      * Determines whether users can register for the site.
      */
-    public bool $allowRegistration = true;
+    public bool $allowRegistration = ENVIRONMENT !== 'production';
 
     /**
      * --------------------------------------------------------------------
@@ -182,7 +182,7 @@ class Auth extends ShieldAuth
      * could be modified as the only method of login once an account
      * has been set up.
      */
-    public bool $allowMagicLinkLogins = true;
+    public bool $allowMagicLinkLogins = ENVIRONMENT !== 'production';
 
     /**
      * --------------------------------------------------------------------
@@ -209,10 +209,30 @@ class Auth extends ShieldAuth
      */
     public array $sessionConfig = [
         'field'              => 'user',
-        'allowRemembering'   => true,
+        'allowRemembering'   => ENVIRONMENT !== 'production',
         'rememberCookieName' => 'remember',
         'rememberLength'     => 30 * DAY,
     ];
+
+    public function __construct()
+    {
+        parent::__construct();
+
+        $secureRuntime = filter_var(
+            env('app.forceGlobalSecureRequests', ENVIRONMENT === 'production'),
+            FILTER_VALIDATE_BOOLEAN,
+        );
+
+        if (! $secureRuntime) {
+            return;
+        }
+
+        // These features are explicit secure-runtime opt-ins; absence of a
+        // deployment decision must not widen the authentication surface.
+        $this->allowRegistration = filter_var(env('auth.allowRegistration', false), FILTER_VALIDATE_BOOLEAN);
+        $this->allowMagicLinkLogins = filter_var(env('auth.allowMagicLinkLogins', false), FILTER_VALIDATE_BOOLEAN);
+        $this->sessionConfig['allowRemembering'] = filter_var(env('auth.allowRemembering', false), FILTER_VALIDATE_BOOLEAN);
+    }
 
     /**
      * --------------------------------------------------------------------

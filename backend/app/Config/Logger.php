@@ -110,7 +110,7 @@ class Logger extends BaseConfig
              * IMPORTANT: This MUST be an integer (no quotes) and you MUST use octal
              * integer notation (i.e. 0700, 0644, etc.)
              */
-            'filePermissions' => 0644,
+            'filePermissions' => ENVIRONMENT === 'production' ? 0600 : 0644,
 
             /*
              * Logging Directory Path

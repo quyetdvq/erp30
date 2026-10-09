@@ -194,6 +194,18 @@ class Database extends Config
     {
         parent::__construct();
 
+        if (ENVIRONMENT === 'production') {
+            $username = (string) ($this->default['username'] ?? '');
+            $password = (string) ($this->default['password'] ?? '');
+            $debug = filter_var($this->default['DBDebug'] ?? true, FILTER_VALIDATE_BOOLEAN);
+
+            if ($username === '' || $username === 'root' || $password === '' || $debug) {
+                throw new \RuntimeException(
+                    'Production database configuration requires non-default credentials and DBDebug=false.',
+                );
+            }
+        }
+
         // Ensure that we always set the database group to 'tests' if
         // we are currently running an automated test suite, so that
         // we don't overwrite live data on accident.

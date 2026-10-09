@@ -5,7 +5,9 @@ import { reportApiError } from '@/services/errorBoundary'
 import { useAuthStore } from '@/stores/auth'
 
 export const apiClient = axios.create({
-  baseURL: import.meta.env.VITE_API_BASE_URL || 'http://api.monmin.net',
+  baseURL:
+    import.meta.env.VITE_API_BASE_URL ||
+    (import.meta.env.PROD ? window.location.origin : 'https://api.monmin.net'),
   timeout: 10_000,
   withCredentials: true,
   headers: {
