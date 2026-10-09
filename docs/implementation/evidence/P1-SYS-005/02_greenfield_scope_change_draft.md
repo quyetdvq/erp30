@@ -1,6 +1,6 @@
 # P1-SYS-005 - Greenfield Release Scope Change Draft
 
-Status: **DRAFT / NOT APPROVED**  
+Status: **SUPERSEDED by approved closure**
 Version: `P1-SYS-005-SCOPE-CHANGE-v1.0`  
 Date: 2026-10-09
 
@@ -12,8 +12,10 @@ the approved legacy reset left no authoritative populated schema baseline,
 dump, provenance record, or representative data snapshot from which an
 existing-schema forward rehearsal could be proven.
 
-This draft does not alter DBD/Contract/Plan authority, mark `P1-SYS-005`
-`DONE`, waive Gate 9, or authorize a development/production migration.
+The approved decision is recorded in
+`03_greenfield_scope_change_approval.md`. This historical draft is retained
+to show the pre-approval boundary and must not be used as the current closure
+status.
 
 ## Required approval
 

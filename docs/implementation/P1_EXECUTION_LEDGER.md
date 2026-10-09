@@ -4,10 +4,10 @@ This ledger is lightweight operational evidence. It is not architecture
 authority and does not replace UR, FRS, DBD, the Implementation Contract, the
 Implementation Plan, API Design, or UI Design.
 
-The registry contains exactly 107 P1 tasks. Current ledger state records 103
+The registry contains exactly 107 P1 tasks. Current ledger state records 104
 completed tasks: Gate 0 is 10/10, Gate 1 is 14/14, Gate 2 is 8/8, Gate 3 is
 10/10, Gate 4 is 7/7, Gate 5 is 11/11, Gate 6 is 9/9, Gate 7 is 15/15,
-Gate 8 is 14/14, and Gate 9 is 5/9.
+Gate 8 is 14/14, and Gate 9 is 6/9.
 
 The Implementation Plan v1.8 retains a planning snapshot of `69/107`; the
 `80/107` value below is evidence-derived from the current Git/ledger history
@@ -20,7 +20,7 @@ registry.
 
 | Measure | Progress |
 |---|---:|
-| P1 tasks DONE | 103/107 |
+| P1 tasks DONE | 104/107 |
 | Gate 0 | 10/10 DONE |
 | Gate 1 | 14/14 DONE |
 | Gate 2 | 8/8 DONE |
@@ -30,7 +30,7 @@ registry.
 | Gate 6 | 9/9 DONE |
 | Gate 7 | 15/15 DONE |
 | Gate 8 | 14/14 DONE |
-| Gate 9 | 5/9 DONE |
+| Gate 9 | 6/9 DONE |
 
 ## Task Ledger
 
@@ -138,7 +138,7 @@ registry.
 | P1-SYS-002 | DONE | 0000000 | high-risk | Authorization/security regression: focused HIGH-risk backend/API profile 234/234 tests, full backend 440/440, PHPStan level 8, frontend permission/error unit 9/9, and Security UI Chromium 5/5. Evidence: `docs/implementation/evidence/P1-SYS-002/01_authorization_security_regression_run.md`. |
 | P1-SYS-003 | DONE | 0000000 | high-risk | Concurrency/locking regression: independent MariaDB GROUP-root, Organization/Employee cycle, Primary Assignment, Product/ParentChild/UOM/COMBO, Price List, Authorization Group, Auto Numbering, and Import atomicity/reconciliation evidence. Evidence: `docs/implementation/evidence/P1-SYS-003/01_concurrency_locking_regression_run.md`. |
 | P1-SYS-004 | DONE | 0000000 | release | Fresh MariaDB 10.4.32 `erp_test` rehearsal, 17-migration order/status, schema/constraint/change-control checks, and twice-idempotent seed/bootstrap evidence. Evidence: `docs/implementation/evidence/P1-SYS-004/01_fresh_migration_rehearsal.md`. |
-| P1-SYS-005 | BLOCKED | — | release | Existing-schema forward rehearsal blocked: no authoritative populated legacy baseline/dump exists after the approved legacy reset; validation evidence: `docs/implementation/evidence/P1-SYS-005/01_existing_schema_forward_migration_rehearsal.md`. |
+| P1-SYS-005 | DONE | 0000000 | release | Approved greenfield-only scope replacement closes this release's legacy rehearsal acceptance; the historical legacy path remains NOT VERIFIED. Evidence: `docs/implementation/evidence/P1-SYS-005/03_greenfield_scope_change_approval.md`. |
 | P1-SYS-006 | DONE | 0000000 | release | OpenAPI/frontend drift check: 133/133 normalized runtime/OpenAPI operations and 133 generated SDK operations with zero drift; transport/envelope/string serialization, request ID/locale, 400/401/403/404/409/422, authorization-safe pagination, approved overlays, pending-surface exclusion, backend/frontend quality gates, and focused/full regressions passed. Evidence: `docs/implementation/evidence/P1-SYS-006/01_openapi_frontend_contract_drift_check.md`. |
 | P1-SYS-007 | BLOCKED | — | release | Production hardening is applied and independently validated, but deployment-owned HTTPS/DSN/CORS values, import/lock/retry/timezone/retention decisions, reviewed SYSTEM_ADMIN reconciliation, and P1-SYS-005 legacy evidence remain unresolved; see `docs/implementation/evidence/P1-SYS-007/01_production_configuration_review.md` and `02_production_readiness_decision_closure.md`. |
 | P1-UAT-001 | NOT_STARTED | — | release | No accepted implementation evidence. |
