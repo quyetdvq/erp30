@@ -3,6 +3,7 @@ import axios from 'axios'
 import { onMounted, ref } from 'vue'
 
 import { apiClient } from '@/services/api'
+import { useFormatters } from '@/composables/useFormatters'
 
 type HealthResponse = {
   service: string
@@ -15,6 +16,7 @@ type CheckState = 'idle' | 'loading' | 'success' | 'error'
 const checkState = ref<CheckState>('idle')
 const health = ref<HealthResponse | null>(null)
 const errorMessage = ref('')
+const formatters = useFormatters()
 
 const endpoint = `${apiClient.defaults.baseURL ?? ''}/api/v1/health`
 
@@ -41,10 +43,7 @@ async function checkConnection(): Promise<void> {
 }
 
 function formatTimestamp(timestamp: string): string {
-  return new Intl.DateTimeFormat('vi-VN', {
-    dateStyle: 'medium',
-    timeStyle: 'medium',
-  }).format(new Date(timestamp))
+  return formatters.formatDateTime(timestamp)
 }
 
 onMounted(checkConnection)

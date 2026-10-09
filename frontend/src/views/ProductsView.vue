@@ -8,6 +8,7 @@ import { ListPagination, ListQueryControls, ListShell, TableRowActions } from '@
 import type { ListQuery } from '@/components/lists/listTypes'
 import { useListState } from '@/composables/useListState'
 import { useBasePermission } from '@/composables/useBasePermission'
+import { useFormatters } from '@/composables/useFormatters'
 import {
   changeProductState,
   getProductById,
@@ -27,6 +28,7 @@ type RelationState = {
 const { t } = useI18n()
 const router = useRouter()
 const { hasBasePermission } = useBasePermission()
+const formatters = useFormatters()
 const state = useListState<Product>((query) => listProductPage(query), { sort: 'product_code' })
 const groups = ref<ProductGroup[]>([])
 const uoms = ref<ProductUom[]>([])
@@ -120,6 +122,11 @@ function toggleExpanded(row: Product): void {
 }
 function productName(row: Product): string {
   return row.full_name || row.product_name || row.product_child_name || t('list.noValue')
+}
+function displayMoney(value: string | number | null | undefined): string {
+  return value === null || value === undefined || value === ''
+    ? t('list.noValue')
+    : formatters.formatMoney(String(value))
 }
 function openDetail(row: Product): void {
   detailProduct.value = row
@@ -337,7 +344,7 @@ onMounted(async () => {
                 </td>
                 <td>{{ groupName(row.product_group_id) }}</td>
                 <td>{{ uomName(row.base_uom_id) }}</td>
-                <td>{{ row.price ?? t('list.noValue') }}</td>
+                <td>{{ displayMoney(row.price) }}</td>
                 <td>{{ row.serial_management_enabled ? t('common.yes') : t('common.no') }}</td>
                 <td>{{ row.status === 'ACTIVE' ? t('status.active') : t('status.inactive') }}</td>
                 <td>

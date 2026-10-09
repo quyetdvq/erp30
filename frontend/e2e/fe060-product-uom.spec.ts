@@ -271,6 +271,35 @@ test.describe('P1-FE-060 Product/UOM UI', () => {
     await expect(page.getByText('COMBO luôn tắt quản lý Serial.')).toBeVisible()
   })
 
+  test('limits Product decimal inputs before save', async ({ page }) => {
+    await mockSession(page)
+    await mockCatalog(page)
+    let createBody: Record<string, unknown> | null = null
+    await page.route('**/api/v1/products*', async (route) => {
+      if (route.request().method() === 'POST') {
+        createBody = JSON.parse(route.request().postData() ?? '{}') as Record<string, unknown>
+        return route.fulfill({
+          status: 201,
+          contentType: 'application/json',
+          body: JSON.stringify({ data: simple }),
+        })
+      }
+      return route.fallback()
+    })
+
+    await page.goto('/products/new')
+    await page.getByRole('textbox', { name: 'Tên sản phẩm' }).fill('UI precision')
+    await page.getByRole('textbox', { name: /Đơn vị cơ sở/ }).click()
+    await page.getByText('PCS - Piece', { exact: true }).click()
+    const netWeight = page.getByRole('textbox', { name: 'Khối lượng tịnh (g)' })
+    await netWeight.fill('1.555555555555')
+    await expect(netWeight).toHaveValue('1.555')
+    await page.getByRole('button', { name: 'Lưu' }).first().click()
+
+    await expect.poll(() => createBody).not.toBeNull()
+    expect(createBody).toMatchObject({ net_weight_g: '1.555' })
+  })
+
   test('keeps PARENT administrative edit available while locking operational fields', async ({
     page,
   }) => {

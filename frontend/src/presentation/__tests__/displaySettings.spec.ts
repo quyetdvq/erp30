@@ -14,10 +14,12 @@ import { useDisplaySettingsStore } from '@/stores/displaySettings'
 import {
   formatDate,
   formatDateTime,
+  formatEditableDecimal,
   formatMoney,
   formatPercentage,
   formatQuantity,
   formatTime,
+  parseDecimalInput,
 } from '@/presentation/formatters'
 
 vi.mock('@/api/generated/sdk.gen', () => ({
@@ -128,5 +130,20 @@ describe('Display Settings runtime foundation', () => {
     expect(formatDateTime('2026-01-01T00:00:00Z', otherTimezone)).toBe('31/12/2025 19:00')
     expect(i18n.global.locale.value).toBe('vi')
     expect(window.localStorage.getItem('ui.locale')).toBeNull()
+  })
+
+  it('parses localized decimal entry while preserving canonical precision', () => {
+    const localized = {
+      ...runtime,
+      number: { ...runtime.number, decimal_separator: ',', group_separator: '.' },
+      money: { ...runtime.money, decimal_separator: ',', group_separator: '.' },
+    }
+    expect(parseDecimalInput('1.234,56789', localized, 'money')).toBe('1234.56789')
+    expect(parseDecimalInput('1234,5', localized, 'money')).toBe('1234.5')
+    expect(parseDecimalInput('1.234', localized, 'money')).toBe('1234')
+    expect(parseDecimalInput('1.2345', localized, 'money')).toBe('12345')
+    expect(parseDecimalInput('1.234.567', localized, 'money')).toBe('1234567')
+    expect(parseDecimalInput('1,555555', localized, 'money', false, 3)).toBe('1.555')
+    expect(formatEditableDecimal('1234.56789', localized, 'money')).toBe('1.234,56789')
   })
 })

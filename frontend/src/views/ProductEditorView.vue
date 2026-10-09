@@ -13,8 +13,10 @@ import type {
   ProductUomConversion,
   ProductUomConversionsRequest,
 } from '@/api/generated/types.gen'
+import DecimalInput from '@/components/forms/DecimalInput.vue'
 import SearchableSelect from '@/components/forms/SearchableSelect.vue'
 import { useBasePermission } from '@/composables/useBasePermission'
+import { useFormatters } from '@/composables/useFormatters'
 import {
   changeProductState,
   getProductById,
@@ -46,6 +48,7 @@ const { t } = useI18n()
 const route = useRoute()
 const router = useRouter()
 const { hasBasePermission } = useBasePermission()
+const formatters = useFormatters()
 const id = computed(() => (typeof route.params.id === 'string' ? route.params.id : undefined))
 const editing = computed(() => Boolean(id.value))
 const product = ref<Product | null>(null)
@@ -151,6 +154,24 @@ const parentRow = computed(() =>
 )
 function textValue(value: string | number | null | undefined): string {
   return value === null || value === undefined ? '' : String(value)
+}
+function displayMoney(value: string | number | null | undefined): string {
+  return value === null || value === undefined || value === ''
+    ? t('list.noValue')
+    : formatters.formatMoney(String(value))
+}
+function displayQuantity(value: string | number | null | undefined): string {
+  return value === null || value === undefined || value === ''
+    ? t('list.noValue')
+    : formatters.formatQuantity(String(value))
+}
+function displayPackage(row: ConversionForm): string {
+  return (
+    [row.package_gross_weight_g, row.package_length_mm, row.package_width_mm, row.package_height_mm]
+      .filter(Boolean)
+      .map((value) => displayQuantity(value))
+      .join(' / ') || t('list.noValue')
+  )
 }
 function resetFromRow(row: Product): void {
   form.value = {
@@ -550,7 +571,11 @@ watch(
             /><small v-if="!isParentRole">{{ t('product.baseUomRequired') }}</small></label
           ><label
             ><span>{{ t('product.defaultPrice') }}</span
-            ><input v-model="form.price" inputmode="decimal"
+            ><DecimalInput
+              v-model="form.price"
+              kind="money"
+              :max-decimals="2"
+              :aria-label="t('product.defaultPrice')"
           /></label>
         </div>
       </fieldset>
@@ -559,19 +584,34 @@ watch(
         <div class="form-grid">
           <label
             ><span>{{ t('product.netWeight') }}</span
-            ><input v-model="form.net_weight_g" inputmode="decimal" /></label
+            ><DecimalInput
+              v-model="form.net_weight_g"
+              :max-decimals="3"
+              :aria-label="t('product.netWeight')" /></label
           ><label
             ><span>{{ t('product.packageGrossWeight') }}</span
-            ><input v-model="form.package_gross_weight_g" inputmode="decimal" /></label
+            ><DecimalInput
+              v-model="form.package_gross_weight_g"
+              :max-decimals="3"
+              :aria-label="t('product.packageGrossWeight')" /></label
           ><label
             ><span>{{ t('product.packageLength') }}</span
-            ><input v-model="form.package_length_mm" inputmode="decimal" /></label
+            ><DecimalInput
+              v-model="form.package_length_mm"
+              :max-decimals="3"
+              :aria-label="t('product.packageLength')" /></label
           ><label
             ><span>{{ t('product.packageWidth') }}</span
-            ><input v-model="form.package_width_mm" inputmode="decimal" /></label
+            ><DecimalInput
+              v-model="form.package_width_mm"
+              :max-decimals="3"
+              :aria-label="t('product.packageWidth')" /></label
           ><label
             ><span>{{ t('product.packageHeight') }}</span
-            ><input v-model="form.package_height_mm" inputmode="decimal"
+            ><DecimalInput
+              v-model="form.package_height_mm"
+              :max-decimals="3"
+              :aria-label="t('product.packageHeight')"
           /></label>
         </div>
       </fieldset>
@@ -669,7 +709,7 @@ watch(
                   t('list.noValue')
                 }}
               </td>
-              <td>{{ row.price ?? t('list.noValue') }}</td>
+              <td>{{ displayMoney(row.price) }}</td>
               <td>{{ row.status === 'ACTIVE' ? t('status.active') : t('status.inactive') }}</td>
               <td class="table-actions">
                 <button
@@ -768,22 +808,11 @@ watch(
               </td>
               <td>
                 1 {{ uoms.find((item) => String(item.id) === row.uom_id)?.code ?? '' }} =
-                {{ row.conversion_factor }} {{ baseUomName }}
+                {{ displayQuantity(row.conversion_factor) }} {{ baseUomName }}
               </td>
               <td>{{ row.usage_type }}</td>
-              <td>{{ row.price || t('list.noValue') }}</td>
-              <td>
-                {{
-                  [
-                    row.package_gross_weight_g,
-                    row.package_length_mm,
-                    row.package_width_mm,
-                    row.package_height_mm,
-                  ]
-                    .filter(Boolean)
-                    .join(' / ') || t('list.noValue')
-                }}
-              </td>
+              <td>{{ displayMoney(row.price) }}</td>
+              <td>{{ displayPackage(row) }}</td>
               <td>{{ row.status === 'ACTIVE' ? t('status.active') : t('status.inactive') }}</td>
               <td class="table-actions">
                 <button
@@ -878,9 +907,9 @@ watch(
                 }}<small class="field-note">{{ componentRole(row.component_product_id) }}</small>
               </td>
               <td>
-                <input
+                <DecimalInput
                   v-model="row.quantity"
-                  inputmode="decimal"
+                  :max-decimals="6"
                   :aria-label="t('product.quantity')"
                 />
               </td>
@@ -947,7 +976,10 @@ watch(
             " /></label
         ><label
           ><span>{{ t('product.conversionFactor') }}</span
-          ><input v-model="conversionDraft.conversion_factor" inputmode="decimal" /></label
+          ><DecimalInput
+            v-model="conversionDraft.conversion_factor"
+            :max-decimals="6"
+            :aria-label="t('product.conversionFactor')" /></label
         ><label
           ><span>{{ t('product.usage') }}</span
           ><select v-model="conversionDraft.usage_type">
@@ -957,19 +989,35 @@ watch(
           </select></label
         ><label
           ><span>{{ t('product.sellingPrice') }}</span
-          ><input v-model="conversionDraft.price" inputmode="decimal" /></label
+          ><DecimalInput
+            v-model="conversionDraft.price"
+            kind="money"
+            :max-decimals="2"
+            :aria-label="t('product.sellingPrice')" /></label
         ><label
           ><span>{{ t('product.packageGrossWeight') }}</span
-          ><input v-model="conversionDraft.package_gross_weight_g" inputmode="decimal" /></label
+          ><DecimalInput
+            v-model="conversionDraft.package_gross_weight_g"
+            :max-decimals="3"
+            :aria-label="t('product.packageGrossWeight')" /></label
         ><label
           ><span>{{ t('product.packageLength') }}</span
-          ><input v-model="conversionDraft.package_length_mm" inputmode="decimal" /></label
+          ><DecimalInput
+            v-model="conversionDraft.package_length_mm"
+            :max-decimals="3"
+            :aria-label="t('product.packageLength')" /></label
         ><label
           ><span>{{ t('product.packageWidth') }}</span
-          ><input v-model="conversionDraft.package_width_mm" inputmode="decimal" /></label
+          ><DecimalInput
+            v-model="conversionDraft.package_width_mm"
+            :max-decimals="3"
+            :aria-label="t('product.packageWidth')" /></label
         ><label
           ><span>{{ t('product.packageHeight') }}</span
-          ><input v-model="conversionDraft.package_height_mm" inputmode="decimal" /></label
+          ><DecimalInput
+            v-model="conversionDraft.package_height_mm"
+            :max-decimals="3"
+            :aria-label="t('product.packageHeight')" /></label
         ><label
           ><span>{{ t('product.status') }}</span
           ><select v-model="conversionDraft.status">

@@ -13,6 +13,7 @@ import type {
   ProductUom,
   ProductUomConversion,
 } from '@/api/generated/types.gen'
+import DecimalInput from '@/components/forms/DecimalInput.vue'
 import SearchableSelect from '@/components/forms/SearchableSelect.vue'
 import {
   ListPagination,
@@ -607,9 +608,10 @@ onMounted(async () => {
                     />
                   </td>
                   <td>
-                    <input
+                    <DecimalInput
                       v-model="item.price"
-                      inputmode="decimal"
+                      kind="money"
+                      :max-decimals="2"
                       :aria-label="t('pricing.price')"
                     />
                   </td>

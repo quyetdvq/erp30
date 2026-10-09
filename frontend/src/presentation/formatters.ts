@@ -165,6 +165,87 @@ function moneyDecimals(mode: string): number {
   return 2
 }
 
+export type DecimalInputKind = 'number' | 'money'
+
+function decimalInputSettings(
+  runtime: FormatterSettings,
+  kind: DecimalInputKind,
+): { decimalSeparator: string; groupSeparator: string } {
+  return kind === 'money'
+    ? {
+        decimalSeparator: runtime.money.decimal_separator,
+        groupSeparator: runtime.money.group_separator,
+      }
+    : {
+        decimalSeparator: runtime.number.decimal_separator,
+        groupSeparator: runtime.number.group_separator,
+      }
+}
+
+/** Parse localized decimal entry into the canonical API decimal string. */
+export function parseDecimalInput(
+  value: string,
+  runtime: FormatterSettings,
+  kind: DecimalInputKind = 'number',
+  allowNegative = false,
+  maxDecimals?: number,
+): string {
+  const raw = value.trim().replace(/\s/g, '')
+  if (!raw) return ''
+
+  const sign = raw.startsWith('-') && allowNegative ? '-' : ''
+  const unsigned = raw.replace(/^[+-]/, '')
+  if (!unsigned) return ''
+
+  const { decimalSeparator, groupSeparator } = decimalInputSettings(runtime, kind)
+  const alternateSeparator = decimalSeparator === '.' ? ',' : '.'
+  let decimalIndex = unsigned.lastIndexOf(decimalSeparator)
+
+  // Allow the common opposite separator for entry. A single separator followed
+  // by fewer than three digits is treated as a decimal; three digits remains a
+  // grouped integer to avoid turning 1,234 into 1.234 accidentally. A
+  // configured grouping separator is never treated as an alternate decimal
+  // separator, otherwise the next digit after live grouping changes 1.555 into
+  // 1.5555.
+  if (decimalIndex < 0 && alternateSeparator !== decimalSeparator) {
+    const alternateIndex = unsigned.lastIndexOf(alternateSeparator)
+    if (
+      alternateSeparator !== groupSeparator &&
+      alternateIndex >= 0 &&
+      unsigned.indexOf(alternateSeparator) === alternateIndex &&
+      unsigned.length - alternateIndex - 1 !== 3
+    ) {
+      decimalIndex = alternateIndex
+    }
+  }
+
+  const integerPart = decimalIndex >= 0 ? unsigned.slice(0, decimalIndex) : unsigned
+  const fractionPart = decimalIndex >= 0 ? unsigned.slice(decimalIndex + 1) : ''
+  const integer =
+    integerPart
+      .split(groupSeparator)
+      .join('')
+      .replace(/[^0-9]/g, '')
+      .replace(/^0+(?=\d)/, '') || '0'
+  const fraction = fractionPart
+    .replace(/[^0-9]/g, '')
+    .slice(0, maxDecimals === undefined ? undefined : Math.max(0, maxDecimals))
+  return `${sign}${integer}${fraction ? `.${fraction}` : ''}`
+}
+
+/** Format a canonical decimal for an editable field without display rounding. */
+export function formatEditableDecimal(
+  value: string,
+  runtime: FormatterSettings,
+  kind: DecimalInputKind = 'number',
+): string {
+  const parsed = decimalParts(value)
+  if (!parsed) return value
+  const { decimalSeparator, groupSeparator } = decimalInputSettings(runtime, kind)
+  const grouped = parsed.integer.replace(/\B(?=(\d{3})+(?!\d))/g, groupSeparator)
+  return `${parsed.sign}${grouped}${parsed.fraction ? decimalSeparator + parsed.fraction : ''}`
+}
+
 export function formatDate(value: string, runtime: FormatterSettings): string {
   const parts = datePartsFromDate(value)
   return parts ? applyPattern(runtime.date.format, parts) : value
