@@ -97,6 +97,9 @@ async function mockCatalog(page: Page): Promise<{
   let patchBody: Record<string, unknown> | null = null
   let stateBody: Record<string, unknown> | null = null
   let itemBody: unknown = null
+  let priceListItems = [
+    { id: '71', price_list_id: '70', product_id: '30', uom_id: '20', price: '125000.00' },
+  ]
   await page.route('**/api/v1/organizations*', (route) =>
     route.fulfill({
       status: 200,
@@ -145,6 +148,7 @@ async function mockCatalog(page: Page): Promise<{
   await page.route(/\/api\/v1\/price-lists(?:\/|\?|$)/, async (route) => {
     const request = route.request()
     const url = request.url()
+    const pathname = new URL(url).pathname
     if (request.method() === 'OPTIONS') {
       return route.fulfill({
         status: 204,
@@ -156,33 +160,26 @@ async function mockCatalog(page: Page): Promise<{
         },
       })
     }
-    if (url.endsWith('/items') && request.method() === 'GET') {
+    if (pathname.endsWith('/items') && request.method() === 'GET') {
       return route.fulfill({
         status: 200,
         contentType: 'application/json',
-        body: JSON.stringify({
-          data: [
-            { id: '71', price_list_id: '70', product_id: '30', uom_id: '20', price: '125000.00' },
-          ],
-        }),
+        body: JSON.stringify({ data: priceListItems }),
       })
     }
-    if (url.endsWith('/items') && request.method() === 'PUT') {
+    if (pathname.endsWith('/items') && request.method() === 'PUT') {
       itemBody = request.postDataJSON()
+      priceListItems = (itemBody as Array<Record<string, string>>).map((item, index) => ({
+        id: String(71 + index),
+        price_list_id: '70',
+        product_id: item.product_id!,
+        uom_id: item.uom_id!,
+        price: item.price!,
+      }))
       return route.fulfill({
         status: 200,
         contentType: 'application/json',
-        body: JSON.stringify({
-          data: [
-            {
-              id: '71',
-              price_list_id: '70',
-              product_id: '32',
-              uom_id: '20',
-              price: '999999999999.0000',
-            },
-          ],
-        }),
+        body: JSON.stringify({ data: [] }),
       })
     }
     if (url.includes('/actions/set-state')) {
@@ -313,10 +310,10 @@ test.describe('P1-FE-070 Pricing/COMBO UI', () => {
       .filter({ hasText: 'RETAIL' })
       .getByRole('button', { name: 'Xem chi tiết' })
       .click()
-    await expect(page.getByRole('dialog', { name: 'Product Price List Items' })).toBeVisible()
-    await expect(page.getByRole('cell', { name: '125000.00', exact: true })).toBeVisible()
-    await page.getByRole('button', { name: 'Thêm Product/UOM' }).click()
     const itemDialog = page.getByRole('dialog', { name: 'Product Price List Items' })
+    await expect(itemDialog).toBeVisible()
+    await expect(itemDialog.getByRole('textbox', { name: 'Giá' }).first()).toHaveValue('125,000.00')
+    await page.getByRole('button', { name: 'Thêm Product/UOM' }).click()
     const itemRow = itemDialog.locator('tbody tr').last()
     const productSelect = itemRow.locator('.n-base-selection').first()
     await productSelect.click()
@@ -332,8 +329,11 @@ test.describe('P1-FE-070 Pricing/COMBO UI', () => {
       .poll(() => requests.itemBody)
       .toEqual([
         { product_id: '30', uom_id: '20', price: '125000.00' },
-        { product_id: '32', uom_id: '20', price: '999999999999.0000' },
+        { product_id: '32', uom_id: '20', price: '999999999999.00' },
       ])
+    await expect(itemDialog.getByRole('textbox', { name: 'Giá' }).last()).toHaveValue(
+      '999,999,999,999.00',
+    )
   })
 
   test('hides create/edit/state actions without base permissions while retaining backend-authoritative list access', async ({

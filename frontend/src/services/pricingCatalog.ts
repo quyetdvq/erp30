@@ -118,13 +118,21 @@ export function replacePriceListItemRows(
   id: string,
   body: PriceListItemsRequest,
 ): Promise<PriceListItem[]> {
-  return withTypedClient((client) =>
-    replacePriceListItems({
+  return withTypedClient(async (client) => {
+    await replacePriceListItems({
       client,
       headers: headers(),
       path: { id },
       body,
       throwOnError: true,
-    }).then((response) => response.data.data ?? []),
-  )
+    })
+    // Re-read after replacement because deployed API revisions may return
+    // 200 with an empty data array even when the set was persisted.
+    return listPriceListItems({
+      client,
+      headers: headers(),
+      path: { id },
+      throwOnError: true,
+    }).then((response) => response.data.data ?? [])
+  })
 }
