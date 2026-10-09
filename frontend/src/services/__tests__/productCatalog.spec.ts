@@ -7,6 +7,8 @@ const sdkMocks = vi.hoisted(() => ({
   updateProductUom: vi.fn<(...args: unknown[]) => unknown>(),
   createProduct: vi.fn<(...args: unknown[]) => unknown>(),
   updateProduct: vi.fn<(...args: unknown[]) => unknown>(),
+  replaceComboItems: vi.fn<(...args: unknown[]) => unknown>(),
+  listComboItems: vi.fn<(...args: unknown[]) => unknown>(),
 }))
 
 vi.mock('@/api/generated/sdk.gen', async (importOriginal) => ({
@@ -14,7 +16,12 @@ vi.mock('@/api/generated/sdk.gen', async (importOriginal) => ({
   ...sdkMocks,
 }))
 
-import { saveProduct, saveProductGroup, saveProductUom } from '@/services/productCatalog'
+import {
+  replaceProductComboItems,
+  saveProduct,
+  saveProductGroup,
+  saveProductUom,
+} from '@/services/productCatalog'
 
 function resource() {
   return { data: { data: { id: '15' } } }
@@ -60,5 +67,36 @@ describe('product catalog patch payloads', () => {
     expect(bodyOf(sdkMocks.updateProduct)).toEqual({
       product_name: 'Sample',
     })
+  })
+
+  it('re-reads combo items when replacement acknowledges with an empty collection', async () => {
+    sdkMocks.replaceComboItems.mockResolvedValue({ data: { data: [] } })
+    sdkMocks.listComboItems.mockResolvedValue({
+      data: {
+        data: [
+          {
+            id: '21',
+            combo_product_id: '15',
+            component_product_id: '30',
+            quantity: '2.000000',
+          },
+        ],
+      },
+    })
+
+    const result = await replaceProductComboItems('15', [
+      { component_product_id: '30', quantity: '2.000000' },
+    ])
+
+    expect(result).toEqual([
+      {
+        id: '21',
+        combo_product_id: '15',
+        component_product_id: '30',
+        quantity: '2.000000',
+      },
+    ])
+    expect(sdkMocks.replaceComboItems).toHaveBeenCalledTimes(1)
+    expect(sdkMocks.listComboItems).toHaveBeenCalledTimes(1)
   })
 })

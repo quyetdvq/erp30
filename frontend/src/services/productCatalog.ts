@@ -253,13 +253,21 @@ export function replaceProductComboItems(
   id: string,
   body: ComboItemsRequest,
 ): Promise<ComboItem[]> {
-  return withTypedClient((client) =>
-    replaceComboItems({
+  return withTypedClient(async (client) => {
+    await replaceComboItems({
       client,
       headers: headers(),
       path: { id },
       body,
       throwOnError: true,
-    }).then((response) => response.data.data ?? []),
-  )
+    })
+    // Some deployed API revisions acknowledge the replacement with an empty
+    // collection. Re-read the authoritative set instead of clearing the UI.
+    return listComboItems({
+      client,
+      headers: headers(),
+      path: { id },
+      throwOnError: true,
+    }).then((response) => response.data.data ?? [])
+  })
 }

@@ -250,8 +250,8 @@ test.describe('P1-FE-060 Product/UOM UI', () => {
       .getByRole('tab', { name: 'Quy đổi đơn vị' })
       .evaluate((element) => (element as HTMLButtonElement).click())
     await expect(page.getByRole('heading', { name: 'Quy đổi UOM' })).toBeVisible()
-    await expect(page.getByRole('cell', { name: /12\.0000/ })).toBeVisible()
-    await expect(page.getByRole('cell', { name: '140000.00', exact: true })).toBeVisible()
+    await expect(page.getByRole('cell', { name: /12\s+PCS/ })).toBeVisible()
+    await expect(page.getByRole('cell', { name: '140,000', exact: true })).toBeVisible()
     await page.goto('/products/new')
     await expect(page.getByRole('heading', { name: 'Tạo sản phẩm' })).toBeVisible()
     expect(
@@ -259,7 +259,7 @@ test.describe('P1-FE-060 Product/UOM UI', () => {
         (url) => new URL(url).searchParams.get('sort') === 'product_name',
       ),
     ).toBe(true)
-    await page.getByRole('combobox', { name: 'Type' }).selectOption('COMBO')
+    await page.getByRole('combobox', { name: 'Loại' }).selectOption('COMBO')
     await expect(page.getByRole('heading', { name: 'Quy đổi UOM' })).toHaveCount(0)
     await expect(page.getByText('Sản phẩm cha')).toHaveCount(0)
     await expect(page.getByRole('heading', { name: 'Thành phần COMBO' })).toBeVisible()
