@@ -137,10 +137,20 @@ class Cors extends BaseConfig
         // when no deployment setting is supplied.
         $configuredOrigins = trim((string) env('cors.allowedOrigins', ''));
         if ($configuredOrigins !== '') {
-            $this->default['allowedOrigins'] = array_values(array_filter(array_map(
+            $origins = array_values(array_filter(array_map(
                 static fn (string $origin): string => rtrim(trim($origin), '/'),
                 explode(',', $configuredOrigins),
             )));
+
+            // CI4 emits a fixed ACAO value when exactly one literal origin is
+            // configured. Use anchored exact patterns so disallowed origins
+            // receive no ACAO header at all.
+            if (count($origins) === 1) {
+                $this->default['allowedOrigins'] = [];
+                $this->default['allowedOriginsPatterns'] = [preg_quote($origins[0], '#')];
+            } else {
+                $this->default['allowedOrigins'] = $origins;
+            }
 
             return;
         }

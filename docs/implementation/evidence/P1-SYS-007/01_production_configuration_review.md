@@ -191,7 +191,7 @@ explicit reviewed correction instead of an auto-grant or auto-revoke.
 | PHPStan level 8 after remediation | PASS |
 | Frontend `vue-tsc`, Oxlint, ESLint, Prettier after remediation | PASS |
 | `validate-context-cache.php` | PASS; 12 authorities / 107 tasks / 47 rules |
-| Live HTTPS recheck (`api.monmin.net` / `erp.monmin.net`) | PASS for HTTPS redirect, secure cookie, CSP/secure headers, HTTPS credentialed CORS, stable unauthenticated envelope, no Debugbar, and no `X-Powered-By`; PHP host settings and production DSN remain deployment blockers |
+| Live HTTPS recheck (`api.monmin.net` / `erp.monmin.net`) | PASS for HTTPS redirect, secure cookie, CSP/secure headers, exact HTTPS credentialed CORS and rejection of unapproved origins, no Debugbar, and no `X-Powered-By`; `/auth/me` is blocked by the intentional non-default-DSN guard |
 | Production DSN/PHP host/retention evidence | BLOCKED; non-default DSN, PHP `display_errors`/UTC/OPcache, and retention values were not supplied and were not invented |
 | Global CSRF SPA regression | BLOCKED; token bootstrap contract is absent |
 

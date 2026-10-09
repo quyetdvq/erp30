@@ -237,3 +237,31 @@ switching to `production` without an Operations-supplied non-default DSN would
 trigger the existing fail-closed guard and take the service down. PHP
 `display_errors`, host timezone/OPcache, CSRF bootstrap, migration `000013`,
 SYSTEM_ADMIN reconciliation, and SYS-005 evidence remain release blockers.
+
+## Production-mode recheck (2026-10-09)
+
+Operations switched the local runtime to `CI_ENVIRONMENT=production`. The
+HTTPS base URL, secure requests, CSP, secure cookies, and Shield opt-outs load
+correctly. The HTTPS SPA origin was restored as an active, exact
+`cors.allowedOrigins` setting (the previously commented line was the cause of
+the missing preflight ACAO header).
+
+Live results:
+
+- HTTPS health remains `200 OK` with CSP/secure headers and no debug or
+  `X-Powered-By` disclosure.
+- HTTPS SPA preflight returns the exact ACAO/credentials headers. HTTP and
+  unapproved origins receive no ACAO header.
+- HTTP API requests return `307` to the HTTPS URL.
+- `/api/v1/auth/me` now reaches the production application but returns `500`
+  because the production database guard correctly rejects the current
+  `root` user with blank password. No credential was fabricated and no guard
+  was weakened.
+- `php spark config:check Database` fails for that same intentional guard.
+  `php spark phpini:check` reports `display_errors=0`, but
+  `display_startup_errors=1`, timezone `Europe/Berlin`, and OPcache disabled;
+  those remain host-level deployment blockers.
+
+SYS-007 therefore remains **BLOCKED**: Operations must inject a non-default
+secret-managed DSN with `DBDebug=false`, then rerun authenticated HTTPS auth
+checks. UAT remains **NOT AUTHORIZED**.
