@@ -26,6 +26,7 @@ import type { ListColumn, ListQuery } from '@/components/lists/listTypes'
 import { useBasePermission } from '@/composables/useBasePermission'
 import { useFormatters } from '@/composables/useFormatters'
 import { useListState } from '@/composables/useListState'
+import { toApiDateTime, toDateTimeLocal } from '@/modules/priceListDateTime'
 import { listOrganizationPage } from '@/services/foundation'
 import { reportApiError } from '@/services/errorBoundary'
 import {
@@ -104,12 +105,6 @@ function productById(id: string): Product | undefined {
 function uomName(id: string | number | null | undefined): string {
   return uoms.value.find((row) => String(row.id) === String(id))?.code ?? t('list.noValue')
 }
-function inputDateTime(value: string | null | undefined): string {
-  return value ? value.slice(0, 16) : ''
-}
-function apiDateTime(value: string): string {
-  return value ? `${value}:00Z` : ''
-}
 function decimalNonNegative(value: string): boolean {
   return /^(?:0|[1-9]\d*)(?:\.\d+)?$/.test(value)
 }
@@ -186,8 +181,8 @@ function openEdit(row: PriceList): void {
     code: row.code,
     name: row.name,
     organization_id: String(row.organization_id),
-    effective_from: inputDateTime(row.effective_from),
-    effective_to: inputDateTime(row.effective_to),
+    effective_from: toDateTimeLocal(row.effective_from),
+    effective_to: toDateTimeLocal(row.effective_to),
     priority: String(row.priority),
     status: row.status,
     description: row.description ?? '',
@@ -197,7 +192,14 @@ function openEdit(row: PriceList): void {
 }
 async function save(): Promise<void> {
   error.value = null
-  if (!form.value.organization_id || !form.value.effective_from || !form.value.priority) {
+  const effectiveFrom = toApiDateTime(form.value.effective_from)
+  const effectiveTo = form.value.effective_to ? toApiDateTime(form.value.effective_to) : ''
+  if (
+    !form.value.organization_id ||
+    !effectiveFrom ||
+    (form.value.effective_to && !effectiveTo) ||
+    !form.value.priority
+  ) {
     error.value = new Error(t('pricing.requiredFields'))
     return
   }
@@ -207,10 +209,8 @@ async function save(): Promise<void> {
       code: form.value.code,
       name: form.value.name,
       organization_id: form.value.organization_id,
-      effective_from: apiDateTime(form.value.effective_from),
-      ...(form.value.effective_to
-        ? { effective_to: apiDateTime(form.value.effective_to) }
-        : { effective_to: null }),
+      effective_from: effectiveFrom,
+      ...(effectiveTo ? { effective_to: effectiveTo } : { effective_to: null }),
       priority: Number(form.value.priority),
       ...(form.value.description ? { description: form.value.description } : { description: null }),
     }
