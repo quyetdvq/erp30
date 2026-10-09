@@ -11,7 +11,7 @@ const props = withDefaults(
     disabled?: boolean
     ariaLabel?: string
   }>(),
-  { pageSizeOptions: () => [50, 100, 200], disabled: false },
+  { pageSizeOptions: () => [10, 15, 20, 25, 50, 100, 200], disabled: false },
 )
 
 const emit = defineEmits<{

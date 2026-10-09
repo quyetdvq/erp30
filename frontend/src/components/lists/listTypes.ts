@@ -1,4 +1,4 @@
-export const DEFAULT_LIST_PAGE_SIZE = 50
+export const DEFAULT_LIST_PAGE_SIZE = 15
 export const MAX_LIST_PAGE_SIZE = 200
 
 export type ListFilterValue = string | readonly string[]

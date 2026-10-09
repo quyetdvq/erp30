@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { onMounted, ref } from 'vue'
+import { computed, onMounted, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 import type { ProductUom, ProductUomCreate, ProductUomPatch } from '@/api/generated/types.gen'
 import {
@@ -10,7 +10,7 @@ import {
   TableDetailModal,
   TableRowActions,
 } from '@/components/lists'
-import type { ListColumn, ListQuery } from '@/components/lists/listTypes'
+import type { ListColumn, ListFilterDefinition, ListQuery } from '@/components/lists/listTypes'
 import { useListState } from '@/composables/useListState'
 import { useBasePermission } from '@/composables/useBasePermission'
 import {
@@ -22,30 +22,93 @@ import { reportApiError } from '@/services/errorBoundary'
 
 const { t } = useI18n()
 const { hasBasePermission } = useBasePermission()
-const state = useListState<ProductUom>((query) => listProductUomPage(query), { sort: 'code' })
+const state = useListState<ProductUom>(listProductUomPage, { sort: 'code' })
 const modalOpen = ref(false)
 const detailOpen = ref(false)
 const detailRow = ref<ProductUom | null>(null)
 const editingId = ref<string>()
 const busy = ref(false)
 const error = ref<unknown | null>(null)
-const form = ref({ code: '', name: '', description: '', status: 'ACTIVE' as ProductUom['status'] })
+
+type ProductUomForm = Pick<ProductUom, 'code' | 'name' | 'status'> & { description: string }
+
+function createEmptyForm(): ProductUomForm {
+  return { code: '', name: '', description: '', status: 'ACTIVE' }
+}
+
+const form = ref<ProductUomForm>(createEmptyForm())
+
+// Local, single-column sort: only reorder the rows already loaded for this page.
+const localSort = ref('')
+const collator = new Intl.Collator('vi', { numeric: true, sensitivity: 'base' })
+const visibleRows = computed(() => {
+  const term = localSort.value
+  const field = term.startsWith('-') ? term.slice(1) : term
+  if (field !== 'code' && field !== 'name' && field !== 'status') return state.rows.value
+
+  const direction = term.startsWith('-') ? -1 : 1
+  // Copy first; mutating the response array would also alter unsorted order.
+  return [...state.rows.value].sort(
+    (first, second) =>
+      direction * collator.compare(String(first[field] ?? ''), String(second[field] ?? '')),
+  )
+})
+
 const columns: readonly ListColumn<ProductUom>[] = [
   { key: 'code', labelKey: 'product.code', sortable: true },
   { key: 'name', labelKey: 'product.name', sortable: true },
   { key: 'description', labelKey: 'product.description' },
   { key: 'status', labelKey: 'product.status', sortable: true },
-  { key: 'actions', labelKey: 'product.actions' },
+  { key: 'actions', labelKey: 'product.actions', align: 'end' },
 ]
+
+const statusFilters: readonly ListFilterDefinition[] = [
+  {
+    key: 'status',
+    labelKey: 'product.status',
+    type: 'select',
+    options: [
+      { value: 'ACTIVE', labelKey: 'status.active' },
+      { value: 'INACTIVE', labelKey: 'status.inactive' },
+    ],
+  },
+]
+
+// Base Permission is a UI hint; final authorization always happens on the server.
+const permissions = computed(() => ({
+  create: hasBasePermission('product_uom', 'create'),
+  view: hasBasePermission('product_uom', 'view'),
+  edit: hasBasePermission('product_uom', 'edit'),
+  setstate: hasBasePermission('product_uom', 'setstate'),
+}))
+
+const detailFields = computed(() => {
+  const row = detailRow.value
+  if (!row) return []
+
+  return [
+    { key: 'code', label: t('product.code'), value: row.code },
+    { key: 'name', label: t('product.name'), value: row.name },
+    { key: 'description', label: t('product.description'), value: row.description },
+    { key: 'status', label: t('product.status'), status: row.status },
+  ]
+})
+
+let latestLoadId = 0
+
 async function load(): Promise<void> {
+  const loadId = ++latestLoadId
   error.value = null
   try {
     await state.apply()
   } catch (caught: unknown) {
+    // Ignore errors from requests superseded by a newer load.
+    if (loadId !== latestLoadId) return
     error.value = caught
     reportApiError(caught)
   }
 }
+
 function applyQuery(query: ListQuery): void {
   state.setSearch(query.q)
   state.setFilters(query.filter)
@@ -53,15 +116,38 @@ function applyQuery(query: ListQuery): void {
   state.setPageSize(query.page_size)
   void load()
 }
+
+// ListTable may include previous sort terms; the clicked column is last.
+// This changes only the displayed order, never the API query or pagination.
+function handleSortChange(sort: string): void {
+  const term = sort.split(',').pop() ?? ''
+  const field = term.startsWith('-') ? term.slice(1) : term
+  if (term && field !== 'code' && field !== 'name' && field !== 'status') return
+  localSort.value = term
+}
+
+function handlePageChange(page: number): void {
+  state.setPage(page)
+  void load()
+}
+
+function handlePageSizeChange(pageSize: number): void {
+  state.setPageSize(pageSize)
+  void load()
+}
+
 function resetQuery(): void {
+  localSort.value = ''
   state.reset()
   void load()
 }
+
 function openCreate(): void {
   editingId.value = undefined
-  form.value = { code: '', name: '', description: '', status: 'ACTIVE' }
+  form.value = createEmptyForm()
   modalOpen.value = true
 }
+
 function openEdit(row: ProductUom): void {
   editingId.value = String(row.id)
   form.value = {
@@ -72,10 +158,12 @@ function openEdit(row: ProductUom): void {
   }
   modalOpen.value = true
 }
+
 function openView(row: ProductUom): void {
   detailRow.value = row
   detailOpen.value = true
 }
+
 async function save(): Promise<void> {
   busy.value = true
   error.value = null
@@ -96,6 +184,7 @@ async function save(): Promise<void> {
     busy.value = false
   }
 }
+
 async function toggle(row: ProductUom): Promise<void> {
   busy.value = true
   error.value = null
@@ -109,6 +198,7 @@ async function toggle(row: ProductUom): Promise<void> {
     busy.value = false
   }
 }
+
 onMounted(() => void load())
 </script>
 
@@ -119,7 +209,7 @@ onMounted(() => void load())
       <p>{{ t('product.uomsDescription') }}</p>
     </div>
     <button
-      v-if="hasBasePermission('product_uom', 'create')"
+      v-if="permissions.create"
       type="button"
       class="primary-button"
       @click="openCreate"
@@ -130,17 +220,7 @@ onMounted(() => void load())
   <section class="content-panel product-panel">
     <ListQueryControls
       :model-value="state.query"
-      :filters="[
-        {
-          key: 'status',
-          labelKey: 'product.status',
-          type: 'select',
-          options: [
-            { value: 'ACTIVE', labelKey: 'status.active' },
-            { value: 'INACTIVE', labelKey: 'status.inactive' },
-          ],
-        },
-      ]"
+      :filters="statusFilters"
       @apply="applyQuery"
       @reset="resetQuery"
     />
@@ -150,18 +230,8 @@ onMounted(() => void load())
       :total="state.total.value"
       :disabled="state.isInitialLoading.value"
       :aria-label="t('product.topPagination')"
-      @update:page="
-        (value) => {
-          state.setPage(value)
-          void load()
-        }
-      "
-      @update:page-size="
-        (value) => {
-          state.setPageSize(value)
-          void load()
-        }
-      "
+      @update:page="handlePageChange"
+      @update:page-size="handlePageSizeChange"
     />
     <ListShell
       :initial-loading="state.isInitialLoading.value"
@@ -171,14 +241,19 @@ onMounted(() => void load())
       :empty-filtered-result="state.isEmptyFilteredResult.value"
       :error="state.queryState.error.value"
     >
-      <ListTable :rows="state.rows.value" :columns="columns" :sort="state.query.sort">
-        <template #cell-actions="{ row }"
-          ><TableRowActions
+      <ListTable
+        :rows="visibleRows"
+        :columns="columns"
+        :sort="localSort"
+        @sort-change="handleSortChange"
+      >
+        <template #cell-actions="{ row }">
+          <TableRowActions
             :active="row.status === 'ACTIVE'"
             :busy="busy"
-            :show-view="hasBasePermission('product_uom', 'view')"
-            :show-edit="hasBasePermission('product_uom', 'edit')"
-            :show-toggle="hasBasePermission('product_uom', 'setstate')"
+            :show-view="permissions.view"
+            :show-edit="permissions.edit"
+            :show-toggle="permissions.setstate"
             view-permission="product_uom.view"
             edit-permission="product_uom.edit"
             toggle-permission="product_uom.setstate"
@@ -189,41 +264,23 @@ onMounted(() => void load())
             @view="openView(row)"
             @edit="openEdit(row)"
             @toggle="toggle(row)"
-        /></template>
+          />
+        </template>
       </ListTable>
       <ListPagination
         :page="state.query.page"
         :page-size="state.query.page_size"
         :total="state.total.value"
         :aria-label="t('product.bottomPagination')"
-        @update:page="
-          (value) => {
-            state.setPage(value)
-            void load()
-          }
-        "
-        @update:page-size="
-          (value) => {
-            state.setPageSize(value)
-            void load()
-          }
-        "
+        @update:page="handlePageChange"
+        @update:page-size="handlePageSizeChange"
       />
     </ListShell>
   </section>
   <TableDetailModal
     :open="detailOpen"
     :title="t('product.uomDetails')"
-    :fields="
-      detailRow
-        ? [
-            { key: 'code', label: t('product.code'), value: detailRow.code },
-            { key: 'name', label: t('product.name'), value: detailRow.name },
-            { key: 'description', label: t('product.description'), value: detailRow.description },
-            { key: 'status', label: t('product.status'), status: detailRow.status },
-          ]
-        : []
-    "
+    :fields="detailFields"
     @close="detailOpen = false"
   />
   <div v-if="modalOpen" class="modal-backdrop">
@@ -240,30 +297,34 @@ onMounted(() => void load())
         </button>
       </header>
       <form class="modal-card__body" @submit.prevent="save">
-        <label
-          ><span>{{ t('product.code') }}</span
-          ><input v-model="form.code" required /></label
-        ><label
-          ><span>{{ t('product.name') }}</span
-          ><input v-model="form.name" required /></label
-        ><label
-          ><span>{{ t('product.description') }}</span
-          ><textarea v-model="form.description" rows="3" /></label
-        ><label v-if="!editingId"
-          ><span>{{ t('product.status') }}</span
-          ><select v-model="form.status">
+        <label>
+          <span>{{ t('product.code') }}</span>
+          <input v-model="form.code" required />
+        </label>
+        <label>
+          <span>{{ t('product.name') }}</span>
+          <input v-model="form.name" required />
+        </label>
+        <label>
+          <span>{{ t('product.description') }}</span>
+          <textarea v-model="form.description" rows="3" />
+        </label>
+        <label v-if="!editingId">
+          <span>{{ t('product.status') }}</span>
+          <select v-model="form.status">
             <option value="ACTIVE">{{ t('status.active') }}</option>
             <option value="INACTIVE">{{ t('status.inactive') }}</option>
-          </select></label
-        >
+          </select>
+        </label>
         <p v-if="error" class="inline-error" role="alert">{{ t('product.requestError') }}</p>
         <footer class="modal-card__footer">
           <button type="button" class="secondary-button" @click="modalOpen = false">
-            {{ t('common.cancel') }}</button
-          ><button
+            {{ t('common.cancel') }}
+          </button>
+          <button
             type="submit"
             class="primary-button"
-            :disabled="busy || !hasBasePermission('product_uom', editingId ? 'edit' : 'create')"
+            :disabled="busy || !(editingId ? permissions.edit : permissions.create)"
           >
             {{ busy ? t('common.saving') : t('common.save') }}
           </button>

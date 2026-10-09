@@ -10,7 +10,7 @@ import {
   TableDetailModal,
   TableRowActions,
 } from '@/components/lists'
-import type { ListColumn, ListQuery } from '@/components/lists/listTypes'
+import type { ListColumn, ListFilterDefinition, ListQuery } from '@/components/lists/listTypes'
 import SearchableSelect from '@/components/forms/SearchableSelect.vue'
 import { useListState } from '@/composables/useListState'
 import { useBasePermission } from '@/composables/useBasePermission'
@@ -22,10 +22,15 @@ import {
 import { reportApiError } from '@/services/errorBoundary'
 
 type TreeRow = ProductGroup & { depth: number; hasChildren: boolean; expanded: boolean }
+type ProductGroupForm = Pick<ProductGroup, 'code' | 'name' | 'status'> & {
+  description: string
+  parent_id: string
+}
 
 const { t } = useI18n()
 const { hasBasePermission } = useBasePermission()
-const state = useListState<ProductGroup>((query) => listProductGroupPage(query), { sort: 'code' })
+const state = useListState<ProductGroup>(listProductGroupPage, { sort: 'code' })
+
 const expanded = ref(new Set<string>())
 const modalOpen = ref(false)
 const detailOpen = ref(false)
@@ -33,51 +38,113 @@ const detailRow = ref<ProductGroup | null>(null)
 const editingId = ref<string>()
 const busy = ref(false)
 const error = ref<unknown | null>(null)
-const form = ref({
-  code: '',
-  name: '',
-  description: '',
-  parent_id: '',
-  status: 'ACTIVE' as ProductGroup['status'],
-})
+
+function createEmptyForm(parent?: ProductGroup): ProductGroupForm {
+  return {
+    code: '',
+    name: '',
+    description: '',
+    parent_id: parent ? String(parent.id) : '',
+    status: 'ACTIVE',
+  }
+}
+
+const form = ref<ProductGroupForm>(createEmptyForm())
+
+// Sort the current page in memory only. The API query is never changed by column clicks.
+const localSort = ref('')
+const collator = new Intl.Collator('vi', { numeric: true, sensitivity: 'base' })
+
+function compareGroupRows(first: ProductGroup, second: ProductGroup): number {
+  const term = localSort.value
+  const field = term.startsWith('-') ? term.slice(1) : term
+  if (field === 'code' || field === 'name' || field === 'status') {
+    const direction = term.startsWith('-') ? -1 : 1
+    return (
+      direction *
+      collator.compare(String(first[field] ?? ''), String(second[field] ?? ''))
+    )
+  }
+
+  // Preserve the pre-existing tree order when no local column is selected.
+  return `${first.code}${first.name}`.localeCompare(`${second.code}${second.name}`)
+}
 
 const columns: readonly ListColumn<TreeRow>[] = [
   { key: 'code', labelKey: 'product.code', sortable: true },
   { key: 'name', labelKey: 'product.name', sortable: true },
   { key: 'parent', labelKey: 'product.parentGroup' },
   { key: 'status', labelKey: 'product.status', sortable: true },
-  { key: 'actions', labelKey: 'product.actions' },
+  { key: 'actions', labelKey: 'product.actions', align: 'end' },
 ]
+
+const statusFilters: readonly ListFilterDefinition[] = [
+  {
+    key: 'status',
+    labelKey: 'product.status',
+    type: 'select',
+    options: [
+      { value: 'ACTIVE', labelKey: 'status.active' },
+      { value: 'INACTIVE', labelKey: 'status.inactive' },
+    ],
+  },
+]
+
+// Base Permission only controls UI visibility; backend authorization remains authoritative.
+const permissions = computed(() => ({
+  create: hasBasePermission('product_group', 'create'),
+  view: hasBasePermission('product_group', 'view'),
+  edit: hasBasePermission('product_group', 'edit'),
+  setstate: hasBasePermission('product_group', 'setstate'),
+}))
 
 const byParent = computed(() => {
   const groups = new Map<string, ProductGroup[]>()
   for (const row of state.rows.value) {
     const key = row.parent_id ? String(row.parent_id) : 'ROOT'
-    groups.set(key, [...(groups.get(key) ?? []), row])
+    const siblings = groups.get(key)
+    if (siblings) siblings.push(row)
+    else groups.set(key, [row])
   }
-  for (const rows of groups.values())
-    rows.sort((a, b) => `${a.code}${a.name}`.localeCompare(`${b.code}${b.name}`))
+  // Sort siblings, not the flattened tree, to keep each parent next to its children.
+  for (const rows of groups.values()) rows.sort(compareGroupRows)
   return groups
+})
+
+const byId = computed(() => {
+  const index = new Map<string, ProductGroup>()
+  for (const row of state.rows.value) {
+    const id = String(row.id)
+    if (!index.has(id)) index.set(id, row)
+  }
+  return index
 })
 
 const treeRows = computed<TreeRow[]>(() => {
   const output: TreeRow[] = []
   const visited = new Set<string>()
+  const groups = byParent.value
+
   function walk(parent: string, depth: number): void {
-    for (const item of byParent.value.get(parent) ?? []) {
+    for (const item of groups.get(parent) ?? []) {
       const id = String(item.id)
       if (visited.has(id)) continue
+
       visited.add(id)
-      const hasChildren = (byParent.value.get(id) ?? []).length > 0
+      const hasChildren = (groups.get(id) ?? []).length > 0
       const isExpanded = expanded.value.has(id)
       output.push({ ...item, depth, hasChildren, expanded: isExpanded })
       if (isExpanded) walk(id, depth + 1)
     }
   }
+
   walk('ROOT', 0)
-  for (const item of state.rows.value) {
-    if (!visited.has(String(item.id)))
-      output.push({ ...item, depth: 0, hasChildren: false, expanded: false })
+  // Preserve the fallback for rows outside the currently visible tree (e.g. off-page
+  // parents). In active local-sort mode, sort those remaining rows in memory as well.
+  const remaining = state.rows.value.filter((item) => !visited.has(String(item.id)))
+  if (localSort.value) remaining.sort(compareGroupRows)
+  for (const item of remaining) {
+    output.push({ ...item, depth: 0, hasChildren: false, expanded: false })
   }
   return output
 })
@@ -85,29 +152,47 @@ const treeRows = computed<TreeRow[]>(() => {
 const parentOptions = computed(() => {
   const blocked = new Set<string>()
   if (editingId.value) {
-    const collect = (id: string): void => {
+    const groups = byParent.value
+    function collect(id: string): void {
       if (blocked.has(id)) return
       blocked.add(id)
-      for (const child of state.rows.value.filter((row) => String(row.parent_id) === id))
-        collect(String(child.id))
+      for (const child of groups.get(id) ?? []) collect(String(child.id))
     }
     collect(editingId.value)
   }
   return state.rows.value.filter((row) => !blocked.has(String(row.id)))
 })
 
+const parentSelectOptions = computed(() =>
+  parentOptions.value.map((row) => ({
+    value: String(row.id),
+    label: `${row.code} - ${row.name}`,
+  })),
+)
+
 function parentName(row: ProductGroup): string {
-  return (
-    state.rows.value.find((candidate) => String(candidate.id) === String(row.parent_id))?.name ??
-    t('product.root')
-  )
+  return byId.value.get(String(row.parent_id))?.name ?? t('product.root')
 }
+
+const detailFields = computed(() => {
+  const row = detailRow.value
+  if (!row) return []
+  return [
+    { key: 'code', label: t('product.code'), value: row.code },
+    { key: 'name', label: t('product.name'), value: row.name },
+    { key: 'parent', label: t('product.parentGroup'), value: parentName(row) },
+    { key: 'description', label: t('product.description'), value: row.description },
+    { key: 'status', label: t('product.status'), status: row.status },
+  ]
+})
+
 function toggleExpanded(id: string): void {
   const next = new Set(expanded.value)
   if (next.has(id)) next.delete(id)
   else next.add(id)
   expanded.value = next
 }
+
 async function load(): Promise<void> {
   error.value = null
   try {
@@ -117,6 +202,7 @@ async function load(): Promise<void> {
     reportApiError(caught)
   }
 }
+
 function applyQuery(query: ListQuery): void {
   state.setSearch(query.q)
   state.setFilters(query.filter)
@@ -124,22 +210,39 @@ function applyQuery(query: ListQuery): void {
   state.setPageSize(query.page_size)
   void load()
 }
+
+// ListTable owns the heading-click cycle: asc -> desc -> original order.
+// Only localSort changes: do not call load() or state.setSort() here.
+function handleSortChange(sort: string): void {
+  const term = sort.split(',').pop() ?? ''
+  const field = term.startsWith('-') ? term.slice(1) : term
+  if (term && field !== 'code' && field !== 'name' && field !== 'status') return
+  localSort.value = term
+}
+
+function handlePageChange(page: number): void {
+  state.setPage(page)
+  void load()
+}
+
+function handlePageSizeChange(pageSize: number): void {
+  state.setPageSize(pageSize)
+  void load()
+}
+
 function resetQuery(): void {
+  localSort.value = ''
   state.reset()
   expanded.value = new Set()
   void load()
 }
+
 function openCreate(parent?: ProductGroup): void {
   editingId.value = undefined
-  form.value = {
-    code: '',
-    name: '',
-    description: '',
-    parent_id: parent ? String(parent.id) : '',
-    status: 'ACTIVE',
-  }
+  form.value = createEmptyForm(parent)
   modalOpen.value = true
 }
+
 function openEdit(row: ProductGroup): void {
   editingId.value = String(row.id)
   form.value = {
@@ -151,10 +254,16 @@ function openEdit(row: ProductGroup): void {
   }
   modalOpen.value = true
 }
+
 function openView(row: ProductGroup): void {
   detailRow.value = row
   detailOpen.value = true
 }
+
+function updateParentId(value: string | string[]): void {
+  form.value.parent_id = typeof value === 'string' ? value : ''
+}
+
 async function save(): Promise<void> {
   busy.value = true
   error.value = null
@@ -163,7 +272,7 @@ async function save(): Promise<void> {
       code: form.value.code,
       name: form.value.name,
       status: form.value.status,
-      ...(form.value.parent_id ? { parent_id: form.value.parent_id } : { parent_id: null }),
+      parent_id: form.value.parent_id || null,
       ...(form.value.description ? { description: form.value.description } : {}),
     }
     await saveProductGroup(payload, editingId.value)
@@ -176,6 +285,7 @@ async function save(): Promise<void> {
     busy.value = false
   }
 }
+
 async function toggle(row: ProductGroup): Promise<void> {
   busy.value = true
   error.value = null
@@ -189,6 +299,7 @@ async function toggle(row: ProductGroup): Promise<void> {
     busy.value = false
   }
 }
+
 onMounted(() => void load())
 </script>
 
@@ -199,7 +310,7 @@ onMounted(() => void load())
       <p>{{ t('product.groupsDescription') }}</p>
     </div>
     <button
-      v-if="hasBasePermission('product_group', 'create')"
+      v-if="permissions.create"
       type="button"
       class="primary-button"
       @click="openCreate()"
@@ -207,20 +318,11 @@ onMounted(() => void load())
       {{ t('common.create') }}
     </button>
   </div>
+
   <section class="content-panel product-panel">
     <ListQueryControls
       :model-value="state.query"
-      :filters="[
-        {
-          key: 'status',
-          labelKey: 'product.status',
-          type: 'select',
-          options: [
-            { value: 'ACTIVE', labelKey: 'status.active' },
-            { value: 'INACTIVE', labelKey: 'status.inactive' },
-          ],
-        },
-      ]"
+      :filters="statusFilters"
       @apply="applyQuery"
       @reset="resetQuery"
     />
@@ -233,19 +335,10 @@ onMounted(() => void load())
       :total="state.total.value"
       :disabled="state.isInitialLoading.value"
       :aria-label="t('product.topPagination')"
-      @update:page="
-        (value) => {
-          state.setPage(value)
-          void load()
-        }
-      "
-      @update:page-size="
-        (value) => {
-          state.setPageSize(value)
-          void load()
-        }
-      "
+      @update:page="handlePageChange"
+      @update:page-size="handlePageSizeChange"
     />
+
     <ListShell
       :initial-loading="state.isInitialLoading.value"
       :refreshing="state.isBackgroundRefreshing.value"
@@ -254,93 +347,81 @@ onMounted(() => void load())
       :empty-filtered-result="state.isEmptyFilteredResult.value"
       :error="state.queryState.error.value"
     >
-      <ListTable :rows="treeRows" :columns="columns" :sort="state.query.sort">
-        <template #cell-code="{ row }"
-          ><span class="tree-code" :style="{ paddingLeft: `${row.depth * 20}px` }"
-            ><button
+      <ListTable
+        :rows="treeRows"
+        :columns="columns"
+        :sort="localSort"
+        @sort-change="handleSortChange"
+      >
+        <template #cell-code="{ row }">
+          <span class="tree-code" :style="{ paddingLeft: `${row.depth * 20}px` }">
+            <button
               v-if="row.hasChildren"
               type="button"
               class="tree-toggle"
               :aria-label="row.expanded ? t('product.collapse') : t('product.expand')"
+              :aria-expanded="row.expanded"
               @click="toggleExpanded(String(row.id))"
             >
-              {{ row.expanded ? '-' : '+' }}</button
-            ><span v-else class="tree-toggle-spacer" />{{ row.code }}</span
-          ></template
-        >
+              {{ row.expanded ? '-' : '+' }}
+            </button>
+            <span v-else class="tree-toggle-spacer" />
+            {{ row.code }}
+          </span>
+        </template>
         <template #cell-parent="{ row }">{{ parentName(row) }}</template>
-        <template #cell-actions="{ row }"
-          ><TableRowActions
-            :active="row.status === 'ACTIVE'"
-            :busy="busy"
-            :show-view="hasBasePermission('product_group', 'view')"
-            :show-edit="hasBasePermission('product_group', 'edit')"
-            :show-toggle="hasBasePermission('product_group', 'setstate')"
-            view-permission="product_group.view"
-            edit-permission="product_group.edit"
-            toggle-permission="product_group.setstate"
-            :view-label="t('common.view')"
-            :edit-label="t('common.edit')"
-            :activate-label="t('common.activate')"
-            :deactivate-label="t('common.deactivate')"
-            @view="openView(row)"
-            @edit="openEdit(row)"
-            @toggle="toggle(row)"
-          /><button
-            v-if="hasBasePermission('product_group', 'create')"
-            type="button"
-            class="icon-button"
-            :aria-label="t('product.createChild')"
-            :title="t('product.createChild')"
-            @click="openCreate(row)"
-          >
-            +
-          </button></template
-        >
+        <template #cell-actions="{ row }">
+          <span class="tree-row-actions">
+            <TableRowActions
+              :active="row.status === 'ACTIVE'"
+              :busy="busy"
+              :show-view="permissions.view"
+              :show-edit="permissions.edit"
+              :show-toggle="permissions.setstate"
+              view-permission="product_group.view"
+              edit-permission="product_group.edit"
+              toggle-permission="product_group.setstate"
+              :view-label="t('common.view')"
+              :edit-label="t('common.edit')"
+              :activate-label="t('common.activate')"
+              :deactivate-label="t('common.deactivate')"
+              @view="openView(row)"
+              @edit="openEdit(row)"
+              @toggle="toggle(row)"
+            />
+            <button
+              v-if="permissions.create"
+              type="button"
+              class="icon-button"
+              :aria-label="t('product.createChild')"
+              :title="t('product.createChild')"
+              @click="openCreate(row)"
+            >
+              +
+            </button>
+          </span>
+        </template>
       </ListTable>
       <ListPagination
         :page="state.query.page"
         :page-size="state.query.page_size"
         :total="state.total.value"
         :aria-label="t('product.bottomPagination')"
-        @update:page="
-          (value) => {
-            state.setPage(value)
-            void load()
-          }
-        "
-        @update:page-size="
-          (value) => {
-            state.setPageSize(value)
-            void load()
-          }
-        "
+        @update:page="handlePageChange"
+        @update:page-size="handlePageSizeChange"
       />
     </ListShell>
   </section>
+
   <TableDetailModal
     :open="detailOpen"
     :title="t('product.groupDetails')"
-    :fields="
-      detailRow
-        ? [
-            { key: 'code', label: t('product.code'), value: detailRow.code },
-            { key: 'name', label: t('product.name'), value: detailRow.name },
-            { key: 'parent', label: t('product.parentGroup'), value: parentName(detailRow) },
-            { key: 'description', label: t('product.description'), value: detailRow.description },
-            { key: 'status', label: t('product.status'), status: detailRow.status },
-          ]
-        : []
-    "
+    :fields="detailFields"
     @close="detailOpen = false"
   />
+
   <div v-if="modalOpen" class="modal-backdrop">
-    <section
-      class="modal-card"
-      role="dialog"
-      aria-modal="true"
-      :aria-label="t('product.groupForm')"
-    >
+    <section class="modal-card" role="dialog" aria-modal="true" :aria-label="t('product.groupForm')">
       <header class="modal-card__header">
         <h2>{{ editingId ? t('common.edit') : t('common.create') }} {{ t('product.group') }}</h2>
         <button
@@ -353,45 +434,44 @@ onMounted(() => void load())
         </button>
       </header>
       <form class="modal-card__body" @submit.prevent="save">
-        <label
-          ><span>{{ t('product.code') }}</span
-          ><input v-model="form.code" required /></label
-        ><label
-          ><span>{{ t('product.name') }}</span
-          ><input v-model="form.name" required /></label
-        ><label
-          ><span>{{ t('product.parentGroup') }}</span
-          ><SearchableSelect
+        <label>
+          <span>{{ t('product.code') }}</span>
+          <input v-model="form.code" required />
+        </label>
+        <label>
+          <span>{{ t('product.name') }}</span>
+          <input v-model="form.name" required />
+        </label>
+        <label>
+          <span>{{ t('product.parentGroup') }}</span>
+          <SearchableSelect
             :model-value="form.parent_id"
-            :options="
-              parentOptions.map((row) => ({
-                value: String(row.id),
-                label: `${row.code} - ${row.name}`,
-              }))
-            "
+            :options="parentSelectOptions"
             :placeholder="t('product.root')"
             :aria-label="t('product.parentGroup')"
-            @update:model-value="
-              (value) => (form.parent_id = typeof value === 'string' ? value : '')
-            " /></label
-        ><label
-          ><span>{{ t('product.description') }}</span
-          ><textarea v-model="form.description" rows="3" /></label
-        ><label v-if="!editingId"
-          ><span>{{ t('product.status') }}</span
-          ><select v-model="form.status">
+            @update:model-value="updateParentId"
+          />
+        </label>
+        <label>
+          <span>{{ t('product.description') }}</span>
+          <textarea v-model="form.description" rows="3" />
+        </label>
+        <label v-if="!editingId">
+          <span>{{ t('product.status') }}</span>
+          <select v-model="form.status">
             <option value="ACTIVE">{{ t('status.active') }}</option>
             <option value="INACTIVE">{{ t('status.inactive') }}</option>
-          </select></label
-        >
+          </select>
+        </label>
         <p v-if="error" class="inline-error" role="alert">{{ t('product.requestError') }}</p>
         <footer class="modal-card__footer">
           <button type="button" class="secondary-button" @click="modalOpen = false">
-            {{ t('common.cancel') }}</button
-          ><button
+            {{ t('common.cancel') }}
+          </button>
+          <button
             type="submit"
             class="primary-button"
-            :disabled="busy || !hasBasePermission('product_group', editingId ? 'edit' : 'create')"
+            :disabled="busy || !(editingId ? permissions.edit : permissions.create)"
           >
             {{ busy ? t('common.saving') : t('common.save') }}
           </button>
@@ -427,6 +507,11 @@ onMounted(() => void load())
 }
 .tree-toggle-spacer {
   border-color: transparent;
+}
+.tree-row-actions {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
 }
 .inline-error {
   margin: 0;

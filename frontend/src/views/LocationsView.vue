@@ -132,13 +132,13 @@ const columns = computed<readonly ListColumn<LocationRow>[]>(() =>
           value: (row) => provinceName(String((row as Ward).province_id)),
         },
         { key: 'status', labelKey: 'locations.status', sortable: true },
-        { key: 'actions', labelKey: 'locations.actions' },
+        { key: 'actions', labelKey: 'locations.actions', align: 'end' },
       ]
     : [
         { key: 'code', labelKey: 'locations.code', sortable: true },
         { key: 'name', labelKey: 'locations.name', sortable: true },
         { key: 'status', labelKey: 'locations.status', sortable: true },
-        { key: 'actions', labelKey: 'locations.actions' },
+        { key: 'actions', labelKey: 'locations.actions', align: 'end' },
       ],
 )
 
