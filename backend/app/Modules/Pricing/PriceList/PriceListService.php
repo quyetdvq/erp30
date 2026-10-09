@@ -21,6 +21,8 @@ use App\Services\OrganizationService;
 use CodeIgniter\Database\BaseConnection;
 use CodeIgniter\Database\ConnectionInterface;
 use DateTimeImmutable;
+use DateTimeInterface;
+use DateTimeZone;
 
 /** Authorized Price List configuration and atomic item-set mutations. */
 final class PriceListService
@@ -370,12 +372,19 @@ final class PriceListService
         }
         $parsed = DateTimeImmutable::createFromFormat('!Y-m-d H:i:s', $value);
         $errors = DateTimeImmutable::getLastErrors();
-        if ($parsed === false || $parsed->format('Y-m-d H:i:s') !== $value
-            || ($errors !== false && ($errors['warning_count'] !== 0 || $errors['error_count'] !== 0))) {
+        if ($parsed !== false && $parsed->format('Y-m-d H:i:s') === $value
+            && ($errors === false || ($errors['warning_count'] === 0 && $errors['error_count'] === 0))) {
+            return $value;
+        }
+
+        // API date-time values are RFC3339; persist all offset-bearing input as UTC SQL time.
+        $parsed = DateTimeImmutable::createFromFormat(DateTimeInterface::ATOM, $value);
+        $errors = DateTimeImmutable::getLastErrors();
+        if ($parsed === false || ($errors !== false && ($errors['warning_count'] !== 0 || $errors['error_count'] !== 0))) {
             throw new DomainException(self::ERROR_INVALID_INTERVAL, ['field' => $field]);
         }
 
-        return $value;
+        return $parsed->setTimezone(new DateTimeZone('UTC'))->format('Y-m-d H:i:s');
     }
 
     /** @param array<string, mixed> $data */

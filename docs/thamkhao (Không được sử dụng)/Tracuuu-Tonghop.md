@@ -1031,7 +1031,7 @@ Các modal hiện tại chỉ cần Click chuột ra khỏi phạm vi modal là 
 
 
 
-Xử lý lỗi:
+Xử lý lỗi: Liên quan đến định dạng thời gian
 
 Request URL http://api.monmin.net/api/v1/price-lists/1
 Request Method PATCH

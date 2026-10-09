@@ -56,6 +56,28 @@ final class P1Prc001PriceListServiceTest extends CIUnitTestCase
         $this->assertSame('ACTIVE', $service->findById($companyList)['status']);
     }
 
+    public function testApiDateTimeIntervalsNormalizeToUtc(): void
+    {
+        [$service, $operation] = $this->fixture(['create', 'edit']);
+        $companyId = $this->organization('COMPANY', $this->groupRoot());
+
+        $id = $service->create($this->header('RFC3339-PRICE', $companyId, [
+            'effective_from' => '2026-10-01T00:00:00Z',
+            'effective_to' => '2026-11-01T03:00:00+03:00',
+        ]), $operation);
+        $row = $service->findById($id);
+        $this->assertSame('2026-10-01 00:00:00', $row['effective_from']);
+        $this->assertSame('2026-11-01 00:00:00', $row['effective_to']);
+
+        $this->assertTrue($service->update($id, [
+            'effective_from' => '2026-10-15T02:00:00+02:00',
+            'effective_to' => '2026-12-01T00:00:00Z',
+        ], $operation));
+        $updated = $service->findById($id);
+        $this->assertSame('2026-10-15 00:00:00', $updated['effective_from']);
+        $this->assertSame('2026-12-01 00:00:00', $updated['effective_to']);
+    }
+
     public function testAuthorizationAndAuditUsePriceListOwnerWithoutProductBypass(): void
     {
         [$service, $operation, $actorId] = $this->fixture(['create', 'edit', 'setstate']);
