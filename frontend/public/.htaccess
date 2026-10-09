@@ -1,0 +1,11 @@
+DirectoryIndex index.html
+
+RewriteEngine On
+
+# Let Apache serve real files and directories directly.
+RewriteCond %{REQUEST_FILENAME} -f [OR]
+RewriteCond %{REQUEST_FILENAME} -d
+RewriteRule ^ - [L]
+
+# Delegate all client-side routes to Vue Router history mode.
+RewriteRule ^ index.html [L]
