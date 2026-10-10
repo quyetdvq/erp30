@@ -87,6 +87,67 @@ final class P1Prd004ProductRoleServiceTest extends CIUnitTestCase
         $this->assertDomainCode(fn () => $role->getFullName(987654321), ProductRoleService::ERROR_NOT_FOUND);
     }
 
+    public function testDescribeListMatchesCanonicalSingleProductFields(): void
+    {
+        $role = new ProductRoleService(db: $this->db);
+        $base = ['product_type' => 'STANDARD', 'status' => 'ACTIVE', 'created_at' => '2026-10-06 00:00:00'];
+        $this->db->table('products')->insert(array_merge($base, ['code' => 'ROLE-LIST-PARENT', 'product_name' => 'T-Shirt']));
+        $parentId = (int) $this->db->insertID();
+        $this->db->table('products')->insert(array_merge($base, ['code' => 'ROLE-LIST-CHILD', 'parent_product_id' => $parentId, 'product_child_name' => 'Red']));
+        $this->db->table('products')->insert(array_merge($base, ['code' => 'ROLE-LIST-SIMPLE', 'product_name' => 'Simple']));
+        $this->db->table('products')->insert(array_merge($base, ['code' => 'ROLE-LIST-INACTIVE', 'status' => 'INACTIVE', 'product_name' => 'Inactive']));
+        $this->db->table('products')->insert(array_merge($base, ['code' => 'ROLE-LIST-COMBO', 'product_type' => 'COMBO', 'product_name' => 'Combo']));
+
+        $codes = ['ROLE-LIST-PARENT', 'ROLE-LIST-CHILD', 'ROLE-LIST-SIMPLE', 'ROLE-LIST-INACTIVE', 'ROLE-LIST-COMBO'];
+        $query = $this->db->table('products')->whereIn('code', $codes)->orderBy('id', 'ASC')->get();
+        $this->assertNotFalse($query);
+        $rows = array_values($query->getResultArray());
+        $this->assertCount(5, $rows);
+
+        $described = $role->describeList($rows);
+        $this->assertCount(5, $described);
+        foreach ($rows as $index => $row) {
+            $this->assertSame($role->getRole($row), $described[$index]['role']);
+            $this->assertSame($role->getFullName($row), $described[$index]['full_name']);
+            $this->assertSame($role->isSelectable($row), $described[$index]['selectable']);
+            $this->assertSame($role->isLeafTransactionable($row), $described[$index]['leaf_transactionable']);
+            $this->assertSame($row['code'], $described[$index]['code']);
+        }
+    }
+
+    public function testDescribeListRejectsIncompleteAndInvalidProductGraphs(): void
+    {
+        $role = new ProductRoleService(db: $this->db);
+        $child = [
+            'id' => 90002, 'parent_product_id' => 90001, 'product_type' => 'STANDARD',
+            'product_child_name' => 'Red', 'status' => 'ACTIVE',
+        ];
+        $this->assertDomainCode(fn () => $role->describeList([$child]), ProductRoleService::ERROR_INVALID_ROLE);
+
+        $combo = ['id' => 90003, 'product_type' => 'COMBO', 'product_name' => 'Combo', 'status' => 'ACTIVE'];
+        $this->assertDomainCode(
+            fn () => $role->describeList([$combo, ['id' => 90004, 'parent_product_id' => 90003, 'product_type' => 'STANDARD', 'product_child_name' => 'Child']]),
+            ProductRoleService::ERROR_INVALID_ROLE,
+        );
+    }
+
+    public function testDescribeListRequiresNoDatabaseQueryForCompleteSnapshot(): void
+    {
+        // No constructor => no initialized connection. Any repository access
+        // from describeList would fail this regression test immediately.
+        $role = (new \ReflectionClass(ProductRoleService::class))->newInstanceWithoutConstructor();
+        $rows = [
+            ['id' => 50002, 'parent_product_id' => 50001, 'product_type' => 'STANDARD', 'product_child_name' => 'Blue', 'status' => 'ACTIVE'],
+            ['id' => 50001, 'parent_product_id' => null, 'product_type' => 'STANDARD', 'product_name' => 'Jacket', 'status' => 'ACTIVE'],
+        ];
+        $result = $role->describeList($rows);
+        $this->assertSame(ProductRoleService::ROLE_CHILD, $result[0]['role']);
+        $this->assertSame('Jacket - Blue', $result[0]['full_name']);
+        $this->assertTrue($result[0]['selectable']);
+        $this->assertSame(ProductRoleService::ROLE_PARENT, $result[1]['role']);
+        $this->assertFalse($result[1]['selectable']);
+    }
+
     private function assertDomainCode(callable $callback, string $code): void
     {
         try {

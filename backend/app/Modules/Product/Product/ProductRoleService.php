@@ -35,6 +35,48 @@ final class ProductRoleService
         return $this->resolve($product)['role'];
     }
 
+    /**
+     * Derive list-only Product fields from a complete Product snapshot.
+     *
+     * Reuses the same role validation as single-record reads while avoiding
+     * per-Product parent/child SQL queries. Call with the unpaginated list:
+     * structural checks require parents and descendants outside the page.
+     *
+     * @param list<array<string, mixed>> $rows
+     * @return list<array<string, mixed>>
+     */
+    public function describeList(array $rows): array
+    {
+        $byId = [];
+        $childrenByParent = [];
+        foreach ($rows as $row) {
+            if (isset($row['id'])) {
+                $byId[(int) $row['id']] = $row;
+            }
+            if (($row['parent_product_id'] ?? null) !== null) {
+                $childrenByParent[(int) $row['parent_product_id']][] = $row;
+            }
+        }
+        foreach ($childrenByParent as $parentId => $children) {
+            usort($children, static fn (array $a, array $b): int => (int) ($a['id'] ?? 0) <=> (int) ($b['id'] ?? 0));
+            $childrenByParent[$parentId] = $children;
+        }
+
+        $result = [];
+        foreach ($rows as $row) {
+            $resolved = $this->resolve($row, $byId, $childrenByParent);
+            $role = $resolved['role'];
+            $row['role'] = $role;
+            $row['full_name'] = $this->fullName($resolved);
+            $row['selectable'] = strtoupper((string) ($row['status'] ?? '')) === 'ACTIVE'
+                && in_array($role, [self::ROLE_SIMPLE, self::ROLE_CHILD, self::ROLE_COMBO], true);
+            $row['leaf_transactionable'] = in_array($role, [self::ROLE_SIMPLE, self::ROLE_CHILD], true);
+            $result[] = $row;
+        }
+
+        return $result;
+    }
+
     /** @return array<string, mixed>|null */
     public function findById(mixed $productId): ?array
     {
@@ -83,7 +125,12 @@ final class ProductRoleService
 
     public function getFullName(mixed $product): string
     {
-        $resolved = $this->resolve($product);
+        return $this->fullName($this->resolve($product));
+    }
+
+    /** @param array{row:array<string,mixed>,role:string,parent?:array<string,mixed>} $resolved */
+    private function fullName(array $resolved): string
+    {
         $row = $resolved['row'];
         if ($resolved['role'] !== self::ROLE_CHILD) {
             return $this->requiredName($row['product_name'] ?? null, 'product_name');
@@ -99,10 +146,16 @@ final class ProductRoleService
         return $this->requiredName($parent['product_name'] ?? null, 'parent.product_name') . ' - ' . $childName;
     }
 
-    /** @return array{row:array<string,mixed>,role:string,parent?:array<string,mixed>} */
-    private function resolve(mixed $product): array
+    /**
+     * @param array<int, array<string,mixed>>|null $byId
+     * @param array<int, list<array<string,mixed>>>|null $childrenByParent
+     * @return array{row:array<string,mixed>,role:string,parent?:array<string,mixed>}
+     */
+    private function resolve(mixed $product, ?array $byId = null, ?array $childrenByParent = null): array
     {
-        $row = is_array($product) ? $product : $this->repo()->findById($product);
+        $row = is_array($product)
+            ? $product
+            : ($byId !== null ? ($byId[(int) $product] ?? null) : $this->repo()->findById($product));
         if ($row === null) {
             throw new DomainException(self::ERROR_NOT_FOUND, ['product_id' => $product]);
         }
@@ -113,7 +166,7 @@ final class ProductRoleService
         $type = strtoupper((string) ($row['product_type'] ?? ''));
         $parentId = $row['parent_product_id'] ?? null;
         if ($type === self::ROLE_COMBO) {
-            if ($parentId !== null || $this->repo()->hasChildren($row['id'])) {
+            if ($parentId !== null || $this->hasChildren($row['id'], $childrenByParent)) {
                 throw new DomainException(self::ERROR_INVALID_ROLE, ['reason' => 'combo_structure', 'product_id' => $row['id']]);
             }
             return ['row' => $row, 'role' => self::ROLE_COMBO];
@@ -126,28 +179,40 @@ final class ProductRoleService
             if ((int) $row['id'] === $parentId) {
                 throw new DomainException(self::ERROR_INVALID_ROLE, ['reason' => 'self_parent', 'product_id' => $row['id']]);
             }
-            $parent = $this->repo()->findById($parentId);
+            $parent = $byId !== null ? ($byId[$parentId] ?? null) : $this->repo()->findById($parentId);
             if ($parent === null) {
                 throw new DomainException(self::ERROR_INVALID_ROLE, ['reason' => 'parent_not_found', 'product_id' => $row['id']]);
             }
             $this->assertRootStandard($parent, 'parent');
-            if ($this->repo()->hasChildren($row['id'])) {
+            if ($this->hasChildren($row['id'], $childrenByParent)) {
                 throw new DomainException(self::ERROR_INVALID_ROLE, ['reason' => 'child_has_children', 'product_id' => $row['id']]);
             }
             return ['row' => $row, 'role' => self::ROLE_CHILD, 'parent' => $parent];
         }
 
-        $children = $this->repo()->listChildren($row['id']);
+        $children = $childrenByParent !== null
+            ? ($childrenByParent[(int) $row['id']] ?? [])
+            : $this->repo()->listChildren($row['id']);
         foreach ($children as $child) {
             if (strtoupper((string) ($child['product_type'] ?? '')) !== 'STANDARD'
                 || ($child['parent_product_id'] ?? null) === null
                 || (int) $child['parent_product_id'] !== (int) $row['id']
-                || $this->repo()->hasChildren($child['id'])) {
+                || $this->hasChildren($child['id'], $childrenByParent)) {
                 throw new DomainException(self::ERROR_INVALID_ROLE, ['reason' => 'child_structure', 'product_id' => $row['id']]);
             }
         }
 
         return ['row' => $row, 'role' => $children === [] ? self::ROLE_SIMPLE : self::ROLE_PARENT];
+    }
+
+    /** @param array<int, list<array<string,mixed>>>|null $childrenByParent */
+    private function hasChildren(mixed $id, ?array $childrenByParent): bool
+    {
+        if ($childrenByParent !== null) {
+            return ($childrenByParent[(int) $id] ?? []) !== [];
+        }
+
+        return $this->repo()->hasChildren($id);
     }
 
     /** @param array<string,mixed> $parent */

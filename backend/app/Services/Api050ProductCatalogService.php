@@ -148,7 +148,12 @@ final class Api050ProductCatalogService
     public function listProducts(array $query = []): array
     {
         $this->authorize('product', 'view');
-        $rows = array_map(fn (array $row): array => $this->decorateProduct($row), $this->products()->listAll());
+        // Derive relationship-dependent fields in one in-memory pass. Per-row
+        // role resolution would otherwise issue SQL for each Product.
+        $rows = array_map(
+            fn (array $row): array => $this->productCodeForApi($row),
+            $this->roles()->describeList($this->products()->listAll()),
+        );
         return $this->paginate(
             $rows,
             $query,
@@ -306,6 +311,14 @@ final class Api050ProductCatalogService
         $row['full_name'] = $this->roles()->getFullName($row);
         $row['selectable'] = $this->roles()->isSelectable($row);
         $row['leaf_transactionable'] = $this->roles()->isLeafTransactionable($row);
+        return $this->productCodeForApi($row);
+    }
+
+    /** @param array<string, mixed> $row
+     *  @return array<string, mixed>
+     */
+    private function productCodeForApi(array $row): array
+    {
         if (array_key_exists('code', $row)) {
             $row['product_code'] = $row['code'];
             unset($row['code']);
