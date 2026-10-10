@@ -50,6 +50,23 @@ const { t } = useI18n()
 const { hasBasePermissionKey } = useBasePermission()
 const can = (permission?: string): boolean =>
   permission === undefined || hasBasePermissionKey(permission)
+function emitIfReady(action: 'view' | 'edit' | 'toggle' | 'delete'): void {
+  if (props.busy) return
+  switch (action) {
+    case 'view':
+      emit('view')
+      break
+    case 'edit':
+      emit('edit')
+      break
+    case 'toggle':
+      emit('toggle')
+      break
+    case 'delete':
+      emit('delete')
+      break
+  }
+}
 const toggleLabel = computed(() =>
   props.active === false
     ? (props.activateLabel ?? t('common.activate'))
@@ -59,14 +76,15 @@ const toggleIcon = computed(() => (props.active === false ? PowerOutline : BanOu
 </script>
 
 <template>
-  <span class="table-row-actions">
+  <span class="table-row-actions" :aria-busy="props.busy">
     <button
       v-if="props.showView && can(props.viewPermission)"
       type="button"
       class="table-row-action"
       :title="props.viewLabel ?? t('common.view')"
       :aria-label="props.viewLabel ?? t('common.view')"
-      @click="emit('view')"
+      :disabled="props.busy"
+      @click="emitIfReady('view')"
     >
       <NIcon :component="EyeOutline" aria-hidden="true" />
     </button>
@@ -76,7 +94,8 @@ const toggleIcon = computed(() => (props.active === false ? PowerOutline : BanOu
       class="table-row-action"
       :title="props.editLabel ?? t('common.edit')"
       :aria-label="props.editLabel ?? t('common.edit')"
-      @click="emit('edit')"
+      :disabled="props.busy"
+      @click="emitIfReady('edit')"
     >
       <NIcon :component="CreateOutline" aria-hidden="true" />
     </button>
@@ -87,7 +106,7 @@ const toggleIcon = computed(() => (props.active === false ? PowerOutline : BanOu
       :disabled="props.busy"
       :title="toggleLabel"
       :aria-label="toggleLabel"
-      @click="emit('toggle')"
+      @click="emitIfReady('toggle')"
     >
       <NIcon :component="toggleIcon" aria-hidden="true" />
     </button>
@@ -98,7 +117,7 @@ const toggleIcon = computed(() => (props.active === false ? PowerOutline : BanOu
       :disabled="props.busy"
       :title="props.deleteLabel ?? t('common.delete')"
       :aria-label="props.deleteLabel ?? t('common.delete')"
-      @click="emit('delete')"
+      @click="emitIfReady('delete')"
     >
       <NIcon :component="TrashOutline" aria-hidden="true" />
     </button>

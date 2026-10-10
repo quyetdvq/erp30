@@ -361,8 +361,11 @@ onMounted(() => void load())
       :empty-dataset="state.isEmptyDataset.value"
       :empty-filtered-result="state.isEmptyFilteredResult.value"
       :error="state.queryState.error.value"
+      :retryable="true"
+      @retry="void load()"
     >
       <ListTable
+        :busy="state.isBackgroundRefreshing.value"
         :rows="treeRows"
         :columns="columns"
         :sort="localSort"

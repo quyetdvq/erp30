@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { useI18n } from 'vue-i18n'
+import { nextTick, onBeforeUnmount, ref, watch } from 'vue'
 
 import TableStatus from './TableStatus.vue'
 
@@ -21,15 +22,81 @@ const emit = defineEmits<{
 }>()
 
 const { t } = useI18n()
+const dialog = ref<HTMLElement | null>(null)
+const closeButton = ref<HTMLButtonElement | null>(null)
+let returnFocusTo: HTMLElement | null = null
+
+function restoreFocus(): void {
+  if (returnFocusTo?.isConnected) returnFocusTo.focus()
+  returnFocusTo = null
+}
+
+watch(
+  () => props.open,
+  async (open, previousOpen) => {
+    if (open) {
+      returnFocusTo = document.activeElement instanceof HTMLElement ? document.activeElement : null
+      await nextTick()
+      if (props.open) closeButton.value?.focus()
+    } else if (previousOpen) {
+      restoreFocus()
+    }
+  },
+  { immediate: true, flush: 'post' },
+)
+
+onBeforeUnmount(restoreFocus)
+
+function onKeydown(event: KeyboardEvent): void {
+  if (event.key === 'Escape') {
+    event.preventDefault()
+    event.stopPropagation()
+    emit('close')
+    return
+  }
+  if (event.key !== 'Tab' || !dialog.value) return
+  const focusable = [
+    ...dialog.value.querySelectorAll<HTMLElement>(
+      'button:not(:disabled), [href], input:not(:disabled), select:not(:disabled), textarea:not(:disabled), [tabindex]:not([tabindex="-1"])',
+    ),
+  ]
+  if (focusable.length === 0) {
+    event.preventDefault()
+    return
+  }
+  const first = focusable[0]!
+  const last = focusable[focusable.length - 1]!
+  if (
+    event.shiftKey &&
+    (document.activeElement === first || !dialog.value.contains(document.activeElement))
+  ) {
+    event.preventDefault()
+    last.focus()
+  } else if (
+    !event.shiftKey &&
+    (document.activeElement === last || !dialog.value.contains(document.activeElement))
+  ) {
+    event.preventDefault()
+    first.focus()
+  }
+}
 </script>
 
 <template>
   <div v-if="props.open" class="table-detail-backdrop">
-    <section class="table-detail-modal" role="dialog" aria-modal="true" :aria-label="props.title">
+    <section
+      ref="dialog"
+      class="table-detail-modal"
+      role="dialog"
+      aria-modal="true"
+      :aria-label="props.title"
+      @keydown="onKeydown"
+    >
       <header class="table-detail-modal__header">
         <h2>{{ props.title }}</h2>
         <button
           type="button"
+          ref="closeButton"
           class="table-detail-modal__close"
           :aria-label="t('common.close')"
           :title="t('common.close')"

@@ -15,6 +15,7 @@ import type { TableDetailField } from '@/components/lists/TableDetailModal.vue'
 import SearchableSelect from '@/components/forms/SearchableSelect.vue'
 import type { ListQuery } from '@/components/lists/listTypes'
 import { useListState } from '@/composables/useListState'
+import { useUnsavedChanges } from '@/composables/useUnsavedChanges'
 import {
   changeDepartmentState,
   listDepartmentPage,
@@ -40,6 +41,13 @@ const form = ref({
   description: '',
   status: 'ACTIVE' as State['status'],
 })
+const { markClean, confirmDiscard } = useUnsavedChanges(form, modalOpen)
+
+function closeForm(): void {
+  if (busy.value || !confirmDiscard()) return
+  markClean()
+  modalOpen.value = false
+}
 
 const byParent = computed(() => {
   const groups = new Map<string, Department[]>()
@@ -137,6 +145,7 @@ function openCreate(): void {
     description: '',
     status: 'ACTIVE',
   }
+  markClean()
   modalOpen.value = true
 }
 function openEdit(row: Department): void {
@@ -148,6 +157,7 @@ function openEdit(row: Department): void {
     description: row.description ?? '',
     status: row.status,
   }
+  markClean()
   modalOpen.value = true
 }
 function openView(row: Department): void {
@@ -166,6 +176,7 @@ async function save(): Promise<void> {
       ...(form.value.description ? { description: form.value.description } : {}),
     }
     await saveDepartment(payload, editingId.value)
+    markClean()
     modalOpen.value = false
     await load()
   } catch (caught: unknown) {
@@ -224,8 +235,11 @@ onMounted(() => void load())
       :empty-dataset="state.isEmptyDataset.value"
       :empty-filtered-result="state.isEmptyFilteredResult.value"
       :error="state.queryState.error.value"
+      :retryable="true"
+      @retry="void load()"
     >
       <ListTable
+        :busy="state.isBackgroundRefreshing.value"
         :rows="treeRows"
         :columns="columns"
         :sort="state.query.sort"
@@ -301,7 +315,7 @@ onMounted(() => void load())
           type="button"
           class="icon-button"
           :aria-label="t('common.close')"
-          @click="modalOpen = false"
+          @click="closeForm"
         >
           ×
         </button>
@@ -339,7 +353,7 @@ onMounted(() => void load())
           </select></label
         >
         <footer class="modal-card__footer">
-          <button type="button" class="secondary-button" @click="modalOpen = false">
+          <button type="button" class="secondary-button" @click="closeForm">
             {{ t('common.cancel') }}</button
           ><button
             type="submit"

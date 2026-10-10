@@ -60,6 +60,12 @@ function statusValue(row: TRow, column: ListColumn<TRow>): string | boolean | nu
   return typeof raw === 'string' || typeof raw === 'boolean' ? raw : null
 }
 
+function alignmentFor(column: ListColumn<TRow>): 'start' | 'center' | 'end' {
+  return (
+    column.align ?? (column.key === 'actions' || column.key === 'row_actions' ? 'end' : 'start')
+  )
+}
+
 function keyFor(row: TRow, index: number): string {
   const value =
     typeof props.rowKey === 'function'
@@ -75,6 +81,7 @@ function sortDirection(field: string): 'asc' | 'desc' | null {
 }
 
 function changeSort(column: ListColumn<TRow>): void {
+  if (props.busy) return
   const field = column.sortField ?? column.key
   const direction = sortDirection(field)
   const nextDirection = direction === null ? 'asc' : direction === 'asc' ? 'desc' : null
@@ -104,12 +111,13 @@ const ariaSort = computed(() => (column: ListColumn<TRow>) => {
             :key="column.key"
             scope="col"
             :aria-sort="column.sortable ? ariaSort(column) : undefined"
-            :style="{ textAlign: column.align ?? 'start' }"
+            :style="{ textAlign: alignmentFor(column) }"
           >
             <button
               v-if="column.sortable"
               type="button"
               class="list-table__sort"
+              :disabled="props.busy"
               :aria-label="t('list.sortBy', { field: labelFor(column.labelKey) })"
               @click="changeSort(column)"
             >
@@ -124,7 +132,7 @@ const ariaSort = computed(() => (column: ListColumn<TRow>) => {
           <td
             v-for="column in props.columns"
             :key="column.key"
-            :style="{ textAlign: column.align ?? 'start' }"
+            :style="{ textAlign: alignmentFor(column) }"
           >
             <slot :name="`cell-${column.key}`" :row="row" :value="valueFor(row, column)">
               <TableStatus
@@ -175,6 +183,10 @@ const ariaSort = computed(() => (column: ListColumn<TRow>) => {
   color: inherit;
   font: inherit;
   cursor: pointer;
+}
+.list-table__sort:disabled {
+  cursor: wait;
+  opacity: 0.65;
 }
 .list-table__sort:focus-visible {
   outline: 2px solid #1876a8;

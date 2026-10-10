@@ -48,6 +48,38 @@ describe('unsaved form guard', () => {
     confirm.mockRestore()
   })
 
+  it('keeps a workspace tab dirty until every independently edited form is clean', async () => {
+    const workspace = useWorkspaceStore()
+    workspace.openTab({
+      key: 'profile',
+      path: '/profile',
+      labelKey: 'shell.profile',
+      closable: true,
+    })
+    const header = ref({ title: '' })
+    const details = ref({ description: '' })
+    let headerGuard!: ReturnType<typeof useUnsavedChanges>
+    let detailsGuard!: ReturnType<typeof useUnsavedChanges>
+    const Host = defineComponent({
+      setup() {
+        headerGuard = useUnsavedChanges(header)
+        detailsGuard = useUnsavedChanges(details)
+        return () => h('div')
+      },
+    })
+    const wrapper = mount(Host)
+    header.value.title = 'Edit header'
+    details.value.description = 'Edit details'
+    await nextTick()
+    expect(workspace.isDirty('profile')).toBe(true)
+    headerGuard.markClean()
+    expect(workspace.isDirty('profile')).toBe(true)
+    expect(workspace.tabs[0]?.dirty).toBe(true)
+    detailsGuard.markClean()
+    expect(workspace.isDirty('profile')).toBe(false)
+    wrapper.unmount()
+  })
+
   it('does not mark a closed modal dirty and resets on reopening', async () => {
     const workspace = useWorkspaceStore()
     workspace.openTab({

@@ -57,6 +57,27 @@ export const useWorkspaceStore = defineStore('workspace', () => {
   const activeUserId = ref<string | null>(null)
   const preferences = ref<WorkspacePreferences>({ ...DEFAULT_PREFERENCES })
   const tabs = ref<WorkspaceTab[]>([])
+  // Non-persistent form instances tracked independently per route/tab.
+  const dirtySources = new Map<string, Set<symbol>>()
+  const manuallyDirty = new Set<string>()
+
+  function syncDirty(key: string): void {
+    const tab = tabs.value.find((candidate) => candidate.key === key)
+    if (tab) tab.dirty = manuallyDirty.has(key) || (dirtySources.get(key)?.size ?? 0) > 0
+  }
+
+  function markDirtySource(key: string, source: symbol, dirty: boolean): void {
+    if (dirty) {
+      const sources = dirtySources.get(key) ?? new Set<symbol>()
+      sources.add(source)
+      dirtySources.set(key, sources)
+    } else {
+      const sources = dirtySources.get(key)
+      sources?.delete(source)
+      if (sources?.size === 0) dirtySources.delete(key)
+    }
+    syncDirty(key)
+  }
 
   const sidebarMode = computed(() => preferences.value.sidebarMode)
   const sidebarCollapsed = computed(() => preferences.value.sidebarCollapsed)
@@ -71,6 +92,8 @@ export const useWorkspaceStore = defineStore('workspace', () => {
   function activateUser(userId: number | string): void {
     const normalized = String(userId).trim()
     if (!normalized) return
+    dirtySources.clear()
+    manuallyDirty.clear()
     activeUserId.value = normalized
     let stored: unknown = null
     if (typeof window !== 'undefined') {
@@ -85,6 +108,8 @@ export const useWorkspaceStore = defineStore('workspace', () => {
   }
 
   function clearSession(): void {
+    dirtySources.clear()
+    manuallyDirty.clear()
     activeUserId.value = null
     preferences.value = { ...DEFAULT_PREFERENCES }
     tabs.value = []
@@ -118,18 +143,23 @@ export const useWorkspaceStore = defineStore('workspace', () => {
   function openTab(tab: Omit<WorkspaceTab, 'dirty'> & { dirty?: boolean }): WorkspaceTab {
     const existing = tabs.value.find((candidate) => candidate.key === tab.key)
     if (existing) return existing
-    const next: WorkspaceTab = { ...tab, dirty: tab.dirty ?? false }
+    if (tab.dirty) manuallyDirty.add(tab.key)
+    const next: WorkspaceTab = {
+      ...tab,
+      dirty: manuallyDirty.has(tab.key) || (dirtySources.get(tab.key)?.size ?? 0) > 0,
+    }
     tabs.value = [...tabs.value, next]
     return next
   }
 
   function markDirty(key: string, dirty = true): void {
-    const target = tabs.value.find((tab) => tab.key === key)
-    if (target) target.dirty = dirty
+    if (dirty) manuallyDirty.add(key)
+    else manuallyDirty.delete(key)
+    syncDirty(key)
   }
 
   function isDirty(key: string): boolean {
-    return tabs.value.some((tab) => tab.key === key && tab.dirty)
+    return manuallyDirty.has(key) || (dirtySources.get(key)?.size ?? 0) > 0
   }
 
   function closeTab(key: string, confirmDirty?: (tab: WorkspaceTab) => boolean): string | null {
@@ -138,7 +168,11 @@ export const useWorkspaceStore = defineStore('workspace', () => {
     const target = tabs.value[index]!
     if (target.dirty && confirmDirty && !confirmDirty(target)) return null
     const remaining = tabs.value.filter((tab) => tab.key !== key)
-    tabs.value = remaining.length > 0 ? remaining : tabs.value
+    if (remaining.length > 0) {
+      dirtySources.delete(key)
+      manuallyDirty.delete(key)
+      tabs.value = remaining
+    }
     const fallback = remaining[index - 1] || remaining[index] || remaining[0]
     return fallback?.path || null
   }
@@ -159,6 +193,7 @@ export const useWorkspaceStore = defineStore('workspace', () => {
     setThemeMode,
     openTab,
     markDirty,
+    markDirtySource,
     isDirty,
     closeTab,
     MIN_SIDEBAR_WIDTH,

@@ -14,6 +14,7 @@ import {
 } from '@/components/lists'
 import type { ListColumn, ListQuery } from '@/components/lists/listTypes'
 import { useListState } from '@/composables/useListState'
+import { useUnsavedChanges } from '@/composables/useUnsavedChanges'
 import {
   getResourceActions,
   listAuthorizationGroupPage,
@@ -88,6 +89,14 @@ const form = ref({
   participant_ref_id: '',
   actions: [] as PolicyDraftAction[],
 })
+const { markClean, confirmDiscard } = useUnsavedChanges(form, modalOpen)
+
+function closeForm(): void {
+  if (busy.value || !confirmDiscard()) return
+  markClean()
+  modalOpen.value = false
+}
+
 const columns: readonly ListColumn<Policy>[] = [
   { key: 'organization_id', labelKey: 'security.organizationScope' },
   { key: 'resource_id', labelKey: 'security.resource' },
@@ -440,11 +449,28 @@ function openCreate(): void {
     participant_ref_id: '',
     actions: [],
   }
+  // Choosing the first participant is an API-driven default, not a user edit.
+  // Rebase the pristine draft only if no other field or selection changed while loading.
+  const initialFields = JSON.stringify({ ...form.value, participant_ref_id: '' })
+  const initialParticipantLoad = loadParticipantOptions(form.value.participant_type, '', true)
+  const requestId = participantRequestId
   void Promise.all([
     loadActions(form.value.resource_id),
     loadWorkflowStates(form.value.resource_id),
-    loadParticipantOptions(form.value.participant_type, '', true),
+    initialParticipantLoad,
   ])
+    .then(() => {
+      if (
+        modalOpen.value &&
+        editingId.value === undefined &&
+        participantRequestId === requestId &&
+        JSON.stringify({ ...form.value, participant_ref_id: '' }) === initialFields &&
+        form.value.participant_ref_id === (participantOptions.value[0]?.id ?? '')
+      )
+        markClean()
+    })
+    .catch(reportApiError)
+  markClean()
   modalOpen.value = true
 }
 function openEdit(policy: Policy): void {
@@ -465,6 +491,7 @@ function openEdit(policy: Policy): void {
     loadWorkflowStates(form.value.resource_id),
     loadParticipantOptions(form.value.participant_type, ''),
   ])
+  markClean()
   modalOpen.value = true
 }
 function addAction(): void {
@@ -490,6 +517,7 @@ async function save(): Promise<void> {
       actions: form.value.actions,
     }
     await savePolicy(payload, editingId.value)
+    markClean()
     modalOpen.value = false
     await load()
   } catch (caught: unknown) {
@@ -616,7 +644,7 @@ onBeforeUnmount(() => {
           type="button"
           class="icon-button"
           :aria-label="t('common.close')"
-          @click="modalOpen = false"
+          @click="closeForm"
         >
           ×
         </button>
@@ -737,7 +765,7 @@ onBeforeUnmount(() => {
           <p class="security-note">{{ t('security.policyBasePermissionNote') }}</p>
         </div>
         <footer class="modal-card__footer">
-          <button type="button" class="secondary-button" @click="modalOpen = false">
+          <button type="button" class="secondary-button" @click="closeForm">
             {{ t('common.cancel') }}</button
           ><button
             type="submit"

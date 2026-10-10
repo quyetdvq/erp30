@@ -13,6 +13,7 @@ type Readable<T> = Readonly<Ref<T>> | ComputedRef<T>
 export function useUnsavedChanges<T>(model: Readable<T>, enabled?: Readable<boolean>) {
   const route = useRoute()
   const workspace = useWorkspaceStore()
+  const source = Symbol('unsaved-form')
   const snapshot = ref(JSON.stringify(model.value))
   const dirty = computed(
     () => (enabled ? enabled.value : true) && JSON.stringify(model.value) !== snapshot.value,
@@ -24,9 +25,9 @@ export function useUnsavedChanges<T>(model: Readable<T>, enabled?: Readable<bool
     ([value, key], previous) => {
       const previousKey = previous?.[1]
       if (previousKey !== undefined && previousKey !== key) {
-        workspace.markDirty(previousKey, false)
+        workspace.markDirtySource(previousKey, source, false)
       }
-      workspace.markDirty(key, value)
+      workspace.markDirtySource(key, source, value)
     },
     { immediate: true, flush: 'sync' },
   )
@@ -41,12 +42,12 @@ export function useUnsavedChanges<T>(model: Readable<T>, enabled?: Readable<bool
   onScopeDispose(() => {
     if (typeof window !== 'undefined') window.removeEventListener('beforeunload', beforeUnload)
     stop()
-    workspace.markDirty(tabKey.value, false)
+    workspace.markDirtySource(tabKey.value, source, false)
   })
 
   function markClean(): void {
     snapshot.value = JSON.stringify(model.value)
-    workspace.markDirty(tabKey.value, false)
+    workspace.markDirtySource(tabKey.value, source, false)
   }
 
   function confirmDiscard(): boolean {

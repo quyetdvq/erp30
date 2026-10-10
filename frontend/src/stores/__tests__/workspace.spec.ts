@@ -30,6 +30,33 @@ describe('workspace shell state', () => {
     expect(store.themeMode).toBe('dark')
   })
 
+  it('separates manual and form-owned dirty state, and clears both on user switch', () => {
+    const store = useWorkspaceStore()
+    store.activateUser(7)
+    const first = Symbol('first')
+    const second = Symbol('second')
+    store.markDirtySource('organizations', first, true)
+    store.openTab({
+      key: 'organizations',
+      path: '/organizations',
+      labelKey: 'nav.organizations',
+      closable: true,
+    })
+    expect(store.isDirty('organizations')).toBe(true)
+    store.markDirtySource('organizations', second, true)
+    store.markDirtySource('organizations', first, false)
+    expect(store.tabs[0]?.dirty).toBe(true)
+    store.markDirty('organizations')
+    store.markDirtySource('organizations', second, false)
+    expect(store.isDirty('organizations')).toBe(true)
+    store.markDirty('organizations', false)
+    expect(store.isDirty('organizations')).toBe(false)
+    store.markDirtySource('organizations', second, true)
+    store.activateUser(8)
+    expect(store.isDirty('organizations')).toBe(false)
+    expect(store.tabs).toHaveLength(0)
+  })
+
   it('deduplicates tabs and protects dirty close', () => {
     const store = useWorkspaceStore()
     store.activateUser(7)

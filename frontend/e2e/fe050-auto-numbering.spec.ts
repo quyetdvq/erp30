@@ -208,10 +208,11 @@ test.describe('P1-FE-050 Auto Numbering configuration UI', () => {
     await expect(dialog).toHaveCount(0)
     await expect.poll(() => requests.createRequests).toBe(1)
 
-    await page
-      .getByRole('row', { name: /DEFAULT/ })
-      .getByRole('button', { name: /Xem chi tiết|View details/ })
-      .dispatchEvent('click')
+    // Batch 3 disables row actions until the save AND subsequent list refresh finish.
+    const defaultRow = page.getByRole('row', { name: /DEFAULT/ })
+    const viewAction = defaultRow.getByRole('button', { name: /Xem chi tiết|View details/ })
+    await expect(viewAction).toBeEnabled()
+    await viewAction.dispatchEvent('click')
     await expect(
       page.getByRole('dialog', { name: /Chi tiết numbering|Numbering series details/ }),
     ).toBeVisible()
@@ -220,20 +221,21 @@ test.describe('P1-FE-050 Auto Numbering configuration UI', () => {
       .getByRole('button', { name: /Đóng|Close/ })
       .last()
       .dispatchEvent('click')
-    await page
-      .getByRole('row', { name: /DEFAULT/ })
-      .getByRole('button', { name: /Sửa|Edit/ })
-      .dispatchEvent('click')
+    const editAction = defaultRow.getByRole('button', { name: /Sửa|Edit/ })
+    await expect(editAction).toBeEnabled()
+    await editAction.dispatchEvent('click')
     const editDialog = page.getByRole('dialog', {
       name: /Biểu mẫu Auto Numbering|Auto Numbering form/,
     })
     await editDialog.getByLabel('Tên').fill('Updated series')
     await editDialog.getByRole('button', { name: /Lưu|Save/ }).dispatchEvent('click')
     await expect.poll(() => requests.patchRequests).toBe(1)
-    await page
-      .getByRole('row', { name: /DEFAULT/ })
-      .getByRole('button', { name: /Ngừng hoạt động|Deactivate/ })
-      .dispatchEvent('click')
+    await expect(editDialog).toHaveCount(0)
+    // A PATCH reaching the mock does not mean busy has cleared after loadSeries().
+    // Do not bypass disabled controls with dispatchEvent while a save is in progress.
+    const deactivateAction = defaultRow.getByRole('button', { name: /Ngừng hoạt động|Deactivate/ })
+    await expect(deactivateAction).toBeEnabled()
+    await deactivateAction.dispatchEvent('click')
     await expect.poll(() => requests.stateRequests).toBe(1)
 
     const panelA11y = await new AxeBuilder({ page }).include('.numbering-panel').analyze()

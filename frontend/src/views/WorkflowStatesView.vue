@@ -15,6 +15,7 @@ import {
 } from '@/components/lists'
 import type { ListColumn, ListQuery } from '@/components/lists/listTypes'
 import { useListState } from '@/composables/useListState'
+import { useUnsavedChanges } from '@/composables/useUnsavedChanges'
 import { useBasePermission } from '@/composables/useBasePermission'
 import { changeWorkflowState, listWorkflowStatePage, saveWorkflowState } from '@/services/workflow'
 import { normalizeApiError, reportApiError } from '@/services/errorBoundary'
@@ -32,6 +33,14 @@ const form = ref({
   description: '',
   status: 'ACTIVE' as WorkflowState['status'],
 })
+const { markClean, confirmDiscard } = useUnsavedChanges(form, modalOpen)
+
+function closeForm(): void {
+  if (busy.value || !confirmDiscard()) return
+  markClean()
+  modalOpen.value = false
+}
+
 const columns: readonly ListColumn<WorkflowState>[] = [
   { key: 'code', labelKey: 'workflow.code', sortable: true },
   { key: 'name', labelKey: 'workflow.name', sortable: true },
@@ -72,6 +81,7 @@ async function load(): Promise<void> {
 function openCreate(): void {
   editingId.value = undefined
   form.value = { code: '', name: '', description: '', status: 'ACTIVE' }
+  markClean()
   modalOpen.value = true
 }
 
@@ -83,6 +93,7 @@ function openEdit(row: WorkflowState): void {
     description: row.description ?? '',
     status: row.status,
   }
+  markClean()
   modalOpen.value = true
 }
 
@@ -97,6 +108,7 @@ async function save(): Promise<void> {
       ...(form.value.description ? { description: form.value.description } : { description: null }),
     }
     await saveWorkflowState(payload, editingId.value)
+    markClean()
     modalOpen.value = false
     await load()
   } catch (caught: unknown) {
@@ -154,8 +166,11 @@ onMounted(() => void load())
       :empty-dataset="state.isEmptyDataset.value"
       :empty-filtered-result="state.isEmptyFilteredResult.value"
       :error="state.queryState.error.value"
+      :retryable="true"
+      @retry="void load()"
     >
       <ListTable
+        :busy="state.isBackgroundRefreshing.value"
         :rows="state.rows.value"
         :columns="columns"
         :sort="state.query.sort"
@@ -215,7 +230,7 @@ onMounted(() => void load())
           type="button"
           class="icon-button"
           :aria-label="t('common.close')"
-          @click="modalOpen = false"
+          @click="closeForm"
         >
           ×
         </button>
@@ -241,7 +256,7 @@ onMounted(() => void load())
           </select></label
         >
         <footer class="modal-card__footer">
-          <button type="button" class="secondary-button" @click="modalOpen = false">
+          <button type="button" class="secondary-button" @click="closeForm">
             {{ t('common.cancel') }}
           </button>
           <button

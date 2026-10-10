@@ -7,6 +7,7 @@ import ContactList from '@/components/contacts/ContactList.vue'
 import OrganizationTreeSelect from '@/components/organizations/OrganizationTreeSelect.vue'
 import { ListPagination, ListQueryControls, ListShell } from '@/components/lists'
 import { useListState } from '@/composables/useListState'
+import { useUnsavedChanges } from '@/composables/useUnsavedChanges'
 import type { ListQuery } from '@/components/lists/listTypes'
 import {
   changeOrganizationState,
@@ -44,6 +45,13 @@ const form = ref({
   active_from: '',
   active_to: '',
 })
+const { markClean, confirmDiscard } = useUnsavedChanges(form, modalOpen)
+
+function closeForm(): void {
+  if (mutationBusy.value || !confirmDiscard()) return
+  markClean()
+  modalOpen.value = false
+}
 
 const state = useListState<Organization>((query) => listOrganizationTree(query), { sort: 'name' })
 const organizations = computed(() => state.rows.value)
@@ -147,6 +155,7 @@ function openCreate(): void {
     active_from: '',
     active_to: '',
   }
+  markClean()
   modalOpen.value = true
 }
 
@@ -167,6 +176,7 @@ function openEdit(item: Organization): void {
     active_from: item.active_from ?? '',
     active_to: item.active_to ?? '',
   }
+  markClean()
   modalOpen.value = true
 }
 
@@ -197,6 +207,7 @@ async function save(): Promise<void> {
   error.value = null
   try {
     await saveOrganization(payload(), editingId.value)
+    markClean()
     modalOpen.value = false
     await load()
   } catch (caught: unknown) {
@@ -429,7 +440,7 @@ onMounted(() => void load())
           type="button"
           class="icon-button"
           :aria-label="t('common.close')"
-          @click="modalOpen = false"
+          @click="closeForm"
         >
           ×
         </button>
@@ -498,7 +509,7 @@ onMounted(() => void load())
         >
         <p v-if="error" class="inline-error" role="alert">{{ t('organization.error') }}</p>
         <footer>
-          <button type="button" class="secondary-button" @click="modalOpen = false">
+          <button type="button" class="secondary-button" @click="closeForm">
             {{ t('common.cancel') }}</button
           ><button
             type="submit"

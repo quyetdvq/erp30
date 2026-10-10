@@ -18,6 +18,7 @@ import {
 } from '@/components/lists'
 import type { ListColumn } from '@/components/lists/listTypes'
 import { useBasePermission } from '@/composables/useBasePermission'
+import { useUnsavedChanges } from '@/composables/useUnsavedChanges'
 import {
   changeNumberingSeriesState,
   getNumberingSeriesById,
@@ -70,6 +71,8 @@ const form = ref({
   is_default: false,
   status: 'ACTIVE' as NumberingSeriesCreate['status'],
 })
+
+const { markClean, confirmDiscard } = useUnsavedChanges(form, modalOpen)
 
 const resource = computed(() =>
   resources.value.find((candidate) => String(candidate.id) === selectedResourceId.value),
@@ -256,6 +259,7 @@ function openCreate(): void {
   if (!selectedResourceId.value) return
   editingId.value = undefined
   resetForm()
+  markClean()
   modalOpen.value = true
 }
 
@@ -280,6 +284,7 @@ function openEdit(row: NumberingSeriesRow): void {
   editingId.value = String(row.id)
   selectedResourceId.value = String(row.resource_id)
   fillForm(row)
+  markClean()
   modalOpen.value = true
 }
 
@@ -298,6 +303,8 @@ async function openView(row: NumberingSeriesRow): Promise<void> {
 }
 
 function closeModal(): void {
+  if (busy.value || !confirmDiscard()) return
+  markClean()
   modalOpen.value = false
   editingId.value = undefined
 }
@@ -382,7 +389,9 @@ async function save(): Promise<void> {
       editingId.value ? editablePayload() : fullPayload(),
       editingId.value,
     )
-    closeModal()
+    markClean()
+    modalOpen.value = false
+    editingId.value = undefined
     await loadSeries()
   } catch (caught: unknown) {
     formError.value = caught

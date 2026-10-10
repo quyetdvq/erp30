@@ -16,6 +16,7 @@ import {
 } from '@/components/lists'
 import type { ListColumn, ListQuery } from '@/components/lists/listTypes'
 import { useListState } from '@/composables/useListState'
+import { useUnsavedChanges } from '@/composables/useUnsavedChanges'
 import { useBasePermission } from '@/composables/useBasePermission'
 import {
   addLifecycleState,
@@ -52,6 +53,14 @@ const detailBusy = ref(false)
 const error = ref<unknown | null>(null)
 const detailError = ref<unknown | null>(null)
 const form = ref({ code: '', name: '', description: '', status: 'ACTIVE' as Lifecycle['status'] })
+const { markClean, confirmDiscard } = useUnsavedChanges(form, modalOpen)
+
+function closeForm(): void {
+  if (busy.value || !confirmDiscard()) return
+  markClean()
+  modalOpen.value = false
+}
+
 const stateForm = ref({ state_id: '', sequence: 1, is_initial: false, is_final: false })
 const transitionForm = ref({
   from_state_id: '',
@@ -59,6 +68,21 @@ const transitionForm = ref({
   to_state_id: '',
   status: 'ACTIVE' as LifecycleTransition['status'],
 })
+
+const stateDraft = useUnsavedChanges(stateForm, stateModalOpen)
+const transitionDraft = useUnsavedChanges(transitionForm, transitionModalOpen)
+
+function closeStateForm(): void {
+  if (busy.value || !stateDraft.confirmDiscard()) return
+  stateDraft.markClean()
+  stateModalOpen.value = false
+}
+
+function closeTransitionForm(): void {
+  if (busy.value || !transitionDraft.confirmDiscard()) return
+  transitionDraft.markClean()
+  transitionModalOpen.value = false
+}
 
 const columns: readonly ListColumn<Lifecycle>[] = [
   { key: 'code', labelKey: 'workflow.code', sortable: true },
@@ -184,6 +208,7 @@ function selectLifecycle(row: Lifecycle): void {
 function openCreate(): void {
   editingId.value = undefined
   form.value = { code: '', name: '', description: '', status: 'ACTIVE' }
+  markClean()
   modalOpen.value = true
 }
 
@@ -195,6 +220,7 @@ function openEdit(row: Lifecycle): void {
     description: row.description ?? '',
     status: row.status,
   }
+  markClean()
   modalOpen.value = true
 }
 
@@ -209,6 +235,7 @@ async function save(): Promise<void> {
       ...(form.value.description ? { description: form.value.description } : { description: null }),
     }
     const saved = await saveLifecycle(payload, editingId.value)
+    markClean()
     modalOpen.value = false
     selectedId.value = String(saved.id)
     await load()
@@ -241,6 +268,7 @@ function openStateCreate(): void {
     is_initial: !initialAlreadySet.value,
     is_final: false,
   }
+  stateDraft.markClean()
   stateModalOpen.value = true
 }
 
@@ -250,6 +278,7 @@ async function saveState(): Promise<void> {
   detailError.value = null
   try {
     await addLifecycleState(selectedId.value, stateForm.value)
+    stateDraft.markClean()
     stateModalOpen.value = false
     await loadDetails()
   } catch (caught: unknown) {
@@ -262,6 +291,7 @@ async function saveState(): Promise<void> {
 
 function openTransitionCreate(): void {
   transitionForm.value = { from_state_id: '', action_code: '', to_state_id: '', status: 'ACTIVE' }
+  transitionDraft.markClean()
   transitionModalOpen.value = true
 }
 
@@ -277,6 +307,7 @@ async function saveTransition(): Promise<void> {
   detailError.value = null
   try {
     await addLifecycleTransition(selectedId.value, transitionForm.value)
+    transitionDraft.markClean()
     transitionModalOpen.value = false
     await loadDetails()
   } catch (caught: unknown) {
@@ -581,7 +612,7 @@ onMounted(() => void load())
           type="button"
           class="icon-button"
           :aria-label="t('common.close')"
-          @click="modalOpen = false"
+          @click="closeForm"
         >
           ×
         </button>
@@ -604,7 +635,7 @@ onMounted(() => void load())
           </select></label
         >
         <footer class="modal-card__footer">
-          <button type="button" class="secondary-button" @click="modalOpen = false">
+          <button type="button" class="secondary-button" @click="closeForm">
             {{ t('common.cancel') }}</button
           ><button
             type="submit"
@@ -630,7 +661,7 @@ onMounted(() => void load())
           type="button"
           class="icon-button"
           :aria-label="t('common.close')"
-          @click="stateModalOpen = false"
+          @click="closeStateForm"
         >
           ×
         </button>
@@ -667,7 +698,7 @@ onMounted(() => void load())
           }}</span></label
         >
         <footer class="modal-card__footer">
-          <button type="button" class="secondary-button" @click="stateModalOpen = false">
+          <button type="button" class="secondary-button" @click="closeStateForm">
             {{ t('common.cancel') }}</button
           ><button
             type="submit"
@@ -693,7 +724,7 @@ onMounted(() => void load())
           type="button"
           class="icon-button"
           :aria-label="t('common.close')"
-          @click="transitionModalOpen = false"
+          @click="closeTransitionForm"
         >
           ×
         </button>
@@ -738,7 +769,7 @@ onMounted(() => void load())
           </select></label
         >
         <footer class="modal-card__footer">
-          <button type="button" class="secondary-button" @click="transitionModalOpen = false">
+          <button type="button" class="secondary-button" @click="closeTransitionForm">
             {{ t('common.cancel') }}</button
           ><button
             type="submit"

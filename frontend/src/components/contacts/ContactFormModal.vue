@@ -5,6 +5,7 @@ import { useI18n } from 'vue-i18n'
 import type { Contact, ContactCreate, Province, Ward } from '@/api/generated/types.gen'
 import type { ContactUpdate } from '@/services/foundation'
 import SearchableSelect from '@/components/forms/SearchableSelect.vue'
+import { useUnsavedChanges } from '@/composables/useUnsavedChanges'
 
 const props = withDefaults(
   defineProps<{
@@ -38,6 +39,17 @@ const draft = ref({
   status: 'ACTIVE' as 'ACTIVE' | 'INACTIVE' | 'CLOSED',
 })
 
+const { markClean, confirmDiscard } = useUnsavedChanges(
+  draft,
+  computed(() => props.open),
+)
+
+function requestClose(): void {
+  if (props.busy || !confirmDiscard()) return
+  markClean()
+  emit('close')
+}
+
 const title = computed(() => (props.contact ? t('contact.edit') : t('contact.add')))
 const provinceOptions = computed(() =>
   props.provinces.map((province) => ({
@@ -67,6 +79,7 @@ watch(
       ward_id: contact?.ward_id ?? '',
       status: (contact?.status as 'ACTIVE' | 'INACTIVE' | 'CLOSED' | undefined) ?? 'ACTIVE',
     }
+    markClean()
   },
   { immediate: true },
 )
@@ -114,7 +127,7 @@ function save(): void {
           type="button"
           class="icon-button"
           :aria-label="t('common.close')"
-          @click="emit('close')"
+          @click="requestClose"
         >
           ×
         </button>
@@ -180,7 +193,7 @@ function save(): void {
           </select>
         </label>
         <footer class="modal-card__footer">
-          <button type="button" class="secondary-button" @click="emit('close')">
+          <button type="button" class="secondary-button" @click="requestClose">
             {{ t('common.cancel') }}
           </button>
           <button type="submit" class="primary-button" :disabled="props.busy">

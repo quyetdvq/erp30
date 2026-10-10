@@ -26,6 +26,7 @@ import {
   type ListQuery,
 } from '@/components/lists/listTypes'
 import { useListState } from '@/composables/useListState'
+import { useUnsavedChanges } from '@/composables/useUnsavedChanges'
 import { listOrganizationPage } from '@/services/foundation'
 import {
   changeAssignmentState,
@@ -87,6 +88,21 @@ const assignmentForm = ref({
   status: 'ACTIVE' as 'ACTIVE' | 'INACTIVE',
   description: '',
 })
+
+const employeeDraft = useUnsavedChanges(employeeForm, employeeModal)
+const assignmentDraft = useUnsavedChanges(assignmentForm, assignmentModal)
+
+function closeEmployeeForm(): void {
+  if (busy.value || !employeeDraft.confirmDiscard()) return
+  employeeDraft.markClean()
+  employeeModal.value = false
+}
+
+function closeAssignmentForm(): void {
+  if (busy.value || !assignmentDraft.confirmDiscard()) return
+  assignmentDraft.markClean()
+  assignmentModal.value = false
+}
 
 const selected = computed<Employee>(
   () => state.rows.value.find((row) => String(row.id) === selectedId.value) as Employee,
@@ -317,6 +333,7 @@ function openCreate(): void {
     status: 'ACTIVE',
     description: '',
   }
+  employeeDraft.markClean()
   employeeModal.value = true
 }
 function openEdit(row: Employee | null): void {
@@ -334,6 +351,7 @@ function openEdit(row: Employee | null): void {
     status: row.status,
     description: row.description ?? '',
   }
+  employeeDraft.markClean()
   employeeModal.value = true
 }
 function openEmployeeDetail(row: Employee): void {
@@ -388,6 +406,7 @@ async function saveEmployeeForm(): Promise<void> {
     }
     const saved = await saveEmployee(payload as unknown as EmployeeCreate, editingEmployeeId.value)
     upsertEmployeeLookup(saved)
+    employeeDraft.markClean()
     employeeModal.value = false
     await load()
   } catch (caught: unknown) {
@@ -426,6 +445,7 @@ function openAssignmentCreate(): void {
     status: 'ACTIVE',
     description: '',
   }
+  assignmentDraft.markClean()
   assignmentModal.value = true
 }
 function openAssignmentEdit(row: EmployeeAssignment): void {
@@ -440,6 +460,7 @@ function openAssignmentEdit(row: EmployeeAssignment): void {
     status: row.status,
     description: row.description ?? '',
   }
+  assignmentDraft.markClean()
   assignmentModal.value = true
 }
 const assignmentOverlap = computed(() =>
@@ -482,6 +503,7 @@ async function saveAssignmentForm(): Promise<void> {
       ? (base as EmployeeAssignmentPatch)
       : ({ ...base, employee_id: selectedId.value } as EmployeeAssignmentCreate)
     await saveAssignment(payload, editingAssignmentId.value)
+    assignmentDraft.markClean()
     assignmentModal.value = false
     await Promise.all([loadAssignments(), loadAllAssignments()])
     await load()
@@ -558,8 +580,11 @@ onMounted(async () => {
       :empty-dataset="state.isEmptyDataset.value"
       :empty-filtered-result="state.isEmptyFilteredResult.value"
       :error="state.queryState.error.value"
+      :retryable="true"
+      @retry="void load()"
     >
       <ListTable
+        :busy="state.isBackgroundRefreshing.value"
         :rows="state.rows.value"
         :columns="columns"
         :sort="state.query.sort"
@@ -806,7 +831,7 @@ onMounted(async () => {
           type="button"
           class="icon-button"
           :aria-label="t('common.close')"
-          @click="employeeModal = false"
+          @click="closeEmployeeForm"
         >
           ×
         </button>
@@ -869,7 +894,7 @@ onMounted(async () => {
           ><textarea v-model="employeeForm.description" rows="3" />
         </label>
         <footer class="modal-card__footer">
-          <button type="button" class="secondary-button" @click="employeeModal = false">
+          <button type="button" class="secondary-button" @click="closeEmployeeForm">
             {{ t('common.cancel') }}</button
           ><button
             type="submit"
@@ -902,7 +927,7 @@ onMounted(async () => {
           type="button"
           class="icon-button"
           :aria-label="t('common.close')"
-          @click="assignmentModal = false"
+          @click="closeAssignmentForm"
         >
           ×
         </button>
@@ -967,7 +992,7 @@ onMounted(async () => {
           ><textarea v-model="assignmentForm.description" rows="3" />
         </label>
         <footer class="modal-card__footer">
-          <button type="button" class="secondary-button" @click="assignmentModal = false">
+          <button type="button" class="secondary-button" @click="closeAssignmentForm">
             {{ t('common.cancel') }}</button
           ><button
             type="submit"

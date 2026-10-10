@@ -10,6 +10,7 @@ const props = withDefaults(
     emptyDataset?: boolean
     emptyFilteredResult?: boolean
     error?: unknown | null
+    retryable?: boolean
   }>(),
   {
     initialLoading: false,
@@ -17,10 +18,12 @@ const props = withDefaults(
     hasData: false,
     emptyDataset: false,
     emptyFilteredResult: false,
+    retryable: false,
   },
 )
 
 const { t } = useI18n()
+const emit = defineEmits<{ retry: [] }>()
 </script>
 
 <template>
@@ -30,27 +33,43 @@ const { t } = useI18n()
       <div v-if="$slots.toolbar" class="list-shell__toolbar"><slot name="toolbar" /></div>
     </header>
 
-    <div v-if="props.initialLoading" class="list-shell__state" role="status" aria-live="polite">
+    <div
+      v-if="props.initialLoading && !props.hasData"
+      class="list-shell__state"
+      role="status"
+      aria-live="polite"
+    >
       <slot name="loading">{{ t('list.loading') }}</slot>
     </div>
     <div v-else-if="props.error && !props.hasData" class="list-shell__state" role="alert">
       <slot name="error">{{ t('list.error') }}</slot>
-    </div>
-    <div v-else-if="props.emptyDataset" class="list-shell__state" role="status">
-      <slot name="empty">{{ t('list.empty') }}</slot>
-    </div>
-    <div v-else-if="props.emptyFilteredResult" class="list-shell__state" role="status">
-      <slot name="empty-filtered">{{ t('list.emptyFiltered') }}</slot>
+      <button v-if="props.retryable" type="button" class="list-shell__retry" @click="emit('retry')">
+        {{ t('list.retry') }}
+      </button>
     </div>
     <template v-else-if="props.hasData">
       <div v-if="props.error" class="list-shell__notice" role="alert">
         <slot name="refresh-error">{{ t('list.refreshError') }}</slot>
+        <button
+          v-if="props.retryable && !props.refreshing"
+          type="button"
+          class="list-shell__retry"
+          @click="emit('retry')"
+        >
+          {{ t('list.retry') }}
+        </button>
       </div>
       <div v-if="props.refreshing" class="list-shell__refreshing" role="status" aria-live="polite">
         {{ t('list.refreshing') }}
       </div>
       <slot />
     </template>
+    <div v-else-if="props.emptyFilteredResult" class="list-shell__state" role="status">
+      <slot name="empty-filtered">{{ t('list.emptyFiltered') }}</slot>
+    </div>
+    <div v-else-if="props.emptyDataset" class="list-shell__state" role="status">
+      <slot name="empty">{{ t('list.empty') }}</slot>
+    </div>
     <slot v-else />
   </section>
 </template>
@@ -92,5 +111,19 @@ const { t } = useI18n()
 .list-shell__refreshing {
   color: #536b7b;
   font-size: 13px;
+}
+.list-shell__retry {
+  display: block;
+  margin-top: 8px;
+  padding: 4px 0;
+  border: 0;
+  background: transparent;
+  color: #1876a8;
+  text-decoration: underline;
+  cursor: pointer;
+}
+.list-shell__retry:focus-visible {
+  outline: 2px solid #1876a8;
+  outline-offset: 2px;
 }
 </style>
