@@ -40,6 +40,9 @@ const state = useListState<Product>((query) => listProductPage(query), { sort: '
 const groups = ref<ProductGroup[]>([])
 const uoms = ref<ProductUom[]>([])
 const productLookup = ref<Product[]>([])
+// Resolve table labels in O(1) per visible row even with thousands of groups/UOMs.
+const groupNameById = computed(() => new Map(groups.value.map((row) => [String(row.id), row.name])))
+const uomCodeById = computed(() => new Map(uoms.value.map((row) => [String(row.id), row.code])))
 const relations = ref<Record<string, RelationState>>({})
 const expandedRows = ref<Record<string, boolean>>({})
 const detailProduct = ref<Product | null>(null)
@@ -100,10 +103,10 @@ const filters = () => [
   },
 ]
 function groupName(id: string | null | undefined): string {
-  return groups.value.find((row) => String(row.id) === String(id))?.name ?? t('list.noValue')
+  return groupNameById.value.get(String(id)) ?? t('list.noValue')
 }
 function uomName(id: string | null | undefined): string {
-  return uoms.value.find((row) => String(row.id) === String(id))?.code ?? t('list.noValue')
+  return uomCodeById.value.get(String(id)) ?? t('list.noValue')
 }
 function relation(row: Product): RelationState {
   return (

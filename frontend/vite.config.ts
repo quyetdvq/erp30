@@ -25,6 +25,11 @@ export default defineConfig({
             {
               name: 'naive-ui',
               test: /[\\/]node_modules[\\/]naive-ui[\\/]/,
+              // Do not ship every Naive UI component to routes that only need a few.
+              // Split by dynamic-entry usage, with a bounded chunk-size target.
+              entriesAware: true,
+              minSize: 20_000,
+              maxSize: 260_000,
             },
             {
               name: 'vue-runtime',

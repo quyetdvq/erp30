@@ -242,6 +242,36 @@ test.describe('P1-FE-050 Auto Numbering configuration UI', () => {
     expect(panelA11y.violations).toEqual([])
   })
 
+  test('asks before discarding an edited numbering form and keeps the draft if cancelled', async ({
+    page,
+  }) => {
+    await mockSession(page)
+    const requests = await mockNumberingApi(page)
+    let confirmations = 0
+    page.on('dialog', async (confirmation) => {
+      confirmations += 1
+      expect(confirmation.type()).toBe('confirm')
+      if (confirmations === 1) await confirmation.dismiss()
+      else await confirmation.accept()
+    })
+    await page.goto('/configuration/auto-numbering')
+    await expect(page.getByRole('cell', { name: 'DEFAULT', exact: true })).toBeVisible()
+    await page
+      .getByRole('button', { name: /Tạo numbering series|Create numbering series/ })
+      .dispatchEvent('click')
+    const form = page.getByRole('dialog', { name: /Biểu mẫu Auto Numbering|Auto Numbering form/ })
+    await expect(form).toBeVisible()
+    await form.getByLabel('Mã series').fill('NOT_SAVED')
+    await form.getByRole('button', { name: /Hủy|Cancel/ }).click()
+    await expect(form).toBeVisible()
+    await expect(form.getByLabel('Mã series')).toHaveValue('NOT_SAVED')
+    expect(requests.createRequests).toBe(0)
+    await form.getByRole('button', { name: /Hủy|Cancel/ }).click()
+    await expect(form).toHaveCount(0)
+    expect(confirmations).toBe(2)
+    expect(requests.createRequests).toBe(0)
+  })
+
   test('hides controls without configure permission', async ({ page }) => {
     await mockSession(page, [])
     await mockNumberingApi(page)

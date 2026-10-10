@@ -80,6 +80,40 @@ describe('unsaved form guard', () => {
     wrapper.unmount()
   })
 
+  it('blocks browser unload while any form is dirty and removes the listener on unmount', async () => {
+    const first = ref({ name: '' })
+    const second = ref({ name: '' })
+    let firstGuard!: ReturnType<typeof useUnsavedChanges>
+    let secondGuard!: ReturnType<typeof useUnsavedChanges>
+    const Host = defineComponent({
+      setup() {
+        firstGuard = useUnsavedChanges(first)
+        secondGuard = useUnsavedChanges(second)
+        return () => h('div')
+      },
+    })
+    const wrapper = mount(Host)
+    first.value.name = 'draft'
+    second.value.name = 'draft'
+    await nextTick()
+
+    const unloading = () => {
+      const event = new Event('beforeunload', { cancelable: true })
+      window.dispatchEvent(event)
+      return event.defaultPrevented
+    }
+    expect(unloading()).toBe(true)
+    firstGuard.markClean()
+    expect(unloading()).toBe(true)
+    secondGuard.markClean()
+    expect(unloading()).toBe(false)
+    second.value.name = 'new draft'
+    await nextTick()
+    expect(unloading()).toBe(true)
+    wrapper.unmount()
+    expect(unloading()).toBe(false)
+  })
+
   it('does not mark a closed modal dirty and resets on reopening', async () => {
     const workspace = useWorkspaceStore()
     workspace.openTab({
