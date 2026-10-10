@@ -107,3 +107,96 @@ describe('complete master-data lookups', () => {
     await expect(loadLookupPages(request)).rejects.toThrow(/incomplete page/)
   })
 })
+
+describe('shared lookup request budget', () => {
+  it('caps simultaneous first-page requests from seven independent selectors', async () => {
+    let release!: () => void
+    const gate = new Promise<void>((resolve) => {
+      release = resolve
+    })
+    let active = 0
+    let peak = 0
+    const request = vi.fn<(query: ListQuery) => Promise<ListResponse<number>>>(async (query) => {
+      active += 1
+      peak = Math.max(peak, active)
+      try {
+        await gate
+        return {
+          data: [query.page],
+          meta: { page: query.page, page_size: query.page_size, total: 1 },
+        }
+      } finally {
+        active -= 1
+      }
+    })
+
+    const pending = Array.from({ length: 7 }, () => loadLookupPages(request))
+    const startedBeforeRelease = request.mock.calls.length
+    release()
+    const rows = await Promise.all(pending)
+    expect(startedBeforeRelease).toBe(4)
+    expect(request).toHaveBeenCalledTimes(7)
+    expect(rows).toEqual(Array.from({ length: 7 }, () => [1]))
+    expect(peak).toBe(4)
+    expect(active).toBe(0)
+  })
+
+  it('never exceeds four in-flight page requests across simultaneous selectors', async () => {
+    let inFlight = 0
+    let peak = 0
+    const request = vi.fn<(query: ListQuery) => Promise<ListResponse<number>>>(async (query) => {
+      inFlight += 1
+      peak = Math.max(peak, inFlight)
+      try {
+        await new Promise<void>((resolve) => setTimeout(resolve, 3))
+        const total = 1_001
+        const start = (query.page - 1) * query.page_size
+        return {
+          data: Array.from(
+            { length: Math.max(0, Math.min(query.page_size, total - start)) },
+            (_, i) => start + i,
+          ),
+          meta: { page: query.page, page_size: query.page_size, total },
+        }
+      } finally {
+        inFlight -= 1
+      }
+    })
+
+    const lookups = await Promise.all(Array.from({ length: 4 }, () => loadLookupPages(request)))
+    for (const rows of lookups) {
+      expect(rows).toHaveLength(1_001)
+      expect(rows[1_000]).toBe(1_000)
+    }
+    expect(request).toHaveBeenCalledTimes(24)
+    expect(peak).toBeGreaterThan(1)
+    expect(peak).toBeLessThanOrEqual(4)
+    expect(inFlight).toBe(0)
+  })
+
+  it('releases all request slots when a lookup fails and lets the next lookup finish', async () => {
+    let inFlight = 0
+    const broken = vi.fn<(query: ListQuery) => Promise<ListResponse<number>>>(async (query) => {
+      inFlight += 1
+      try {
+        await new Promise<void>((resolve) => setTimeout(resolve, 2))
+        if (query.page === 2) throw new Error('Simulated page failure')
+        const total = 601
+        const start = (query.page - 1) * query.page_size
+        return {
+          data: Array.from(
+            { length: Math.min(query.page_size, total - start) },
+            (_, i) => start + i,
+          ),
+          meta: { page: query.page, page_size: query.page_size, total },
+        }
+      } finally {
+        inFlight -= 1
+      }
+    })
+    await expect(loadLookupPages(broken)).rejects.toThrow('Simulated page failure')
+    expect(inFlight).toBe(0)
+    const rows = await loadLookupPages(paged(451))
+    expect(rows).toHaveLength(451)
+  })
+})

@@ -5,20 +5,39 @@ import {
   type ListResponse,
 } from '@/components/lists/listTypes'
 
-// Keep lookup traffic bounded when several large selectors load at the same time.
-// The API still returns 200 rows per request; this only overlaps network latency.
-const MAX_CONCURRENT_LOOKUP_PAGES = 4
+// Limit total lookup traffic across concurrently mounted selectors, not only
+// requests within a single selector. Ordinary list/detail requests are not gated.
+const MAX_CONCURRENT_LOOKUP_REQUESTS = 4
+let activeLookupRequests = 0
+const waitingLookupRequests: Array<() => void> = []
+
+async function withLookupRequestSlot<T>(request: () => Promise<T>): Promise<T> {
+  if (activeLookupRequests >= MAX_CONCURRENT_LOOKUP_REQUESTS) {
+    await new Promise<void>((resolve) => waitingLookupRequests.push(resolve))
+  } else {
+    activeLookupRequests += 1
+  }
+
+  try {
+    return await request()
+  } finally {
+    // Transfer the existing slot directly to the next waiter. Decrementing
+    // before waking it would briefly allow a fifth request to start.
+    const next = waitingLookupRequests.shift()
+    if (next) next()
+    else activeLookupRequests -= 1
+  }
+}
 
 /**
- * Read a complete, authorization-filtered master-data lookup through the existing
- * paginated list contract. NEVER silently substitute the first page for the full
- * selector. Larger catalogs require server-side search.
+ * Read an entire authorization-filtered paginated lookup. Never present a
+ * truncated selector as if it were complete. For larger catalogs, use a
+ * server-side searchable selector instead of raising maxRows.
  *
- * Read page 1 first to establish the authoritative total, then request the remaining
- * pages with bounded concurrency. Validate every page before returning anything;
- * store by page number so network response order cannot reorder the options.
- * This is not a transactional database snapshot (concurrent updates can still
- * replace a row without changing the total).
+ * Page one establishes the total. Later pages run concurrently with a shared
+ * four-request budget across all lookups, and are stored in page order.
+ * Metadata validation cannot provide a database snapshot if rows are edited
+ * concurrently without changing the total.
  */
 export async function loadLookupPages<T>(
   listPage: (query: ListQuery) => Promise<ListResponse<T>>,
@@ -50,7 +69,8 @@ export async function loadLookupPages<T>(
     return result.data
   }
 
-  const firstResponse = await listPage(query)
+  // Include page one in the global budget: several selectors often mount at once.
+  const firstResponse = await withLookupRequestSlot(() => listPage(query))
   const firstPage = readPage(firstResponse, 1)
   const total = firstResponse.meta.total
   if (total > maxRows) {
@@ -63,17 +83,27 @@ export async function loadLookupPages<T>(
 
   const pages: T[][] = [firstPage]
   let nextPage = 2
+  let stopped = false
   const workers = Array.from(
-    { length: Math.min(MAX_CONCURRENT_LOOKUP_PAGES, pageCount - 1) },
+    { length: Math.min(MAX_CONCURRENT_LOOKUP_REQUESTS, pageCount - 1) },
     async () => {
-      while (nextPage <= pageCount) {
-        // Claim synchronously before the await, so workers never request one page twice.
+      while (!stopped && nextPage <= pageCount) {
+        // Claim synchronously so two workers cannot fetch the same page.
         const page = nextPage++
-        const response = await listPage({ ...query, page })
-        pages[page - 1] = readPage(response, page, total)
+        try {
+          const response = await withLookupRequestSlot(() => listPage({ ...query, page }))
+          pages[page - 1] = readPage(response, page, total)
+        } catch (error: unknown) {
+          stopped = true
+          throw error
+        }
       }
     },
   )
-  await Promise.all(workers)
+  // Wait for all already-started workers to settle even after a failure. This
+  // prevents an abandoned lookup from continuing to schedule page requests.
+  const results = await Promise.allSettled(workers)
+  const failure = results.find((result) => result.status === 'rejected')
+  if (failure?.status === 'rejected') throw failure.reason
   return pages.flat()
 }
