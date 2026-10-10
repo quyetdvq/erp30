@@ -1,0 +1,533 @@
+diff --git a/frontend/e2e/fe060-product-uom.spec.ts b/frontend/e2e/fe060-product-uom.spec.ts
+index c6a7ed7..089a6fa 100644
+--- a/frontend/e2e/fe060-product-uom.spec.ts
++++ b/frontend/e2e/fe060-product-uom.spec.ts
+@@ -89,11 +89,13 @@ async function mockSession(page: Page): Promise<void> {
+ 
+ async function mockCatalog(page: Page): Promise<{
+   groupCreates: number
++  groupReads: number
+   uomCreates: number
+   productListUrls: string[]
+   comboWrites: number
+ }> {
+   let groupCreates = 0
++  let groupReads = 0
+   let uomCreates = 0
+   let comboWrites = 0
+   const productListUrls: string[] = []
+@@ -108,6 +110,7 @@ async function mockCatalog(page: Page): Promise<{
+         }),
+       })
+     }
++    groupReads += 1
+     return route.fulfill({
+       status: 200,
+       contentType: 'application/json',
+@@ -159,6 +162,9 @@ async function mockCatalog(page: Page): Promise<{
+     get groupCreates() {
+       return groupCreates
+     },
++    get groupReads() {
++      return groupReads
++    },
+     get uomCreates() {
+       return uomCreates
+     },
+@@ -220,6 +226,35 @@ test.describe('P1-FE-060 Product/UOM UI', () => {
+     expect(accessibility.violations.filter(({ impact }) => impact === 'critical')).toEqual([])
+   })
+ 
++  test('does not leak collapsed Product Group children and never reloads on local sort', async ({
++    page,
++  }) => {
++    await mockSession(page)
++    const catalog = await mockCatalog(page)
++    await page.goto('/products/groups')
++
++    const tableBody = page.locator('table tbody')
++    const child = tableBody.getByText('TSH', { exact: true })
++    await expect(tableBody.getByRole('button', { name: 'Mở rộng' })).toBeVisible()
++    await expect(child).toHaveCount(0)
++
++    await tableBody.getByRole('button', { name: 'Mở rộng' }).click()
++    await expect(child).toBeVisible()
++    await tableBody.getByRole('button', { name: 'Thu gọn' }).click()
++    await expect(child).toHaveCount(0)
++
++    const initialReads = catalog.groupReads
++    const codeHeader = page.getByRole('columnheader', { name: 'Mã' })
++    const sortButton = codeHeader.getByRole('button')
++    await sortButton.click()
++    await expect(codeHeader).toHaveAttribute('aria-sort', 'ascending')
++    await sortButton.click()
++    await expect(codeHeader).toHaveAttribute('aria-sort', 'descending')
++    await sortButton.click()
++    await expect(codeHeader).toHaveAttribute('aria-sort', 'none')
++    expect(catalog.groupReads).toBe(initialReads)
++  })
++
+   test('keeps SIMPLE conversion scope and COMBO serial UX bounded', async ({ page }) => {
+     await mockSession(page)
+     const requests = await mockCatalog(page)
+diff --git a/frontend/src/components/lists/__tests__/listState.spec.ts b/frontend/src/components/lists/__tests__/listState.spec.ts
+index 02f1c03..5f4a60a 100644
+--- a/frontend/src/components/lists/__tests__/listState.spec.ts
++++ b/frontend/src/components/lists/__tests__/listState.spec.ts
+@@ -1,12 +1,34 @@
+ import { describe, expect, it } from 'vitest'
+ 
+ import { useListState } from '@/composables/useListState'
+-import { createListQuery, resetListQuery, serializeListQuery } from '@/components/lists/listTypes'
++import {
++  createListQuery,
++  DEFAULT_LIST_PAGE_SIZE,
++  resetListQuery,
++  serializeListQuery,
++  type ListResponse,
++} from '@/components/lists/listTypes'
+ 
+ type Row = { id: string; amount: string }
+ 
+-function result(data: Row[], total = data.length) {
+-  return { data, meta: { page: 1, page_size: 50, total } }
++function result(
++  data: Row[],
++  total = data.length,
++  page = 1,
++  pageSize = DEFAULT_LIST_PAGE_SIZE,
++): ListResponse<Row> {
++  return { data, meta: { page, page_size: pageSize, total } }
++}
++
++function deferred<T>(): {
++  promise: Promise<T>
++  resolve: (value: T) => void
++} {
++  let resolve!: (value: T) => void
++  const promise = new Promise<T>((done) => {
++    resolve = done
++  })
++  return { promise, resolve }
+ }
+ 
+ describe('shared list query infrastructure', () => {
+@@ -17,9 +39,16 @@ describe('shared list query infrastructure', () => {
+       filter: { status: ['ACTIVE', 'DRAFT'], owner_id: '9007199254740993' },
+     })
+     expect(serializeListQuery(query)).toBe(
+-      'q=9007199254740993&page=1&page_size=50&sort=-created_at&filter%5Bowner_id%5D=9007199254740993&filter%5Bstatus%5D%5B%5D=ACTIVE&filter%5Bstatus%5D%5B%5D=DRAFT',
++      `q=9007199254740993&page=1&page_size=${DEFAULT_LIST_PAGE_SIZE}&sort=-created_at&filter%5Bowner_id%5D=9007199254740993&filter%5Bstatus%5D%5B%5D=ACTIVE&filter%5Bstatus%5D%5B%5D=DRAFT`,
+     )
+-    expect(resetListQuery(query)).toEqual({ q: '', page: 1, page_size: 50, sort: '', filter: {} })
++    expect(resetListQuery(query)).toEqual({
++      q: '',
++      page: 1,
++      page_size: DEFAULT_LIST_PAGE_SIZE,
++      sort: '',
++      filter: {},
++    })
++    expect(resetListQuery(createListQuery({ page_size: 100 })).page_size).toBe(100)
+   })
+ 
+   it('resets page for query controls and trusts backend metadata for counts', async () => {
+@@ -29,10 +58,10 @@ describe('shared list query infrastructure', () => {
+       return result([{ id: '9007199254740993', amount: '0.10' }], 101)
+     })
+ 
+-    expect(list.query.page_size).toBe(50)
++    expect(list.query.page_size).toBe(DEFAULT_LIST_PAGE_SIZE)
+     await list.apply()
+     expect(list.total.value).toBe(101)
+-    expect(list.pageCount.value).toBe(3)
++    expect(list.pageCount.value).toBe(Math.ceil(101 / DEFAULT_LIST_PAGE_SIZE))
+     expect(list.rows.value[0]).toEqual({ id: '9007199254740993', amount: '0.10' })
+ 
+     list.setSearch('alpha')
+@@ -45,6 +74,77 @@ describe('shared list query infrastructure', () => {
+     expect(calls).toHaveLength(1)
+   })
+ 
++  it('keeps only the newest list response if two page requests finish out of order', async () => {
++    const first = deferred<ListResponse<Row>>()
++    const second = deferred<ListResponse<Row>>()
++    const pages: number[] = []
++    const list = useListState<Row>((query) => {
++      pages.push(query.page)
++      return pages.length === 1 ? first.promise : second.promise
++    })
++
++    const firstRequest = list.apply()
++    list.setPage(2)
++    const secondRequest = list.apply()
++
++    second.resolve(result([{ id: 'new', amount: '2.00' }], 22, 2))
++    await secondRequest
++    expect(list.rows.value.map((row) => row.id)).toEqual(['new'])
++    expect(list.response.value).toBe(list.queryState.data.value)
++    expect(list.queryState.status.value).toBe('loaded')
++
++    first.resolve(result([{ id: 'old', amount: '1.00' }], 1))
++    await firstRequest
++    expect(pages).toEqual([1, 2])
++    expect(list.rows.value.map((row) => row.id)).toEqual(['new'])
++    expect(list.total.value).toBe(22)
++    expect(list.response.value?.meta.page).toBe(2)
++  })
++
++  it('never restores an invalidated list response after reset', async () => {
++    const pending = deferred<ListResponse<Row>>()
++    const list = useListState<Row>(() => pending.promise)
++
++    const loading = list.apply()
++    expect(list.isInitialLoading.value).toBe(true)
++    list.reset()
++    pending.resolve(result([{ id: 'old', amount: '1.00' }]))
++    await loading
++
++    expect(list.queryState.status.value).toBe('idle')
++    expect(list.queryState.hasData.value).toBe(false)
++    expect(list.response.value).toBeNull()
++    expect(list.rows.value).toEqual([])
++    expect(list.total.value).toBe(0)
++  })
++
++  it('does not let an older refresh overwrite a newer successful query', async () => {
++    const oldRefresh = deferred<ListResponse<Row>>()
++    const latest = deferred<ListResponse<Row>>()
++    let calls = 0
++    const list = useListState<Row>(() => {
++      calls += 1
++      if (calls === 1) return Promise.resolve(result([{ id: 'initial', amount: '1.00' }]))
++      return calls === 2 ? oldRefresh.promise : latest.promise
++    })
++
++    await list.apply()
++    const refreshing = list.refresh()
++    expect(list.isBackgroundRefreshing.value).toBe(true)
++    expect(list.rows.value[0]?.id).toBe('initial')
++
++    list.setSearch('new')
++    const searching = list.apply()
++    latest.resolve(result([{ id: 'latest', amount: '3.00' }]))
++    await searching
++    oldRefresh.resolve(result([{ id: 'stale', amount: '2.00' }]))
++    await refreshing
++
++    expect(list.rows.value[0]?.id).toBe('latest')
++    expect(list.response.value).toBe(list.queryState.data.value)
++    expect(list.queryState.error.value).toBeNull()
++  })
++
+   it('distinguishes initial empty, filtered empty, and refresh failure with retained data', async () => {
+     let call = 0
+     const list = useListState<Row>(async () => {
+diff --git a/frontend/src/composables/useListState.ts b/frontend/src/composables/useListState.ts
+index 54ef5ab..5760293 100644
+--- a/frontend/src/composables/useListState.ts
++++ b/frontend/src/composables/useListState.ts
+@@ -1,4 +1,4 @@
+-import { computed, reactive, shallowRef, type ComputedRef, type ShallowRef } from 'vue'
++import { computed, reactive, type ComputedRef, type Ref } from 'vue'
+ 
+ import { useQueryState, type QueryState } from '@/composables/useQueryState'
+ 
+@@ -16,7 +16,7 @@ export type ListRequest<T> = (query: ListQuery) => Promise<ListResponse<T>>
+ 
+ export type ListState<T> = {
+   query: Readonly<ListQuery>
+-  response: Readonly<ShallowRef<ListResponse<T> | null>>
++  response: Readonly<Ref<ListResponse<T> | null>>
+   rows: Readonly<ComputedRef<T[]>>
+   total: Readonly<ComputedRef<number>>
+   pageCount: Readonly<ComputedRef<number>>
+@@ -42,11 +42,13 @@ export function useListState<T>(
+   initialQuery: Partial<ListQuery> = {},
+ ): ListState<T> {
+   const query = reactive(createListQuery(initialQuery))
+-  const response = shallowRef<ListResponse<T> | null>(null)
+   const queryState = useQueryState<ListResponse<T>>({
+     request: () => request(cloneListQuery(query)),
+     isEmpty: (result) => result.data.length === 0,
+   })
++  // Single source of truth: useQueryState only commits the latest request.
++  // A second response ref updated after await would resurrect stale data.
++  const response = queryState.data
+   const rows = computed(() => response.value?.data ?? [])
+   const total = computed(() => response.value?.meta.total ?? 0)
+   const pageCount = computed(() =>
+@@ -96,22 +98,17 @@ export function useListState<T>(
+     query.page = 1
+   }
+ 
+-  async function apply(): Promise<ListResponse<T>> {
+-    const result = await queryState.execute()
+-    response.value = result
+-    return result
++  function apply(): Promise<ListResponse<T>> {
++    return queryState.execute()
+   }
+ 
+-  async function refresh(): Promise<ListResponse<T>> {
+-    const result = await queryState.refresh()
+-    response.value = result
+-    return result
++  function refresh(): Promise<ListResponse<T>> {
++    return queryState.refresh()
+   }
+ 
+   function reset(): void {
+     replaceQuery(resetListQuery(query))
+     queryState.reset()
+-    response.value = null
+   }
+ 
+   return {
+diff --git a/frontend/src/modules/__tests__/productGroupTree.spec.ts b/frontend/src/modules/__tests__/productGroupTree.spec.ts
+new file mode 100644
+index 0000000..43f0065
+--- /dev/null
++++ b/frontend/src/modules/__tests__/productGroupTree.spec.ts
+@@ -0,0 +1,96 @@
++import { describe, expect, it } from 'vitest'
++
++import { buildVisibleProductGroupTree } from '@/modules/productGroupTree'
++
++type Group = { id: string; parent_id: string | null; code: string }
++
++function group(id: string, parent_id: string | null, code = id): Group {
++  return { id, parent_id, code }
++}
++
++function childrenByParent(rows: readonly Group[], descending = false): Map<string, Group[]> {
++  const result = new Map<string, Group[]>()
++  for (const row of rows) {
++    const key = row.parent_id ?? 'ROOT'
++    const children = result.get(key)
++    if (children) children.push(row)
++    else result.set(key, [row])
++  }
++  for (const children of result.values()) {
++    children.sort((a, b) => (descending ? -1 : 1) * a.code.localeCompare(b.code))
++  }
++  return result
++}
++
++function ids(rows: readonly Group[]): string[] {
++  return rows.map((row) => row.id)
++}
++
++describe('Product Groups visible tree (current page)', () => {
++  it('does not reintroduce collapsed children or grandchildren as root rows', () => {
++    const source = [
++      group('1', null, 'A'),
++      group('2', '1', 'A1'),
++      group('3', '2', 'A1a'),
++      group('4', null, 'B'),
++    ]
++    const children = childrenByParent(source)
++
++    const collapsed = buildVisibleProductGroupTree(source, children, new Set())
++    expect(ids(collapsed)).toEqual(['1', '4'])
++    expect(collapsed[0]).toMatchObject({ depth: 0, hasChildren: true, expanded: false })
++
++    const parentExpanded = buildVisibleProductGroupTree(source, children, new Set(['1']))
++    expect(ids(parentExpanded)).toEqual(['1', '2', '4'])
++    expect(parentExpanded[1]).toMatchObject({ depth: 1, hasChildren: true, expanded: false })
++
++    const fullyExpanded = buildVisibleProductGroupTree(source, children, new Set(['1', '2']))
++    expect(ids(fullyExpanded)).toEqual(['1', '2', '3', '4'])
++    expect(fullyExpanded.map((row) => row.depth)).toEqual([0, 1, 2, 0])
++    expect(ids(buildVisibleProductGroupTree(source, children, new Set()))).toEqual(['1', '4'])
++  })
++
++  it('treats missing-page parents as provisional roots but respects their collapse', () => {
++    const source = [group('9', '999', 'Orphan'), group('10', '9', 'Child')]
++    const children = childrenByParent(source)
++
++    expect(ids(buildVisibleProductGroupTree(source, children, new Set()))).toEqual(['9'])
++    const expanded = buildVisibleProductGroupTree(source, children, new Set(['9']))
++    expect(ids(expanded)).toEqual(['9', '10'])
++    expect(expanded.map((row) => row.depth)).toEqual([0, 1])
++  })
++
++  it('preserves hierarchy while sorting siblings locally and never mutates source rows', () => {
++    const source = [
++      group('1', null, 'B'),
++      group('2', null, 'A'),
++      group('3', '1', 'Z'),
++      group('4', '1', 'C'),
++    ]
++    const original = [...source]
++    const ascending = buildVisibleProductGroupTree(
++      source,
++      childrenByParent(source),
++      new Set(['1']),
++    )
++    const descending = buildVisibleProductGroupTree(
++      source,
++      childrenByParent(source, true),
++      new Set(['1']),
++      (a, b) => b.code.localeCompare(a.code),
++    )
++
++    expect(ids(ascending)).toEqual(['2', '1', '4', '3'])
++    expect(ids(descending)).toEqual(['1', '3', '4', '2'])
++    expect(descending.map((row) => row.depth)).toEqual([0, 1, 1, 0])
++    expect(source).toEqual(original)
++    expect(source.every((row) => !('depth' in row))).toBe(true)
++  })
++
++  it('keeps disconnected cyclic data inspectable without infinite recursion', () => {
++    const source = [group('a', 'b'), group('b', 'a'), group('1', null)]
++    const visible = buildVisibleProductGroupTree(source, childrenByParent(source), new Set(['a']))
++    expect(ids(visible)).toEqual(['1', 'a', 'b'])
++    expect(visible.map((row) => row.depth)).toEqual([0, 0, 1])
++  })
++})
+diff --git a/frontend/src/modules/productGroupTree.ts b/frontend/src/modules/productGroupTree.ts
+new file mode 100644
+index 0000000..a06d31c
+--- /dev/null
++++ b/frontend/src/modules/productGroupTree.ts
+@@ -0,0 +1,76 @@
++/**
++ * Flatten the groups loaded on the current page without exposing children of
++ * collapsed parents as unrelated top-level rows.
++ *
++ * The caller supplies sibling lists in the desired order. Rows whose parent is
++ * not present on this page remain provisional roots (the API is paginated).
++ */
++export type ProductGroupTreeSource = {
++  id: string | number
++  parent_id?: string | number | null
++}
++
++export type VisibleProductGroup<T extends ProductGroupTreeSource> = T & {
++  depth: number
++  hasChildren: boolean
++  expanded: boolean
++}
++
++export function buildVisibleProductGroupTree<T extends ProductGroupTreeSource>(
++  rows: readonly T[],
++  byParent: ReadonlyMap<string, readonly T[]>,
++  expanded: ReadonlySet<string>,
++  sortUnlinked?: (first: T, second: T) => number,
++): VisibleProductGroup<T>[] {
++  const idsOnPage = new Set(rows.map((row) => String(row.id)))
++  const roots = byParent.get('ROOT') ?? []
++  const unlinkedRoots = rows.filter(
++    (row) => Boolean(row.parent_id) && !idsOnPage.has(String(row.parent_id)),
++  )
++  if (sortUnlinked) unlinkedRoots.sort(sortUnlinked)
++
++  const connected = new Set<string>()
++  const rendered = new Set<string>()
++  const visible: VisibleProductGroup<T>[] = []
++
++  // Structural reachability must ignore expansion. Otherwise descendants of a
++  // collapsed node would be mistaken for unlinked page rows in the fallback.
++  function markConnected(root: T): void {
++    const pending = [root]
++    while (pending.length > 0) {
++      const current = pending.pop()
++      if (!current) continue
++      const id = String(current.id)
++      if (connected.has(id)) continue
++      connected.add(id)
++      pending.push(...(byParent.get(id) ?? []))
++    }
++  }
++
++  function render(node: T, depth: number): void {
++    const id = String(node.id)
++    if (rendered.has(id)) return
++    rendered.add(id)
++    const children = byParent.get(id) ?? []
++    const isExpanded = expanded.has(id)
++    visible.push({ ...node, depth, hasChildren: children.length > 0, expanded: isExpanded })
++    if (isExpanded) {
++      for (const child of children) render(child, depth + 1)
++    }
++  }
++
++  for (const root of [...roots, ...unlinkedRoots]) {
++    markConnected(root)
++    render(root, 0)
++  }
++
++  // Valid hierarchies are already covered. This fallback keeps corrupted or
++  // cyclic disconnected data inspectable, without reviving collapsed children.
++  for (const row of rows) {
++    if (connected.has(String(row.id))) continue
++    markConnected(row)
++    render(row, 0)
++  }
++
++  return visible
++}
+diff --git a/frontend/src/views/ProductGroupsView.vue b/frontend/src/views/ProductGroupsView.vue
+index 81fc229..1c19ccc 100644
+--- a/frontend/src/views/ProductGroupsView.vue
++++ b/frontend/src/views/ProductGroupsView.vue
+@@ -14,6 +14,7 @@ import type { ListColumn, ListFilterDefinition, ListQuery } from '@/components/l
+ import SearchableSelect from '@/components/forms/SearchableSelect.vue'
+ import { useListState } from '@/composables/useListState'
+ import { useBasePermission } from '@/composables/useBasePermission'
++import { buildVisibleProductGroupTree, type VisibleProductGroup } from '@/modules/productGroupTree'
+ import {
+   changeProductGroupState,
+   listProductGroupPage,
+@@ -21,7 +22,7 @@ import {
+ } from '@/services/productCatalog'
+ import { reportApiError } from '@/services/errorBoundary'
+ 
+-type TreeRow = ProductGroup & { depth: number; hasChildren: boolean; expanded: boolean }
++type TreeRow = VisibleProductGroup<ProductGroup>
+ type ProductGroupForm = Pick<ProductGroup, 'code' | 'name' | 'status'> & {
+   description: string
+   parent_id: string
+@@ -120,34 +121,14 @@ const byId = computed(() => {
+   return index
+ })
+ 
+-const treeRows = computed<TreeRow[]>(() => {
+-  const output: TreeRow[] = []
+-  const visited = new Set<string>()
+-  const groups = byParent.value
+-
+-  function walk(parent: string, depth: number): void {
+-    for (const item of groups.get(parent) ?? []) {
+-      const id = String(item.id)
+-      if (visited.has(id)) continue
+-
+-      visited.add(id)
+-      const hasChildren = (groups.get(id) ?? []).length > 0
+-      const isExpanded = expanded.value.has(id)
+-      output.push({ ...item, depth, hasChildren, expanded: isExpanded })
+-      if (isExpanded) walk(id, depth + 1)
+-    }
+-  }
+-
+-  walk('ROOT', 0)
+-  // Preserve the fallback for rows outside the currently visible tree (e.g. off-page
+-  // parents). In active local-sort mode, sort those remaining rows in memory as well.
+-  const remaining = state.rows.value.filter((item) => !visited.has(String(item.id)))
+-  if (localSort.value) remaining.sort(compareGroupRows)
+-  for (const item of remaining) {
+-    output.push({ ...item, depth: 0, hasChildren: false, expanded: false })
+-  }
+-  return output
+-})
++const treeRows = computed<TreeRow[]>(() =>
++  buildVisibleProductGroupTree(
++    state.rows.value,
++    byParent.value,
++    expanded.value,
++    localSort.value ? compareGroupRows : undefined,
++  ),
++)
+ 
+ const parentOptions = computed(() => {
+   const blocked = new Set<string>()

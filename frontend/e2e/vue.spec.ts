@@ -17,7 +17,8 @@ test('loads the login shell and switches locale', async ({ page }) => {
     () => document.documentElement.scrollHeight <= window.innerHeight,
   )
   expect(viewportFits).toBe(true)
-  const accessibility = await new AxeBuilder({ page }).analyze()
+  // Test the application itself, excluding Vite's development-only DevTools anchor.
+  const accessibility = await new AxeBuilder({ page }).include('#app').analyze()
   expect(accessibility.violations).toEqual([])
   await page.getByRole('button', { name: 'Ngôn ngữ' }).dispatchEvent('click')
   await expect(page.locator('h1')).toHaveText('Sign in to workspace')

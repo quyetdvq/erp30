@@ -153,10 +153,11 @@ async function mockCatalog(page: Page): Promise<{
       return route.fulfill({
         status: 204,
         headers: {
-          'Access-Control-Allow-Origin': 'http://localhost:5173',
+          'Access-Control-Allow-Origin': request.headers()['origin'] ?? 'http://localhost:5173',
           'Access-Control-Allow-Credentials': 'true',
           'Access-Control-Allow-Methods': 'GET,POST,PATCH,PUT,OPTIONS',
-          'Access-Control-Allow-Headers': 'Accept, Accept-Language, Content-Type, X-Request-ID',
+          'Access-Control-Allow-Headers':
+            'Accept, Accept-Language, Content-Type, X-Request-ID, X-CSRF-TOKEN',
         },
       })
     }
@@ -168,8 +169,15 @@ async function mockCatalog(page: Page): Promise<{
       })
     }
     if (pathname.endsWith('/items') && request.method() === 'PUT') {
-      itemBody = request.postDataJSON()
-      priceListItems = (itemBody as Array<Record<string, string>>).map((item, index) => ({
+      // OpenAPI PriceListItemsRequest accepts both an array and { items: [...] }.
+      const body = request.postDataJSON() as
+        Array<Record<string, string>> | { items: Array<Record<string, string>> }
+      const submittedItems = Array.isArray(body) ? body : body.items
+      if (!Array.isArray(submittedItems)) {
+        throw new Error('Invalid PriceListItemsRequest in E2E mock')
+      }
+      itemBody = submittedItems
+      priceListItems = submittedItems.map((item, index) => ({
         id: String(71 + index),
         price_list_id: '70',
         product_id: item.product_id!,

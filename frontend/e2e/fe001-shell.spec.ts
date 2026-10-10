@@ -1,5 +1,9 @@
 import { expect, test, type Page } from '@playwright/test'
 
+import { messages } from '../src/i18n'
+
+const { vi, en } = messages
+
 async function mockAuthenticatedSession(page: Page): Promise<void> {
   await page.route('**/api/v1/auth/me', async (route) => {
     await route.fulfill({
@@ -45,26 +49,24 @@ test('authenticated shell exposes five modes, deduplicated tabs, locale, and 404
   await page.goto('/organizations')
 
   await expect(page.locator('.mode-switcher button')).toHaveCount(5)
-  await expect(page.getByText('Tổ chức và dữ liệu nền').first()).toBeVisible()
-  await expect(
-    page.locator('.workspace-tabs-wrap').getByText('Tổ chức và dữ liệu nền'),
-  ).toBeVisible()
+  await expect(page.getByText(vi.nav.organizations).first()).toBeVisible()
+  await expect(page.locator('.workspace-tabs-wrap').getByText(vi.nav.organizations)).toBeVisible()
 
-  await page.getByRole('button', { name: 'Ngôn ngữ' }).click()
+  await page.getByRole('button', { name: vi.shell.language }).click()
   await page.getByText('English', { exact: true }).click()
-  await expect(page.getByText('Organizations and foundation data').first()).toBeVisible()
+  await expect(page.getByText(en.nav.organizations).first()).toBeVisible()
   await expect(page.getByRole('button', { name: 'quyetdv' })).toBeVisible()
   await expect(page).toHaveURL(/\/organizations$/)
   await expect.poll(() => page.evaluate(() => localStorage.getItem('ui.locale'))).toBe('en')
 
-  await page.getByRole('button', { name: 'Language' }).click()
+  await page.getByRole('button', { name: en.shell.language }).click()
   await page.getByText('Tiếng Việt', { exact: true }).click()
-  await expect(page.getByText('Tổ chức và dữ liệu nền').first()).toBeVisible()
+  await expect(page.getByText(vi.nav.organizations).first()).toBeVisible()
   await expect.poll(() => page.evaluate(() => localStorage.getItem('ui.locale'))).toBe('vi')
 
   await page.goto('/missing-fe001-route')
-  await expect(page.getByRole('main').getByText('Không tìm thấy tài nguyên')).toBeVisible()
-  await expect(page.getByRole('button', { name: 'Về workspace' })).toBeVisible()
+  await expect(page.getByRole('main').getByText(vi.errors.status['404'])).toBeVisible()
+  await expect(page.getByRole('button', { name: vi.errors.backToWorkspace })).toBeVisible()
 })
 
 test('shell keeps organization structure routes in the Organization mode', async ({ page }) => {
@@ -73,25 +75,25 @@ test('shell keeps organization structure routes in the Organization mode', async
   await page.goto('/organizations')
 
   const menu = page.locator('.shell-sider .n-menu')
-  await expect(menu.getByRole('menuitem', { name: 'Tổ chức và dữ liệu nền' })).toHaveCount(0)
-  await expect(menu.getByRole('menuitem', { name: 'Cấu hình hiển thị' })).toHaveCount(0)
-  await expect(menu.getByRole('menuitem', { name: 'Người dùng và quyền trực tiếp' })).toHaveCount(0)
-  await expect(menu.getByRole('menuitem', { name: 'Nhóm phân quyền' })).toHaveCount(0)
-  await expect(menu.getByRole('menuitem', { name: 'Resource và Action' })).toHaveCount(0)
-  await expect(menu.getByRole('menuitem', { name: 'Policy PBAC' })).toHaveCount(0)
-  await expect(menu.getByRole('menuitem', { name: 'Nhật ký phân quyền' })).toHaveCount(0)
-  await expect(menu.getByRole('menuitem', { name: 'Workflow State' })).toHaveCount(0)
-  await expect(menu.getByRole('menuitem', { name: 'Lifecycles' })).toHaveCount(0)
-  await expect(menu.getByRole('menuitem', { name: 'Tỉnh, phường/xã' })).toHaveCount(0)
-  await expect(menu.getByRole('menuitem', { name: 'Phòng ban' })).toHaveCount(0)
+  await expect(menu.getByRole('menuitem', { name: vi.nav.organizations })).toHaveCount(0)
+  await expect(menu.getByRole('menuitem', { name: vi.nav.displaySettings })).toHaveCount(0)
+  await expect(menu.getByRole('menuitem', { name: vi.nav.securityUsers })).toHaveCount(0)
+  await expect(menu.getByRole('menuitem', { name: vi.nav.authorizationGroups })).toHaveCount(0)
+  await expect(menu.getByRole('menuitem', { name: vi.nav.resources })).toHaveCount(0)
+  await expect(menu.getByRole('menuitem', { name: vi.nav.policies })).toHaveCount(0)
+  await expect(menu.getByRole('menuitem', { name: vi.nav.authorizationLogs })).toHaveCount(0)
+  await expect(menu.getByRole('menuitem', { name: vi.nav.workflowStates })).toHaveCount(0)
+  await expect(menu.getByRole('menuitem', { name: vi.nav.lifecycles })).toHaveCount(0)
+  await expect(menu.getByRole('menuitem', { name: vi.nav.locations })).toHaveCount(0)
+  await expect(menu.getByRole('menuitem', { name: vi.nav.departments })).toHaveCount(0)
 
-  await page.getByRole('button', { name: 'Cơ cấu tổ chức' }).click()
-  await expect(menu.getByRole('menuitem', { name: 'Tỉnh, phường/xã' })).toBeVisible()
-  await expect(menu.getByRole('menuitem', { name: 'Phường/Xã', exact: true })).toBeVisible()
-  await expect(menu.getByRole('menuitem', { name: 'Phòng ban' })).toBeVisible()
-  await expect(menu.getByRole('menuitem', { name: 'Chức danh' })).toBeVisible()
-  await expect(menu.getByRole('menuitem', { name: 'Nhân viên' })).toBeVisible()
-  await expect(menu.getByRole('menuitem', { name: 'Tổ chức và dữ liệu nền' })).toBeVisible()
+  await page.getByRole('button', { name: vi.shell.modes.organization }).click()
+  await expect(menu.getByRole('menuitem', { name: vi.nav.locations })).toBeVisible()
+  await expect(menu.getByRole('menuitem', { name: vi.nav.wards, exact: true })).toBeVisible()
+  await expect(menu.getByRole('menuitem', { name: vi.nav.departments })).toBeVisible()
+  await expect(menu.getByRole('menuitem', { name: vi.nav.positions })).toBeVisible()
+  await expect(menu.getByRole('menuitem', { name: vi.nav.employees })).toBeVisible()
+  await expect(menu.getByRole('menuitem', { name: vi.nav.organizations })).toBeVisible()
 
   const menuScroll = page.locator('.sider-menu-scroll')
   await expect(menuScroll).toBeVisible()
@@ -107,15 +109,15 @@ test('shell keeps organization structure routes in the Organization mode', async
   expect(scrollMetrics.overflowY).toBe('auto')
   expect(scrollMetrics.scrollable).toBe(true)
 
-  await page.getByRole('button', { name: 'Hệ thống' }).click()
-  await expect(menu.getByRole('menuitem', { name: 'Cấu hình hiển thị' })).toBeVisible()
-  await expect(menu.getByRole('menuitem', { name: 'Người dùng và quyền trực tiếp' })).toBeVisible()
-  await expect(menu.getByRole('menuitem', { name: 'Nhóm phân quyền' })).toBeVisible()
-  await expect(menu.getByRole('menuitem', { name: 'Resource và Action' })).toBeVisible()
-  await expect(menu.getByRole('menuitem', { name: 'Policy PBAC' })).toBeVisible()
-  await expect(menu.getByRole('menuitem', { name: 'Nhật ký phân quyền' })).toBeVisible()
-  await expect(menu.getByRole('menuitem', { name: 'Workflow State' })).toBeVisible()
-  await expect(menu.getByRole('menuitem', { name: 'Lifecycles' })).toBeVisible()
+  await page.getByRole('button', { name: vi.shell.modes.system }).click()
+  await expect(menu.getByRole('menuitem', { name: vi.nav.displaySettings })).toBeVisible()
+  await expect(menu.getByRole('menuitem', { name: vi.nav.securityUsers })).toBeVisible()
+  await expect(menu.getByRole('menuitem', { name: vi.nav.authorizationGroups })).toBeVisible()
+  await expect(menu.getByRole('menuitem', { name: vi.nav.resources })).toBeVisible()
+  await expect(menu.getByRole('menuitem', { name: vi.nav.policies })).toBeVisible()
+  await expect(menu.getByRole('menuitem', { name: vi.nav.authorizationLogs })).toBeVisible()
+  await expect(menu.getByRole('menuitem', { name: vi.nav.workflowStates })).toBeVisible()
+  await expect(menu.getByRole('menuitem', { name: vi.nav.lifecycles })).toBeVisible()
 })
 
 test('removed menu routes resolve to the not-found boundary', async ({ page }) => {
@@ -123,7 +125,7 @@ test('removed menu routes resolve to the not-found boundary', async ({ page }) =
 
   for (const path of ['/approvals', '/sales']) {
     await page.goto(path)
-    await expect(page.getByRole('main').getByText('Không tìm thấy tài nguyên')).toBeVisible()
+    await expect(page.getByRole('main').getByText(vi.errors.status['404'])).toBeVisible()
   }
 })
 
@@ -168,22 +170,26 @@ test('collapsed shell keeps only five mode icons and shell actions work', async 
     .poll(async () => (await page.locator('.shell-sider').boundingBox())?.width ?? 0)
     .toBeGreaterThan(0)
 
-  await page.getByRole('button', { name: 'Thu gọn sidebar' }).evaluate((element) => element.click())
+  await page
+    .getByRole('button', { name: vi.shell.collapseSidebar })
+    .evaluate((element) => element.click())
   await expect(page.locator('.mode-switcher button')).toHaveCount(5)
   await expect(page.locator('.shell-sider .n-menu')).toHaveCount(0)
-  await expect(page.getByPlaceholder('Tìm menu')).toHaveCount(0)
+  await expect(page.getByPlaceholder(vi.shell.searchMenu)).toHaveCount(0)
 
-  await page.getByRole('button', { name: 'Đổi giao diện' }).dispatchEvent('click')
+  await page.getByRole('button', { name: vi.shell.theme }).dispatchEvent('click')
   await expect(page.locator('.erp-shell')).toHaveClass(/theme-dark/)
-  await page.getByRole('button', { name: 'Đổi giao diện' }).dispatchEvent('click')
+  await page.getByRole('button', { name: vi.shell.theme }).dispatchEvent('click')
   await expect(page.locator('.erp-shell')).not.toHaveClass(/theme-dark/)
 
-  await page.getByRole('button', { name: 'Thông báo' }).dispatchEvent('click')
-  await expect(page.getByText('Workspace đã sẵn sàng')).toBeVisible()
-  await page.getByRole('button', { name: 'Đánh dấu đã đọc' }).evaluate((element) => element.click())
-  await expect(page.getByRole('button', { name: 'Đã đọc hết' })).toBeVisible()
+  await page.getByRole('button', { name: vi.shell.notifications }).dispatchEvent('click')
+  await expect(page.getByText(vi.shell.notificationWorkspace)).toBeVisible()
+  await page
+    .getByRole('button', { name: vi.shell.markAllRead })
+    .evaluate((element) => element.click())
+  await expect(page.getByRole('button', { name: vi.shell.allRead })).toBeVisible()
 
-  await page.getByRole('button', { name: /Tìm trong workspace/ }).dispatchEvent('click')
-  await expect(page.getByText('Command palette')).toBeVisible()
-  await expect(page.getByPlaceholder('Tìm lệnh')).toBeVisible()
+  await page.getByRole('button', { name: vi.shell.searchWorkspace }).click()
+  await expect(page.getByText(vi.shell.commandPalette)).toBeVisible()
+  await expect(page.getByPlaceholder(vi.shell.searchCommand)).toBeVisible()
 })

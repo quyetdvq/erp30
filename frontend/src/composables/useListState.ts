@@ -1,4 +1,4 @@
-import { computed, reactive, shallowRef, type ComputedRef, type ShallowRef } from 'vue'
+import { computed, reactive, type ComputedRef, type Ref } from 'vue'
 
 import { useQueryState, type QueryState } from '@/composables/useQueryState'
 
@@ -16,7 +16,7 @@ export type ListRequest<T> = (query: ListQuery) => Promise<ListResponse<T>>
 
 export type ListState<T> = {
   query: Readonly<ListQuery>
-  response: Readonly<ShallowRef<ListResponse<T> | null>>
+  response: Readonly<Ref<ListResponse<T> | null>>
   rows: Readonly<ComputedRef<T[]>>
   total: Readonly<ComputedRef<number>>
   pageCount: Readonly<ComputedRef<number>>
@@ -42,11 +42,13 @@ export function useListState<T>(
   initialQuery: Partial<ListQuery> = {},
 ): ListState<T> {
   const query = reactive(createListQuery(initialQuery))
-  const response = shallowRef<ListResponse<T> | null>(null)
   const queryState = useQueryState<ListResponse<T>>({
     request: () => request(cloneListQuery(query)),
     isEmpty: (result) => result.data.length === 0,
   })
+  // Single source of truth: useQueryState only commits the latest request.
+  // A second response ref updated after await would resurrect stale data.
+  const response = queryState.data
   const rows = computed(() => response.value?.data ?? [])
   const total = computed(() => response.value?.meta.total ?? 0)
   const pageCount = computed(() =>
@@ -96,22 +98,17 @@ export function useListState<T>(
     query.page = 1
   }
 
-  async function apply(): Promise<ListResponse<T>> {
-    const result = await queryState.execute()
-    response.value = result
-    return result
+  function apply(): Promise<ListResponse<T>> {
+    return queryState.execute()
   }
 
-  async function refresh(): Promise<ListResponse<T>> {
-    const result = await queryState.refresh()
-    response.value = result
-    return result
+  function refresh(): Promise<ListResponse<T>> {
+    return queryState.refresh()
   }
 
   function reset(): void {
     replaceQuery(resetListQuery(query))
     queryState.reset()
-    response.value = null
   }
 
   return {

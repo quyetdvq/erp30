@@ -197,6 +197,19 @@ test.describe('P1-FE-030 security surfaces', () => {
         }),
       }),
     )
+    // Mock the complete Lifecycle detail dependency graph. Leaving transitions
+    // unmocked reaches the real API, whose 404 marks the permission snapshot stale
+    // and removes TableRowActions buttons while Playwright is clicking them.
+    await page.route('**/api/v1/lifecycles/50/transitions', async (route) =>
+      route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({
+          data: [],
+          meta: { request_id: 'test-lifecycle-transition' },
+        }),
+      }),
+    )
     await page.route(
       (url) => url.pathname === '/api/v1/lifecycles',
       async (route) =>
@@ -522,7 +535,11 @@ test.describe('P1-FE-030 security surfaces', () => {
   test('workflow management screens use one table-first pagination and modal detail surfaces', async ({
     page,
   }) => {
+    const transitionsResponse = page.waitForResponse(
+      (response) => new URL(response.url()).pathname === '/api/v1/lifecycles/50/transitions',
+    )
     await page.goto('/configuration/lifecycles')
+    expect((await transitionsResponse).status()).toBe(200)
     await expect(page.getByRole('heading', { name: /Lifecycle/i })).toBeVisible()
     await expect(page.getByRole('navigation', { name: 'Phân trang danh sách' })).toHaveCount(1)
     await page.getByRole('button', { name: 'Xem chi tiết' }).click()
@@ -536,10 +553,27 @@ test.describe('P1-FE-030 security surfaces', () => {
       .getByRole('button', { name: 'Đóng' })
       .click()
 
+    // Wait for the actual Workflow State list, not just the pagination container.
+    const workflowStatesResponse = page.waitForResponse(
+      (response) =>
+        response.request().method() === 'GET' &&
+        new URL(response.url()).pathname === '/api/v1/workflow-states',
+    )
     await page.goto('/configuration/workflow-states')
+    expect((await workflowStatesResponse).status()).toBe(200)
     await expect(page.getByRole('heading', { name: /Workflow State/i })).toBeVisible()
     await expect(page.getByRole('navigation', { name: 'Phân trang danh sách' })).toHaveCount(1)
-    await page.getByRole('button', { name: 'Sửa' }).first().click()
+
+    const draftRow = page
+      .getByRole('table', { name: 'Danh sách dữ liệu' })
+      .getByRole('row')
+      .filter({
+        has: page.getByRole('cell', { name: 'DRAFT', exact: true }),
+      })
+    await expect(draftRow).toBeVisible()
+    const editDraft = draftRow.getByRole('button', { name: 'Sửa', exact: true })
+    await expect(editDraft).toBeEnabled()
+    await editDraft.click()
     const stateDialog = page.getByRole('dialog', { name: /Trạng thái quy trình|Workflow State/i })
     await expect(stateDialog.locator('.modal-card__header')).toHaveCount(1)
     await expect(stateDialog.locator('.modal-card__body')).toHaveCount(1)

@@ -208,12 +208,7 @@ onMounted(() => void load())
       <h1>{{ t('product.uomsTitle') }}</h1>
       <p>{{ t('product.uomsDescription') }}</p>
     </div>
-    <button
-      v-if="permissions.create"
-      type="button"
-      class="primary-button"
-      @click="openCreate"
-    >
+    <button v-if="permissions.create" type="button" class="primary-button" @click="openCreate">
       {{ t('common.create') }}
     </button>
   </div>

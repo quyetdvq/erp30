@@ -89,11 +89,13 @@ async function mockSession(page: Page): Promise<void> {
 
 async function mockCatalog(page: Page): Promise<{
   groupCreates: number
+  groupReads: number
   uomCreates: number
   productListUrls: string[]
   comboWrites: number
 }> {
   let groupCreates = 0
+  let groupReads = 0
   let uomCreates = 0
   let comboWrites = 0
   const productListUrls: string[] = []
@@ -108,6 +110,7 @@ async function mockCatalog(page: Page): Promise<{
         }),
       })
     }
+    groupReads += 1
     return route.fulfill({
       status: 200,
       contentType: 'application/json',
@@ -158,6 +161,9 @@ async function mockCatalog(page: Page): Promise<{
   return {
     get groupCreates() {
       return groupCreates
+    },
+    get groupReads() {
+      return groupReads
     },
     get uomCreates() {
       return uomCreates
@@ -218,6 +224,35 @@ test.describe('P1-FE-060 Product/UOM UI', () => {
     await expect.poll(() => requests.uomCreates).toBe(1)
     const accessibility = await new AxeBuilder({ page }).analyze()
     expect(accessibility.violations.filter(({ impact }) => impact === 'critical')).toEqual([])
+  })
+
+  test('does not leak collapsed Product Group children and never reloads on local sort', async ({
+    page,
+  }) => {
+    await mockSession(page)
+    const catalog = await mockCatalog(page)
+    await page.goto('/products/groups')
+
+    const tableBody = page.locator('table tbody')
+    const child = tableBody.getByText('TSH', { exact: true })
+    await expect(tableBody.getByRole('button', { name: 'Mở rộng' })).toBeVisible()
+    await expect(child).toHaveCount(0)
+
+    await tableBody.getByRole('button', { name: 'Mở rộng' }).click()
+    await expect(child).toBeVisible()
+    await tableBody.getByRole('button', { name: 'Thu gọn' }).click()
+    await expect(child).toHaveCount(0)
+
+    const initialReads = catalog.groupReads
+    const codeHeader = page.getByRole('columnheader', { name: 'Mã' })
+    const sortButton = codeHeader.getByRole('button')
+    await sortButton.click()
+    await expect(codeHeader).toHaveAttribute('aria-sort', 'ascending')
+    await sortButton.click()
+    await expect(codeHeader).toHaveAttribute('aria-sort', 'descending')
+    await sortButton.click()
+    await expect(codeHeader).toHaveAttribute('aria-sort', 'none')
+    expect(catalog.groupReads).toBe(initialReads)
   })
 
   test('keeps SIMPLE conversion scope and COMBO serial UX bounded', async ({ page }) => {

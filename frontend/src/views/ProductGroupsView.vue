@@ -14,6 +14,7 @@ import type { ListColumn, ListFilterDefinition, ListQuery } from '@/components/l
 import SearchableSelect from '@/components/forms/SearchableSelect.vue'
 import { useListState } from '@/composables/useListState'
 import { useBasePermission } from '@/composables/useBasePermission'
+import { buildVisibleProductGroupTree, type VisibleProductGroup } from '@/modules/productGroupTree'
 import {
   changeProductGroupState,
   listProductGroupPage,
@@ -21,7 +22,7 @@ import {
 } from '@/services/productCatalog'
 import { reportApiError } from '@/services/errorBoundary'
 
-type TreeRow = ProductGroup & { depth: number; hasChildren: boolean; expanded: boolean }
+type TreeRow = VisibleProductGroup<ProductGroup>
 type ProductGroupForm = Pick<ProductGroup, 'code' | 'name' | 'status'> & {
   description: string
   parent_id: string
@@ -60,10 +61,7 @@ function compareGroupRows(first: ProductGroup, second: ProductGroup): number {
   const field = term.startsWith('-') ? term.slice(1) : term
   if (field === 'code' || field === 'name' || field === 'status') {
     const direction = term.startsWith('-') ? -1 : 1
-    return (
-      direction *
-      collator.compare(String(first[field] ?? ''), String(second[field] ?? ''))
-    )
+    return direction * collator.compare(String(first[field] ?? ''), String(second[field] ?? ''))
   }
 
   // Preserve the pre-existing tree order when no local column is selected.
@@ -120,34 +118,14 @@ const byId = computed(() => {
   return index
 })
 
-const treeRows = computed<TreeRow[]>(() => {
-  const output: TreeRow[] = []
-  const visited = new Set<string>()
-  const groups = byParent.value
-
-  function walk(parent: string, depth: number): void {
-    for (const item of groups.get(parent) ?? []) {
-      const id = String(item.id)
-      if (visited.has(id)) continue
-
-      visited.add(id)
-      const hasChildren = (groups.get(id) ?? []).length > 0
-      const isExpanded = expanded.value.has(id)
-      output.push({ ...item, depth, hasChildren, expanded: isExpanded })
-      if (isExpanded) walk(id, depth + 1)
-    }
-  }
-
-  walk('ROOT', 0)
-  // Preserve the fallback for rows outside the currently visible tree (e.g. off-page
-  // parents). In active local-sort mode, sort those remaining rows in memory as well.
-  const remaining = state.rows.value.filter((item) => !visited.has(String(item.id)))
-  if (localSort.value) remaining.sort(compareGroupRows)
-  for (const item of remaining) {
-    output.push({ ...item, depth: 0, hasChildren: false, expanded: false })
-  }
-  return output
-})
+const treeRows = computed<TreeRow[]>(() =>
+  buildVisibleProductGroupTree(
+    state.rows.value,
+    byParent.value,
+    expanded.value,
+    localSort.value ? compareGroupRows : undefined,
+  ),
+)
 
 const parentOptions = computed(() => {
   const blocked = new Set<string>()
@@ -309,12 +287,7 @@ onMounted(() => void load())
       <h1>{{ t('product.groupsTitle') }}</h1>
       <p>{{ t('product.groupsDescription') }}</p>
     </div>
-    <button
-      v-if="permissions.create"
-      type="button"
-      class="primary-button"
-      @click="openCreate()"
-    >
+    <button v-if="permissions.create" type="button" class="primary-button" @click="openCreate()">
       {{ t('common.create') }}
     </button>
   </div>
@@ -421,7 +394,12 @@ onMounted(() => void load())
   />
 
   <div v-if="modalOpen" class="modal-backdrop">
-    <section class="modal-card" role="dialog" aria-modal="true" :aria-label="t('product.groupForm')">
+    <section
+      class="modal-card"
+      role="dialog"
+      aria-modal="true"
+      :aria-label="t('product.groupForm')"
+    >
       <header class="modal-card__header">
         <h2>{{ editingId ? t('common.edit') : t('common.create') }} {{ t('product.group') }}</h2>
         <button
