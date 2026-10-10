@@ -3,6 +3,10 @@
 declare(strict_types=1);
 
 use App\Exceptions\DomainException;
+use App\Infrastructure\Mutation\OperationContext;
+use App\Infrastructure\Time\EvaluationTime;
+use App\Repositories\EmployeeAssignmentRepository;
+use App\Services\Api020EmployeeStructureService;
 use App\Repositories\DepartmentRepository;
 use App\Repositories\EmployeeRepository;
 use App\Repositories\PositionRepository;
@@ -35,6 +39,83 @@ final class P1Api020EmployeeStructureTest extends CIUnitTestCase
         $this->assertSame('Root', (new DepartmentRepository($this->db))->find($root)['name']);
         $service->update($child, ['name' => 'Updated Child']);
         $this->assertSame('Updated Child', (new DepartmentRepository($this->db))->find($child)['name']);
+    }
+
+    public function testEmployeeFiltersPreserveVisibleScopeAndIndependentAssignmentMatches(): void
+    {
+        $organizations = [];
+        $departments = [];
+        $positions = [];
+        $employees = [];
+        foreach (['A', 'B'] as $suffix) {
+            $this->db->table('organizations')->insert([
+                'type' => 'GROUP', 'code' => 'API020-BATCH-O-' . uniqid(), 'name' => 'Org ' . $suffix,
+                'status' => 'ACTIVE', 'created_at' => '2026-10-05 00:00:00',
+            ]);
+            $organizations[$suffix] = (int) $this->db->insertID();
+            $this->db->table('departments')->insert([
+                'code' => 'API020-BATCH-D-' . uniqid(), 'name' => 'Dept ' . $suffix,
+                'status' => 'ACTIVE', 'created_at' => '2026-10-05 00:00:00',
+            ]);
+            $departments[$suffix] = (int) $this->db->insertID();
+            $this->db->table('positions')->insert([
+                'code' => 'API020-BATCH-P-' . uniqid(), 'name' => 'Position ' . $suffix,
+                'status' => 'ACTIVE', 'created_at' => '2026-10-05 00:00:00',
+            ]);
+            $positions[$suffix] = (int) $this->db->insertID();
+        }
+        foreach (['visible_match', 'visible_no_match', 'not_visible'] as $key) {
+            $this->db->table('employees')->insert([
+                'employee_code' => 'API020-BATCH-E-' . uniqid(),
+                'employee_name' => $key,
+                'status' => 'ACTIVE',
+                'created_at' => '2026-10-05 00:00:00',
+            ]);
+            $employees[$key] = (int) $this->db->insertID();
+        }
+        $repo = new EmployeeAssignmentRepository($this->db);
+        $insert = static function (int $employeeId, int $orgId, int $depId, int $posId, string $status, ?string $until) use ($repo): void {
+            $repo->insert([
+                'employee_id' => $employeeId,
+                'organization_id' => $orgId,
+                'department_id' => $depId,
+                'position_id' => $posId,
+                'is_primary' => 0,
+                'effective_from' => '2026-01-01',
+                'effective_to' => $until,
+                'status' => $status,
+                'created_at' => '2026-10-05 00:00:00',
+            ]);
+        };
+        // The matching employee has the requested organization on one
+        // assignment and the requested department/position on another.
+        $insert($employees['visible_match'], $organizations['A'], $departments['A'], $positions['A'], 'ACTIVE', null);
+        $insert($employees['visible_match'], $organizations['B'], $departments['B'], $positions['B'], 'ACTIVE', null);
+        $insert($employees['visible_no_match'], $organizations['A'], $departments['A'], $positions['A'], 'ACTIVE', null);
+        $insert($employees['visible_no_match'], $organizations['B'], $departments['B'], $positions['B'], 'INACTIVE', null);
+        $insert($employees['visible_no_match'], $organizations['B'], $departments['B'], $positions['B'], 'ACTIVE', '2026-10-04');
+        $insert($employees['not_visible'], $organizations['A'], $departments['B'], $positions['B'], 'ACTIVE', null);
+
+        // applyDataFilters receives already-authorized rows from authorizedRows().
+        // Invoke it directly to isolate the data-filter behavior from PBAC setup.
+        $service = new Api020EmployeeStructureService(assignments: $repo, db: $this->db);
+        $operation = new OperationContext(null, new EvaluationTime(new DateTimeImmutable('2026-10-05T12:00:00+00:00')), null, true);
+        $rows = [
+            ['id' => $employees['visible_no_match']],
+            ['id' => $employees['visible_match']],
+            ['id' => 0],
+        ];
+        $query = ['filter' => [
+            'organization_id' => (string) $organizations['A'],
+            'department_id' => (string) $departments['B'],
+            'position_id' => (string) $positions['B'],
+            'status' => 'ACTIVE',
+        ]];
+        $method = new ReflectionMethod(Api020EmployeeStructureService::class, 'applyDataFilters');
+        $args = ['employee', $query, &$rows, $operation];
+        $remainingQuery = $method->invokeArgs($service, $args);
+        $this->assertSame([['id' => $employees['visible_match']]], $rows);
+        $this->assertSame(['filter' => ['status' => 'ACTIVE']], $remainingQuery);
     }
 
     public function testPositionAndEmployeeUniqueRulesPreserveNullableUserAndCanonicalGender(): void

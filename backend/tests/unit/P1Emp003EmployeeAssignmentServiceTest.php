@@ -74,6 +74,36 @@ final class P1Emp003EmployeeAssignmentServiceTest extends CIUnitTestCase
         $this->assertContains($secondaryId, array_map(static fn (array $row): int => (int) $row['id'], $effective));
     }
 
+    public function testBatchedEffectiveAssignmentsReuseUtcEvaluationDateAndValidateIds(): void
+    {
+        [$employeeId, $organizationId] = $this->references();
+        $repo = new EmployeeAssignmentRepository($this->db);
+        $repo->insert([
+            'employee_id' => $employeeId,
+            'organization_id' => $organizationId,
+            'is_primary' => 1,
+            'effective_from' => '2026-10-05',
+            'effective_to' => '2026-10-05',
+            'status' => 'ACTIVE',
+            'created_at' => '2026-10-05 00:00:00',
+        ]);
+        $service = new EmployeeAssignmentService($repo, $this->db);
+        $instant = new EvaluationTime(new DateTimeImmutable('2026-10-06T01:00:00+07:00'));
+        $batched = $service->findEffectiveForEmployees([$employeeId, $employeeId], $instant);
+        $this->assertCount(1, $batched);
+        $this->assertSame($service->findEffective($employeeId, $instant), $batched[$employeeId]);
+        $this->assertCount(1, $batched[$employeeId]);
+        $this->assertSame([], $service->findEffectiveForEmployees([], $instant));
+        $nextDay = new EvaluationTime(new DateTimeImmutable('2026-10-06T00:00:00+00:00'));
+        $this->assertSame([], $service->findEffectiveForEmployees([$employeeId], $nextDay)[$employeeId]);
+        try {
+            $service->findEffectiveForEmployees([0], $instant);
+            $this->fail('Expected invalid employee ID rejection.');
+        } catch (DomainException $exception) {
+            $this->assertSame(EmployeeAssignmentService::ERROR_REFERENCE_INVALID, $exception->getErrorCode());
+        }
+    }
+
     public function testUpdateAndEndAreSerializedAndPreserveHistory(): void
     {
         [$employeeId, $organizationId] = $this->references();

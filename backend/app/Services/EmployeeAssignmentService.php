@@ -156,6 +156,32 @@ final class EmployeeAssignmentService
         );
     }
 
+    /**
+     * Batch equivalent of findEffective(), retaining the same UTC business date.
+     * Only the supplied employee IDs are queried; empty groups remain visible.
+     *
+     * @param list<int> $employeeIds
+     * @return array<int, list<array<string, mixed>>>
+     */
+    public function findEffectiveForEmployees(array $employeeIds, ?EvaluationTime $evaluationTime = null): array
+    {
+        if ($employeeIds === []) {
+            return [];
+        }
+
+        $normalized = [];
+        foreach ($employeeIds as $employeeId) {
+            $id = PositiveId::normalize($employeeId, 'employee_id', self::ERROR_REFERENCE_INVALID);
+            $normalized[$id] = $id;
+        }
+        $operation = $this->operation($evaluationTime);
+
+        return $this->repo()->findEffectiveForEmployees(
+            array_values($normalized),
+            $operation->evaluationTime->businessDate(new DateTimeZone('UTC')),
+        );
+    }
+
     /** @return array<string, mixed>|null */
     public function resolvePrimary(int $employeeId, ?EvaluationTime $evaluationTime = null): ?array
     {

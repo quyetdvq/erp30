@@ -191,13 +191,26 @@ final class Api020EmployeeStructureService
                 }
             }
             if ($requested !== []) {
-                $evaluationTime = $operation->evaluationTime;
-                $rows = array_values(array_filter($rows, function (array $row) use ($requested, $evaluationTime, $operation): bool {
+                // Query only IDs already permitted by authorizedRows().
+                $visibleEmployeeIds = [];
+                foreach ($rows as $row) {
+                    $employeeId = (int) ($row['id'] ?? 0);
+                    if ($employeeId > 0) {
+                        $visibleEmployeeIds[] = $employeeId;
+                    }
+                }
+                $effectiveByEmployee = $this->assignmentService($operation)->findEffectiveForEmployees(
+                    $visibleEmployeeIds,
+                    $operation->evaluationTime,
+                );
+                $rows = array_values(array_filter($rows, static function (array $row) use ($requested, $effectiveByEmployee): bool {
                     $employeeId = (int) ($row['id'] ?? 0);
                     if ($employeeId < 1) {
                         return false;
                     }
-                    $effective = $this->assignmentService($operation)->findEffective($employeeId, $evaluationTime);
+                    $effective = $effectiveByEmployee[$employeeId] ?? [];
+                    // Preserve existing semantics: different assignments may satisfy
+                    // different filter fields for the same employee.
                     foreach ($requested as $field => $values) {
                         if (! array_filter($effective, static fn (array $assignment): bool => in_array((string) ($assignment[$field] ?? ''), $values, true))) {
                             return false;

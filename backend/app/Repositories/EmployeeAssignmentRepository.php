@@ -148,6 +148,55 @@ final class EmployeeAssignmentRepository
         return array_values($result->getResultArray());
     }
 
+    /**
+     * Fetch effective assignments for visible employees with bounded IN clauses.
+     * Per-employee ordering matches findEffective(); employees without an
+     * effective assignment are represented by an empty list.
+     *
+     * @param list<int> $employeeIds
+     * @return array<int, list<array<string, mixed>>>
+     */
+    public function findEffectiveForEmployees(array $employeeIds, string $onDate): array
+    {
+        if ($employeeIds === []) {
+            return [];
+        }
+
+        $grouped = [];
+        foreach ($employeeIds as $employeeId) {
+            $grouped[$employeeId] = [];
+        }
+
+        // Bound the number of values in a SQL IN clause on large employee lists.
+        foreach (array_chunk(array_keys($grouped), 500) as $batch) {
+            $builder = $this->db->table('employee_assignments')
+                ->whereIn('employee_id', $batch)
+                ->where('status', 'ACTIVE')
+                ->where('effective_from <=', $onDate)
+                ->groupStart()
+                ->where('effective_to IS NULL', null, false)
+                ->orWhere('effective_to >=', $onDate)
+                ->groupEnd()
+                ->orderBy('is_primary', 'DESC')
+                ->orderBy('effective_from', 'DESC');
+            try {
+                $result = $builder->get();
+            } catch (\Throwable $exception) {
+                throw new PersistenceException(self::ERROR_PERSISTENCE_FAILED, 'findEffectiveForEmployees', $exception);
+            }
+            if ($result === false) {
+                throw new PersistenceException(self::ERROR_PERSISTENCE_FAILED, 'findEffectiveForEmployees');
+            }
+
+            foreach ($result->getResultArray() as $row) {
+                $employeeId = (int) $row['employee_id'];
+                $grouped[$employeeId][] = $row;
+            }
+        }
+
+        return $grouped;
+    }
+
     /** @return list<array<string, mixed>> */
     public function findOverlappingPrimary(
         int $employeeId,
