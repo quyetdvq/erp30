@@ -10,6 +10,7 @@ export type ApiErrorNotice = {
 }
 
 export const errorNotices = ref<ApiErrorNotice[]>([])
+const reportedErrors = new WeakMap<object, ApiErrorNotice>()
 
 function headerValue(headers: unknown, name: string): string | null {
   if (!headers) return null
@@ -29,7 +30,7 @@ function payloadOf(error: unknown): Record<string, unknown> {
 }
 
 export function normalizeApiError(error: unknown): ApiErrorNotice | null {
-  if (!axios.isAxiosError(error)) return null
+  if (!axios.isAxiosError(error) || axios.isCancel(error)) return null
   const status = error.response?.status
   if (![401, 403, 404, 409, 422, 500].includes(status || 0)) return null
   const payload = payloadOf(error)
@@ -39,7 +40,10 @@ export function normalizeApiError(error: unknown): ApiErrorNotice | null {
   const message = payload.message || nestedRecord.message
   const requestId =
     headerValue(error.response?.headers, 'x-request-id') ||
-    (typeof payload.request_id === 'string' ? payload.request_id : null)
+    (typeof payload.request_id === 'string' ? payload.request_id : null) ||
+    (typeof (payload.meta as { request_id?: unknown } | undefined)?.request_id === 'string'
+      ? (payload.meta as { request_id: string }).request_id
+      : null)
   const id = `${status}:${String(code || 'unknown')}:${requestId || Date.now()}`
   return {
     id,
@@ -51,8 +55,13 @@ export function normalizeApiError(error: unknown): ApiErrorNotice | null {
 }
 
 export function reportApiError(error: unknown): ApiErrorNotice | null {
+  if (error !== null && typeof error === 'object') {
+    const existing = reportedErrors.get(error)
+    if (existing) return existing
+  }
   const notice = normalizeApiError(error)
   if (!notice) return null
+  if (error !== null && typeof error === 'object') reportedErrors.set(error, notice)
   if (errorNotices.value.some((candidate) => candidate.id === notice.id)) return notice
   errorNotices.value = [...errorNotices.value.slice(-2), notice]
   return notice

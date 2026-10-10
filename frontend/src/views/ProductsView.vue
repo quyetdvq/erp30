@@ -24,6 +24,7 @@ import {
   listProductUomPage,
 } from '@/services/productCatalog'
 import { reportApiError } from '@/services/errorBoundary'
+import { loadLookupPages } from '@/services/listLookups'
 
 type RelationState = {
   children: Product[]
@@ -153,15 +154,10 @@ async function loadRelations(rows: readonly Product[]): Promise<void> {
             )
             relations.value[key] = { children: [], components, componentItems, loading: false }
           } else {
-            const children = (
-              await listProductPage({
-                q: '',
-                page: 1,
-                page_size: 200,
-                sort: 'product_name',
-                filter: { parent_product_id: key },
-              })
-            ).data
+            const children = await loadLookupPages(listProductPage, {
+              sort: 'product_name',
+              filter: { parent_product_id: key },
+            })
             relations.value[key] = { children, components: [], componentItems: [], loading: false }
           }
         } catch (caught: unknown) {
@@ -213,21 +209,30 @@ async function toggle(row: Product): Promise<void> {
 onMounted(async () => {
   await Promise.all([
     load(),
-    listProductGroupPage({ q: '', page: 1, page_size: 200, sort: 'name', filter: {} })
+    loadLookupPages(listProductGroupPage, { sort: 'name' })
       .then((result) => {
-        groups.value = result.data
+        groups.value = result
       })
-      .catch(() => undefined),
-    listProductUomPage({ q: '', page: 1, page_size: 200, sort: 'code', filter: {} })
+      .catch((caught) => {
+        error.value = caught
+        reportApiError(caught)
+      }),
+    loadLookupPages(listProductUomPage, { sort: 'code' })
       .then((result) => {
-        uoms.value = result.data
+        uoms.value = result
       })
-      .catch(() => undefined),
-    listProductPage({ q: '', page: 1, page_size: 200, sort: 'product_name', filter: {} })
+      .catch((caught) => {
+        error.value = caught
+        reportApiError(caught)
+      }),
+    loadLookupPages(listProductPage, { sort: 'product_name' })
       .then((result) => {
-        productLookup.value = result.data
+        productLookup.value = result
       })
-      .catch(() => undefined),
+      .catch((caught) => {
+        error.value = caught
+        reportApiError(caught)
+      }),
   ])
 })
 </script>

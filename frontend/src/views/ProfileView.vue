@@ -1,5 +1,6 @@
 <script setup lang="ts">
-import { ref } from 'vue'
+import { computed, ref } from 'vue'
+import { useUnsavedChanges } from '@/composables/useUnsavedChanges'
 
 import { useAuthStore } from '@/stores/auth'
 
@@ -9,6 +10,13 @@ const email = ref(auth.user?.email || '')
 const password = ref('')
 const saved = ref(false)
 const error = ref('')
+const unsaved = useUnsavedChanges(
+  computed(() => ({
+    username: username.value,
+    email: email.value,
+    password: password.value,
+  })),
+)
 
 async function save(): Promise<void> {
   saved.value = false
@@ -20,6 +28,7 @@ async function save(): Promise<void> {
       password: password.value || undefined,
     })
     password.value = ''
+    unsaved.markClean()
     saved.value = true
   } catch {
     error.value = 'Không thể lưu profile. Vui lòng kiểm tra lại thông tin.'

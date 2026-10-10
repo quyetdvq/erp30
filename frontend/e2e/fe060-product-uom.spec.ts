@@ -1,5 +1,6 @@
 import AxeBuilder from '@axe-core/playwright'
 import { expect, test, type Page } from '@playwright/test'
+import { mockPagination } from './support/mockPagination'
 
 const group = {
   id: '10',
@@ -116,7 +117,7 @@ async function mockCatalog(page: Page): Promise<{
       contentType: 'application/json',
       body: JSON.stringify({
         data: [group, { ...group, id: '11', parent_id: '10', code: 'TSH', name: 'T-Shirts' }],
-        meta: { page: 1, page_size: 50, total: 2 },
+        meta: mockPagination(route, 2),
       }),
     })
   })
@@ -132,7 +133,7 @@ async function mockCatalog(page: Page): Promise<{
     return route.fulfill({
       status: 200,
       contentType: 'application/json',
-      body: JSON.stringify({ data: [uom], meta: { page: 1, page_size: 50, total: 1 } }),
+      body: JSON.stringify({ data: [uom], meta: mockPagination(route, 1) }),
     })
   })
   await page.route('**/api/v1/products*', async (route) => {
@@ -147,7 +148,7 @@ async function mockCatalog(page: Page): Promise<{
     return route.fulfill({
       status: 200,
       contentType: 'application/json',
-      body: JSON.stringify({ data: [simple], meta: { page: 1, page_size: 50, total: 1 } }),
+      body: JSON.stringify({ data: [simple], meta: mockPagination(route, 1) }),
     })
   })
   await page.route('**/api/v1/products/*/combo-items', async (route) => {

@@ -33,6 +33,7 @@ import {
   type UserState,
 } from '@/services/security'
 import { reportApiError } from '@/services/errorBoundary'
+import { loadLookupPages } from '@/services/listLookups'
 import type { ManagedUser } from '@/services/security'
 import type { AuthorizationGroup, Resource } from '@/api/generated/types.gen'
 
@@ -122,10 +123,10 @@ async function loadDetail(): Promise<void> {
   if (!selected.value) return
   try {
     const [groupPage, direct] = await Promise.all([
-      listAuthorizationGroupPage({ q: '', page: 1, page_size: 200, sort: 'name', filter: {} }),
+      loadLookupPages(listAuthorizationGroupPage, { sort: 'name' }),
       getSecurityUserPermissions(String(selected.value.id)),
     ])
-    groups.value = groupPage.data
+    groups.value = groupPage
     permissionDraft.value = direct
     const entries = await Promise.all(
       groups.value.map(
@@ -145,12 +146,11 @@ async function loadPermissionCatalog(): Promise<void> {
   if (permissionCatalogLoaded.value || permissionCatalogLoading.value) return
   permissionCatalogLoading.value = true
   try {
-    const resourcePage = await listResourcePage(
-      { q: '', page: 1, page_size: 200, sort: 'type', filter: {} },
-      true,
-    )
-    resources.value = resourcePage.data
-    resourceActions.value = resourcePage.data.reduce<Record<string, SecurityActionSummary[]>>(
+    const resourcePage = await loadLookupPages((query) => listResourcePage(query, true), {
+      sort: 'type',
+    })
+    resources.value = resourcePage
+    resourceActions.value = resourcePage.reduce<Record<string, SecurityActionSummary[]>>(
       (result, resource) => {
         result[String(resource.id)] = (resource.actions ?? []).map((action) => ({
           id: String(action.id),
@@ -294,7 +294,7 @@ async function saveMembership(): Promise<void> {
       if (nextIds.join(',') !== previousIds.join(','))
         membersByGroup.value[groupId] = await saveGroupMembers(groupId, nextIds)
     }
-    await refreshBasePermissions()
+    await refreshBasePermissions(true)
     await loadDetail()
     await load()
   } catch (caught: unknown) {
@@ -312,7 +312,7 @@ async function savePermissions(): Promise<void> {
       String(selected.value.id),
       permissionDraft.value,
     )
-    await refreshBasePermissions()
+    await refreshBasePermissions(true)
     await load()
   } catch (caught: unknown) {
     error.value = caught

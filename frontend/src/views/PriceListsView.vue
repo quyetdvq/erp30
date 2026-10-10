@@ -30,6 +30,8 @@ import { useListState } from '@/composables/useListState'
 import { toApiDateTime, toDateTimeLocal } from '@/modules/priceListDateTime'
 import { listOrganizationPage } from '@/services/foundation'
 import { reportApiError } from '@/services/errorBoundary'
+import { useUnsavedChanges } from '@/composables/useUnsavedChanges'
+import { loadLookupPages } from '@/services/listLookups'
 import {
   changePriceListState,
   listPriceListItemRows,
@@ -60,6 +62,8 @@ const detailRow = ref<PriceList | null>(null)
 const itemRows = ref<ItemDraft[]>([])
 const busy = ref(false)
 const itemBusy = ref(false)
+const organizationLookupReady = ref(false)
+const itemLookupsReady = ref(false)
 const error = ref<unknown | null>(null)
 const itemError = ref<unknown | null>(null)
 const form = ref({
@@ -72,6 +76,19 @@ const form = ref({
   status: 'ACTIVE' as PriceList['status'],
   description: '',
 })
+const unsaved = useUnsavedChanges(form, modalOpen)
+const itemsUnsaved = useUnsavedChanges(itemRows, detailOpen)
+function closeDetail(): void {
+  if (!itemsUnsaved.confirmDiscard()) return
+  detailOpen.value = false
+  itemsUnsaved.markClean()
+}
+function closeForm(): void {
+  if (!unsaved.confirmDiscard()) return
+  modalOpen.value = false
+  unsaved.markClean()
+}
+
 const listBusy = computed(() => state.isInitialLoading.value || state.isBackgroundRefreshing.value)
 
 const columns: readonly ListColumn<PriceList>[] = [
@@ -174,6 +191,7 @@ function openCreate(): void {
     description: '',
   }
   error.value = null
+  unsaved.markClean()
   modalOpen.value = true
 }
 function openEdit(row: PriceList): void {
@@ -189,9 +207,11 @@ function openEdit(row: PriceList): void {
     description: row.description ?? '',
   }
   error.value = null
+  unsaved.markClean()
   modalOpen.value = true
 }
 async function save(): Promise<void> {
+  if (!organizationLookupReady.value) return
   error.value = null
   const effectiveFrom = toApiDateTime(form.value.effective_from)
   const effectiveTo = form.value.effective_to ? toApiDateTime(form.value.effective_to) : ''
@@ -219,6 +239,7 @@ async function save(): Promise<void> {
       ? base
       : { ...base, status: form.value.status }
     await savePriceList(payload, editingId.value)
+    unsaved.markClean()
     modalOpen.value = false
     await load()
   } catch (caught: unknown) {
@@ -242,6 +263,8 @@ async function toggle(row: PriceList): Promise<void> {
   }
 }
 async function openDetail(row: PriceList): Promise<void> {
+  itemRows.value = []
+  itemsUnsaved.markClean()
   detailRow.value = row
   detailOpen.value = true
   itemBusy.value = true
@@ -253,6 +276,7 @@ async function openDetail(row: PriceList): Promise<void> {
       uom_id: String(item.uom_id),
       price: String(item.price),
     }))
+    itemsUnsaved.markClean()
     await Promise.all(itemRows.value.map((item) => ensureConversions(item.product_id)))
   } catch (caught: unknown) {
     itemError.value = caught
@@ -275,7 +299,7 @@ async function productChanged(index: number, value: string | string[]): Promise<
   await ensureConversions(row.product_id)
 }
 async function saveItems(): Promise<void> {
-  if (!detailRow.value) return
+  if (!detailRow.value || !itemLookupsReady.value) return
   itemError.value = null
   if (
     itemRows.value.some((row) => !row.product_id || !row.uom_id || !decimalNonNegative(row.price))
@@ -296,6 +320,7 @@ async function saveItems(): Promise<void> {
       uom_id: String(item.uom_id),
       price: String(item.price),
     }))
+    itemsUnsaved.markClean()
   } catch (caught: unknown) {
     itemError.value = caught
     reportApiError(caught)
@@ -306,21 +331,33 @@ async function saveItems(): Promise<void> {
 onMounted(async () => {
   await Promise.all([
     load(),
-    listOrganizationPage({ q: '', page: 1, page_size: 200, sort: 'code', filter: {} })
+    loadLookupPages(listOrganizationPage, { sort: 'code' })
       .then((result) => {
-        organizations.value = result.data
+        organizations.value = result
+        organizationLookupReady.value = true
       })
-      .catch(() => undefined),
-    listProductPage({ q: '', page: 1, page_size: 200, sort: 'product_name', filter: {} })
+      .catch((caught) => {
+        error.value = caught
+        reportApiError(caught)
+      }),
+    loadLookupPages(listProductPage, { sort: 'product_name' })
       .then((result) => {
-        products.value = result.data
+        products.value = result
+        itemLookupsReady.value = uoms.value.length > 0
       })
-      .catch(() => undefined),
-    listProductUomPage({ q: '', page: 1, page_size: 200, sort: 'code', filter: {} })
+      .catch((caught) => {
+        error.value = caught
+        reportApiError(caught)
+      }),
+    loadLookupPages(listProductUomPage, { sort: 'code' })
       .then((result) => {
-        uoms.value = result.data
+        uoms.value = result
+        itemLookupsReady.value = products.value.length > 0
       })
-      .catch(() => undefined),
+      .catch((caught) => {
+        error.value = caught
+        reportApiError(caught)
+      }),
   ])
 })
 </script>
@@ -461,7 +498,7 @@ onMounted(async () => {
           type="button"
           class="icon-button"
           :aria-label="t('common.close')"
-          @click="modalOpen = false"
+          @click="closeForm"
         >
           <NIcon :component="CloseOutline" aria-hidden="true" />
         </button>
@@ -511,10 +548,10 @@ onMounted(async () => {
         </label>
         <p v-if="error" class="inline-error" role="alert">{{ t('pricing.requestError') }}</p>
         <footer class="modal-card__footer">
-          <button type="button" class="secondary-button" @click="modalOpen = false">
+          <button type="button" class="secondary-button" @click="closeForm">
             {{ t('common.cancel') }}
           </button>
-          <button type="submit" class="primary-button" :disabled="busy">
+          <button type="submit" class="primary-button" :disabled="busy || !organizationLookupReady">
             {{ busy ? t('common.saving') : t('common.save') }}
           </button>
         </footer>
@@ -538,7 +575,7 @@ onMounted(async () => {
           type="button"
           class="icon-button"
           :aria-label="t('common.close')"
-          @click="detailOpen = false"
+          @click="closeDetail"
         >
           <NIcon :component="CloseOutline" aria-hidden="true" />
         </button>
@@ -637,7 +674,7 @@ onMounted(async () => {
             v-if="hasBasePermission('price_list', 'edit')"
             type="button"
             class="primary-button"
-            :disabled="itemBusy"
+            :disabled="itemBusy || !itemLookupsReady"
             @click="saveItems"
           >
             {{ itemBusy ? t('common.saving') : t('common.save') }}
@@ -645,7 +682,7 @@ onMounted(async () => {
         </section>
       </div>
       <footer class="modal-card__footer">
-        <button type="button" class="secondary-button" @click="detailOpen = false">
+        <button type="button" class="secondary-button" @click="closeDetail">
           {{ t('common.close') }}
         </button>
       </footer>

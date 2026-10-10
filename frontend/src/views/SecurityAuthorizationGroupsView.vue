@@ -27,6 +27,7 @@ import {
   type SecurityPermission,
 } from '@/services/security'
 import { reportApiError } from '@/services/errorBoundary'
+import { loadLookupPages } from '@/services/listLookups'
 import type { ManagedUser } from '@/services/security'
 import { useBasePermission } from '@/composables/useBasePermission'
 
@@ -117,12 +118,12 @@ async function loadDetail(): Promise<void> {
     const [nextMembers, nextPermissions, resourcePage] = await Promise.all([
       getGroupMembers(String(selected.value.id)),
       getGroupPermissions(String(selected.value.id)),
-      listResourcePage({ q: '', page: 1, page_size: 200, sort: 'type', filter: {} }, true),
+      loadLookupPages((query) => listResourcePage(query, true), { sort: 'type' }),
     ])
     members.value = nextMembers
     permissions.value = nextPermissions
-    resources.value = resourcePage.data
-    allActions.value = resourcePage.data.flatMap((resource) =>
+    resources.value = resourcePage
+    allActions.value = resourcePage.flatMap((resource) =>
       (resource.actions ?? []).map((action) => ({
         id: String(action.id),
         resource_id: String(resource.id),
@@ -135,15 +136,7 @@ async function loadDetail(): Promise<void> {
       String(permission.resource_action_id),
     )
     try {
-      users.value = (
-        await listSecurityUserPage({
-          q: '',
-          page: 1,
-          page_size: 200,
-          sort: 'username',
-          filter: {},
-        })
-      ).data
+      users.value = await loadLookupPages(listSecurityUserPage, { sort: 'username' })
     } catch {
       users.value = []
     }
@@ -224,7 +217,7 @@ async function saveMembers(): Promise<void> {
   error.value = null
   try {
     members.value = await saveGroupMembers(String(selected.value.id), memberDraft.value)
-    await refreshBasePermissions()
+    await refreshBasePermissions(true)
     await load()
   } catch (caught: unknown) {
     error.value = caught
@@ -239,7 +232,7 @@ async function savePermissions(): Promise<void> {
   error.value = null
   try {
     permissions.value = await saveGroupPermissions(String(selected.value.id), permissionDraft.value)
-    await refreshBasePermissions()
+    await refreshBasePermissions(true)
     await load()
   } catch (caught: unknown) {
     error.value = caught

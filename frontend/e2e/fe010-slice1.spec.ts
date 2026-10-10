@@ -1,5 +1,6 @@
 import AxeBuilder from '@axe-core/playwright'
 import { expect, test, type Page } from '@playwright/test'
+import { mockPagination } from './support/mockPagination'
 
 const groupId = '9007199254740993'
 const companyId = '9007199254740994'
@@ -161,6 +162,13 @@ test('Organization tree, parent matrix, contacts history, and accessibility', as
   await mockSession(page)
   const contactUpdateBody: { value: Record<string, unknown> | null } = { value: null }
   await mockOrganizationApi(page, { contactUpdateBody })
+  await page.route('**/api/v1/provinces**', (route) =>
+    route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify({ data: [], meta: mockPagination(route, 0, 'fe010-provinces') }),
+    }),
+  )
   await page.goto('/organizations')
 
   await expect(page.getByRole('button', { name: /G-01/ })).toBeVisible()

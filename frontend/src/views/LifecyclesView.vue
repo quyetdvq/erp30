@@ -30,6 +30,7 @@ import {
   saveLifecycle,
 } from '@/services/workflow'
 import { normalizeApiError, reportApiError } from '@/services/errorBoundary'
+import { loadLookupPages } from '@/services/listLookups'
 
 type Tab = 'overview' | 'states' | 'transitions'
 
@@ -143,14 +144,7 @@ async function load(): Promise<void> {
 
 async function loadReferences(): Promise<void> {
   try {
-    const response = await listWorkflowStatePage({
-      q: '',
-      page: 1,
-      page_size: 200,
-      sort: 'name',
-      filter: {},
-    })
-    workflowStates.value = response.data
+    workflowStates.value = await loadLookupPages(listWorkflowStatePage, { sort: 'name' })
   } catch (caught: unknown) {
     detailError.value = caught
     reportApiError(caught)

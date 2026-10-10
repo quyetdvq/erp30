@@ -1,5 +1,6 @@
 import AxeBuilder from '@axe-core/playwright'
 import { expect, test, type Page } from '@playwright/test'
+import { mockPagination } from './support/mockPagination'
 
 const workflowStates = [
   { id: '11', code: 'draft', name: 'Draft', description: null, status: 'ACTIVE' },
@@ -57,7 +58,7 @@ async function mockWorkflowApi(page: Page): Promise<void> {
         contentType: 'application/json',
         body: JSON.stringify({
           data: workflowStates,
-          meta: { page: 1, page_size: 50, total: workflowStates.length },
+          meta: mockPagination(route, workflowStates.length),
         }),
       })
     }
@@ -76,7 +77,7 @@ async function mockWorkflowApi(page: Page): Promise<void> {
       return route.fulfill({
         status: 200,
         contentType: 'application/json',
-        body: JSON.stringify({ data: [lifecycle], meta: { page: 1, page_size: 50, total: 1 } }),
+        body: JSON.stringify({ data: [lifecycle], meta: mockPagination(route, 1) }),
       })
     }
     if (pathname === '/api/v1/lifecycles/21/states' && route.request().method() === 'GET') {

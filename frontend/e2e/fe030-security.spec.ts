@@ -1,5 +1,6 @@
 import AxeBuilder from '@axe-core/playwright'
 import { expect, test, type Page } from '@playwright/test'
+import { mockPagination } from './support/mockPagination'
 
 async function mockSession(page: Page): Promise<void> {
   await page.route('**/api/v1/auth/me', async (route) =>
@@ -99,7 +100,7 @@ test.describe('P1-FE-030 security surfaces', () => {
               direct_permission_count: 0,
             },
           ],
-          meta: { page: 1, page_size: 25, total: 2, request_id: 'test-security-users' },
+          meta: mockPagination(route, 2, 'test-security-users'),
         }),
       }),
     )
@@ -118,7 +119,7 @@ test.describe('P1-FE-030 security surfaces', () => {
           data: [
             { id: '1', code: 'SECURITY_ADMIN', name: 'Security administrators', status: 'ACTIVE' },
           ],
-          meta: { page: 1, page_size: 25, total: 1, request_id: 'test-group' },
+          meta: mockPagination(route, 1, 'test-group'),
         }),
       }),
     )
@@ -164,7 +165,7 @@ test.describe('P1-FE-030 security surfaces', () => {
                 : {}),
             },
           ],
-          meta: { page: 1, page_size: 25, total: 1, request_id: 'test-resource' },
+          meta: mockPagination(route, 1, 'test-resource'),
         }),
       })
     })

@@ -27,6 +27,7 @@ import {
   type NumberingSeriesRow,
 } from '@/services/autoNumbering'
 import { listResourcePage } from '@/services/security'
+import { loadLookupPages } from '@/services/listLookups'
 import { normalizeApiError, reportApiError } from '@/services/errorBoundary'
 
 const { t } = useI18n()
@@ -219,16 +220,9 @@ async function loadResources(): Promise<void> {
   loadingResources.value = true
   error.value = null
   try {
-    const result = await listResourcePage({
-      q: '',
-      page: 1,
-      page_size: 200,
-      sort: 'type',
-      filter: {},
-    })
-    resources.value = result.data
-    if (!selectedResourceId.value && result.data[0])
-      selectedResourceId.value = String(result.data[0].id)
+    const result = await loadLookupPages(listResourcePage, { sort: 'type' })
+    resources.value = result
+    if (!selectedResourceId.value && result[0]) selectedResourceId.value = String(result[0].id)
   } catch (caught: unknown) {
     error.value = caught
     reportApiError(caught)

@@ -3,6 +3,7 @@
 Báo cáo mới: 132 test, 121 PASS, 11 FAIL. `fe001-shell.spec.ts`: 15/15 PASS, KHÔNG thay đổi.
 
 File được sửa:
+
 - `frontend/e2e/fe070-pricing-combo.spec.ts`: xử lý `request.postDataJSON()` có thể là `{ items: [...] }` hoặc mảng; đồng thời cập nhật CORS mock.
 - `frontend/e2e/vue.spec.ts`: giới hạn Axe vào `#app`, không quét nút Vue DevTools ngoài app khi chạy dev localhost.
 

@@ -21,7 +21,6 @@ import {
   TableRowActions,
 } from '@/components/lists'
 import {
-  createListQuery,
   type ListFilterDefinition,
   type ListColumn,
   type ListQuery,
@@ -39,6 +38,7 @@ import {
   saveEmployee,
 } from '@/services/employeeStructure'
 import { reportApiError } from '@/services/errorBoundary'
+import { loadLookupPages } from '@/services/listLookups'
 import { hasPrimaryOverlap, wouldCreateManagerCycle } from '@/modules/employeeRules'
 import { useBasePermission } from '@/composables/useBasePermission'
 
@@ -53,6 +53,7 @@ const organizations = ref<Organization[]>([])
 const departments = ref<Department[]>([])
 const positions = ref<Position[]>([])
 const assignments = ref<EmployeeAssignment[]>([])
+const employeeLookup = ref<Employee[]>([])
 const selectedEmployeeAssignments = ref<EmployeeAssignment[]>([])
 const selectedId = ref<string | null>(null)
 const activeTab = ref<Tab>('overview')
@@ -90,7 +91,19 @@ const assignmentForm = ref({
 const selected = computed<Employee>(
   () => state.rows.value.find((row) => String(row.id) === selectedId.value) as Employee,
 )
-const activeEmployees = computed(() => state.rows.value.filter((row) => row.status === 'ACTIVE'))
+const activeEmployees = computed(() =>
+  employeeLookup.value.filter((row) => row.status === 'ACTIVE'),
+)
+function upsertEmployeeLookup(row: Employee): void {
+  const id = String(row.id)
+  const index = employeeLookup.value.findIndex((entry) => String(entry.id) === id)
+  if (index === -1) employeeLookup.value = [...employeeLookup.value, row]
+  else
+    employeeLookup.value = employeeLookup.value.map((entry, current) =>
+      current === index ? row : entry,
+    )
+}
+
 const managerOptions = computed(() =>
   activeEmployees.value.filter(
     (row) =>
@@ -221,7 +234,7 @@ const columns: readonly ListColumn<Employee>[] = [
     key: 'manager',
     labelKey: 'people.manager',
     value: (row) =>
-      state.rows.value.find((manager) => String(manager.id) === String(row.manager_employee_id))
+      employeeLookup.value.find((manager) => String(manager.id) === String(row.manager_employee_id))
         ?.employee_name ?? '—',
   },
   { key: 'status', labelKey: 'people.status' },
@@ -230,15 +243,18 @@ const columns: readonly ListColumn<Employee>[] = [
 
 async function loadLookups(): Promise<void> {
   try {
-    const [orgs, deps, poss] = await Promise.all([
-      listOrganizationPage(createListQuery({ page_size: 200 })),
-      listDepartmentPage(createListQuery({ page_size: 200 })),
-      listPositionPage(createListQuery({ page_size: 200 })),
+    const [orgs, deps, poss, employees] = await Promise.all([
+      loadLookupPages(listOrganizationPage),
+      loadLookupPages(listDepartmentPage),
+      loadLookupPages(listPositionPage),
+      loadLookupPages(listEmployeePage, { sort: 'employee_name' }),
     ])
-    organizations.value = orgs.data
-    departments.value = deps.data
-    positions.value = poss.data
+    employeeLookup.value = employees
+    organizations.value = orgs
+    departments.value = deps
+    positions.value = poss
   } catch (caught: unknown) {
+    error.value = caught
     reportApiError(caught)
   }
 }
@@ -260,11 +276,9 @@ async function loadAssignments(): Promise<void> {
     return
   }
   try {
-    selectedEmployeeAssignments.value = (
-      await listAssignmentPage(
-        createListQuery({ page_size: 200, filter: { employee_id: selectedId.value } }),
-      )
-    ).data
+    selectedEmployeeAssignments.value = await loadLookupPages(listAssignmentPage, {
+      filter: { employee_id: selectedId.value },
+    })
   } catch (caught: unknown) {
     selectedEmployeeAssignments.value = []
     reportApiError(caught)
@@ -272,7 +286,7 @@ async function loadAssignments(): Promise<void> {
 }
 async function loadAllAssignments(): Promise<void> {
   try {
-    assignments.value = (await listAssignmentPage(createListQuery({ page_size: 200 }))).data
+    assignments.value = await loadLookupPages(listAssignmentPage)
   } catch (caught: unknown) {
     assignments.value = []
     reportApiError(caught)
@@ -327,14 +341,14 @@ function openEmployeeDetail(row: Employee): void {
   employeeDetailOpen.value = true
 }
 function managerWouldCycle(candidate: string): boolean {
-  return wouldCreateManagerCycle(state.rows.value, editingEmployeeId.value ?? '', candidate)
+  return wouldCreateManagerCycle(employeeLookup.value, editingEmployeeId.value ?? '', candidate)
 }
 function managerError(): string | null {
   if (employeeForm.value.manager_employee_id === editingEmployeeId.value)
     return t('people.managerSelfError')
   if (managerWouldCycle(employeeForm.value.manager_employee_id))
     return t('people.managerCycleError')
-  const selectedManager = state.rows.value.find(
+  const selectedManager = employeeLookup.value.find(
     (row) => String(row.id) === employeeForm.value.manager_employee_id,
   )
   if (selectedManager && selectedManager.status !== 'ACTIVE')
@@ -372,7 +386,8 @@ async function saveEmployeeForm(): Promise<void> {
         ? { description: employeeForm.value.description }
         : { description: null }),
     }
-    await saveEmployee(payload as unknown as EmployeeCreate, editingEmployeeId.value)
+    const saved = await saveEmployee(payload as unknown as EmployeeCreate, editingEmployeeId.value)
+    upsertEmployeeLookup(saved)
     employeeModal.value = false
     await load()
   } catch (caught: unknown) {
@@ -386,7 +401,11 @@ async function toggleEmployee(row: Employee): Promise<void> {
   busy.value = true
   error.value = null
   try {
-    await changeEmployeeState(String(row.id), row.status === 'ACTIVE' ? 'INACTIVE' : 'ACTIVE')
+    const updated = await changeEmployeeState(
+      String(row.id),
+      row.status === 'ACTIVE' ? 'INACTIVE' : 'ACTIVE',
+    )
+    upsertEmployeeLookup(updated)
     await load()
   } catch (caught: unknown) {
     error.value = caught
@@ -764,9 +783,8 @@ onMounted(async () => {
           <dt>{{ t('people.manager') }}</dt>
           <dd>
             {{
-              state.rows.value.find(
-                (row) => String(row.id) === String(selected.manager_employee_id),
-              )?.employee_name ?? '—'
+              employeeLookup.find((row) => String(row.id) === String(selected.manager_employee_id))
+                ?.employee_name ?? '—'
             }}
           </dd>
         </dl>

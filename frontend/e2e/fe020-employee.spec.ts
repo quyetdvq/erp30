@@ -1,8 +1,9 @@
 import AxeBuilder from '@axe-core/playwright'
-import { expect, test, type Page } from '@playwright/test'
+import { expect, test, type Page, type Route } from '@playwright/test'
+import { mockPagination } from './support/mockPagination'
 
-const collection = (data: unknown[], total = data.length) =>
-  JSON.stringify({ data, meta: { page: 1, page_size: 50, total, request_id: 'fe020-test' } })
+const collection = (route: Route, data: unknown[], total = data.length) =>
+  JSON.stringify({ data, meta: mockPagination(route, total, 'fe020-test') })
 
 async function mockBase(page: Page, status = 200): Promise<void> {
   await page.route('**/api/v1/auth/me', (route) =>
@@ -113,41 +114,57 @@ async function mockBase(page: Page, status = 200): Promise<void> {
       contentType: 'application/json',
       body:
         status === 200
-          ? collection(departments)
+          ? collection(route, departments)
           : JSON.stringify({ error: { code: 'FORBIDDEN', message: 'Forbidden' } }),
     }),
   )
   await page.route('**/api/v1/positions**', (route) =>
-    route.fulfill({ status: 200, contentType: 'application/json', body: collection(positions) }),
+    route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: collection(route, positions),
+    }),
   )
   await page.route('**/api/v1/organizations**', (route) =>
     route.fulfill({
       status: 200,
       contentType: 'application/json',
-      body: collection(organizations),
+      body: collection(route, organizations),
     }),
   )
   await page.route('**/api/v1/employees**', (route) =>
-    route.fulfill({ status: 200, contentType: 'application/json', body: collection(employees) }),
+    route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: collection(route, employees),
+    }),
   )
   await page.route('**/api/v1/employee-assignments**', (route) =>
-    route.fulfill({ status: 200, contentType: 'application/json', body: collection(assignments) }),
+    route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: collection(route, assignments),
+    }),
   )
   await page.route('**/api/v1/contacts**', (route) =>
-    route.fulfill({ status: 200, contentType: 'application/json', body: collection(contacts) }),
+    route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: collection(route, contacts),
+    }),
   )
   await page.route('**/api/v1/provinces**', (route) =>
     route.fulfill({
       status: 200,
       contentType: 'application/json',
-      body: collection([{ id: '71', code: 'HN', name: 'Hà Nội', status: 'ACTIVE' }]),
+      body: collection(route, [{ id: '71', code: 'HN', name: 'Hà Nội', status: 'ACTIVE' }]),
     }),
   )
   await page.route('**/api/v1/wards**', (route) =>
     route.fulfill({
       status: 200,
       contentType: 'application/json',
-      body: collection([
+      body: collection(route, [
         {
           id: '81',
           province_id: '71',

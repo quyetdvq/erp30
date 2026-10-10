@@ -1,10 +1,20 @@
 import { expect, test, type Page } from '@playwright/test'
 
 import { messages } from '../src/i18n'
+import { mockPagination } from './support/mockPagination'
 
 const { vi, en } = messages
 
 async function mockAuthenticatedSession(page: Page): Promise<void> {
+  // Shell tests still mount OrganizationsView; never let its background GET
+  // escape to a real API and invalidate the mocked user session.
+  await page.route('**/api/v1/organizations/tree**', (route) =>
+    route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify({ data: [], meta: mockPagination(route, 0, 'fe001-tree') }),
+    }),
+  )
   await page.route('**/api/v1/auth/me', async (route) => {
     await route.fulfill({
       status: 200,

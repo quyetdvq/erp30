@@ -1,7 +1,16 @@
-import { describe, it, expect } from 'vitest'
+import { describe, it, expect, vi } from 'vitest'
 import { createPinia } from 'pinia'
 
 import { mount } from '@vue/test-utils'
+// The App unit test stubs RouterView, so it must not load the real router's
+// eagerly imported AppShell (and its public logo asset) in Vitest/JSDOM.
+vi.mock('@/router', () => ({
+  default: {
+    currentRoute: { value: { path: '/' } },
+    replace: vi.fn<() => Promise<void>>(async () => undefined),
+  },
+}))
+
 import App from '../App.vue'
 
 describe('App', () => {

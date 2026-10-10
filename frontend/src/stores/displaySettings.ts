@@ -23,6 +23,7 @@ export const useDisplaySettingsStore = defineStore('displaySettings', () => {
   const loading = ref(false)
   const loaded = ref(false)
   const error = ref<unknown>(null)
+  let requestGeneration = 0
 
   const serverValues = computed(() => runtimeToValues(serverRuntime.value))
   const effectiveValues = computed<DisplaySettingValues>(() => ({
@@ -34,6 +35,8 @@ export const useDisplaySettingsStore = defineStore('displaySettings', () => {
   function activateUser(userId: number | string): void {
     const normalized = String(userId).trim()
     if (activeUserId.value === normalized) return
+    ++requestGeneration
+    loading.value = false
     activeUserId.value = normalized
     localPreferences.value = readLocalPreferences(normalized)
     serverRuntime.value = DEFAULT_RUNTIME
@@ -42,6 +45,7 @@ export const useDisplaySettingsStore = defineStore('displaySettings', () => {
   }
 
   function clearSession(): void {
+    ++requestGeneration
     activeUserId.value = null
     localPreferences.value = {}
     serverRuntime.value = DEFAULT_RUNTIME
@@ -52,17 +56,21 @@ export const useDisplaySettingsStore = defineStore('displaySettings', () => {
 
   async function load(userId: number | string, organizationId?: number | string): Promise<void> {
     activateUser(userId)
+    const generation = ++requestGeneration
     loading.value = true
     error.value = null
     try {
-      serverRuntime.value = await fetchDisplaySettingsRuntime(organizationId)
+      const runtime = await fetchDisplaySettingsRuntime(organizationId)
+      if (generation !== requestGeneration) return
+      serverRuntime.value = runtime
       loaded.value = true
     } catch (requestError: unknown) {
+      if (generation !== requestGeneration) return
       error.value = requestError
       loaded.value = false
       throw requestError
     } finally {
-      loading.value = false
+      if (generation === requestGeneration) loading.value = false
     }
   }
 

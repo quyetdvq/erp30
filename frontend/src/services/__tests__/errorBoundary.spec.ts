@@ -32,6 +32,22 @@ describe('API error boundary', () => {
     expect(errorNotices.value).toHaveLength(1)
   })
 
+  it('reads canonical meta.request_id and deduplicates a reported Axios error object', () => {
+    const err = new axios.AxiosError('Forbidden')
+    err.response = {
+      status: 403,
+      statusText: 'Forbidden',
+      headers: {},
+      config: err.config as never,
+      data: { error: { code: 'DENIED' }, meta: { request_id: 'req-meta' } },
+    }
+    const first = reportApiError(err)
+    const second = reportApiError(err)
+    expect(first).toBe(second)
+    expect(first?.requestId).toBe('req-meta')
+    expect(errorNotices.value).toHaveLength(1)
+  })
+
   it('preserves the Policy scope conflict code for FE-030 draft handling', () => {
     const error = new axios.AxiosError('Policy scope conflict')
     error.response = {

@@ -30,6 +30,8 @@ import {
   saveProduct,
 } from '@/services/productCatalog'
 import { reportApiError } from '@/services/errorBoundary'
+import { useUnsavedChanges } from '@/composables/useUnsavedChanges'
+import { loadLookupPages } from '@/services/listLookups'
 
 type ConversionForm = {
   id: string
@@ -61,6 +63,7 @@ const comboItems = ref<ComboForm[]>([])
 const busy = ref(false)
 const conversionBusy = ref(false)
 const comboBusy = ref(false)
+const lookupsReady = ref(false)
 const error = ref<unknown | null>(null)
 const conversionError = ref<unknown | null>(null)
 const comboError = ref<unknown | null>(null)
@@ -88,6 +91,7 @@ const form = ref({
   description: '',
   status: 'ACTIVE' as Product['status'],
 })
+const unsaved = useUnsavedChanges(form)
 function emptyConversion(): ConversionForm {
   return {
     id: '',
@@ -228,15 +232,10 @@ async function loadConversions(): Promise<void> {
 async function loadChildren(): Promise<void> {
   if (!id.value || !['SIMPLE', 'PARENT'].includes(role.value)) return
   try {
-    children.value = (
-      await listProductPage({
-        q: '',
-        page: 1,
-        page_size: 200,
-        sort: 'product_name',
-        filter: { parent_product_id: id.value },
-      })
-    ).data
+    children.value = await loadLookupPages(listProductPage, {
+      sort: 'product_name',
+      filter: { parent_product_id: id.value },
+    })
   } catch (caught: unknown) {
     error.value = caught
     reportApiError(caught)
@@ -253,18 +252,21 @@ async function loadComboItems(): Promise<void> {
 }
 async function load(): Promise<void> {
   error.value = null
+  lookupsReady.value = false
   try {
     const [groupResult, uomResult, productResult] = await Promise.all([
-      listProductGroupPage({ q: '', page: 1, page_size: 200, sort: 'name', filter: {} }),
-      listProductUomPage({ q: '', page: 1, page_size: 200, sort: 'code', filter: {} }),
-      listProductPage({ q: '', page: 1, page_size: 200, sort: 'product_name', filter: {} }),
+      loadLookupPages(listProductGroupPage, { sort: 'name' }),
+      loadLookupPages(listProductUomPage, { sort: 'code' }),
+      loadLookupPages(listProductPage, { sort: 'product_name' }),
     ])
-    groups.value = groupResult.data
-    uoms.value = uomResult.data
-    products.value = productResult.data
+    groups.value = groupResult
+    uoms.value = uomResult
+    products.value = productResult
+    lookupsReady.value = true
     if (id.value) {
       product.value = await getProductById(id.value)
       resetFromRow(product.value)
+      unsaved.markClean()
       await Promise.all([loadConversions(), loadChildren(), loadComboItems()])
     }
   } catch (caught: unknown) {
@@ -326,6 +328,7 @@ function decimalIsPositive(value: string): boolean {
   return /^\d+(?:\.\d+)?$/.test(value) && !/^0+(?:\.0+)?$/.test(value)
 }
 async function save(): Promise<void> {
+  if (!lookupsReady.value) return
   validationError.value = null
   if (isChild.value && !form.value.parent_product_id)
     validationError.value = t('product.parentRequired')
@@ -349,6 +352,8 @@ async function save(): Promise<void> {
       comboItems.value.length > 0
     )
       await replaceProductComboItems(String(saved.id), comboPayload())
+    // Save completed: do not ask for discard confirmation on route replacement.
+    unsaved.markClean()
     if (!id.value && typeof route.query.return_parent_id === 'string') {
       await router.replace(`/products/${route.query.return_parent_id}`)
       product.value = await getProductById(route.query.return_parent_id)
@@ -357,6 +362,7 @@ async function save(): Promise<void> {
       product.value = saved
     }
     resetFromRow(product.value)
+    unsaved.markClean()
     await Promise.all([loadConversions(), loadChildren(), loadComboItems()])
   } catch (caught: unknown) {
     error.value = caught
@@ -644,7 +650,7 @@ watch(
       <footer class="editor-actions">
         <button type="button" class="secondary-button" @click="router.push('/products')">
           {{ t('common.cancel') }}</button
-        ><button type="submit" class="primary-button" :disabled="busy || !canEdit">
+        ><button type="submit" class="primary-button" :disabled="busy || !canEdit || !lookupsReady">
           {{ busy ? t('common.saving') : t('common.save') }}</button
         ><button
           v-if="editing && product && hasBasePermission('product', 'setstate')"

@@ -442,6 +442,14 @@ function handleUserAction(key: string): void {
 }
 
 async function signOut(): Promise<void> {
+  const key = String(route.name || route.path)
+  if (workspace.isDirty(key)) {
+    const confirmed =
+      typeof window !== 'undefined' && typeof window.confirm === 'function'
+        ? window.confirm(t('shell.dirtyCloseConfirm'))
+        : false
+    if (!confirmed) return
+  }
   await auth.logout()
   clearApiErrors()
   void router.push('/login')

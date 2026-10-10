@@ -21,6 +21,8 @@ import {
   saveProductGroup,
 } from '@/services/productCatalog'
 import { reportApiError } from '@/services/errorBoundary'
+import { loadLookupPages } from '@/services/listLookups'
+import { useUnsavedChanges } from '@/composables/useUnsavedChanges'
 
 type TreeRow = VisibleProductGroup<ProductGroup>
 type ProductGroupForm = Pick<ProductGroup, 'code' | 'name' | 'status'> & {
@@ -36,6 +38,8 @@ const expanded = ref(new Set<string>())
 const modalOpen = ref(false)
 const detailOpen = ref(false)
 const detailRow = ref<ProductGroup | null>(null)
+const allGroups = ref<ProductGroup[]>([])
+const parentLookupReady = ref(false)
 const editingId = ref<string>()
 const busy = ref(false)
 const error = ref<unknown | null>(null)
@@ -51,6 +55,12 @@ function createEmptyForm(parent?: ProductGroup): ProductGroupForm {
 }
 
 const form = ref<ProductGroupForm>(createEmptyForm())
+const unsaved = useUnsavedChanges(form, modalOpen)
+function closeForm(): void {
+  if (!unsaved.confirmDiscard()) return
+  modalOpen.value = false
+  unsaved.markClean()
+}
 
 // Sort the current page in memory only. The API query is never changed by column clicks.
 const localSort = ref('')
@@ -127,10 +137,21 @@ const treeRows = computed<TreeRow[]>(() =>
   ),
 )
 
+const lookupByParent = computed(() => {
+  const result = new Map<string, ProductGroup[]>()
+  for (const row of allGroups.value) {
+    const key = row.parent_id ? String(row.parent_id) : 'ROOT'
+    const siblings = result.get(key) ?? []
+    siblings.push(row)
+    result.set(key, siblings)
+  }
+  return result
+})
+
 const parentOptions = computed(() => {
   const blocked = new Set<string>()
   if (editingId.value) {
-    const groups = byParent.value
+    const groups = lookupByParent.value
     function collect(id: string): void {
       if (blocked.has(id)) return
       blocked.add(id)
@@ -138,7 +159,7 @@ const parentOptions = computed(() => {
     }
     collect(editingId.value)
   }
-  return state.rows.value.filter((row) => !blocked.has(String(row.id)))
+  return allGroups.value.filter((row) => !blocked.has(String(row.id)))
 })
 
 const parentSelectOptions = computed(() =>
@@ -149,7 +170,11 @@ const parentSelectOptions = computed(() =>
 )
 
 function parentName(row: ProductGroup): string {
-  return byId.value.get(String(row.parent_id))?.name ?? t('product.root')
+  return (
+    allGroups.value.find((parent) => String(parent.id) === String(row.parent_id))?.name ??
+    byId.value.get(String(row.parent_id))?.name ??
+    t('product.root')
+  )
 }
 
 const detailFields = computed(() => {
@@ -169,6 +194,17 @@ function toggleExpanded(id: string): void {
   if (next.has(id)) next.delete(id)
   else next.add(id)
   expanded.value = next
+}
+
+async function loadParentLookup(): Promise<void> {
+  parentLookupReady.value = false
+  try {
+    allGroups.value = await loadLookupPages(listProductGroupPage, { sort: 'name' })
+    parentLookupReady.value = true
+  } catch (caught: unknown) {
+    error.value = caught
+    reportApiError(caught)
+  }
 }
 
 async function load(): Promise<void> {
@@ -218,7 +254,9 @@ function resetQuery(): void {
 function openCreate(parent?: ProductGroup): void {
   editingId.value = undefined
   form.value = createEmptyForm(parent)
+  unsaved.markClean()
   modalOpen.value = true
+  if (!parentLookupReady.value) void loadParentLookup()
 }
 
 function openEdit(row: ProductGroup): void {
@@ -230,7 +268,9 @@ function openEdit(row: ProductGroup): void {
     parent_id: row.parent_id ? String(row.parent_id) : '',
     status: row.status,
   }
+  unsaved.markClean()
   modalOpen.value = true
+  if (!parentLookupReady.value) void loadParentLookup()
 }
 
 function openView(row: ProductGroup): void {
@@ -243,6 +283,7 @@ function updateParentId(value: string | string[]): void {
 }
 
 async function save(): Promise<void> {
+  if (!parentLookupReady.value) return // Never save against a partial parent catalog.
   busy.value = true
   error.value = null
   try {
@@ -254,8 +295,9 @@ async function save(): Promise<void> {
       ...(form.value.description ? { description: form.value.description } : {}),
     }
     await saveProductGroup(payload, editingId.value)
+    unsaved.markClean()
     modalOpen.value = false
-    await load()
+    await Promise.all([load(), loadParentLookup()])
   } catch (caught: unknown) {
     error.value = caught
     reportApiError(caught)
@@ -269,7 +311,7 @@ async function toggle(row: ProductGroup): Promise<void> {
   error.value = null
   try {
     await changeProductGroupState(String(row.id), row.status === 'ACTIVE' ? 'INACTIVE' : 'ACTIVE')
-    await load()
+    await Promise.all([load(), loadParentLookup()])
   } catch (caught: unknown) {
     error.value = caught
     reportApiError(caught)
@@ -406,7 +448,7 @@ onMounted(() => void load())
           type="button"
           class="icon-button"
           :aria-label="t('common.close')"
-          @click="modalOpen = false"
+          @click="closeForm"
         >
           x
         </button>
@@ -423,6 +465,7 @@ onMounted(() => void load())
         <label>
           <span>{{ t('product.parentGroup') }}</span>
           <SearchableSelect
+            :disabled="!parentLookupReady"
             :model-value="form.parent_id"
             :options="parentSelectOptions"
             :placeholder="t('product.root')"
@@ -443,13 +486,15 @@ onMounted(() => void load())
         </label>
         <p v-if="error" class="inline-error" role="alert">{{ t('product.requestError') }}</p>
         <footer class="modal-card__footer">
-          <button type="button" class="secondary-button" @click="modalOpen = false">
+          <button type="button" class="secondary-button" @click="closeForm">
             {{ t('common.cancel') }}
           </button>
           <button
             type="submit"
             class="primary-button"
-            :disabled="busy || !(editingId ? permissions.edit : permissions.create)"
+            :disabled="
+              busy || !parentLookupReady || !(editingId ? permissions.edit : permissions.create)
+            "
           >
             {{ busy ? t('common.saving') : t('common.save') }}
           </button>

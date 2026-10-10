@@ -19,6 +19,7 @@ import {
   saveProductUom,
 } from '@/services/productCatalog'
 import { reportApiError } from '@/services/errorBoundary'
+import { useUnsavedChanges } from '@/composables/useUnsavedChanges'
 
 const { t } = useI18n()
 const { hasBasePermission } = useBasePermission()
@@ -39,6 +40,13 @@ function createEmptyForm(): ProductUomForm {
 const form = ref<ProductUomForm>(createEmptyForm())
 
 // Local, single-column sort: only reorder the rows already loaded for this page.
+const unsaved = useUnsavedChanges(form, modalOpen)
+function closeForm(): void {
+  if (!unsaved.confirmDiscard()) return
+  modalOpen.value = false
+  unsaved.markClean()
+}
+
 const localSort = ref('')
 const collator = new Intl.Collator('vi', { numeric: true, sensitivity: 'base' })
 const visibleRows = computed(() => {
@@ -145,6 +153,7 @@ function resetQuery(): void {
 function openCreate(): void {
   editingId.value = undefined
   form.value = createEmptyForm()
+  unsaved.markClean()
   modalOpen.value = true
 }
 
@@ -156,6 +165,7 @@ function openEdit(row: ProductUom): void {
     description: row.description ?? '',
     status: row.status,
   }
+  unsaved.markClean()
   modalOpen.value = true
 }
 
@@ -175,6 +185,7 @@ async function save(): Promise<void> {
       ...(form.value.description ? { description: form.value.description } : {}),
     }
     await saveProductUom(payload, editingId.value)
+    unsaved.markClean()
     modalOpen.value = false
     await load()
   } catch (caught: unknown) {
@@ -286,7 +297,7 @@ onMounted(() => void load())
           type="button"
           class="icon-button"
           :aria-label="t('common.close')"
-          @click="modalOpen = false"
+          @click="closeForm"
         >
           x
         </button>
@@ -313,7 +324,7 @@ onMounted(() => void load())
         </label>
         <p v-if="error" class="inline-error" role="alert">{{ t('product.requestError') }}</p>
         <footer class="modal-card__footer">
-          <button type="button" class="secondary-button" @click="modalOpen = false">
+          <button type="button" class="secondary-button" @click="closeForm">
             {{ t('common.cancel') }}
           </button>
           <button
