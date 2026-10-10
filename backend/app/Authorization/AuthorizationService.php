@@ -263,7 +263,9 @@ final class AuthorizationService implements LifecycleAuthorizationPort, Numberin
      */
     private function loadPolicies(int $resourceId, array $scopeIds, int $resourceActionId, ?int $stateId): array
     {
-        $rows = [];
+        // Preserve policy selection (resource, ancestor scope, state) and its
+        // deterministic order before loading actions in batches.
+        $eligiblePolicies = [];
         foreach ($this->policies->findAll(['resource_id' => $resourceId]) as $policy) {
             $organizationId = PositiveId::normalize($policy['organization_id'] ?? null, 'organization_id', self::ERROR_POLICY_INVALID);
             if (! in_array($organizationId, $scopeIds, true)) {
@@ -273,10 +275,22 @@ final class AuthorizationService implements LifecycleAuthorizationPort, Numberin
             if ($policyState !== null && ($stateId === null || PositiveId::normalize($policyState, 'state_id', self::ERROR_POLICY_INVALID) !== $stateId)) {
                 continue;
             }
-            foreach ($this->policies->findPolicyActions((int) $policy['id']) as $action) {
-                if ((int) ($action['resource_action_id'] ?? 0) !== $resourceActionId) {
-                    continue;
-                }
+            $eligiblePolicies[] = $policy;
+        }
+
+        if ($eligiblePolicies === []) {
+            return [];
+        }
+
+        $policyIds = array_map(static fn (array $policy): int => (int) $policy['id'], $eligiblePolicies);
+        $actionsByPolicy = [];
+        foreach ($this->policies->findPolicyActionsForPolicies($policyIds, $resourceActionId) as $action) {
+            $actionsByPolicy[(int) $action['policy_id']][] = $action;
+        }
+
+        $rows = [];
+        foreach ($eligiblePolicies as $policy) {
+            foreach ($actionsByPolicy[(int) $policy['id']] ?? [] as $action) {
                 $effect = strtoupper(trim((string) ($action['effect'] ?? '')));
                 if (! in_array($effect, ['ALLOW', 'DENY', 'ABSOLUTE_DENY'], true)) {
                     throw new DomainException(self::ERROR_POLICY_INVALID, ['policy_id' => $policy['id']]);

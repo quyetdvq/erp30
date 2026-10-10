@@ -9,6 +9,7 @@ use App\Exceptions\DomainException;
 use App\Infrastructure\Mutation\OperationContext;
 use App\Infrastructure\Time\EvaluationTime;
 use App\Repositories\PolicyRepository;
+use CodeIgniter\Events\Events;
 use CodeIgniter\Test\CIUnitTestCase;
 use CodeIgniter\Test\DatabaseTestTrait;
 
@@ -159,6 +160,105 @@ final class P1Auth002AuthorizationServiceTest extends CIUnitTestCase
             $this->fail('Expected authoritative context mismatch.');
         } catch (DomainException $exception) {
             $this->assertSame('EVALUATION_ORGANIZATION_HINT_MISMATCH', $exception->getErrorCode());
+        }
+    }
+
+    public function testBatchedPolicyActionsPreserveScopeStateLaneAndAuditWithOneQuery(): void
+    {
+        [$userId, $groupId, $companyId, $rootId, $siblingId] = $this->fixture(true, true);
+        $this->assertNotNull($siblingId);
+        $repository = new PolicyRepository($this->db);
+        $view = $this->resourceActionId('price_list', 'view');
+        $edit = $this->resourceActionId('price_list', 'edit');
+
+        // Noise policies are in scope but do not match either the user or
+        // their assignment's department. They must still be fetched in one batch.
+        for ($i = 0; $i < 12; $i++) {
+            $repository->insertWithActions(
+                $this->policy($companyId, 'DEPARTMENT', $this->insertDepartment()),
+                [['resource_action_id' => $view, 'effect' => 'DENY']],
+            );
+        }
+        $denyId = $repository->insertWithActions(
+            $this->policy($rootId, 'USER', $userId),
+            [['resource_action_id' => $view, 'effect' => 'DENY']],
+        );
+        $allowId = $repository->insertWithActions(
+            $this->policy($companyId, 'GROUP', $groupId),
+            [
+                ['resource_action_id' => $view, 'effect' => 'ALLOW'],
+                ['resource_action_id' => $edit, 'effect' => 'ALLOW'],
+            ],
+        );
+        // Keep the deliberately invalid effect short enough for older test
+        // schemas; its action is unrelated to the evaluated `view` action.
+        $unrelatedActionUpdated = $this->db->table('policy_actions')
+            ->where('policy_id', $allowId)
+            ->where('resource_action_id', $edit)
+            ->update(['effect' => 'NOT_AN_EFFECT']);
+        $this->assertTrue($unrelatedActionUpdated, 'Unrelated action fixture update failed: ' . json_encode($this->db->error()));
+        $repository->insertWithActions(
+            $this->policy($siblingId, 'USER', $userId),
+            [['resource_action_id' => $view, 'effect' => 'ABSOLUTE_DENY']],
+        );
+        $stateCode = 'AUTH002-N1-' . uniqid();
+        $stateInserted = $this->db->table('workflow_states')->insert([
+            'code' => $stateCode, 'name' => 'Unrelated state',
+            'status' => 'ACTIVE', 'created_at' => '2026-10-05 00:00:00',
+        ]);
+        $this->assertTrue($stateInserted, 'Workflow state fixture insert failed: ' . json_encode($this->db->error()));
+        // Resolve the persisted row by its unique code rather than assuming
+        // that a prior failed write left a usable connection insert ID.
+        $stateRow = $this->db->table('workflow_states')->select('id')->where('code', $stateCode)->get()->getRowArray();
+        $this->assertNotNull($stateRow, 'New workflow state must be queryable before creating its policy.');
+        $stateId = (int) $stateRow['id'];
+        $this->assertGreaterThan(0, $stateId);
+        $statePolicy = $this->policy($companyId, 'USER', $userId);
+        $statePolicy['state_id'] = $stateId;
+        $repository->insertWithActions($statePolicy, [['resource_action_id' => $view, 'effect' => 'ABSOLUTE_DENY']]);
+
+        $queries = [];
+        $listener = static function ($query) use (&$queries): void {
+            if (str_contains(strtolower((string) $query), 'policy_actions')) {
+                $queries[] = (string) $query;
+            }
+        };
+        Events::on('DBQuery', $listener);
+        try {
+            $decision = $this->service()->authorize($this->operation($userId), 'price_list', 'view', $this->request($companyId));
+        } finally {
+            Events::removeListener('DBQuery', $listener);
+        }
+
+        $this->assertCount(1, $queries, 'PBAC must batch actions for all eligible policies.');
+        $this->assertSame('ALLOW', $decision->decision);
+        $this->assertSame(AuthorizationService::REASON_POLICY_ALLOWED, $decision->reasonCode);
+        $expectedMatched = [$denyId, $allowId];
+        sort($expectedMatched);
+        $this->assertSame($expectedMatched, $decision->matchedPolicyIds);
+        $this->assertSame([$allowId], $decision->decisivePolicyIds);
+        $this->assertCount(1, $decision->participatingAssignmentIds);
+    }
+
+    public function testBatchedPolicyActionsRejectInvalidEffectForEvaluatedAction(): void
+    {
+        [$userId, , $companyId] = $this->fixture(true);
+        $repository = new PolicyRepository($this->db);
+        $view = $this->resourceActionId('price_list', 'view');
+        $policyId = $repository->insertWithActions(
+            $this->policy($companyId, 'USER', $userId),
+            [['resource_action_id' => $view, 'effect' => 'ALLOW']],
+        );
+        $this->db->table('policy_actions')
+            ->where('policy_id', $policyId)
+            ->where('resource_action_id', $view)
+            ->update(['effect' => 'NOT_AN_EFFECT']);
+
+        try {
+            $this->service()->authorize($this->operation($userId), 'price_list', 'view', $this->request($companyId));
+            $this->fail('An invalid effect for the evaluated resource action must fail closed.');
+        } catch (DomainException $exception) {
+            $this->assertSame(AuthorizationService::ERROR_POLICY_INVALID, $exception->getErrorCode());
         }
     }
 

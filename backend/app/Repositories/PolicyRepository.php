@@ -171,6 +171,44 @@ final class PolicyRepository
         return array_values($result->getResultArray());
     }
 
+    /**
+     * Fetch only the requested resource action for a set of Policy IDs.
+     * Bounded IN lists avoid a query per Policy and keep SQL statements small.
+     * The legacy findPolicyActions() API remains unchanged for administration.
+     *
+     * @param list<int> $policyIds
+     * @return list<array<string, mixed>>
+     */
+    public function findPolicyActionsForPolicies(array $policyIds, int $resourceActionId): array
+    {
+        $ids = array_values(array_unique($policyIds));
+        if ($ids === []) {
+            return [];
+        }
+
+        $actions = [];
+        foreach (array_chunk($ids, 500) as $batch) {
+            try {
+                $result = $this->db->table('policy_actions')
+                    ->whereIn('policy_id', $batch)
+                    ->where('resource_action_id', $resourceActionId)
+                    ->orderBy('policy_id', 'ASC')
+                    ->orderBy('id', 'ASC')
+                    ->get();
+            } catch (\Throwable $exception) {
+                throw new PersistenceException(self::ERROR_PERSISTENCE_FAILED, 'findPolicyActionsForPolicies', $exception);
+            }
+            if ($result === false) {
+                throw new PersistenceException(self::ERROR_PERSISTENCE_FAILED, 'findPolicyActionsForPolicies');
+            }
+            foreach ($result->getResultArray() as $action) {
+                $actions[] = $action;
+            }
+        }
+
+        return $actions;
+    }
+
     /** @return list<array<string, mixed>> */
     public function findActions(int $policyId): array
     {

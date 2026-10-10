@@ -10,6 +10,7 @@ use App\Infrastructure\Mutation\OperationContext;
 use App\Infrastructure\Time\EvaluationTime;
 use App\Repositories\PolicyRepository;
 use CodeIgniter\Database\ConnectionInterface;
+use CodeIgniter\Events\Events;
 use CodeIgniter\Test\CIUnitTestCase;
 use CodeIgniter\Test\DatabaseTestTrait;
 
@@ -258,6 +259,50 @@ final class P1Auth001PolicyRepositoryTest extends CIUnitTestCase
             ->where('participant_type', 'GROUP')
             ->where('participant_ref_id', $refs['GROUP'])
             ->countAllResults());
+    }
+
+    public function testBatchPolicyActionReadFiltersResourceActionAndBoundsQueryCount(): void
+    {
+        $this->seedCatalog();
+        $refs = $this->insertReferences();
+        $repository = new PolicyRepository($this->db);
+        $view = $this->resourceActionId('product', 'view');
+        $edit = $this->resourceActionId('product', 'edit');
+        $policyId = $repository->insertWithActions([
+            'organization_id' => $refs['ORGANIZATION'],
+            'resource_id' => $this->resourceId('product'),
+            'participant_type' => 'USER',
+            'participant_ref_id' => $refs['USER'],
+        ], [
+            ['resource_action_id' => $view, 'effect' => 'ALLOW'],
+            ['resource_action_id' => $edit, 'effect' => 'DENY'],
+        ]);
+
+        $queries = [];
+        $listener = static function ($query) use (&$queries): void {
+            if (str_contains(strtolower((string) $query), 'policy_actions')) {
+                $queries[] = (string) $query;
+            }
+        };
+        Events::on('DBQuery', $listener);
+        try {
+            $this->assertSame([], $repository->findPolicyActionsForPolicies([], $view));
+            $this->assertCount(0, $queries, 'An empty policy selection must not query policy_actions.');
+
+            // 1001 nonexistent IDs exercise three bounded batches without
+            // creating a thousand database fixtures.
+            $ids = array_merge([$policyId, $policyId], range(900000000, 900001000));
+            $rows = $repository->findPolicyActionsForPolicies($ids, $view);
+        } finally {
+            Events::removeListener('DBQuery', $listener);
+        }
+
+        $this->assertCount(3, $queries, '1002 unique IDs must use 3 queries, not one query per policy.');
+        $this->assertCount(1, $rows);
+        $this->assertSame($policyId, (int) $rows[0]['policy_id']);
+        $this->assertSame($view, (int) $rows[0]['resource_action_id']);
+        $this->assertSame('ALLOW', $rows[0]['effect']);
+        $this->assertCount(2, $repository->findPolicyActions($policyId), 'Existing administration reads remain unchanged.');
     }
 
     /** @return array<string, int> */
