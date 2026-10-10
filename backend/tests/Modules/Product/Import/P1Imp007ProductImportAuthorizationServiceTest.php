@@ -212,6 +212,18 @@ final class P1Imp007ProductImportAuthorizationServiceTest extends CIUnitTestCase
             $this->db->table('group_permissions')->insert(['group_id' => $authGroupId, 'resource_action_id' => (int) $actionRow['id'], 'created_at' => '2026-10-06 04:05:06']);
         }
 
+        $this->db->table('employees')->insert([
+            'user_id' => $userId, 'employee_code' => 'IMP007-E-' . uniqid(),
+            'employee_name' => 'Import actor', 'status' => 'ACTIVE', 'created_at' => '2026-10-06 04:05:06',
+        ]);
+        $employeeId = (int) $this->db->insertID();
+        $this->db->table('employee_assignments')->insert([
+            'employee_id' => $employeeId, 'organization_id' => (int) $groupRoot['id'],
+            'department_id' => null, 'position_id' => null, 'is_primary' => 0,
+            'effective_from' => '2026-01-01', 'effective_to' => null,
+            'status' => 'ACTIVE', 'created_at' => '2026-10-06 04:05:06',
+        ]);
+
         return [new OperationContext($userId, new EvaluationTime(new DateTimeImmutable('2026-10-06T04:05:06+00:00')), 'imp007-' . uniqid(), false), $uomCode, $groupCode, (int) $groupRoot['id']];
     }
 

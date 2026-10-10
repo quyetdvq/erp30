@@ -26,6 +26,9 @@ final class AuthorizationService implements LifecycleAuthorizationPort, Numberin
     public const DECISION_ALLOW = 'ALLOW';
     public const DECISION_DENY = 'DENY';
     public const REASON_NO_BASE_PERMISSION = 'AUTH_NO_BASE_PERMISSION';
+    public const REASON_EMPLOYEE_INELIGIBLE = 'AUTH_EMPLOYEE_INELIGIBLE';
+    public const REASON_NO_EFFECTIVE_ASSIGNMENT = 'AUTH_NO_EFFECTIVE_ASSIGNMENT';
+    public const REASON_OUT_OF_ASSIGNMENT_SCOPE = 'AUTH_OUT_OF_ASSIGNMENT_SCOPE';
     public const REASON_POLICY_DENIED = 'AUTH_POLICY_DENIED';
     public const REASON_ABSOLUTE_DENY = 'AUTH_ABSOLUTE_DENY';
     public const REASON_NO_MATCH = 'AUTH_NO_MATCH_ALLOW';
@@ -129,6 +132,65 @@ final class AuthorizationService implements LifecycleAuthorizationPort, Numberin
             static fn (array $row): int => PositiveId::normalize($row['id'] ?? null, 'organization_id', self::REASON_CONTEXT_REQUIRED),
             $scopePath,
         );
+        // Mandatory employment eligibility precedes all PBAC policy lanes.
+        // SYSTEM / MASTER are shared across the group: any effective assignment
+        // is sufficient, even when that assignment belongs to a lower level.
+        $employee = $this->employees->findByUserId($userId);
+        if ($employee === null || ($employee['status'] ?? null) !== 'ACTIVE') {
+            return $this->decision(
+                self::DECISION_DENY,
+                self::REASON_EMPLOYEE_INELIGIBLE,
+                $userId,
+                $resource,
+                $resourceAction,
+                $context->organizationId,
+                $normalizedState,
+                $operation,
+                $baseSource,
+            );
+        }
+
+        $employeeId = PositiveId::normalize($employee['id'] ?? null, 'employee_id', self::REASON_CONTEXT_REQUIRED);
+        $effectiveAssignments = $this->assignments->findEffective($employeeId, $operation->evaluationTime);
+        if ($effectiveAssignments === []) {
+            return $this->decision(
+                self::DECISION_DENY,
+                self::REASON_NO_EFFECTIVE_ASSIGNMENT,
+                $userId,
+                $resource,
+                $resourceAction,
+                $context->organizationId,
+                $normalizedState,
+                $operation,
+                $baseSource,
+            );
+        }
+
+        // Downward inheritance only: GROUP -> COMPANY -> BRANCH -> ... .
+        // A child assignment never grants access to its ancestors or siblings.
+        $assignmentRows = array_values(array_filter(
+            $effectiveAssignments,
+            static fn (array $assignment): bool => in_array(
+                PositiveId::normalize($assignment['organization_id'] ?? null, 'organization_id', self::REASON_CONTEXT_REQUIRED),
+                $scopeIds,
+                true,
+            ),
+        ));
+        $domain = ResourceDomain::from(trim((string) ($resourceRow['domain'] ?? '')));
+        if ($domain === ResourceDomain::ORGANIZATION && $assignmentRows === []) {
+            return $this->decision(
+                self::DECISION_DENY,
+                self::REASON_OUT_OF_ASSIGNMENT_SCOPE,
+                $userId,
+                $resource,
+                $resourceAction,
+                $context->organizationId,
+                $normalizedState,
+                $operation,
+                $baseSource,
+            );
+        }
+
         $policyRows = $this->loadPolicies($resourceId, $scopeIds, $permission->resourceActionId, $normalizedState);
 
         $groups = $this->identities->resolveActiveAuthorizationGroups(
@@ -142,7 +204,6 @@ final class AuthorizationService implements LifecycleAuthorizationPort, Numberin
         $common = $this->matching($policyRows, [['ORGANIZATION', $scopeIds]]);
         $actor = $this->evaluateLane(array_merge($common, $this->matching($policyRows, $actorParticipants)));
 
-        $assignmentRows = $this->eligibleAssignments($userId, $context->organizationId, $operation);
         $assignmentResults = [];
         $assignmentIds = [];
         foreach ($assignmentRows as $assignment) {
@@ -281,21 +342,6 @@ final class AuthorizationService implements LifecycleAuthorizationPort, Numberin
         ));
 
         return ['denied' => $denies !== [], 'absolute' => [], 'decisive' => $denies, 'matched' => $matched];
-    }
-
-    /** @return list<array<string, mixed>> */
-    private function eligibleAssignments(int $userId, int $organizationId, OperationContext $operation): array
-    {
-        $employee = $this->employees->findByUserId($userId);
-        if ($employee === null || ($employee['status'] ?? null) !== 'ACTIVE') {
-            return [];
-        }
-
-        return $this->assignments->resolveEligible(
-            PositiveId::normalize($employee['id'] ?? null, 'employee_id', self::REASON_CONTEXT_REQUIRED),
-            $organizationId,
-            $operation->evaluationTime,
-        );
     }
 
     /**

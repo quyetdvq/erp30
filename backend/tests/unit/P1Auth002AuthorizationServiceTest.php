@@ -33,13 +33,14 @@ final class P1Auth002AuthorizationServiceTest extends CIUnitTestCase
         $this->assertSame(AuthorizationService::REASON_NO_BASE_PERMISSION, $decision->reasonCode);
     }
 
-    public function testBasePermissionAndNoMatchAllow(): void
+    public function testBasePermissionAndNoMatchAllowAfterEmploymentEligibility(): void
     {
         [$userId, , $companyId] = $this->fixture(true);
         $decision = $this->service()->authorize($this->operation($userId), 'price_list', 'view', $this->request($companyId));
 
         $this->assertSame('ALLOW', $decision->decision);
         $this->assertSame(AuthorizationService::REASON_NO_MATCH, $decision->reasonCode);
+        $this->assertCount(1, $decision->participatingAssignmentIds);
         $this->assertSame([$this->permissionKey('price_list', 'view')], $decision->basePermissionSource);
         $this->assertSame('auth-002-test', $decision->requestId);
         $this->assertSame('2026-10-05T12:00:00+00:00', $decision->evaluationTime->utc()->format(DATE_ATOM));
@@ -80,7 +81,7 @@ final class P1Auth002AuthorizationServiceTest extends CIUnitTestCase
 
     public function testAssignmentDenyIsOnlyOneLaneAndDoesNotDenyActorNoMatch(): void
     {
-        [$userId, , $companyId] = $this->fixture(true);
+        [$userId, , $companyId] = $this->fixture(true, false, false);
         $departmentId = $this->insertDepartment();
         $employeeId = $this->insertEmployee($userId);
         $this->insertAssignment($employeeId, $companyId, $departmentId, null, false);
@@ -100,7 +101,7 @@ final class P1Auth002AuthorizationServiceTest extends CIUnitTestCase
 
     public function testTwoDeniedAssignmentLanesDenyByIntersection(): void
     {
-        [$userId, , $companyId] = $this->fixture(true);
+        [$userId, , $companyId] = $this->fixture(true, false, false);
         $firstDepartment = $this->insertDepartment();
         $secondDepartment = $this->insertDepartment();
         $employeeId = $this->insertEmployee($userId);
@@ -162,7 +163,7 @@ final class P1Auth002AuthorizationServiceTest extends CIUnitTestCase
     }
 
     /** @return array{int,int,int,int,?int} */
-    private function fixture(bool $basePermission, bool $secondCompany = false): array
+    private function fixture(bool $basePermission, bool $secondCompany = false, bool $withAssignment = true): array
     {
         (new ResourceActionSeeder(new Config\Database()))->run();
         $rootId = $this->insertOrganization('GROUP');
@@ -186,6 +187,11 @@ final class P1Auth002AuthorizationServiceTest extends CIUnitTestCase
                 'resource_action_id' => $this->resourceActionId('price_list', 'view'),
                 'created_at' => '2026-10-05 00:00:00',
             ]);
+        }
+
+        if ($withAssignment) {
+            $employeeId = $this->insertEmployee($userId);
+            $this->insertAssignment($employeeId, $companyId, $this->insertDepartment(), null, false);
         }
 
         return [$userId, $groupId, $companyId, $rootId, $siblingId];

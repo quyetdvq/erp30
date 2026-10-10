@@ -11,6 +11,7 @@ use App\Modules\Product\ProductGroup\ProductGroupRepository;
 use App\Modules\Product\ProductGroup\ProductGroupService;
 use CodeIgniter\Test\CIUnitTestCase;
 use CodeIgniter\Test\DatabaseTestTrait;
+use Tests\Support\Authorization\EligibleActorFixture;
 
 /** @internal */
 final class P1Prd001ProductGroupServiceTest extends CIUnitTestCase
@@ -242,6 +243,7 @@ final class P1Prd001ProductGroupServiceTest extends CIUnitTestCase
         (new ResourceActionSeeder(new Config\Database()))->run();
         $groupId = $this->insertOrganizationGroup();
         $userId = $this->insertUser();
+        EligibleActorFixture::assignAtOrganization($this->db, $userId, $groupId);
         $authGroupId = $this->insertAuthorizationGroup($userId);
         foreach (['create', 'edit', 'setstate'] as $action) {
             $this->db->table('group_permissions')->insert([

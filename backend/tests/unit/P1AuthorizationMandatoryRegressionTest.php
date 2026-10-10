@@ -37,12 +37,17 @@ final class P1AuthorizationMandatoryRegressionTest extends CIUnitTestCase
 
     public function testMandatoryCoreMatrixCoversBasePermissionLanesAndIntersection(): void
     {
-        [$userId, $groupId, $rootId] = $this->actorFixture(['price_list.view', 'product.view']);
+        [$userId, $groupId, $rootId] = $this->actorFixture(['price_list.view', 'product.view'], false);
         $companyNoMatch = $this->organization('COMPANY', $rootId);
         $companyDeny = $this->organization('COMPANY', $rootId);
         $companyAllowDeny = $this->organization('COMPANY', $rootId);
         $companyAssignment = $this->organization('COMPANY', $rootId);
         $companyBothDeny = $this->organization('COMPANY', $rootId);
+        $employeeId = $this->employee($userId);
+        $commonDepartment = $this->department();
+        foreach ([$companyNoMatch, $companyDeny, $companyAllowDeny] as $companyId) {
+            $this->assignment($employeeId, $companyId, $commonDepartment, false);
+        }
         $action = $this->resourceActionId('price_list', 'view');
         $policies = new PolicyRepository($this->db);
 
@@ -61,8 +66,9 @@ final class P1AuthorizationMandatoryRegressionTest extends CIUnitTestCase
         $this->assertSame('ALLOW', $noMatch->decision);
         $this->assertSame(AuthorizationService::REASON_NO_MATCH, $noMatch->reasonCode);
 
+        // A common ORGANIZATION deny affects both the actor and assignment lanes.
         $denyId = $policies->insertWithActions(
-            $this->policy($companyDeny, 'USER', $userId, 'price_list'),
+            $this->policy($companyDeny, 'ORGANIZATION', $companyDeny, 'price_list'),
             [['resource_action_id' => $action, 'effect' => 'DENY']],
         );
         $deny = $this->authorize($userId, 'price_list', 'view', $companyDeny);
@@ -83,7 +89,6 @@ final class P1AuthorizationMandatoryRegressionTest extends CIUnitTestCase
         $this->assertSame([$ordinaryDeny, $ordinaryAllow], $allowDeny->matchedPolicyIds);
 
         $department = $this->department();
-        $employeeId = $this->employee($userId);
         $assignmentId = $this->assignment($employeeId, $companyAssignment, $department, false);
         $policies->insertWithActions(
             $this->policy($companyAssignment, 'DEPARTMENT', $department, 'price_list'),
@@ -127,7 +132,7 @@ final class P1AuthorizationMandatoryRegressionTest extends CIUnitTestCase
 
     public function testMandatoryInheritancePartitionSiblingAndSecondaryAssignmentEligibility(): void
     {
-        [$userId, $groupId, $rootId] = $this->actorFixture(['price_list.edit']);
+        [$userId, $groupId, $rootId] = $this->actorFixture(['price_list.edit'], false);
         $companyA = $this->organization('COMPANY', $rootId);
         $branchA = $this->organization('BRANCH', $companyA);
         $companyB = $this->organization('COMPANY', $rootId);
@@ -193,6 +198,10 @@ final class P1AuthorizationMandatoryRegressionTest extends CIUnitTestCase
         $stateThree = $this->state();
         $repository = new PolicyRepository($this->db);
         $action = $this->resourceActionId('price_list', 'view');
+        $repository->insertWithActions(
+            $this->policy($companyA, 'ORGANIZATION', $companyA, 'price_list'),
+            [['resource_action_id' => $action, 'effect' => 'DENY']],
+        );
         $repository->insertWithActions(
             $this->policy($companyA, 'USER', $userId, 'price_list'),
             [['resource_action_id' => $action, 'effect' => 'DENY']],
@@ -269,6 +278,7 @@ final class P1AuthorizationMandatoryRegressionTest extends CIUnitTestCase
         (new PrivilegedAuthorizationGroupSeeder(new Config\Database()))->run();
         $rootId = $this->organization('GROUP');
         $systemAdmin = $this->insertUser('auth090-system-admin');
+        $this->assignment($this->employee($systemAdmin), $this->organization('COMPANY', $rootId), $this->department(), false);
         $this->db->table('auth_groups_users')->insert(['user_id' => $systemAdmin, 'group' => 'system_admin', 'created_at' => '2026-10-05 00:00:00']);
         $service = new AuthorizationService(db: $this->db);
         $systemGroupId = (int) $this->db->table('groups')->where('code', PrivilegedAuthorizationGroupSeeder::GROUP_CODE)->get()->getRowArray()['id'];
@@ -408,7 +418,7 @@ final class P1AuthorizationMandatoryRegressionTest extends CIUnitTestCase
     }
 
     /** @param list<string> $permissions */
-    private function actorFixture(array $permissions): array
+    private function actorFixture(array $permissions, bool $withGroupAssignment = true): array
     {
         (new ResourceActionSeeder(new Config\Database()))->run();
         $rootId = $this->organization('GROUP');
@@ -420,6 +430,9 @@ final class P1AuthorizationMandatoryRegressionTest extends CIUnitTestCase
         foreach ($permissions as $permission) {
             [$resource, $action] = explode('.', $permission, 2);
             $this->db->table('group_permissions')->insert(['group_id' => $groupId, 'resource_action_id' => $this->resourceActionId($resource, $action), 'created_at' => '2026-10-05 00:00:00']);
+        }
+        if ($withGroupAssignment) {
+            $this->assignment($this->employee($userId), $rootId, $this->department(), false);
         }
 
         return [$userId, $groupId, $rootId];
@@ -437,6 +450,7 @@ final class P1AuthorizationMandatoryRegressionTest extends CIUnitTestCase
         foreach ([['authorization_group', 'create'], ['authorization_group', 'edit'], ['authorization_group', 'assign_member'], ['user', 'assign_permission']] as [$resource, $action]) {
             $this->db->table('group_permissions')->insert(['group_id' => $groupId, 'resource_action_id' => $this->resourceActionId($resource, $action), 'created_at' => '2026-10-05 00:00:00']);
         }
+        $this->assignment($this->employee($actorId), $rootId, $this->department(), false);
 
         return [$actorId, $groupId, $rootId];
     }

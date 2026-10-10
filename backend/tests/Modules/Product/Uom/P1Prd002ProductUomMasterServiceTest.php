@@ -10,6 +10,7 @@ use App\Modules\Product\Uom\ProductUomMasterService;
 use App\Modules\Product\Uom\ProductUomRepository;
 use CodeIgniter\Test\CIUnitTestCase;
 use CodeIgniter\Test\DatabaseTestTrait;
+use Tests\Support\Authorization\EligibleActorFixture;
 
 /** @internal */
 final class P1Prd002ProductUomMasterServiceTest extends CIUnitTestCase
@@ -178,7 +179,9 @@ final class P1Prd002ProductUomMasterServiceTest extends CIUnitTestCase
         $this->assertSame($before, (int) $this->db->table('product_uoms')->countAllResults());
 
         [$deniedService, $deniedOperation, $_root, $_user, $deniedGroup] = $this->fixture(['create'], 'deny');
-        $this->insertPolicy($rootId, $deniedGroup, 'DENY');
+        // A regular DENY must affect all PBAC lanes; a GROUP-only DENY can be
+        // outvoted by an assignment lane with no matching policy.
+        $this->insertPolicy($rootId, $deniedGroup, 'DENY', 'ORGANIZATION');
         $before = (int) $this->db->table('product_uoms')->countAllResults();
         $this->assertDomainCode(fn () => $deniedService->create(['code' => 'PBAC-DENY', 'name' => 'Denied'], $deniedOperation), ProductUomMasterService::ERROR_AUTHORIZATION_DENIED);
         $this->assertSame($before, (int) $this->db->table('product_uoms')->countAllResults());
@@ -230,6 +233,7 @@ final class P1Prd002ProductUomMasterServiceTest extends CIUnitTestCase
         (new ResourceActionSeeder(new Config\Database()))->run();
         $rootId = $this->groupRootId();
         $userId = $this->insertUser('p2-' . $label);
+        EligibleActorFixture::assignAtOrganization($this->db, $userId, $rootId);
         $code = $label === 'SYSTEM_ADMIN'
             ? 'SYSTEM_ADMIN'
             : 'P2-' . strtoupper(substr(preg_replace('/[^A-Za-z0-9]/', '', $label) ?: 'FIX', 0, 10)) . '-' . substr(uniqid(), -6);
@@ -295,11 +299,12 @@ final class P1Prd002ProductUomMasterServiceTest extends CIUnitTestCase
         return (int) $row['id'];
     }
 
-    private function insertPolicy(int $rootId, int $groupId, string $effect): int
+    private function insertPolicy(int $rootId, int $groupId, string $effect, string $participantType = 'GROUP'): int
     {
         $this->db->table('policies')->insert([
             'organization_id' => $rootId, 'resource_id' => $this->resourceId('product_uom'),
-            'state_id' => null, 'participant_type' => 'GROUP', 'participant_ref_id' => $groupId,
+            'state_id' => null, 'participant_type' => $participantType,
+            'participant_ref_id' => $participantType === 'ORGANIZATION' ? $rootId : $groupId,
             'created_at' => '2026-10-06 04:05:06',
         ]);
         $policyId = (int) $this->db->insertID();

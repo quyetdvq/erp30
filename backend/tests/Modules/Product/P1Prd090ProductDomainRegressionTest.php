@@ -19,6 +19,7 @@ use App\Services\OrganizationService;
 use CodeIgniter\Database\BaseBuilder;
 use CodeIgniter\Test\CIUnitTestCase;
 use CodeIgniter\Test\DatabaseTestTrait;
+use Tests\Support\Authorization\EligibleActorFixture;
 
 /** @internal */
 final class P1Prd090ProductDomainRegressionTest extends CIUnitTestCase
@@ -189,6 +190,7 @@ final class P1Prd090ProductDomainRegressionTest extends CIUnitTestCase
             'created_at' => '2026-10-06 04:05:06',
         ]);
         $userId = (int) $this->db->insertID();
+        EligibleActorFixture::assignAtOrganization($this->db, $userId, (int) $group['id']);
         $this->db->table('groups')->insert([
             'code' => 'PRD090-A-' . uniqid(), 'name' => 'Regression Actors', 'status' => 'ACTIVE',
             'created_at' => '2026-10-06 04:05:06',

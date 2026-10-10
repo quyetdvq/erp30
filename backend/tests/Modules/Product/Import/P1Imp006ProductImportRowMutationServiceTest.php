@@ -15,6 +15,7 @@ use App\Modules\Product\Product\ProductMasterService;
 use App\Repositories\AutoNumberingSeriesRepository;
 use CodeIgniter\Test\CIUnitTestCase;
 use CodeIgniter\Test\DatabaseTestTrait;
+use Tests\Support\Authorization\EligibleActorFixture;
 
 /** @internal */
 final class P1Imp006ProductImportRowMutationServiceTest extends CIUnitTestCase
@@ -146,6 +147,7 @@ final class P1Imp006ProductImportRowMutationServiceTest extends CIUnitTestCase
         $this->db->table('product_uoms')->insert(['code' => $uomCode, 'name' => 'Each', 'status' => 'ACTIVE', 'created_at' => '2026-10-06 04:05:06']);
         $this->db->table('users')->insert(['username' => 'imp006-' . uniqid(), 'status' => 'active', 'active' => 1, 'created_at' => '2026-10-06 04:05:06']);
         $userId = (int) $this->db->insertID();
+        EligibleActorFixture::assignAtOrganization($this->db, $userId, (int) $groupRoot['id']);
         $authCode = 'IMP006-A-' . uniqid();
         $this->db->table('groups')->insert(['code' => $authCode, 'name' => 'Import actors', 'status' => 'ACTIVE', 'created_at' => '2026-10-06 04:05:06']);
         $authGroupId = (int) $this->db->insertID();

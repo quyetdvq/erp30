@@ -157,8 +157,8 @@ final class P1Dsp003DisplaySettingsMutationServiceTest extends CIUnitTestCase
             'organization_id' => $companyId,
             'resource_id' => $resourceId,
             'state_id' => null,
-            'participant_type' => 'USER',
-            'participant_ref_id' => $userId,
+            'participant_type' => 'ORGANIZATION',
+            'participant_ref_id' => $companyId,
         ], [['resource_action_id' => $actionId, 'effect' => 'DENY']]);
 
         $authorization = new AuthorizationService(db: $this->db);
@@ -224,6 +224,18 @@ final class P1Dsp003DisplaySettingsMutationServiceTest extends CIUnitTestCase
                 'group_id' => $localGroupId, 'resource_action_id' => $actionId, 'created_at' => '2026-10-07 00:00:00',
             ]);
         }
+
+        $this->db->table('employees')->insert([
+            'user_id' => $userId, 'employee_code' => 'DSP003-E-' . uniqid(),
+            'employee_name' => 'Display operator', 'status' => 'ACTIVE', 'created_at' => '2026-10-07 00:00:00',
+        ]);
+        $employeeId = (int) $this->db->insertID();
+        $this->db->table('employee_assignments')->insert([
+            'employee_id' => $employeeId, 'organization_id' => $groupId,
+            'department_id' => null, 'position_id' => null, 'is_primary' => 0,
+            'effective_from' => '2026-01-01', 'effective_to' => null,
+            'status' => 'ACTIVE', 'created_at' => '2026-10-07 00:00:00',
+        ]);
 
         return [$userId, $groupId, $companyId];
     }

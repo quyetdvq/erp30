@@ -12,6 +12,7 @@ use App\Services\ApiDisplaySettingsService;
 use CodeIgniter\Settings\Settings;
 use CodeIgniter\Test\CIUnitTestCase;
 use CodeIgniter\Test\DatabaseTestTrait;
+use Tests\Support\Authorization\EligibleActorFixture;
 
 /** @internal */
 final class P1Dsp004DisplaySettingsApiTest extends CIUnitTestCase
@@ -159,6 +160,7 @@ final class P1Dsp004DisplaySettingsApiTest extends CIUnitTestCase
             'created_at' => '2026-10-07 00:00:00',
         ]);
         $userId = (int) $this->db->insertID();
+        EligibleActorFixture::assignAtOrganization($this->db, $userId, $groupId);
         $groupCode = 'DSP004-' . uniqid();
         $this->db->table('groups')->insert([
             'code' => $groupCode, 'name' => 'DSP004', 'status' => 'ACTIVE',

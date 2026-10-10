@@ -18,6 +18,7 @@ use App\Services\AuthorizationGroupService;
 use App\Services\PolicyAdministrationService;
 use CodeIgniter\Test\CIUnitTestCase;
 use CodeIgniter\Test\DatabaseTestTrait;
+use Tests\Support\Authorization\EligibleActorFixture;
 
 /** @internal */
 final class P1Auth005SecurityAdministrationTest extends CIUnitTestCase
@@ -223,6 +224,7 @@ final class P1Auth005SecurityAdministrationTest extends CIUnitTestCase
         (new PrivilegedAuthorizationGroupSeeder(new Config\Database()))->run();
         $rootId = $this->insertOrganization('GROUP');
         $actorId = $this->insertUser('auth005-system-admin');
+        EligibleActorFixture::assignAtOrganization($this->db, $actorId, $rootId);
         $systemGroupId = (int) $this->db->table('groups')->where('code', PrivilegedAuthorizationGroupSeeder::GROUP_CODE)->get()->getRowArray()['id'];
         $this->db->table('auth_groups_users')->insert(['user_id' => $actorId, 'group' => 'system_admin', 'created_at' => '2026-10-05 00:00:00']);
         $service = $this->groupService($actorId);
@@ -357,7 +359,11 @@ final class P1Auth005SecurityAdministrationTest extends CIUnitTestCase
     private function denyCapability(int $rootId, int $groupId, string $resource, string $action, string $effect): void
     {
         $repository = new PolicyRepository($this->db);
-        $policy = $this->policy($rootId, 'GROUP', $groupId, $resource);
+        // DENY is lane-local; an ORGANIZATION participant applies to both
+        // actor and assignment lanes, while ABSOLUTE_DENY applies globally.
+        $policy = $effect === 'DENY'
+            ? $this->policy($rootId, 'ORGANIZATION', $rootId, $resource)
+            : $this->policy($rootId, 'GROUP', $groupId, $resource);
         $existing = $this->db->table('policies')->where($policy)->get()->getRowArray();
         $resourceActionId = $this->resourceActionId($resource, $action);
         if ($existing !== null) {
@@ -459,6 +465,7 @@ final class P1Auth005SecurityAdministrationTest extends CIUnitTestCase
             [$actorId, $groupId, $rootId] = $this->adminFixture(false);
         } else {
             $actorId = $this->insertUser('auth005-capability');
+            EligibleActorFixture::assignAtOrganization($this->db, $actorId, $rootId);
             $this->db->table('groups')->insert([
                 'code' => 'AUTH005-CAP-' . uniqid(), 'name' => 'Capability', 'status' => 'ACTIVE',
                 'created_at' => '2026-10-05 00:00:00',
@@ -492,6 +499,7 @@ final class P1Auth005SecurityAdministrationTest extends CIUnitTestCase
             'created_at' => '2026-10-05 00:00:00',
         ]);
         $actorId = (int) $this->db->insertID();
+        EligibleActorFixture::assignAtOrganization($this->db, $actorId, $rootId);
         $this->db->table('groups')->insert([
             'code' => 'AUTH005-ADMIN-' . uniqid(), 'name' => 'Admin', 'status' => 'ACTIVE',
             'created_at' => '2026-10-05 00:00:00',

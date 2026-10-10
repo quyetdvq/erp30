@@ -12,6 +12,7 @@ use App\Modules\Product\Product\ProductMasterService;
 use App\Repositories\AutoNumberingSeriesRepository;
 use CodeIgniter\Test\CIUnitTestCase;
 use CodeIgniter\Test\DatabaseTestTrait;
+use Tests\Support\Authorization\EligibleActorFixture;
 
 /** @internal */
 final class P1Prd003ProductMasterServiceTest extends CIUnitTestCase
@@ -205,6 +206,7 @@ final class P1Prd003ProductMasterServiceTest extends CIUnitTestCase
         $uomId = (int) $this->db->insertID();
         $this->db->table('users')->insert(['username' => 'prd003-' . uniqid(), 'status' => 'active', 'active' => 1, 'created_at' => '2026-10-06 04:05:06']);
         $userId = (int) $this->db->insertID();
+        EligibleActorFixture::assignAtOrganization($this->db, $userId, (int) $groupRoot['id']);
         $this->db->table('groups')->insert(['code' => 'PRD003-A-' . uniqid(), 'name' => 'Product actors', 'status' => 'ACTIVE', 'created_at' => '2026-10-06 04:05:06']);
         $authGroupId = (int) $this->db->insertID();
         $this->db->table('auth_groups_users')->insert(['user_id' => $userId, 'group' => strtolower((string) $this->db->table('groups')->where('id', $authGroupId)->get()->getRowArray()['code']), 'created_at' => '2026-10-06 04:05:06']);

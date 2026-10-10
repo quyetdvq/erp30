@@ -11,6 +11,7 @@ use App\Modules\Product\Product\ProductRoleService;
 use App\Modules\Product\Uom\ProductUomService;
 use CodeIgniter\Test\CIUnitTestCase;
 use CodeIgniter\Test\DatabaseTestTrait;
+use Tests\Support\Authorization\EligibleActorFixture;
 
 /** @internal */
 final class P1Prc001PriceListServiceTest extends CIUnitTestCase
@@ -260,6 +261,7 @@ final class P1Prc001PriceListServiceTest extends CIUnitTestCase
         $this->groupRoot();
         $this->db->table('users')->insert(['username' => 'prc001-' . uniqid(), 'status' => 'active', 'active' => 1, 'created_at' => '2026-10-06 04:05:06']);
         $userId = (int) $this->db->insertID();
+        EligibleActorFixture::assignAtOrganization($this->db, $userId, $this->groupRoot());
         $code = 'PRC001-A-' . substr(uniqid(), -8);
         $this->db->table('groups')->insert(['code' => $code, 'name' => 'Pricing actors', 'status' => 'ACTIVE', 'created_at' => '2026-10-06 04:05:06']);
         $authGroupId = (int) $this->db->insertID();

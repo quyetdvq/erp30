@@ -12,6 +12,7 @@ use App\Modules\Product\Uom\ProductUomMasterService;
 use App\Modules\Product\Uom\ProductUomService;
 use CodeIgniter\Test\CIUnitTestCase;
 use CodeIgniter\Test\DatabaseTestTrait;
+use Tests\Support\Authorization\EligibleActorFixture;
 
 /** @internal */
 final class P1Uom001ProductUomServiceTest extends CIUnitTestCase
@@ -243,6 +244,7 @@ final class P1Uom001ProductUomServiceTest extends CIUnitTestCase
         }
         $this->db->table('users')->insert(['username' => 'uom001-' . uniqid(), 'status' => 'active', 'active' => 1, 'created_at' => '2026-10-06 04:05:06']);
         $userId = (int) $this->db->insertID();
+        EligibleActorFixture::assignAtOrganization($this->db, $userId, (int) $groupRoot['id']);
         $code = 'UOM001-A-' . substr(uniqid(), -8);
         $this->db->table('groups')->insert(['code' => $code, 'name' => 'UOM actors', 'status' => 'ACTIVE', 'created_at' => '2026-10-06 04:05:06']);
         $authGroupId = (int) $this->db->insertID();

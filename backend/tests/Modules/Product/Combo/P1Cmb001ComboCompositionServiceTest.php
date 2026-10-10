@@ -10,6 +10,7 @@ use App\Modules\Product\Combo\ComboCompositionService;
 use App\Modules\Product\Product\ProductMasterService;
 use CodeIgniter\Test\CIUnitTestCase;
 use CodeIgniter\Test\DatabaseTestTrait;
+use Tests\Support\Authorization\EligibleActorFixture;
 
 /** @internal */
 final class P1Cmb001ComboCompositionServiceTest extends CIUnitTestCase
@@ -170,6 +171,7 @@ final class P1Cmb001ComboCompositionServiceTest extends CIUnitTestCase
         $groupRoot = $this->db->table('organizations')->where('type', 'GROUP')->where('parent_id', null)->orderBy('id', 'DESC')->get()->getRowArray();
         if ($groupRoot === null) {
             $this->db->table('organizations')->insert(['type' => 'GROUP', 'code' => 'CMB-GROUP-' . uniqid(), 'name' => 'Combo Group', 'status' => 'ACTIVE', 'created_at' => '2026-10-06 04:05:06']);
+            $groupRoot = ['id' => $this->db->insertID()];
         }
         $this->db->table('product_groups')->insert(['code' => 'CMB-G-' . uniqid(), 'name' => 'Combo Group', 'status' => 'ACTIVE', 'created_at' => '2026-10-06 04:05:06']);
         $groupId = (int) $this->db->insertID();
@@ -177,6 +179,7 @@ final class P1Cmb001ComboCompositionServiceTest extends CIUnitTestCase
         $uomId = (int) $this->db->insertID();
         $this->db->table('users')->insert(['username' => 'cmb-' . uniqid(), 'status' => 'active', 'active' => 1, 'created_at' => '2026-10-06 04:05:06']);
         $userId = (int) $this->db->insertID();
+        EligibleActorFixture::assignAtOrganization($this->db, $userId, (int) $groupRoot['id']);
         $this->db->table('groups')->insert(['code' => 'CMB-A-' . uniqid(), 'name' => 'Combo actors', 'status' => 'ACTIVE', 'created_at' => '2026-10-06 04:05:06']);
         $authGroupId = (int) $this->db->insertID();
         $groupCode = strtolower((string) $this->db->table('groups')->where('id', $authGroupId)->get()->getRowArray()['code']);
