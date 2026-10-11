@@ -15,6 +15,7 @@ import type {
 } from '@/api/generated/types.gen'
 import DecimalInput from '@/components/forms/DecimalInput.vue'
 import SearchableSelect from '@/components/forms/SearchableSelect.vue'
+import RemoteSearchableSelect from '@/components/forms/RemoteSearchableSelect.vue'
 import { useBasePermission } from '@/composables/useBasePermission'
 import { useFormatters } from '@/composables/useFormatters'
 import {
@@ -32,6 +33,11 @@ import {
 import { reportApiError } from '@/services/errorBoundary'
 import { useUnsavedChanges } from '@/composables/useUnsavedChanges'
 import { loadLookupPages } from '@/services/listLookups'
+import {
+  resolveProductOptions,
+  searchProductOptions,
+  type ProductOption,
+} from '@/services/productLookups'
 
 type ConversionForm = {
   id: string
@@ -56,7 +62,7 @@ const editing = computed(() => Boolean(id.value))
 const product = ref<Product | null>(null)
 const groups = ref<ProductGroup[]>([])
 const uoms = ref<ProductUom[]>([])
-const products = ref<Product[]>([])
+const products = ref<ProductOption[]>([])
 const children = ref<Product[]>([])
 const conversions = ref<ConversionForm[]>([])
 const comboItems = ref<ComboForm[]>([])
@@ -107,23 +113,6 @@ function emptyConversion(): ConversionForm {
   }
 }
 const conversionDraft = ref<ConversionForm>(emptyConversion())
-const parentOptions = computed(() =>
-  products.value.filter(
-    (row) =>
-      String(row.id) !== id.value &&
-      (String(row.id) === form.value.parent_product_id ||
-        (row.role !== 'PARENT' && row.selectable && row.status === 'ACTIVE')),
-  ),
-)
-const comboCandidates = computed(() =>
-  products.value.filter(
-    (row) =>
-      String(row.id) !== id.value &&
-      row.role !== 'PARENT' &&
-      row.selectable &&
-      row.status === 'ACTIVE',
-  ),
-)
 const isChild = computed(() => editing.value && Boolean(form.value.parent_product_id))
 const isCombo = computed(() => form.value.product_type === 'COMBO')
 const role = computed(
@@ -138,17 +127,64 @@ const uomOptions = computed(() =>
   uoms.value.map((row) => ({ value: String(row.id), label: `${row.code} - ${row.name}` })),
 )
 const parentSelectOptions = computed(() =>
-  parentOptions.value.map((row) => ({
-    value: String(row.id),
-    label: `${row.full_name} (${row.product_code ?? row.id})`,
-  })),
+  products.value
+    .filter((row) => row.id !== id.value && row.id === form.value.parent_product_id)
+    .map((row) => ({
+      value: String(row.id),
+      label: `${row.full_name} (${row.product_code ?? row.id})`,
+    })),
 )
 const comboSelectOptions = computed(() =>
-  comboCandidates.value.map((row) => ({
-    value: String(row.id),
-    label: `${row.full_name} (${row.role})`,
-  })),
+  products.value
+    .filter((row) => String(row.id) !== id.value)
+    .map((row) => ({
+      value: String(row.id),
+      label: `${row.full_name} (${row.role})`,
+      disabled: row.status !== 'ACTIVE' || !row.selectable,
+    })),
 )
+async function searchParentProducts(q: string, page: number) {
+  const response = await searchProductOptions('parent_product', q, page)
+  return {
+    options: response.data
+      .filter((row) => String(row.id) !== id.value)
+      .map((row) => ({
+        value: String(row.id),
+        label: `${row.full_name} (${row.product_code ?? row.id})`,
+      })),
+    total: response.meta.total,
+  }
+}
+async function searchComboProducts(q: string, page: number) {
+  const response = await searchProductOptions('combo_component', q, page)
+  return {
+    options: response.data
+      .filter((row) => String(row.id) !== id.value)
+      .map((row) => ({
+        value: String(row.id),
+        label: `${row.full_name} (${row.role})`,
+      })),
+    total: response.meta.total,
+  }
+}
+async function hydrateChosenProducts(ids: readonly string[]): Promise<void> {
+  const distinct = [...new Set(ids.filter(Boolean))]
+  if (!distinct.length) return
+  const result = await resolveProductOptions(distinct)
+  const known = new Map(products.value.map((row) => [String(row.id), row]))
+  for (const row of result) known.set(String(row.id), row)
+  products.value = [...known.values()]
+}
+async function parentChanged(value: string): Promise<void> {
+  form.value.parent_product_id = value
+  if (value) await hydrateChosenProducts([value])
+}
+async function componentChanged(index: number, value: string): Promise<void> {
+  const row = comboItems.value[index]
+  if (!row) return
+  row.component_product_id = value
+  if (value) await hydrateChosenProducts([value])
+}
 const baseUomName = computed(
   () =>
     uoms.value.find((row) => String(row.id) === form.value.base_uom_id)?.code ?? t('list.noValue'),
@@ -245,6 +281,7 @@ async function loadComboItems(): Promise<void> {
   if (!id.value || role.value !== 'COMBO') return
   try {
     comboItems.value = (await listProductComboItems(id.value)).map(toCombo)
+    await hydrateChosenProducts(comboItems.value.map((row) => row.component_product_id))
   } catch (caught: unknown) {
     comboError.value = caught
     reportApiError(caught)
@@ -253,21 +290,25 @@ async function loadComboItems(): Promise<void> {
 async function load(): Promise<void> {
   error.value = null
   lookupsReady.value = false
+  products.value = []
   try {
-    const [groupResult, uomResult, productResult] = await Promise.all([
+    const [groupResult, uomResult] = await Promise.all([
       loadLookupPages(listProductGroupPage, { sort: 'name' }),
       loadLookupPages(listProductUomPage, { sort: 'code' }),
-      loadLookupPages(listProductPage, { sort: 'product_name' }),
     ])
     groups.value = groupResult
     uoms.value = uomResult
-    products.value = productResult
     lookupsReady.value = true
     if (id.value) {
       product.value = await getProductById(id.value)
       resetFromRow(product.value)
       unsaved.markClean()
-      await Promise.all([loadConversions(), loadChildren(), loadComboItems()])
+      await Promise.all([
+        loadConversions(),
+        loadChildren(),
+        loadComboItems(),
+        hydrateChosenProducts([form.value.parent_product_id]),
+      ])
     }
   } catch (caught: unknown) {
     error.value = caught
@@ -531,13 +572,12 @@ watch(
             ><input v-model="form.product_name" required /></label
           ><label v-else
             ><span>{{ t('product.parentProduct') }}</span
-            ><SearchableSelect
+            ><RemoteSearchableSelect
               :model-value="form.parent_product_id"
-              :options="parentSelectOptions"
+              :selected-options="parentSelectOptions"
+              :search="searchParentProducts"
               :aria-label="t('product.parentProduct')"
-              @update:model-value="
-                (value) => (form.parent_product_id = typeof value === 'string' ? value : '')
-              " /></label
+              @update:model-value="(value) => void parentChanged(value)" /></label
           ><label v-if="isChild"
             ><span>{{ t('product.childName') }}</span
             ><input v-model="form.product_child_name" required /></label
@@ -899,13 +939,12 @@ watch(
           <tbody>
             <tr v-for="(row, index) in comboItems" :key="row.id || index">
               <td>
-                <SearchableSelect
+                <RemoteSearchableSelect
                   :model-value="row.component_product_id"
-                  :options="comboSelectOptions"
+                  :selected-options="comboSelectOptions"
+                  :search="searchComboProducts"
                   :aria-label="t('product.componentProduct')"
-                  @update:model-value="
-                    (value) => (row.component_product_id = typeof value === 'string' ? value : '')
-                  "
+                  @update:model-value="(value) => void componentChanged(index, value)"
                 />
               </td>
               <td>

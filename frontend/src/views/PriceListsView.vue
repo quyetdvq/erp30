@@ -9,12 +9,10 @@ import type {
   PriceListCreate,
   PriceListItemsRequest,
   PriceListPatch,
-  Product,
-  ProductUom,
-  ProductUomConversion,
 } from '@/api/generated/types.gen'
 import DecimalInput from '@/components/forms/DecimalInput.vue'
 import SearchableSelect from '@/components/forms/SearchableSelect.vue'
+import RemoteSearchableSelect from '@/components/forms/RemoteSearchableSelect.vue'
 import {
   ListPagination,
   ListQueryControls,
@@ -32,6 +30,19 @@ import { listOrganizationPage } from '@/services/foundation'
 import { reportApiError } from '@/services/errorBoundary'
 import { useUnsavedChanges } from '@/composables/useUnsavedChanges'
 import { loadLookupPages } from '@/services/listLookups'
+import { useAuthStore } from '@/stores/auth'
+import {
+  chunks,
+  resolveOrganizationLabels,
+  resolveProductOptions,
+  resolveSalesUomOptions,
+  resolveProductUomLabels,
+  searchProductOptions,
+  type OrganizationLabel,
+  type ProductOption,
+  type SalesUomOption,
+  type UomLabel,
+} from '@/services/productLookups'
 import {
   changePriceListState,
   listPriceListItemRows,
@@ -39,22 +50,19 @@ import {
   replacePriceListItemRows,
   savePriceList,
 } from '@/services/pricingCatalog'
-import {
-  listProductConversions,
-  listProductPage,
-  listProductUomPage,
-} from '@/services/productCatalog'
 
 type ItemDraft = { product_id: string; uom_id: string; price: string }
 
 const { t } = useI18n()
 const { hasBasePermission } = useBasePermission()
+const auth = useAuthStore()
 const formatters = useFormatters()
 const state = useListState<PriceList>((query) => listPriceListPage(query), { sort: 'priority' })
 const organizations = ref<Organization[]>([])
-const products = ref<Product[]>([])
-const uoms = ref<ProductUom[]>([])
-const conversions = ref<Record<string, ProductUomConversion[]>>({})
+const products = ref<ProductOption[]>([])
+const ownerLabels = ref<Record<string, OrganizationLabel>>({})
+const salesUoms = ref<Record<string, SalesUomOption[]>>({})
+const uomLabels = ref<Record<string, UomLabel>>({})
 const modalOpen = ref(false)
 const detailOpen = ref(false)
 const editingId = ref<string>()
@@ -64,6 +72,9 @@ const busy = ref(false)
 const itemBusy = ref(false)
 const organizationLookupReady = ref(false)
 const itemLookupsReady = ref(false)
+let listEpoch = 0
+let detailEpoch = 0
+let organizationLookupPending: Promise<void> | null = null
 const error = ref<unknown | null>(null)
 const itemError = ref<unknown | null>(null)
 const form = ref({
@@ -81,6 +92,7 @@ const itemsUnsaved = useUnsavedChanges(itemRows, detailOpen)
 function closeDetail(): void {
   if (!itemsUnsaved.confirmDiscard()) return
   detailOpen.value = false
+  ++detailEpoch
   itemsUnsaved.markClean()
 }
 function closeForm(): void {
@@ -107,62 +119,130 @@ const organizationOptions = computed(() =>
     .filter((row) => (row.type === 'GROUP' || row.type === 'COMPANY') && row.status === 'ACTIVE')
     .map((row) => ({ value: String(row.id), label: `${row.code} - ${row.name} (${row.type})` })),
 )
-const productOptions = computed(() =>
-  products.value
-    .filter((row) => row.status === 'ACTIVE' && row.selectable && row.role !== 'PARENT')
-    .map((row) => ({ value: String(row.id), label: `${row.full_name} (${row.role})` })),
+const selectedProductOptions = computed(() =>
+  products.value.map((row) => ({
+    value: String(row.id),
+    label: `${row.full_name} (${row.role})`,
+    disabled: row.status !== 'ACTIVE' || !row.selectable,
+  })),
 )
-
 function organizationName(id: string | number | null | undefined): string {
-  const row = organizations.value.find((candidate) => String(candidate.id) === String(id))
+  const row =
+    ownerLabels.value[String(id)] ??
+    organizations.value.find((item) => String(item.id) === String(id))
   return row ? `${row.code} - ${row.name}` : t('list.noValue')
 }
-function productById(id: string): Product | undefined {
-  return products.value.find((row) => String(row.id) === id)
+function optionsForProduct(productId: string) {
+  const options = (salesUoms.value[productId] ?? []).map((row) => ({
+    value: row.id,
+    label: row.code,
+    disabled: false,
+  }))
+  const known = new Set(options.map((row) => row.value))
+  // Persisted INACTIVE or no-longer-eligible UOMs remain recognizable, but
+  // are never offered as new choices. The backend still validates updates.
+  for (const item of itemRows.value) {
+    if (item.product_id !== productId || !item.uom_id || known.has(item.uom_id)) continue
+    const label = uomLabels.value[item.uom_id]
+    options.push({ value: item.uom_id, label: label?.code ?? item.uom_id, disabled: true })
+    known.add(item.uom_id)
+  }
+  return options
 }
-function uomName(id: string | number | null | undefined): string {
-  return uoms.value.find((row) => String(row.id) === String(id))?.code ?? t('list.noValue')
+async function hydrateExistingUomLabels(epoch: number): Promise<void> {
+  const generation = auth.getSessionGeneration()
+  const missing = [
+    ...new Set(
+      itemRows.value
+        .filter(
+          (item) =>
+            item.uom_id &&
+            !(salesUoms.value[item.product_id] ?? []).some((option) => option.id === item.uom_id),
+        )
+        .map((item) => item.uom_id),
+    ),
+  ]
+  if (!missing.length) return
+  const resolved = (await Promise.all(chunks(missing, 100).map(resolveProductUomLabels))).flat()
+  if (epoch !== detailEpoch || generation !== auth.getSessionGeneration()) return
+  uomLabels.value = Object.fromEntries(resolved.map((row) => [row.id, row]))
+}
+async function searchPriceListProducts(q: string, page: number) {
+  const response = await searchProductOptions('price_list_item', q, page)
+  return {
+    options: response.data.map((row) => ({
+      value: String(row.id),
+      label: `${row.full_name} (${row.role})`,
+    })),
+    total: response.meta.total,
+  }
+}
+async function hydrateProducts(ids: readonly string[]): Promise<void> {
+  const distinct = [...new Set(ids.filter(Boolean))]
+  if (!distinct.length) return
+  const epoch = detailEpoch
+  const generation = auth.getSessionGeneration()
+  const [resolved, uomResolved] = await Promise.all([
+    Promise.all(chunks(distinct, 100).map(resolveProductOptions)),
+    Promise.all(chunks(distinct, 50).map(resolveSalesUomOptions)),
+  ])
+  if (epoch !== detailEpoch || generation !== auth.getSessionGeneration()) return
+  const known = new Map(products.value.map((row) => [String(row.id), row]))
+  for (const row of resolved.flat()) known.set(String(row.id), row)
+  products.value = [...known.values()]
+  for (const row of uomResolved.flat()) salesUoms.value[row.product_id] = row.options
+}
+async function ensureOrganizationLookup(): Promise<void> {
+  if (organizationLookupReady.value) return
+  if (organizationLookupPending) return organizationLookupPending
+  const generation = auth.getSessionGeneration()
+  const pending = loadLookupPages(listOrganizationPage, { sort: 'code' })
+    .then((result) => {
+      if (generation !== auth.getSessionGeneration()) return
+      organizations.value = result
+      organizationLookupReady.value = true
+    })
+    .catch((caught: unknown) => {
+      if (generation !== auth.getSessionGeneration()) return
+      error.value = caught
+      reportApiError(caught)
+    })
+    .finally(() => {
+      if (organizationLookupPending === pending) organizationLookupPending = null
+    })
+  organizationLookupPending = pending
+  return pending
+}
+async function hydrateOwnerLabels(rows: readonly PriceList[], epoch: number): Promise<void> {
+  const generation = auth.getSessionGeneration()
+  const ids = [...new Set(rows.map((row) => String(row.organization_id)).filter(Boolean))]
+  const batches = await Promise.all(chunks(ids, 50).map(resolveOrganizationLabels))
+  if (epoch !== listEpoch || generation !== auth.getSessionGeneration()) return
+  ownerLabels.value = Object.fromEntries(batches.flat().map((row) => [row.id, row]))
 }
 function decimalNonNegative(value: string): boolean {
   return /^(?:0|[1-9]\d*)(?:\.\d+)?$/.test(value)
 }
-function optionsForProduct(productId: string) {
-  const product = productById(productId)
-  if (!product || !product.base_uom_id) return []
-  const options = [{ value: String(product.base_uom_id), label: uomName(product.base_uom_id) }]
-  if (product.role !== 'COMBO') {
-    for (const row of conversions.value[productId] ?? []) {
-      if (row.status === 'ACTIVE' && (row.usage_type === 'SALES' || row.usage_type === 'BOTH'))
-        options.push({ value: String(row.uom_id), label: uomName(row.uom_id) })
-    }
-  }
-  return options.filter(
-    (option, index, all) => all.findIndex((item) => item.value === option.value) === index,
-  )
-}
-async function ensureConversions(productId: string): Promise<void> {
-  if (conversions.value[productId] || productById(productId)?.role === 'COMBO') return
-  try {
-    conversions.value[productId] = await listProductConversions(productId)
-  } catch (caught: unknown) {
-    conversions.value[productId] = []
-    reportApiError(caught)
-  }
-}
 async function load(): Promise<void> {
+  const epoch = ++listEpoch
   error.value = null
   try {
     await state.apply()
+    if (epoch === listEpoch) await hydrateOwnerLabels(state.rows.value, epoch)
   } catch (caught: unknown) {
+    if (epoch !== listEpoch) return
     error.value = caught
     reportApiError(caught)
   }
 }
 async function refresh(): Promise<void> {
+  const epoch = ++listEpoch
   error.value = null
   try {
     await state.refresh()
+    if (epoch === listEpoch) await hydrateOwnerLabels(state.rows.value, epoch)
   } catch (caught: unknown) {
+    if (epoch !== listEpoch) return
     error.value = caught
     reportApiError(caught)
   }
@@ -193,6 +273,7 @@ function openCreate(): void {
   error.value = null
   unsaved.markClean()
   modalOpen.value = true
+  void ensureOrganizationLookup()
 }
 function openEdit(row: PriceList): void {
   editingId.value = String(row.id)
@@ -209,6 +290,7 @@ function openEdit(row: PriceList): void {
   error.value = null
   unsaved.markClean()
   modalOpen.value = true
+  void ensureOrganizationLookup()
 }
 async function save(): Promise<void> {
   if (!organizationLookupReady.value) return
@@ -263,26 +345,38 @@ async function toggle(row: PriceList): Promise<void> {
   }
 }
 async function openDetail(row: PriceList): Promise<void> {
+  const epoch = ++detailEpoch
+  const generation = auth.getSessionGeneration()
   itemRows.value = []
   itemsUnsaved.markClean()
   detailRow.value = row
   detailOpen.value = true
   itemBusy.value = true
+  itemLookupsReady.value = false
   itemError.value = null
+  products.value = []
+  salesUoms.value = {}
+  uomLabels.value = {}
   try {
     const items = await listPriceListItemRows(String(row.id))
+    if (epoch !== detailEpoch || generation !== auth.getSessionGeneration()) return
     itemRows.value = items.map((item) => ({
       product_id: String(item.product_id),
       uom_id: String(item.uom_id),
       price: String(item.price),
     }))
     itemsUnsaved.markClean()
-    await Promise.all(itemRows.value.map((item) => ensureConversions(item.product_id)))
+    await hydrateProducts(itemRows.value.map((item) => item.product_id))
+    if (epoch !== detailEpoch || generation !== auth.getSessionGeneration()) return
+    await hydrateExistingUomLabels(epoch)
+    if (epoch !== detailEpoch || generation !== auth.getSessionGeneration()) return
+    itemLookupsReady.value = true
   } catch (caught: unknown) {
+    if (epoch !== detailEpoch) return
     itemError.value = caught
     reportApiError(caught)
   } finally {
-    itemBusy.value = false
+    if (epoch === detailEpoch) itemBusy.value = false
   }
 }
 function addItem(): void {
@@ -291,12 +385,20 @@ function addItem(): void {
 function removeItem(index: number): void {
   itemRows.value = itemRows.value.filter((_, current) => current !== index)
 }
-async function productChanged(index: number, value: string | string[]): Promise<void> {
+async function productChanged(index: number, value: string): Promise<void> {
   const row = itemRows.value[index]
   if (!row) return
-  row.product_id = typeof value === 'string' ? value : ''
+  row.product_id = value
   row.uom_id = ''
-  await ensureConversions(row.product_id)
+  if (!value) return
+  const epoch = detailEpoch
+  try {
+    await hydrateProducts([value])
+  } catch (caught: unknown) {
+    if (epoch !== detailEpoch) return
+    itemError.value = caught
+    reportApiError(caught)
+  }
 }
 async function saveItems(): Promise<void> {
   if (!detailRow.value || !itemLookupsReady.value) return
@@ -328,38 +430,7 @@ async function saveItems(): Promise<void> {
     itemBusy.value = false
   }
 }
-onMounted(async () => {
-  await Promise.all([
-    load(),
-    loadLookupPages(listOrganizationPage, { sort: 'code' })
-      .then((result) => {
-        organizations.value = result
-        organizationLookupReady.value = true
-      })
-      .catch((caught) => {
-        error.value = caught
-        reportApiError(caught)
-      }),
-    loadLookupPages(listProductPage, { sort: 'product_name' })
-      .then((result) => {
-        products.value = result
-        itemLookupsReady.value = uoms.value.length > 0
-      })
-      .catch((caught) => {
-        error.value = caught
-        reportApiError(caught)
-      }),
-    loadLookupPages(listProductUomPage, { sort: 'code' })
-      .then((result) => {
-        uoms.value = result
-        itemLookupsReady.value = products.value.length > 0
-      })
-      .catch((caught) => {
-        error.value = caught
-        reportApiError(caught)
-      }),
-  ])
-})
+onMounted(() => void load())
 </script>
 
 <template>
@@ -627,9 +698,10 @@ onMounted(async () => {
               <tbody>
                 <tr v-for="(item, index) in itemRows" :key="`${item.product_id}-${index}`">
                   <td>
-                    <SearchableSelect
+                    <RemoteSearchableSelect
                       :model-value="item.product_id"
-                      :options="productOptions"
+                      :selected-options="selectedProductOptions"
+                      :search="searchPriceListProducts"
                       :aria-label="t('pricing.product')"
                       @update:model-value="(value) => void productChanged(index, value)"
                     />

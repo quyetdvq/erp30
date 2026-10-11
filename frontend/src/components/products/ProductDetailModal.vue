@@ -12,6 +12,7 @@ import type {
   ProductUomConversionsRequest,
 } from '@/api/generated/types.gen'
 import DecimalInput from '@/components/forms/DecimalInput.vue'
+import RemoteSearchableSelect from '@/components/forms/RemoteSearchableSelect.vue'
 import SearchableSelect from '@/components/forms/SearchableSelect.vue'
 import { useBasePermission } from '@/composables/useBasePermission'
 import { useFormatters } from '@/composables/useFormatters'
@@ -25,6 +26,12 @@ import {
   saveProduct,
 } from '@/services/productCatalog'
 import { reportApiError } from '@/services/errorBoundary'
+import { useAuthStore } from '@/stores/auth'
+import {
+  resolveProductOptions,
+  searchProductOptions,
+  type ProductOption,
+} from '@/services/productLookups'
 
 type Tab = 'general' | 'components' | 'children' | 'conversions' | 'shipping'
 type ConversionForm = {
@@ -54,6 +61,7 @@ const emit = defineEmits<{
 }>()
 const { t } = useI18n()
 const { hasBasePermission } = useBasePermission()
+const auth = useAuthStore()
 const formatters = useFormatters()
 const currentProduct = ref<Product | null>(null)
 const parentProduct = ref<Product | null>(null)
@@ -61,6 +69,8 @@ const activeTab = ref<Tab>('general')
 const children = ref<Product[]>([])
 const conversions = ref<ConversionForm[]>([])
 const comboItems = ref<ComboForm[]>([])
+const componentMetadata = ref<ProductOption[]>([])
+let viewEpoch = 0
 const childFormOpen = ref(false)
 const childForm = ref({
   product_code: '',
@@ -149,17 +159,47 @@ const groupName = computed(
     props.groups.find((row) => String(row.id) === String(currentProduct.value?.product_group_id))
       ?.name ?? t('list.noValue'),
 )
-const componentOptions = computed(() =>
-  props.products
-    .filter(
-      (row) =>
-        String(row.id) !== String(currentProduct.value?.id) &&
-        row.role !== 'PARENT' &&
-        row.selectable &&
-        row.status === 'ACTIVE',
-    )
-    .map((row) => ({ value: String(row.id), label: `${row.full_name} (${row.role})` })),
+const selectedComponentOptions = computed(() =>
+  componentMetadata.value
+    .filter((row) => String(row.id) !== String(currentProduct.value?.id))
+    .map((row) => ({
+      value: String(row.id),
+      label: `${row.full_name} (${row.role})`,
+      disabled: row.status !== 'ACTIVE' || !row.selectable,
+    })),
 )
+async function searchComboProducts(q: string, page: number) {
+  const response = await searchProductOptions('combo_component', q, page)
+  return {
+    options: response.data
+      .filter((row) => String(row.id) !== String(currentProduct.value?.id))
+      .map((row) => ({ value: String(row.id), label: `${row.full_name} (${row.role})` })),
+    total: response.meta.total,
+  }
+}
+async function hydrateComponents(ids: readonly string[], epoch: number): Promise<void> {
+  const distinct = [...new Set(ids.filter(Boolean))]
+  if (!distinct.length) return
+  const generation = auth.getSessionGeneration()
+  const resolved = await resolveProductOptions(distinct)
+  if (epoch !== viewEpoch || generation !== auth.getSessionGeneration()) return
+  const merged = new Map(componentMetadata.value.map((row) => [String(row.id), row]))
+  for (const row of resolved) merged.set(String(row.id), row)
+  componentMetadata.value = [...merged.values()]
+}
+async function componentChanged(index: number, value: string): Promise<void> {
+  const row = comboItems.value[index]
+  if (!row) return
+  row.component_product_id = value
+  if (value) {
+    try {
+      await hydrateComponents([value], viewEpoch)
+    } catch (caught: unknown) {
+      comboError.value = caught
+      reportApiError(caught)
+    }
+  }
+}
 const uomOptions = computed(() =>
   props.uoms.map((row) => ({ value: String(row.id), label: `${row.code} - ${row.name}` })),
 )
@@ -175,47 +215,72 @@ const tabItems = computed(() => {
   return tabs
 })
 
-async function loadRelated(): Promise<void> {
-  if (!currentProduct.value) return
+/** Load only data needed by the tab the user actually opens. */
+async function loadTabData(): Promise<void> {
+  const row = currentProduct.value
+  if (!props.open || !row) return
+  const productId = String(row.id)
+  const tab = activeTab.value
+  const epoch = ++viewEpoch
+  const generation = auth.getSessionGeneration()
+  const live = () =>
+    epoch === viewEpoch &&
+    generation === auth.getSessionGeneration() &&
+    props.open &&
+    String(currentProduct.value?.id) === productId &&
+    activeTab.value === tab
   error.value = null
   try {
-    children.value = (
-      await listProductPage({
-        q: '',
-        page: 1,
-        page_size: 200,
-        sort: 'product_name',
-        filter: { parent_product_id: String(currentProduct.value.id) },
-      })
-    ).data
-    if (isCombo.value)
-      comboItems.value = (await listProductComboItems(String(currentProduct.value.id))).map(toCombo)
-    if (!isCombo.value && !isParent.value)
-      conversions.value = (await listProductConversions(String(currentProduct.value.id))).map(
-        toConversion,
+    if (tab === 'children' && (row.role === 'PARENT' || row.role === 'SIMPLE')) {
+      const result = (
+        await listProductPage({
+          q: '',
+          page: 1,
+          page_size: 200,
+          sort: 'product_name',
+          filter: { parent_product_id: productId },
+        })
+      ).data
+      if (live()) children.value = result
+    } else if (tab === 'components' && row.role === 'COMBO') {
+      const items = (await listProductComboItems(productId)).map(toCombo)
+      if (!live()) return
+      comboItems.value = items
+      componentMetadata.value = []
+      await hydrateComponents(
+        items.map((item) => item.component_product_id),
+        epoch,
       )
+    } else if (tab === 'conversions' && row.role !== 'COMBO' && row.role !== 'PARENT') {
+      const result = (await listProductConversions(productId)).map(toConversion)
+      if (live()) conversions.value = result
+    }
   } catch (caught: unknown) {
+    if (!live()) return
     error.value = caught
     reportApiError(caught)
   }
 }
 async function openChild(row: Product): Promise<void> {
+  const epoch = ++viewEpoch
+  const generation = auth.getSessionGeneration()
   try {
+    const resolved = await getProductById(String(row.id))
+    if (epoch !== viewEpoch || !props.open || generation !== auth.getSessionGeneration()) return
     parentProduct.value = currentProduct.value
-    currentProduct.value = await getProductById(String(row.id))
+    currentProduct.value = resolved
     activeTab.value = 'general'
-    await loadRelated()
   } catch (caught: unknown) {
+    if (epoch !== viewEpoch) return
     error.value = caught
     reportApiError(caught)
   }
 }
-async function backToParent(): Promise<void> {
+function backToParent(): void {
   if (!parentProduct.value) return
   currentProduct.value = parentProduct.value
   parentProduct.value = null
   activeTab.value = 'children'
-  await loadRelated()
 }
 function editCurrent(): void {
   if (currentProduct.value) emit('edit', currentProduct.value)
@@ -262,7 +327,7 @@ async function createChild(): Promise<void> {
     }
     await saveProduct(payload)
     childFormOpen.value = false
-    await loadRelated()
+    await loadTabData()
   } catch (caught: unknown) {
     childError.value = caught
     reportApiError(caught)
@@ -327,14 +392,20 @@ async function saveConversions(): Promise<void> {
 function removeConversion(index: number): void {
   conversions.value = conversions.value.filter((_, current) => current !== index)
 }
+function findComponent(id: string): ProductOption | Product | undefined {
+  return (
+    componentMetadata.value.find((row) => String(row.id) === id) ??
+    props.products.find((row) => String(row.id) === id)
+  )
+}
 function componentName(id: string): string {
-  return props.products.find((row) => String(row.id) === id)?.full_name ?? id
+  return findComponent(id)?.full_name ?? id
 }
 function componentRole(id: string): string {
-  return props.products.find((row) => String(row.id) === id)?.role ?? t('list.noValue')
+  return findComponent(id)?.role ?? t('list.noValue')
 }
 function componentUom(id: string): string {
-  const product = props.products.find((row) => String(row.id) === id)
+  const product = findComponent(id)
   return (
     props.uoms.find((row) => String(row.id) === String(product?.base_uom_id))?.code ??
     t('list.noValue')
@@ -361,6 +432,10 @@ async function saveComboItems(): Promise<void> {
     }))
     await replaceProductComboItems(String(currentProduct.value.id), body)
     comboItems.value = (await listProductComboItems(String(currentProduct.value.id))).map(toCombo)
+    await hydrateComponents(
+      comboItems.value.map((row) => row.component_product_id),
+      viewEpoch,
+    )
   } catch (caught: unknown) {
     comboError.value = caught
     reportApiError(caught)
@@ -370,13 +445,27 @@ async function saveComboItems(): Promise<void> {
 }
 watch(
   () => [props.open, props.product?.id] as const,
-  async ([open]) => {
-    if (!open || !props.product) return
+  ([open]) => {
+    ++viewEpoch
+    if (!open || !props.product) {
+      currentProduct.value = null
+      componentMetadata.value = []
+      return
+    }
     currentProduct.value = props.product
     parentProduct.value = null
     activeTab.value = 'general'
     childFormOpen.value = false
-    await loadRelated()
+    children.value = []
+    comboItems.value = []
+    conversions.value = []
+  },
+)
+watch(
+  () => [props.open, currentProduct.value?.id, activeTab.value] as const,
+  ([open, productId, tab]) => {
+    ++viewEpoch
+    if (open && productId && tab !== 'general' && tab !== 'shipping') void loadTabData()
   },
 )
 </script>
@@ -472,14 +561,12 @@ watch(
               <tbody>
                 <tr v-for="(row, index) in comboItems" :key="row.id || index">
                   <td>
-                    <SearchableSelect
+                    <RemoteSearchableSelect
                       :model-value="row.component_product_id"
-                      :options="componentOptions"
+                      :selected-options="selectedComponentOptions"
+                      :search="searchComboProducts"
                       :aria-label="t('product.componentProduct')"
-                      @update:model-value="
-                        (value) =>
-                          (row.component_product_id = typeof value === 'string' ? value : '')
-                      "
+                      @update:model-value="(value) => void componentChanged(index, value)"
                     />
                   </td>
                   <td>

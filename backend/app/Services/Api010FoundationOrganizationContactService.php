@@ -74,6 +74,49 @@ final class Api010FoundationOrganizationContactService
     }
 
     /**
+     * Resolve labels only for Organizations that pass the same persisted-target
+     * visibility check as GET /organizations/{id}. Never elevate a Price List
+     * viewer into an organization.view permission.
+     *
+     * @param mixed $input
+     * @return list<array{id:string,code:string,name:string,type:string}>
+     */
+    public function resolveOrganizationLabels(mixed $input): array
+    {
+        if (! is_array($input) || ! array_is_list($input) || count($input) > 50) {
+            throw new \CodeIgniter\HTTP\Exceptions\BadRequestException('Invalid Organization ID list.');
+        }
+        $ids = [];
+        foreach ($input as $raw) {
+            $id = (string) $raw;
+            if ((! is_int($raw) && ! is_string($raw)) || preg_match('/\A[1-9][0-9]*\z/', $id) !== 1
+                || strlen($id) > strlen((string) PHP_INT_MAX)
+                || (strlen($id) === strlen((string) PHP_INT_MAX) && strcmp($id, (string) PHP_INT_MAX) > 0)) {
+                throw new \CodeIgniter\HTTP\Exceptions\BadRequestException('Invalid Organization ID.');
+            }
+            $ids[(int) $id] = (int) $id;
+        }
+        $operation = $this->operation();
+        return $this->auth()->withReadOnlyBatch($operation, function () use ($ids, $operation): array {
+            $result = [];
+            foreach ($ids as $id) {
+                $row = $this->organizationRepo()->find($id);
+                if ($row === null) {
+                    continue;
+                }
+                try {
+                    $this->authorizeVisible('organization', $row, $operation);
+                } catch (PageNotFoundException $_) {
+                    continue;
+                }
+                $result[] = ['id' => (string) $row['id'], 'code' => (string) $row['code'],
+                    'name' => (string) $row['name'], 'type' => (string) $row['type']];
+            }
+            return $result;
+        });
+    }
+
+    /**
      * @param array<string, mixed> $payload
      * @return array<string, mixed>
      */

@@ -14,10 +14,10 @@ import {
 import type { ListQuery } from '@/components/lists/listTypes'
 import { useListState } from '@/composables/useListState'
 import { useBasePermission } from '@/composables/useBasePermission'
+import { useAuthStore } from '@/stores/auth'
 import { useFormatters } from '@/composables/useFormatters'
 import {
   changeProductState,
-  getProductById,
   listProductComboItems,
   listProductGroupPage,
   listProductPage,
@@ -25,21 +25,24 @@ import {
 } from '@/services/productCatalog'
 import { reportApiError } from '@/services/errorBoundary'
 import { loadLookupPages } from '@/services/listLookups'
+import { chunks, previewProductRelations, resolveProductDetails } from '@/services/productLookups'
 
 type RelationState = {
   children: Product[]
   components: Product[]
   componentItems: ComboItem[]
+  total: number
+  full: boolean
   loading: boolean
 }
 const { t } = useI18n()
 const router = useRouter()
 const { hasBasePermission } = useBasePermission()
+const auth = useAuthStore()
 const formatters = useFormatters()
 const state = useListState<Product>((query) => listProductPage(query), { sort: 'product_code' })
 const groups = ref<ProductGroup[]>([])
 const uoms = ref<ProductUom[]>([])
-const productLookup = ref<Product[]>([])
 // Resolve table labels in O(1) per visible row even with thousands of groups/UOMs.
 const groupNameById = computed(() => new Map(groups.value.map((row) => [String(row.id), row.name])))
 const uomCodeById = computed(() => new Map(uoms.value.map((row) => [String(row.id), row.code])))
@@ -53,7 +56,6 @@ const productsForDetail = computed(() => {
   const byId = new Map<string, Product>()
   for (const row of [
     ...state.rows.value,
-    ...productLookup.value,
     ...Object.values(relations.value).flatMap((item) => [...item.children, ...item.components]),
   ])
     byId.set(String(row.id), row)
@@ -114,6 +116,8 @@ function relation(row: Product): RelationState {
       children: [],
       components: [],
       componentItems: [],
+      total: 0,
+      full: false,
       loading: false,
     }
   )
@@ -125,10 +129,57 @@ function relatedLabel(row: Product): string {
   return row.role === 'COMBO' ? t('product.components') : t('product.children')
 }
 function canExpand(row: Product): boolean {
-  return relatedProducts(row).length > 2
+  return relation(row).total > 2
 }
-function toggleExpanded(row: Product): void {
-  expandedRows.value[String(row.id)] = !expandedRows.value[String(row.id)]
+async function toggleExpanded(row: Product): Promise<void> {
+  const key = String(row.id)
+  const epoch = listEpoch
+  const generation = auth.getSessionGeneration()
+  expandedRows.value[key] = !expandedRows.value[key]
+  if (!expandedRows.value[key] || relation(row).full) return
+  const previous = relation(row)
+  relations.value[key] = { ...previous, loading: true }
+  try {
+    if (row.role === 'COMBO') {
+      const componentItems = await listProductComboItems(key)
+      const components = (
+        await Promise.all(
+          chunks(
+            componentItems.map((item) => String(item.component_product_id)),
+            100,
+          ).map(resolveProductDetails),
+        )
+      ).flat()
+      if (epoch !== listEpoch || generation !== auth.getSessionGeneration()) return
+      relations.value[key] = {
+        children: [],
+        components,
+        componentItems,
+        total: components.length,
+        full: true,
+        loading: false,
+      }
+    } else {
+      const children = await loadLookupPages(listProductPage, {
+        sort: 'product_name',
+        filter: { parent_product_id: key },
+      })
+      if (epoch !== listEpoch || generation !== auth.getSessionGeneration()) return
+      relations.value[key] = {
+        children,
+        components: [],
+        componentItems: [],
+        total: children.length,
+        full: true,
+        loading: false,
+      }
+    }
+  } catch (caught: unknown) {
+    if (epoch !== listEpoch || generation !== auth.getSessionGeneration()) return
+    relations.value[key] = { ...previous, loading: false }
+    error.value = caught
+    reportApiError(caught)
+  }
 }
 function productName(row: Product): string {
   return row.full_name || row.product_name || row.product_child_name || t('list.noValue')
@@ -142,48 +193,75 @@ function openDetail(row: Product): void {
   detailProduct.value = row
   detailOpen.value = true
 }
-async function loadRelations(rows: readonly Product[]): Promise<void> {
-  await Promise.all(
-    rows
-      .filter((row) => row.role === 'PARENT' || row.role === 'COMBO')
-      .map(async (row) => {
-        const key = String(row.id)
-        relations.value[key] = { children: [], components: [], componentItems: [], loading: true }
-        try {
-          if (row.role === 'COMBO') {
-            const componentItems = await listProductComboItems(key)
-            const components = await Promise.all(
-              componentItems.map((item) => getProductById(String(item.component_product_id))),
-            )
-            relations.value[key] = { children: [], components, componentItems, loading: false }
-          } else {
-            const children = await loadLookupPages(listProductPage, {
-              sort: 'product_name',
-              filter: { parent_product_id: key },
-            })
-            relations.value[key] = { children, components: [], componentItems: [], loading: false }
-          }
-        } catch (caught: unknown) {
-          relations.value[key] = {
-            children: [],
-            components: [],
-            componentItems: [],
-            loading: false,
-          }
-          error.value = caught
-          reportApiError(caught)
-        }
-      }),
+let listEpoch = 0
+async function loadRelations(rows: readonly Product[], epoch: number): Promise<void> {
+  const generation = auth.getSessionGeneration()
+  const targets = rows.filter((row) => row.role === 'PARENT' || row.role === 'COMBO')
+  if (targets.length === 0) {
+    relations.value = {}
+    return
+  }
+  relations.value = Object.fromEntries(
+    targets.map((row) => [
+      String(row.id),
+      {
+        children: [],
+        components: [],
+        componentItems: [],
+        total: 0,
+        full: false,
+        loading: true,
+      },
+    ]),
   )
+  const previews = (
+    await Promise.all(
+      chunks(
+        targets.map((row) => String(row.id)),
+        50,
+      ).map(previewProductRelations),
+    )
+  ).flat()
+  if (epoch !== listEpoch || generation !== auth.getSessionGeneration()) return
+  for (const preview of previews) {
+    const owner = targets.find((row) => String(row.id) === preview.product_id)
+    if (!owner) continue
+    relations.value[preview.product_id] = {
+      children: owner.role === 'PARENT' ? preview.products : [],
+      components: owner.role === 'COMBO' ? preview.products : [],
+      componentItems: [],
+      total: preview.total,
+      full: preview.total <= 2,
+      loading: false,
+    }
+  }
+  for (const row of targets) {
+    const key = String(row.id)
+    if (relations.value[key]?.loading) {
+      relations.value[key] = {
+        children: [],
+        components: [],
+        componentItems: [],
+        total: 0,
+        full: true,
+        loading: false,
+      }
+    }
+  }
 }
 async function load(): Promise<void> {
+  const epoch = ++listEpoch
   error.value = null
   try {
     await state.apply()
-    await loadRelations(state.rows.value)
+    if (epoch !== listEpoch) return
+    expandedRows.value = {}
+    await loadRelations(state.rows.value, epoch)
   } catch (caught: unknown) {
+    if (epoch !== listEpoch) return
     error.value = caught
     reportApiError(caught)
+    relations.value = {}
   }
 }
 function applyQuery(query: ListQuery): void {
@@ -223,14 +301,6 @@ onMounted(async () => {
     loadLookupPages(listProductUomPage, { sort: 'code' })
       .then((result) => {
         uoms.value = result
-      })
-      .catch((caught) => {
-        error.value = caught
-        reportApiError(caught)
-      }),
-    loadLookupPages(listProductPage, { sort: 'product_name' })
-      .then((result) => {
-        productLookup.value = result
       })
       .catch((caught) => {
         error.value = caught
@@ -338,7 +408,7 @@ onMounted(async () => {
                         v-if="canExpand(row)"
                         type="button"
                         class="more-link"
-                        @click.stop="toggleExpanded(row)"
+                        @click.stop="void toggleExpanded(row)"
                       >
                         {{
                           expandedRows[String(row.id)]

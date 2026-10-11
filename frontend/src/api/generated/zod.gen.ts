@@ -263,6 +263,105 @@ export const zProduct = z.object({
     leaf_transactionable: z.boolean()
 });
 
+export const zProductLookupOption = z.object({
+    id: zBigInt,
+    product_code: z.string().nullable(),
+    full_name: z.string(),
+    role: z.enum([
+        'SIMPLE',
+        'PARENT',
+        'CHILD',
+        'COMBO'
+    ]),
+    status: z.enum(['ACTIVE', 'INACTIVE']),
+    base_uom_id: zBigInt.nullable(),
+    selectable: z.boolean()
+});
+
+export const zProductLookupResolveRequest = z.object({
+    product_ids: z.array(zBigInt).max(100)
+});
+
+export const zProductRelationPreviewRequest = z.object({
+    product_ids: z.array(zBigInt).max(50),
+    limit_per_product: z.int().gte(1).lte(5).optional().default(2)
+});
+
+export const zProductRelationPreview = z.object({
+    product_id: zBigInt,
+    total: z.int().gte(0),
+    products: z.array(zProduct)
+});
+
+export const zProductSalesUomResolveRequest = z.object({
+    product_ids: z.array(zBigInt).max(50)
+});
+
+export const zProductSalesUom = z.object({
+    id: zBigInt,
+    code: z.string()
+});
+
+export const zProductSalesUomOptions = z.object({
+    product_id: zBigInt,
+    options: z.array(zProductSalesUom)
+});
+
+export const zProductUomLabelResolveRequest = z.object({
+    uom_ids: z.array(zBigInt).max(100)
+});
+
+export const zProductUomLabel = z.object({
+    id: zBigInt,
+    code: z.string(),
+    status: z.enum(['ACTIVE', 'INACTIVE'])
+});
+
+export const zOrganizationLabelResolveRequest = z.object({
+    organization_ids: z.array(zBigInt).max(50)
+});
+
+export const zOrganizationLabel = z.object({
+    id: zBigInt,
+    code: z.string(),
+    name: z.string(),
+    type: z.enum([
+        'GROUP',
+        'COMPANY',
+        'BRANCH',
+        'PLANT',
+        'WAREHOUSE'
+    ])
+});
+
+export const zProductLookupCollection = zCollectionResponse.and(z.object({
+    data: z.array(zProductLookupOption).optional()
+}));
+
+export const zProductLookupResolveResponse = zSuccessResponse.and(z.object({
+    data: z.array(zProductLookupOption).optional()
+}));
+
+export const zProductDetailsResolveResponse = zSuccessResponse.and(z.object({
+    data: z.array(zProduct).optional()
+}));
+
+export const zProductRelationPreviewsResponse = zSuccessResponse.and(z.object({
+    data: z.array(zProductRelationPreview).optional()
+}));
+
+export const zProductSalesUomResolveResponse = zSuccessResponse.and(z.object({
+    data: z.array(zProductSalesUomOptions).optional()
+}));
+
+export const zProductUomLabelsResponse = zSuccessResponse.and(z.object({
+    data: z.array(zProductUomLabel).optional()
+}));
+
+export const zOrganizationLabelsResponse = zSuccessResponse.and(z.object({
+    data: z.array(zOrganizationLabel).optional()
+}));
+
 export const zProductCreate = z.object({
     product_code: z.string().max(50).nullish(),
     sku: z.string().nullish(),
@@ -2916,6 +3015,69 @@ export const zCreateProductBody = zProductCreate2;
  * Product response.
  */
 export const zCreateProductResponse = zProductResponse;
+
+export const zSearchProductOptionsHeaders = z.object({
+    'Accept-Language': z.enum(['vi', 'en']).optional().default('vi'),
+    'X-Request-ID': zRequestId.optional()
+});
+
+export const zSearchProductOptionsQuery = z.object({
+    q: z.string().optional(),
+    page: z.int().gte(1).optional().default(1),
+    page_size: z.int().gte(1).lte(50).optional().default(20),
+    purpose: z.enum([
+        'price_list_item',
+        'combo_component',
+        'parent_product'
+    ]).optional().default('price_list_item')
+});
+
+/**
+ * Authorized Product selector options.
+ */
+export const zSearchProductOptionsResponse = zProductLookupCollection;
+
+export const zResolveProductOptionsBody = zProductLookupResolveRequest;
+
+/**
+ * Visible Product labels.
+ */
+export const zResolveProductOptionsResponse = zProductLookupResolveResponse;
+
+export const zResolveProductDetailsBody = zProductLookupResolveRequest;
+
+/**
+ * Visible Product details.
+ */
+export const zResolveProductDetailsResponse = zProductDetailsResolveResponse;
+
+export const zPreviewProductRelationsBody = zProductRelationPreviewRequest;
+
+/**
+ * Authorized relation previews.
+ */
+export const zPreviewProductRelationsResponse = zProductRelationPreviewsResponse;
+
+export const zResolveProductSalesUomOptionsBody = zProductSalesUomResolveRequest;
+
+/**
+ * Authorized SALES UOM options.
+ */
+export const zResolveProductSalesUomOptionsResponse = zProductSalesUomResolveResponse;
+
+export const zResolveProductUomLabelsBody = zProductUomLabelResolveRequest;
+
+/**
+ * Authorized Product UOM labels.
+ */
+export const zResolveProductUomLabelsResponse = zProductUomLabelsResponse;
+
+export const zResolveOrganizationLabelsBody = zOrganizationLabelResolveRequest;
+
+/**
+ * Authorized Organization labels.
+ */
+export const zResolveOrganizationLabelsResponse = zOrganizationLabelsResponse;
 
 export const zGetProductPath = z.object({
     id: zBigInt

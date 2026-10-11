@@ -147,7 +147,18 @@ final class P1Api090ContractRegressionTest extends CIUnitTestCase
         $this->assertDoesNotMatchRegularExpression('#/export(?:[\'"\s])#i', $routes);
         $this->assertDoesNotMatchRegularExpression('#price[-_]?resolution|resolvePrice#i', $routes . "\n" . $openapi);
         $this->assertDoesNotMatchRegularExpression('#preview[-_]?combo|combo[-_]?preview#i', $routes . "\n" . $openapi);
-        $this->assertDoesNotMatchRegularExpression('#/api/v1/[^\r\n:]*(?:selector|options)[^\r\n:]*:#i', $openapi);
+        // Increment API lookups are explicitly scoped to the approved Product
+        // selectors. Continue rejecting any other unapproved selector surface.
+        preg_match_all('#^  (/api/v1/[^\r\n:]*(?:selector|options)[^\r\n:]*):#im', $openapi, $optionPaths);
+        $actual = $optionPaths[1];
+        sort($actual);
+        $approved = [
+            '/api/v1/products/options',
+            '/api/v1/products/options/resolve',
+            '/api/v1/products/sales-uom-options/resolve',
+        ];
+        sort($approved);
+        $this->assertSame($approved, $actual);
         $this->assertDoesNotMatchRegularExpression('#\$routes->(?:get|post|put|patch|delete)\(\'api/v1/[^\']*(?:selector|options)[^\']*\'#i', $routes);
         $this->assertStringContainsString("gender: {type: [string, 'null'], enum: [MALE, FEMALE, OTHER, null]}", $openapi);
     }

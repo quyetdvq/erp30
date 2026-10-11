@@ -42,6 +42,7 @@ $routes->group('api/v1', ['filter' => 'cors'], static function (RouteCollection 
     $routes->get('employee-assignments/(:num)', 'Api\\EmployeeStructure::show/employee_assignment/$1');
     $routes->patch('employee-assignments/(:num)', 'Api\\EmployeeStructure::update/employee_assignment/$1');
     $routes->post('employee-assignments/(:num)/actions/set-state', 'Api\\EmployeeStructure::setState/employee_assignment/$1');
+    $routes->post('organizations/labels/resolve', 'Api\\OrganizationLookups::resolve');
     $routes->get('organizations/tree', 'Api\\FoundationOrganizationContact::tree');
 
     $routes->get('security/users', 'Api\\AuthorizationWorkflow::securityUsers');
@@ -100,6 +101,13 @@ $routes->group('api/v1', ['filter' => 'cors'], static function (RouteCollection 
     $routes->patch('product-uoms/(:num)', 'Api\\ProductCatalog::updateUom/$1');
     $routes->post('product-uoms/(:num)/actions/set-state', 'Api\\ProductCatalog::setUomState/$1');
 
+    // Bounded, PBAC-filtered Product lookups (distinct from the P1-API-050 CRUD contract).
+    $routes->get('products/options', 'Api\\ProductLookups::options');
+    $routes->post('products/options/resolve', 'Api\\ProductLookups::resolve');
+    $routes->post('products/details/resolve', 'Api\\ProductLookups::resolveDetails');
+    $routes->post('products/relations-preview', 'Api\\ProductLookups::relationPreviews');
+    $routes->post('products/sales-uom-options/resolve', 'Api\\ProductLookups::salesUomOptions');
+    $routes->post('product-uoms/labels/resolve', 'Api\\ProductLookups::resolveUomLabels');
     $routes->get('products', 'Api\\ProductCatalog::listProducts');
     $routes->post('products', 'Api\\ProductCatalog::createProduct');
     $routes->get('products/(:num)', 'Api\\ProductCatalog::showProduct/$1');

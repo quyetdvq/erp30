@@ -810,6 +810,72 @@ paths:
       summary: Create a product
       requestBody: {$ref: '#/components/requestBodies/ProductCreate'}
       responses: {'201': {$ref: '#/components/responses/ProductResponse'}, '401': {$ref: '#/components/responses/Unauthorized'}, '403': {$ref: '#/components/responses/Forbidden'}, '409': {$ref: '#/components/responses/Conflict'}, '422': {$ref: '#/components/responses/UnprocessableEntity'}}
+  /api/v1/products/options:
+    get:
+      operationId: searchProductOptions
+      summary: Search PBAC-visible, derived-role-eligible Product selector options before pagination
+      description: "MASTER product.view is mandatory; only exact ACTIVE status is eligible. Parent purpose includes root STANDARD PARENT and SIMPLE. Ordering is by numeric id."
+      parameters:
+        - {$ref: '#/components/parameters/AcceptLanguage'}
+        - {$ref: '#/components/parameters/RequestId'}
+        - {$ref: '#/components/parameters/Q'}
+        - {$ref: '#/components/parameters/Page'}
+        - name: page_size
+          in: query
+          schema: {type: integer, minimum: 1, maximum: 50, default: 20}
+        - name: purpose
+          in: query
+          schema: {type: string, enum: [price_list_item, combo_component, parent_product], default: price_list_item}
+      responses: {'200': {$ref: '#/components/responses/ProductLookupCollection'}, '400': {$ref: '#/components/responses/BadRequest'}, '401': {$ref: '#/components/responses/Unauthorized'}, '403': {$ref: '#/components/responses/Forbidden'}}
+  /api/v1/products/options/resolve:
+    post:
+      operationId: resolveProductOptions
+      summary: Resolve at most 100 persisted Product labels; invisible IDs are omitted
+      requestBody:
+        required: true
+        content: {application/json: {schema: {$ref: '#/components/schemas/ProductLookupResolveRequest'}}}
+      responses: {'200': {$ref: '#/components/responses/ProductLookupResolveResponse'}, '400': {$ref: '#/components/responses/BadRequest'}, '401': {$ref: '#/components/responses/Unauthorized'}, '403': {$ref: '#/components/responses/Forbidden'}}
+  /api/v1/products/details/resolve:
+    post:
+      operationId: resolveProductDetails
+      summary: Batch resolve full Product details for an explicitly expanded Combo
+      requestBody:
+        required: true
+        content: {application/json: {schema: {$ref: '#/components/schemas/ProductLookupResolveRequest'}}}
+      responses: {'200': {$ref: '#/components/responses/ProductDetailsResolveResponse'}, '400': {$ref: '#/components/responses/BadRequest'}, '401': {$ref: '#/components/responses/Unauthorized'}, '403': {$ref: '#/components/responses/Forbidden'}}
+  /api/v1/products/relations-preview:
+    post:
+      operationId: previewProductRelations
+      summary: Batch preview up to 50 PARENT/COMBO Products with PBAC-filtered relation counts
+      requestBody:
+        required: true
+        content: {application/json: {schema: {$ref: '#/components/schemas/ProductRelationPreviewRequest'}}}
+      responses: {'200': {$ref: '#/components/responses/ProductRelationPreviewsResponse'}, '400': {$ref: '#/components/responses/BadRequest'}, '401': {$ref: '#/components/responses/Unauthorized'}, '403': {$ref: '#/components/responses/Forbidden'}}
+  /api/v1/products/sales-uom-options/resolve:
+    post:
+      operationId: resolveProductSalesUomOptions
+      summary: Batch resolve visible SALES UOMs for up to 50 Products
+      requestBody:
+        required: true
+        content: {application/json: {schema: {$ref: '#/components/schemas/ProductSalesUomResolveRequest'}}}
+      responses: {'200': {$ref: '#/components/responses/ProductSalesUomResolveResponse'}, '400': {$ref: '#/components/responses/BadRequest'}, '401': {$ref: '#/components/responses/Unauthorized'}, '403': {$ref: '#/components/responses/Forbidden'}}
+  /api/v1/product-uoms/labels/resolve:
+    post:
+      operationId: resolveProductUomLabels
+      summary: Resolve existing Product UOM labels, including INACTIVE, without granting selection rights
+      requestBody:
+        required: true
+        content: {application/json: {schema: {$ref: '#/components/schemas/ProductUomLabelResolveRequest'}}}
+      responses: {'200': {$ref: '#/components/responses/ProductUomLabelsResponse'}, '400': {$ref: '#/components/responses/BadRequest'}, '401': {$ref: '#/components/responses/Unauthorized'}, '403': {$ref: '#/components/responses/Forbidden'}}
+  /api/v1/organizations/labels/resolve:
+    post:
+      operationId: resolveOrganizationLabels
+      summary: Resolve at most 50 Organization labels with organization.view authorization
+      requestBody:
+        required: true
+        content: {application/json: {schema: {$ref: '#/components/schemas/OrganizationLabelResolveRequest'}}}
+      responses: {'200': {$ref: '#/components/responses/OrganizationLabelsResponse'}, '400': {$ref: '#/components/responses/BadRequest'}, '401': {$ref: '#/components/responses/Unauthorized'}, '403': {$ref: '#/components/responses/Forbidden'}}
+
   /api/v1/products/{id}:
     parameters: [{$ref: '#/components/parameters/Id'}]
     get:
@@ -1119,6 +1185,13 @@ components:
     ProductGroupCollection: {description: Authorized product group collection., content: {application/json: {schema: {$ref: '#/components/schemas/ProductGroupCollection'}}}}
     ProductUomResponse: {description: Product UOM response., content: {application/json: {schema: {$ref: '#/components/schemas/ProductUomResponse'}}}}
     ProductUomCollection: {description: Authorized product UOM collection., content: {application/json: {schema: {$ref: '#/components/schemas/ProductUomCollection'}}}}
+    ProductLookupCollection: {description: Authorized Product selector options., content: {application/json: {schema: {$ref: '#/components/schemas/ProductLookupCollection'}}}}
+    ProductLookupResolveResponse: {description: Visible Product labels., content: {application/json: {schema: {$ref: '#/components/schemas/ProductLookupResolveResponse'}}}}
+    ProductDetailsResolveResponse: {description: Visible Product details., content: {application/json: {schema: {$ref: '#/components/schemas/ProductDetailsResolveResponse'}}}}
+    ProductRelationPreviewsResponse: {description: Authorized relation previews., content: {application/json: {schema: {$ref: '#/components/schemas/ProductRelationPreviewsResponse'}}}}
+    ProductSalesUomResolveResponse: {description: Authorized SALES UOM options., content: {application/json: {schema: {$ref: '#/components/schemas/ProductSalesUomResolveResponse'}}}}
+    OrganizationLabelsResponse: {description: Authorized Organization labels., content: {application/json: {schema: {$ref: '#/components/schemas/OrganizationLabelsResponse'}}}}
+    ProductUomLabelsResponse: {description: Authorized Product UOM labels., content: {application/json: {schema: {$ref: '#/components/schemas/ProductUomLabelsResponse'}}}}
     ProductResponse: {description: Product response., content: {application/json: {schema: {$ref: '#/components/schemas/ProductResponse'}}}}
     ProductCollection: {description: Authorized product collection., content: {application/json: {schema: {$ref: '#/components/schemas/ProductCollection'}}}}
     PriceListResponse: {description: Price list response., content: {application/json: {schema: {$ref: '#/components/schemas/PriceListResponse'}}}}
@@ -1591,6 +1664,97 @@ components:
         full_name: {type: string}
         selectable: {type: boolean}
         leaf_transactionable: {type: boolean}
+    ProductLookupOption:
+      type: object
+      required: [id, product_code, full_name, role, status, base_uom_id, selectable]
+      properties:
+        id: {$ref: '#/components/schemas/BigInt'}
+        product_code: {type: [string, 'null']}
+        full_name: {type: string}
+        role: {type: string, enum: [SIMPLE, PARENT, CHILD, COMBO]}
+        status: {type: string, enum: [ACTIVE, INACTIVE]}
+        base_uom_id: {oneOf: [{$ref: '#/components/schemas/BigInt'}, {type: 'null'}]}
+        selectable: {type: boolean}
+    ProductLookupResolveRequest:
+      type: object
+      required: [product_ids]
+      properties:
+        product_ids: {type: array, maxItems: 100, uniqueItems: true, items: {$ref: '#/components/schemas/BigInt'}}
+    ProductRelationPreviewRequest:
+      type: object
+      required: [product_ids]
+      properties:
+        product_ids: {type: array, maxItems: 50, uniqueItems: true, items: {$ref: '#/components/schemas/BigInt'}}
+        limit_per_product: {type: integer, minimum: 1, maximum: 5, default: 2}
+    ProductRelationPreview:
+      type: object
+      required: [product_id, total, products]
+      properties:
+        product_id: {$ref: '#/components/schemas/BigInt'}
+        total: {type: integer, minimum: 0}
+        products: {type: array, items: {$ref: '#/components/schemas/Product'}}
+    ProductSalesUomResolveRequest:
+      type: object
+      required: [product_ids]
+      properties:
+        product_ids: {type: array, maxItems: 50, uniqueItems: true, items: {$ref: '#/components/schemas/BigInt'}}
+    ProductSalesUom:
+      type: object
+      required: [id, code]
+      properties:
+        id: {$ref: '#/components/schemas/BigInt'}
+        code: {type: string}
+    ProductSalesUomOptions:
+      type: object
+      required: [product_id, options]
+      properties:
+        product_id: {$ref: '#/components/schemas/BigInt'}
+        options: {type: array, items: {$ref: '#/components/schemas/ProductSalesUom'}}
+    ProductUomLabelResolveRequest:
+      type: object
+      required: [uom_ids]
+      properties: {uom_ids: {type: array, maxItems: 100, uniqueItems: true, items: {$ref: '#/components/schemas/BigInt'}}}
+    ProductUomLabel:
+      type: object
+      required: [id, code, status]
+      properties:
+        id: {$ref: '#/components/schemas/BigInt'}
+        code: {type: string}
+        status: {type: string, enum: [ACTIVE, INACTIVE]}
+    OrganizationLabelResolveRequest:
+      type: object
+      required: [organization_ids]
+      properties:
+        organization_ids: {type: array, maxItems: 50, uniqueItems: true, items: {$ref: '#/components/schemas/BigInt'}}
+    OrganizationLabel:
+      type: object
+      required: [id, code, name, type]
+      properties:
+        id: {$ref: '#/components/schemas/BigInt'}
+        code: {type: string}
+        name: {type: string}
+        type: {type: string, enum: [GROUP, COMPANY, BRANCH, PLANT, WAREHOUSE]}
+    ProductLookupCollection:
+      allOf: [{$ref: '#/components/schemas/CollectionResponse'}]
+      properties: {data: {type: array, items: {$ref: '#/components/schemas/ProductLookupOption'}}}
+    ProductLookupResolveResponse:
+      allOf: [{$ref: '#/components/schemas/SuccessResponse'}]
+      properties: {data: {type: array, items: {$ref: '#/components/schemas/ProductLookupOption'}}}
+    ProductDetailsResolveResponse:
+      allOf: [{$ref: '#/components/schemas/SuccessResponse'}]
+      properties: {data: {type: array, items: {$ref: '#/components/schemas/Product'}}}
+    ProductRelationPreviewsResponse:
+      allOf: [{$ref: '#/components/schemas/SuccessResponse'}]
+      properties: {data: {type: array, items: {$ref: '#/components/schemas/ProductRelationPreview'}}}
+    ProductSalesUomResolveResponse:
+      allOf: [{$ref: '#/components/schemas/SuccessResponse'}]
+      properties: {data: {type: array, items: {$ref: '#/components/schemas/ProductSalesUomOptions'}}}
+    ProductUomLabelsResponse:
+      allOf: [{$ref: '#/components/schemas/SuccessResponse'}]
+      properties: {data: {type: array, items: {$ref: '#/components/schemas/ProductUomLabel'}}}
+    OrganizationLabelsResponse:
+      allOf: [{$ref: '#/components/schemas/SuccessResponse'}]
+      properties: {data: {type: array, items: {$ref: '#/components/schemas/OrganizationLabel'}}}
     ProductCreate:
       type: object
       properties:

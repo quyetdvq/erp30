@@ -259,6 +259,94 @@ export type Product = {
     leaf_transactionable: boolean;
 };
 
+export type ProductLookupOption = {
+    id: BigInt;
+    product_code: string | null;
+    full_name: string;
+    role: 'SIMPLE' | 'PARENT' | 'CHILD' | 'COMBO';
+    status: 'ACTIVE' | 'INACTIVE';
+    base_uom_id: BigInt | null;
+    selectable: boolean;
+};
+
+export type ProductLookupResolveRequest = {
+    product_ids: Array<BigInt>;
+};
+
+export type ProductRelationPreviewRequest = {
+    product_ids: Array<BigInt>;
+    limit_per_product?: number;
+};
+
+export type ProductRelationPreview = {
+    product_id: BigInt;
+    total: number;
+    products: Array<Product>;
+};
+
+export type ProductSalesUomResolveRequest = {
+    product_ids: Array<BigInt>;
+};
+
+export type ProductSalesUom = {
+    id: BigInt;
+    code: string;
+};
+
+export type ProductSalesUomOptions = {
+    product_id: BigInt;
+    options: Array<ProductSalesUom>;
+};
+
+export type ProductUomLabelResolveRequest = {
+    uom_ids: Array<BigInt>;
+};
+
+export type ProductUomLabel = {
+    id: BigInt;
+    code: string;
+    status: 'ACTIVE' | 'INACTIVE';
+};
+
+export type OrganizationLabelResolveRequest = {
+    organization_ids: Array<BigInt>;
+};
+
+export type OrganizationLabel = {
+    id: BigInt;
+    code: string;
+    name: string;
+    type: 'GROUP' | 'COMPANY' | 'BRANCH' | 'PLANT' | 'WAREHOUSE';
+};
+
+export type ProductLookupCollection = CollectionResponse & {
+    data?: Array<ProductLookupOption>;
+};
+
+export type ProductLookupResolveResponse = SuccessResponse & {
+    data?: Array<ProductLookupOption>;
+};
+
+export type ProductDetailsResolveResponse = SuccessResponse & {
+    data?: Array<Product>;
+};
+
+export type ProductRelationPreviewsResponse = SuccessResponse & {
+    data?: Array<ProductRelationPreview>;
+};
+
+export type ProductSalesUomResolveResponse = SuccessResponse & {
+    data?: Array<ProductSalesUomOptions>;
+};
+
+export type ProductUomLabelsResponse = SuccessResponse & {
+    data?: Array<ProductUomLabel>;
+};
+
+export type OrganizationLabelsResponse = SuccessResponse & {
+    data?: Array<OrganizationLabel>;
+};
+
 export type ProductCreate = {
     product_code?: string | null;
     sku?: string | null;
@@ -6099,6 +6187,252 @@ export type CreateProductResponses = {
 };
 
 export type CreateProductResponse = CreateProductResponses[keyof CreateProductResponses];
+
+export type SearchProductOptionsData = {
+    body?: never;
+    headers?: {
+        /**
+         * Supported request language. Unsupported values fall back to vi.
+         */
+        'Accept-Language'?: 'vi' | 'en';
+        /**
+         * Client request correlation identifier; invalid or missing values are replaced by a generated UUID.
+         */
+        'X-Request-ID'?: RequestId;
+    };
+    path?: never;
+    query?: {
+        q?: string;
+        page?: number;
+        page_size?: number;
+        purpose?: 'price_list_item' | 'combo_component' | 'parent_product';
+    };
+    url: '/api/v1/products/options';
+};
+
+export type SearchProductOptionsErrors = {
+    /**
+     * Malformed request or query.
+     */
+    400: ErrorResponse;
+    /**
+     * Unauthenticated or invalid authentication.
+     */
+    401: ErrorResponse;
+    /**
+     * Visible target but action denied.
+     */
+    403: ErrorResponse;
+};
+
+export type SearchProductOptionsError = SearchProductOptionsErrors[keyof SearchProductOptionsErrors];
+
+export type SearchProductOptionsResponses = {
+    /**
+     * Authorized Product selector options.
+     */
+    200: ProductLookupCollection;
+};
+
+export type SearchProductOptionsResponse = SearchProductOptionsResponses[keyof SearchProductOptionsResponses];
+
+export type ResolveProductOptionsData = {
+    body: ProductLookupResolveRequest;
+    path?: never;
+    query?: never;
+    url: '/api/v1/products/options/resolve';
+};
+
+export type ResolveProductOptionsErrors = {
+    /**
+     * Malformed request or query.
+     */
+    400: ErrorResponse;
+    /**
+     * Unauthenticated or invalid authentication.
+     */
+    401: ErrorResponse;
+    /**
+     * Visible target but action denied.
+     */
+    403: ErrorResponse;
+};
+
+export type ResolveProductOptionsError = ResolveProductOptionsErrors[keyof ResolveProductOptionsErrors];
+
+export type ResolveProductOptionsResponses = {
+    /**
+     * Visible Product labels.
+     */
+    200: ProductLookupResolveResponse;
+};
+
+export type ResolveProductOptionsResponse = ResolveProductOptionsResponses[keyof ResolveProductOptionsResponses];
+
+export type ResolveProductDetailsData = {
+    body: ProductLookupResolveRequest;
+    path?: never;
+    query?: never;
+    url: '/api/v1/products/details/resolve';
+};
+
+export type ResolveProductDetailsErrors = {
+    /**
+     * Malformed request or query.
+     */
+    400: ErrorResponse;
+    /**
+     * Unauthenticated or invalid authentication.
+     */
+    401: ErrorResponse;
+    /**
+     * Visible target but action denied.
+     */
+    403: ErrorResponse;
+};
+
+export type ResolveProductDetailsError = ResolveProductDetailsErrors[keyof ResolveProductDetailsErrors];
+
+export type ResolveProductDetailsResponses = {
+    /**
+     * Visible Product details.
+     */
+    200: ProductDetailsResolveResponse;
+};
+
+export type ResolveProductDetailsResponse = ResolveProductDetailsResponses[keyof ResolveProductDetailsResponses];
+
+export type PreviewProductRelationsData = {
+    body: ProductRelationPreviewRequest;
+    path?: never;
+    query?: never;
+    url: '/api/v1/products/relations-preview';
+};
+
+export type PreviewProductRelationsErrors = {
+    /**
+     * Malformed request or query.
+     */
+    400: ErrorResponse;
+    /**
+     * Unauthenticated or invalid authentication.
+     */
+    401: ErrorResponse;
+    /**
+     * Visible target but action denied.
+     */
+    403: ErrorResponse;
+};
+
+export type PreviewProductRelationsError = PreviewProductRelationsErrors[keyof PreviewProductRelationsErrors];
+
+export type PreviewProductRelationsResponses = {
+    /**
+     * Authorized relation previews.
+     */
+    200: ProductRelationPreviewsResponse;
+};
+
+export type PreviewProductRelationsResponse = PreviewProductRelationsResponses[keyof PreviewProductRelationsResponses];
+
+export type ResolveProductSalesUomOptionsData = {
+    body: ProductSalesUomResolveRequest;
+    path?: never;
+    query?: never;
+    url: '/api/v1/products/sales-uom-options/resolve';
+};
+
+export type ResolveProductSalesUomOptionsErrors = {
+    /**
+     * Malformed request or query.
+     */
+    400: ErrorResponse;
+    /**
+     * Unauthenticated or invalid authentication.
+     */
+    401: ErrorResponse;
+    /**
+     * Visible target but action denied.
+     */
+    403: ErrorResponse;
+};
+
+export type ResolveProductSalesUomOptionsError = ResolveProductSalesUomOptionsErrors[keyof ResolveProductSalesUomOptionsErrors];
+
+export type ResolveProductSalesUomOptionsResponses = {
+    /**
+     * Authorized SALES UOM options.
+     */
+    200: ProductSalesUomResolveResponse;
+};
+
+export type ResolveProductSalesUomOptionsResponse = ResolveProductSalesUomOptionsResponses[keyof ResolveProductSalesUomOptionsResponses];
+
+export type ResolveProductUomLabelsData = {
+    body: ProductUomLabelResolveRequest;
+    path?: never;
+    query?: never;
+    url: '/api/v1/product-uoms/labels/resolve';
+};
+
+export type ResolveProductUomLabelsErrors = {
+    /**
+     * Malformed request or query.
+     */
+    400: ErrorResponse;
+    /**
+     * Unauthenticated or invalid authentication.
+     */
+    401: ErrorResponse;
+    /**
+     * Visible target but action denied.
+     */
+    403: ErrorResponse;
+};
+
+export type ResolveProductUomLabelsError = ResolveProductUomLabelsErrors[keyof ResolveProductUomLabelsErrors];
+
+export type ResolveProductUomLabelsResponses = {
+    /**
+     * Authorized Product UOM labels.
+     */
+    200: ProductUomLabelsResponse;
+};
+
+export type ResolveProductUomLabelsResponse = ResolveProductUomLabelsResponses[keyof ResolveProductUomLabelsResponses];
+
+export type ResolveOrganizationLabelsData = {
+    body: OrganizationLabelResolveRequest;
+    path?: never;
+    query?: never;
+    url: '/api/v1/organizations/labels/resolve';
+};
+
+export type ResolveOrganizationLabelsErrors = {
+    /**
+     * Malformed request or query.
+     */
+    400: ErrorResponse;
+    /**
+     * Unauthenticated or invalid authentication.
+     */
+    401: ErrorResponse;
+    /**
+     * Visible target but action denied.
+     */
+    403: ErrorResponse;
+};
+
+export type ResolveOrganizationLabelsError = ResolveOrganizationLabelsErrors[keyof ResolveOrganizationLabelsErrors];
+
+export type ResolveOrganizationLabelsResponses = {
+    /**
+     * Authorized Organization labels.
+     */
+    200: OrganizationLabelsResponse;
+};
+
+export type ResolveOrganizationLabelsResponse = ResolveOrganizationLabelsResponses[keyof ResolveOrganizationLabelsResponses];
 
 export type GetProductData = {
     body?: never;
