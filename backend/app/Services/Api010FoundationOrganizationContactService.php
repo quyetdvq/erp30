@@ -23,12 +23,16 @@ use CodeIgniter\Shield\Entities\User;
 /** Application boundary for the CONTRACT_READY API-010 surfaces. */
 final class Api010FoundationOrganizationContactService
 {
+    public const ERROR_TRANSITION_REQUIRED = 'WF_TRANSITION_REQUIRED';
+
     public function __construct(
         private readonly ?CommonListQueryAdapter $queryAdapter = null,
         private readonly ?FoundationLocationRepository $locations = null,
         private readonly ?OrganizationRepository $organizations = null,
         private readonly ?ContactRepository $contacts = null,
         private ?AuthorizationService $authorization = null,
+        private ?ResourceWorkflowStateResolver $workflowStates = null,
+        private readonly ?LifecycleService $lifecycleService = null,
     ) {
     }
 
@@ -83,6 +87,11 @@ final class Api010FoundationOrganizationContactService
         $operation = $this->operation();
         $row = $this->row($resource, $id);
         $this->authorizeVisible($resource, $row, $operation);
+        // State changes must go through a validated Transition rather than
+        // smuggling a status field through an ordinary edit operation.
+        if (array_key_exists('status', $payload) && $this->stateResolver()->lifecycleId($resource) !== null) {
+            throw new DomainException(self::ERROR_TRANSITION_REQUIRED, ['resource' => $resource]);
+        }
         $this->authorizeAction($resource, 'edit', $row, $payload, $operation);
 
         match ($resource) {
@@ -102,6 +111,16 @@ final class Api010FoundationOrganizationContactService
         $operation = $this->operation();
         $row = $this->row($resource, $id);
         $this->authorizeVisible($resource, $row, $operation);
+        if ($this->stateResolver()->lifecycleId($resource) !== null) {
+            if (! in_array($resource, ['province', 'ward'], true)) {
+                throw new DomainException(LifecycleService::ERROR_TARGET_ADAPTER_UNAVAILABLE, ['resource' => $resource]);
+            }
+            $destinationStateId = $this->stateResolver()->stateIdForCode($resource, $status);
+            $this->lifecycle()->execute($resource, $id, 'setstate', $operation, $destinationStateId);
+
+            return $this->get($resource, $id);
+        }
+        // Legacy resources without a configured Lifecycle retain their API.
         $this->authorizeAction($resource, 'setstate', $row, ['status' => $status], $operation);
 
         match ($resource) {
@@ -219,6 +238,7 @@ final class Api010FoundationOrganizationContactService
                 persistedTarget: $target === [] ? null : $target,
                 input: $input,
             ),
+            $target === [] ? null : $this->stateResolver()->persistedStateId($resource, $target),
         );
         if (! $decision->isAllowed()) {
             throw new DomainException(AuthorizationService::REASON_POLICY_DENIED);
@@ -228,6 +248,7 @@ final class Api010FoundationOrganizationContactService
     /** @param array<string, mixed> $payload */
     private function createProvince(array $payload, OperationContext $operation): int
     {
+        $this->assertInitialStatus('province', $payload);
         $this->authorize($operation, 'province', 'create', [], $payload);
 
         return $this->locationService($operation)->createProvince($payload);
@@ -236,6 +257,7 @@ final class Api010FoundationOrganizationContactService
     /** @param array<string, mixed> $payload */
     private function createWard(array $payload, OperationContext $operation): int
     {
+        $this->assertInitialStatus('ward', $payload);
         $this->authorize($operation, 'ward', 'create', [], $payload);
 
         return $this->locationService($operation)->createWard($payload);
@@ -244,6 +266,7 @@ final class Api010FoundationOrganizationContactService
     /** @param array<string, mixed> $payload */
     private function createOrganization(array $payload, OperationContext $operation): int
     {
+        $this->assertInitialStatus('organization', $payload);
         $this->authorize($operation, 'organization', 'create', [], $payload);
 
         return $this->organizationService($operation)->create($payload);
@@ -252,6 +275,7 @@ final class Api010FoundationOrganizationContactService
     /** @param array<string, mixed> $payload */
     private function createContact(array $payload, OperationContext $operation): int
     {
+        $this->assertInitialStatus('contact', $payload);
         $this->authorize($operation, 'contact', 'create', [], $payload);
 
         return $this->contactService($operation)->create($payload);
@@ -285,6 +309,17 @@ final class Api010FoundationOrganizationContactService
         return new FoundationLocationService($this->locationRepo(), null, new MutationContext(service('clock'), $operation->actorUserId, $operation->requestId, false));
     }
 
+    private function lifecycle(): LifecycleService
+    {
+        if ($this->lifecycleService !== null) {
+            return $this->lifecycleService;
+        }
+        $adapterProvince = new FoundationLocationLifecycleAdapter('province');
+        $adapterWard = new FoundationLocationLifecycleAdapter('ward');
+
+        return new LifecycleService(adapters: [$adapterProvince, $adapterWard]);
+    }
+
     private function organizationService(OperationContext $operation): OrganizationService
     {
         return new OrganizationService($this->organizationRepo(), null, null, new MutationContext(service('clock'), $operation->actorUserId, $operation->requestId, false));
@@ -298,6 +333,24 @@ final class Api010FoundationOrganizationContactService
     private function auth(): AuthorizationService
     {
         return $this->authorization ??= new AuthorizationService();
+    }
+
+    /** @param array<string,mixed> $payload */
+    private function assertInitialStatus(string $resource, array $payload): void
+    {
+        $initial = $this->stateResolver()->initialCode($resource);
+        if ($initial !== null && (! is_string($payload['status'] ?? null)
+            || strtoupper(trim($payload['status'])) !== $initial)) {
+            throw new DomainException(ResourceWorkflowStateResolver::ERROR_INITIAL_STATE_INVALID, [
+                'resource' => $resource,
+                'initial_status' => $initial,
+            ]);
+        }
+    }
+
+    private function stateResolver(): ResourceWorkflowStateResolver
+    {
+        return $this->workflowStates ??= new ResourceWorkflowStateResolver();
     }
 
     private function locationRepo(): FoundationLocationRepository

@@ -168,6 +168,78 @@ final class ImportJobRowRepository
         return $rows;
     }
 
+    /**
+     * SQL pagination for terminal Import Jobs when filters and sorting are
+     * compatible with the canonical array-list contract. The caller owns
+     * parent Job authorization and terminal-state verification.
+     *
+     * @param list<string> $statuses Canonical uppercase row_status filters.
+     */
+    public function countPageRows(int $jobId, array $statuses = []): int
+    {
+        $jobId = PositiveId::normalize($jobId, 'import_job_id', self::ERROR_INVALID_ID);
+        try {
+            $query = $this->db->table('import_job_rows')->where('import_job_id', $jobId);
+            if ($statuses !== []) {
+                $query->whereIn('row_status', $statuses);
+                $this->whereExactStatuses($query, $statuses);
+            }
+            return $query->countAllResults();
+        } catch (\Throwable $exception) {
+            throw new PersistenceException(self::ERROR_PERSISTENCE_FAILED, 'countPageRows', $exception);
+        }
+    }
+
+    /**
+     * @param list<string> $statuses Canonical uppercase row_status filters.
+     * @return list<array<string, mixed>>
+     */
+    public function findPageRows(int $jobId, int $limit, int $offset, string $direction = 'ASC', array $statuses = []): array
+    {
+        $jobId = PositiveId::normalize($jobId, 'import_job_id', self::ERROR_INVALID_ID);
+        if ($limit < 1 || $offset < 0 || ! in_array($direction, ['ASC', 'DESC'], true)) {
+            throw new DomainException(self::ERROR_INVALID_ROW, ['field' => 'pagination']);
+        }
+        try {
+            $query = $this->db->table('import_job_rows')->where('import_job_id', $jobId);
+            if ($statuses !== []) {
+                $query->whereIn('row_status', $statuses);
+                $this->whereExactStatuses($query, $statuses);
+            }
+            $result = $query->orderBy('row_number', $direction)
+                ->orderBy('id', 'ASC')
+                ->get($limit, $offset);
+        } catch (\Throwable $exception) {
+            throw new PersistenceException(self::ERROR_PERSISTENCE_FAILED, 'findPageRows', $exception);
+        }
+        if ($result === false) {
+            throw new PersistenceException(self::ERROR_PERSISTENCE_FAILED, 'findPageRows');
+        }
+
+        return array_values($result->getResultArray());
+    }
+
+    /**
+     * The legacy PHP list filter compares row_status case-sensitively; MariaDB
+     * may use a case-insensitive collation. Keep its index-friendly IN filter
+     * above, then require the exact binary value before SQL LIMIT/COUNT.
+     *
+     * @param \CodeIgniter\Database\BaseBuilder $query
+     * @param list<string> $statuses
+     */
+    private function whereExactStatuses(\CodeIgniter\Database\BaseBuilder $query, array $statuses): void
+    {
+        foreach ($statuses as $status) {
+            if (! in_array($status, self::STATUSES, true)) {
+                throw new DomainException(self::ERROR_INVALID_STATUS, ['row_status' => $status]);
+            }
+        }
+        // Values come from the canonical enum and are still escaped, not
+        // interpolated as user SQL. BINARY prevents case-insensitive matches.
+        $escaped = implode(', ', array_map($this->db->escape(...), $statuses));
+        $query->where('BINARY row_status IN (' . $escaped . ')', null, false);
+    }
+
     /** @param array<string, mixed> $data
      *  @return array<string, mixed>
      */

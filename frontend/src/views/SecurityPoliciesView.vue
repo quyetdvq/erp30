@@ -11,17 +11,21 @@ import {
   ListShell,
   ListTable,
   TableRowActions,
+  TableStatus,
 } from '@/components/lists'
 import type { ListColumn, ListQuery } from '@/components/lists/listTypes'
 import { useListState } from '@/composables/useListState'
 import { useUnsavedChanges } from '@/composables/useUnsavedChanges'
 import {
+  changePolicyState,
   getResourceActions,
   listAuthorizationGroupPage,
   listPolicyPage,
   listResourcePage,
   listSecurityUserPage,
   savePolicy,
+  getResourceAvailableStates,
+  type ResourceStateOption,
   type ManagedUser,
   type SecurityAction,
 } from '@/services/security'
@@ -42,7 +46,6 @@ import type {
 import { i18n } from '@/i18n'
 import { normalizeApiError, reportApiError } from '@/services/errorBoundary'
 import { useBasePermission } from '@/composables/useBasePermission'
-import { getLifecycleStates, type LifecycleStateMembership } from '@/services/workflow'
 
 type ParticipantType = Policy['participant_type']
 type PolicyDraftAction = { resource_action_id: string; effect: PolicyAction['effect'] }
@@ -75,9 +78,9 @@ const actions = ref<SecurityAction[]>([])
 const actionCatalog = ref<SecurityAction[]>([])
 const participantOptions = ref<ParticipantOption[]>([])
 const participantLoading = ref(false)
-const lifecycleStateMemberships = ref<LifecycleStateMembership[]>([])
+const resourceStateOptions = ref<ResourceStateOption[]>([])
 const workflowStatesLoading = ref(false)
-const lifecycleStatesById = new Map<string, LifecycleStateMembership[]>()
+const workflowStatesUnavailable = ref(false)
 let participantRequestId = 0
 let workflowStateRequestId = 0
 let participantSearchTimer: ReturnType<typeof setTimeout> | undefined
@@ -101,6 +104,7 @@ const columns: readonly ListColumn<Policy>[] = [
   { key: 'organization_id', labelKey: 'security.organizationScope' },
   { key: 'resource_id', labelKey: 'security.resource' },
   { key: 'state_id', labelKey: 'security.workflowState' },
+  { key: 'status', labelKey: 'security.status' },
   { key: 'participant_type', labelKey: 'security.participantType' },
   { key: 'participant_ref_id', labelKey: 'security.participant' },
   { key: 'actions', labelKey: 'security.effectsSummary' },
@@ -110,12 +114,7 @@ const actionOptions = computed(() =>
   actionCatalog.value.filter((action) => String(action.resource_id) === form.value.resource_id),
 )
 const workflowStateOptions = computed(() =>
-  lifecycleStateMemberships.value
-    .map((membership) =>
-      workflowStates.value.find((state) => String(state.id) === String(membership.state_id)),
-    )
-    .filter((state): state is WorkflowState => state !== undefined)
-    .map((state) => ({ id: String(state.id), label: `${state.code} · ${state.name}` })),
+  resourceStateOptions.value.map((item) => ({ id: item.id, label: `${item.code} · ${item.name}` })),
 )
 const participantSelectOptions = computed(() =>
   participantOptions.value.map((option) => ({ value: option.id, label: option.label })),
@@ -400,34 +399,25 @@ function searchParticipants(query: string): void {
   }, 250)
 }
 async function loadWorkflowStates(resourceId: string): Promise<void> {
-  const resource = resources.value.find((item) => String(item.id) === resourceId)
-  const lifecycleId = resource?.lifecycle_id ? String(resource.lifecycle_id) : ''
   const requestId = ++workflowStateRequestId
+  resourceStateOptions.value = []
+  workflowStatesUnavailable.value = false
   workflowStatesLoading.value = true
   try {
-    if (!lifecycleId) {
-      lifecycleStateMemberships.value = []
-    } else {
-      let memberships = lifecycleStatesById.get(lifecycleId)
-      if (!memberships) {
-        memberships = await getLifecycleStates(lifecycleId)
-        lifecycleStatesById.set(lifecycleId, memberships)
-      }
-      if (requestId !== workflowStateRequestId) return
-      lifecycleStateMemberships.value = memberships
-    }
-    if (
-      form.value.state_id &&
-      !lifecycleStateMemberships.value.some(
-        (membership) => String(membership.state_id) === form.value.state_id,
-      )
-    ) {
-      form.value.state_id = ''
+    const result = resourceId
+      ? await getResourceAvailableStates(resourceId)
+      : { mode: 'STATELESS' as const, states: [] }
+    if (requestId !== workflowStateRequestId) return
+    resourceStateOptions.value = result.states
+    if (form.value.state_id && !result.states.some((item) => item.id === form.value.state_id)) {
+      // Preserve an invalid existing selection as a visible validation problem;
+      // never silently broaden a state-specific Policy to All States on load.
+      workflowStatesUnavailable.value = true
     }
   } catch (caught: unknown) {
     if (requestId === workflowStateRequestId) {
-      lifecycleStateMemberships.value = []
-      form.value.state_id = ''
+      resourceStateOptions.value = []
+      workflowStatesUnavailable.value = true
       error.value = caught
       reportApiError(caught)
     }
@@ -437,6 +427,7 @@ async function loadWorkflowStates(resourceId: string): Promise<void> {
 }
 function onResourceChange(resourceId: string): void {
   form.value.state_id = ''
+  form.value.actions = []
   void Promise.all([loadActions(resourceId), loadWorkflowStates(resourceId)])
 }
 function openCreate(): void {
@@ -508,10 +499,12 @@ async function save(): Promise<void> {
   error.value = null
   duplicateScopeConflict.value = false
   try {
+    if (workflowStatesLoading.value || workflowStatesUnavailable.value) return
     const payload = {
       organization_id: form.value.organization_id,
       resource_id: form.value.resource_id,
-      ...(form.value.state_id ? { state_id: form.value.state_id } : {}),
+      // Explicit null clears a State when editing; omission would retain the old scope.
+      state_id: form.value.state_id || null,
       participant_type: form.value.participant_type,
       participant_ref_id: form.value.participant_ref_id,
       actions: form.value.actions,
@@ -528,6 +521,24 @@ async function save(): Promise<void> {
     busy.value = false
   }
 }
+async function toggle(row: Policy): Promise<void> {
+  const status = row.status === 'ACTIVE' ? 'INACTIVE' : 'ACTIVE'
+  const label = t(status === 'ACTIVE' ? 'common.activate' : 'common.deactivate')
+  const message = `${label}: ${t('security.policy')} #${row.id}?`
+  if (typeof window !== 'undefined' && !window.confirm(message)) return
+  busy.value = true
+  error.value = null
+  try {
+    await changePolicyState(String(row.id), status)
+    await load()
+  } catch (caught: unknown) {
+    error.value = caught
+    reportApiError(caught)
+  } finally {
+    busy.value = false
+  }
+}
+
 async function reloadAfterDuplicate(): Promise<void> {
   duplicateScopeConflict.value = false
   await load()
@@ -597,6 +608,7 @@ onBeforeUnmount(() => {
               `#${row.state_id}`)
             : t('security.allStates')
         }}</template
+        ><template #cell-status="{ row }"><TableStatus :status="row.status" /></template
         ><template #cell-participant_ref_id="{ row }">{{
           labelForParticipant(row) || `#${row.participant_ref_id}`
         }}</template
@@ -604,15 +616,21 @@ onBeforeUnmount(() => {
           ><span class="effect-summary">{{ effectsSummary(row) }}</span></template
         ><template #cell-row_actions="{ row }"
           ><TableRowActions
+            :active="row.status === 'ACTIVE'"
             :busy="busy"
             :show-view="true"
             :show-edit="true"
+            :show-toggle="true"
             view-permission="policy.view"
             edit-permission="policy.edit"
+            toggle-permission="policy.setstate"
             :edit-label="t('common.edit')"
             :view-label="t('common.view')"
+            :activate-label="t('common.activate')"
+            :deactivate-label="t('common.deactivate')"
             @view="openEdit(row)"
-            @edit="openEdit(row)" /></template></ListTable
+            @edit="openEdit(row)"
+            @toggle="toggle(row)" /></template></ListTable
       ><ListPagination
         :page="state.query.page"
         :page-size="state.query.page_size"
@@ -683,7 +701,7 @@ onBeforeUnmount(() => {
           ><select
             v-model="form.state_id"
             class="field-select"
-            :disabled="workflowStatesLoading || !form.resource_id"
+            :disabled="workflowStatesLoading || workflowStatesUnavailable || !form.resource_id"
           >
             <option value="">{{ t('security.allStates') }}</option>
             <option v-for="item in workflowStateOptions" :key="item.id" :value="item.id">
@@ -691,6 +709,9 @@ onBeforeUnmount(() => {
             </option>
           </select></label
         >
+        <p v-if="workflowStatesUnavailable" class="inline-error" role="alert">
+          {{ t('security.requestError') }}
+        </p>
         <div class="form-grid">
           <label
             ><span>{{ t('security.participantType') }}</span
@@ -772,6 +793,8 @@ onBeforeUnmount(() => {
             class="primary-button"
             :disabled="
               busy ||
+              workflowStatesLoading ||
+              workflowStatesUnavailable ||
               form.actions.length === 0 ||
               !form.participant_ref_id ||
               !hasBasePermission(editingId ? 'policy' : 'policy', editingId ? 'edit' : 'create')

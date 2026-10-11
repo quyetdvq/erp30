@@ -64,7 +64,7 @@ final class PolicyAdministrationService
         $operation ??= $this->operation();
         $current = $this->existing($id);
         $candidate = array_merge($current, $policy);
-        unset($candidate['id']);
+        unset($candidate['id'], $candidate['status']);
         $this->authorize($operation, 'edit', $current, $candidate);
         $validatedPolicy = $this->validator()->validatePolicy($candidate);
         $validatedActions = $actions === null
@@ -99,7 +99,7 @@ final class PolicyAdministrationService
             persistedTarget: $target,
             input: $policy,
         );
-        $decision = $this->auth()->authorize($operation, 'policy', $action, $request, $policy['state_id'] ?? null);
+        $decision = $this->auth()->authorize($operation, 'policy', $action, $request);
         if (! $decision->isAllowed()) {
             throw new DomainException(self::ERROR_DENIED, ['action' => $action]);
         }

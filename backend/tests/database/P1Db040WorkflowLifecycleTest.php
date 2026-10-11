@@ -105,13 +105,16 @@ final class P1Db040WorkflowLifecycleTest extends CIUnitTestCase
     public function testLifecycleAndWorkflowCodesAndRelationshipKeysAreUnique(): void
     {
         $this->db->table('lifecycles')->insert($this->lifecycle('LIFE-UNIQUE'));
+        // Capture each successful insert ID immediately: the following duplicate
+        // inserts intentionally fail and can reset the connection's last insert ID.
+        $lifecycleId = (int) $this->db->insertID();
+        $this->assertGreaterThan(0, $lifecycleId);
         $this->assertInsertRejected('lifecycles', $this->lifecycle('LIFE-UNIQUE'));
 
         $this->db->table('workflow_states')->insert($this->state('STATE-UNIQUE'));
+        $stateId = (int) $this->db->insertID();
+        $this->assertGreaterThan(0, $stateId);
         $this->assertInsertRejected('workflow_states', $this->state('STATE-UNIQUE'));
-
-        $lifecycleId = $this->db->insertID();
-        $stateId = $this->db->table('workflow_states')->where('code', 'STATE-UNIQUE')->get()->getFirstRow()->id;
         $this->db->table('lifecycle_states')->insert($this->lifecycleState((int) $lifecycleId, (int) $stateId));
         $this->assertInsertRejected('lifecycle_states', $this->lifecycleState((int) $lifecycleId, (int) $stateId));
 

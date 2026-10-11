@@ -23,14 +23,24 @@ final class P1Seed003PrivilegedAuthorizationGroupTest extends CIUnitTestCase
         $this->seedPrivilegedGroup();
         $second = $this->permissionSnapshot();
 
-        $this->assertSame(93, PrivilegedAuthorizationGroupSeeder::approvedActionCount());
+        // Stage 1 explicitly adds policy.setstate and resource.setstate to
+        // the approved SYSTEM_ADMIN matrix; unrelated future actions stay out.
+        $this->assertSame(95, PrivilegedAuthorizationGroupSeeder::approvedActionCount());
         $this->assertSame($first, $second);
+        $approved = array_map(
+            static fn (array $action): string => $action['resource_type'] . '.' . $action['action'],
+            PrivilegedAuthorizationGroupSeeder::approvedActions(),
+        );
+        sort($approved, SORT_STRING);
+        $this->assertSame($approved, $first);
+        $this->assertContains('policy.setstate', $first);
+        $this->assertContains('resource.setstate', $first);
         $this->assertCount(1, $this->db->table('groups')->where('code', 'SYSTEM_ADMIN')->get()->getResultArray());
         $group = $this->db->table('groups')->where('code', 'SYSTEM_ADMIN')->get()->getRowArray();
         $this->assertSame('System Admin', $group['name']);
         $this->assertNull($group['description']);
         $this->assertSame('ACTIVE', $group['status']);
-        $this->assertSame(93, count($first));
+        $this->assertSame(95, count($first));
         $this->assertSame([
             'policies' => 0,
             'auto_numbering_series' => 0,
@@ -59,7 +69,7 @@ final class P1Seed003PrivilegedAuthorizationGroupTest extends CIUnitTestCase
         $this->assertSame(1, $this->db->table('group_permissions')->where([
             'group_id' => $groupId, 'resource_action_id' => $futureActionId,
         ])->countAllResults());
-        $this->assertSame(94, $this->db->table('group_permissions')->where('group_id', $groupId)->countAllResults());
+        $this->assertSame(96, $this->db->table('group_permissions')->where('group_id', $groupId)->countAllResults());
     }
 
     public function testMissingApprovedActionRollsBackTheWholeBootstrap(): void
@@ -104,7 +114,10 @@ final class P1Seed003PrivilegedAuthorizationGroupTest extends CIUnitTestCase
         $groups = $adapter->resolveActiveAuthorizationGroups($identity);
         $permissions = $adapter->resolveGroupBasePermissions($groups);
         $this->assertContains('SYSTEM_ADMIN', array_map(static fn ($group): string => $group->code, $groups));
-        $this->assertCount(93, $permissions);
+        $this->assertCount(95, $permissions);
+        $keys = array_map(static fn ($permission): string => $permission->key(), $permissions);
+        $this->assertContains('policy.setstate', $keys);
+        $this->assertContains('resource.setstate', $keys);
     }
 
     private function seedCatalog(): void

@@ -29,6 +29,9 @@ final class Api060ProductImportService
     public const ERROR_FILE_INVALID = 'IMPORT_FILE_INVALID';
     public const ERROR_FILE_TOO_LARGE = 'IMPORT_FILE_TOO_LARGE';
 
+    private ?AuthorizationService $runtimeAuthorization = null;
+    private ?ResourceWorkflowStateResolver $runtimeWorkflowStates = null;
+
     /** @param ConnectionInterface<mixed, mixed>|null $db */
     public function __construct(
         private readonly ?ConnectionInterface $db = null,
@@ -74,7 +77,10 @@ final class Api060ProductImportService
      */
     public function list(array $query = []): array
     {
-        $this->authorizeView(['entity_type' => ProductImportJobService::ENTITY_PRODUCT]);
+        $stateAware = $this->requiresImportJobStateAuthorization();
+        if (! $stateAware) {
+            $this->authorizeView(['entity_type' => ProductImportJobService::ENTITY_PRODUCT]);
+        }
         [$query, $dateFilters] = $this->normalizeJobQuery($query);
         $this->validateFilterEnum($query, 'mode', [
             ProductImportJobService::MODE_CREATE_ONLY,
@@ -88,11 +94,19 @@ final class Api060ProductImportService
             ProductImportJobService::STATUS_COMPLETED_WITH_ERRORS,
             ProductImportJobService::STATUS_FAILED,
         ]);
+        // Use a single actor/evaluation instant across all rows in this list.
+        $operation = $stateAware ? $this->operation() : null;
         $rows = array_map(
             fn (array $row): array => $this->jobOutput($row),
             array_values(array_filter(
                 $this->jobs()->findAll(),
-                fn (array $row): bool => $this->isVisibleJob($row, $dateFilters),
+                fn (array $row): bool => $this->isVisibleJob($row, $dateFilters)
+                    && (! $stateAware || $this->authorization()->authorize(
+                        $operation,
+                        'import_job',
+                        'view',
+                        new EvaluationOrganizationRequest(persistedTarget: $row),
+                    )->isAllowed()),
             )),
         );
 
@@ -128,20 +142,68 @@ final class Api060ProductImportService
         if (! isset($normalizedQuery['sort'])) {
             $normalizedQuery['sort'] = 'row_number';
         }
+        $allowlist = new CommonListQueryAllowlist(
+            search: ['entity_key'],
+            filters: ['row_status'],
+            sort: ['row_number', 'row_status', 'entity_key', 'target_ref_id', 'created_at'],
+        );
+        $parsed = ($this->queryAdapter ?? new CommonListQueryAdapter())->parse($normalizedQuery, $allowlist);
+        if ($this->canPageImportRowsInSql($job, $parsed)) {
+            $statuses = $parsed->filterValues('row_status');
+            $direction = $parsed->sortTerms()[0]->direction;
+            $total = $this->rowRepository()->countPageRows($id, $statuses);
+            $page = $this->rowRepository()->findPageRows(
+                $id, $parsed->pageSize, $parsed->offset, $direction, $statuses,
+            );
+
+            return [
+                'items' => array_map(fn (array $row): array => $this->rowOutput($row), $page),
+                'page' => $parsed->page,
+                'page_size' => $parsed->pageSize,
+                'total' => (string) $total,
+            ];
+        }
+
+        // Compatibility path: live jobs, Unicode search, non-numeric sorts,
+        // and noncanonical status values retain the original PHP semantics.
         $rowData = array_map(
             fn (array $row): array => $this->rowOutput($row),
             $this->rowRepository()->findByJobId($id),
         );
 
-        return $this->paginate(
-            $rowData,
-            $normalizedQuery,
-            new CommonListQueryAllowlist(
-                search: ['entity_key'],
-                filters: ['row_status'],
-                sort: ['row_number', 'row_status', 'entity_key', 'target_ref_id', 'created_at'],
-            ),
-        );
+        return $this->paginate($rowData, $normalizedQuery, $allowlist);
+    }
+
+    /**
+     * Safe SQL subset: a terminal job cannot acquire more row results during
+     * normal import processing; row_number is unique per job and numeric.
+     * Other comparisons must retain the canonical PHP filtering/sorting rules.
+     *
+     * @param array<string, mixed> $job
+     */
+    private function canPageImportRowsInSql(array $job, \App\Infrastructure\Api\CommonListQuery $query): bool
+    {
+        if (! in_array(strtoupper((string) ($job['status'] ?? '')), [
+            ProductImportJobService::STATUS_COMPLETED,
+            ProductImportJobService::STATUS_COMPLETED_WITH_ERRORS,
+            ProductImportJobService::STATUS_FAILED,
+        ], true) || $query->search() !== null) {
+            return false;
+        }
+        if (array_diff(array_keys($query->filters), ['row_status']) !== []) {
+            return false;
+        }
+        foreach ($query->filterValues('row_status') as $status) {
+            if (! in_array($status, ['SUCCESS', 'ERROR', 'SKIPPED'], true)) {
+                // Case-insensitive SQL collation cannot replace the existing
+                // case-sensitive PHP match for malformed-but-accepted tokens.
+                return false;
+            }
+        }
+        $terms = $query->sortTerms();
+        return count($terms) === 2
+            && $terms[0]->field === 'row_number'
+            && $terms[1]->field === 'id';
     }
 
     /** @return array<string, mixed> */
@@ -324,7 +386,18 @@ final class Api060ProductImportService
 
     private function authorization(): AuthorizationService
     {
-        return $this->authorization ?? new AuthorizationService(db: $this->connection());
+        return $this->authorization ?? ($this->runtimeAuthorization ??= new AuthorizationService(db: $this->connection()));
+    }
+
+    private function requiresImportJobStateAuthorization(): bool
+    {
+        $this->runtimeWorkflowStates ??= new ResourceWorkflowStateResolver($this->connection());
+        if ($this->runtimeWorkflowStates->lifecycleId('import_job') !== null) {
+            return true;
+        }
+        $resourceRow = $this->runtimeWorkflowStates->resource('import_job');
+        return (new \App\Repositories\PolicyRepository($this->connection()))
+            ->hasActiveStateScopedPolicies((int) $resourceRow['id']);
     }
 
     private function imports(): ProductImportAuthorizationService

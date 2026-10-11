@@ -907,7 +907,9 @@ export type Resource = {
     type: string;
     name: string;
     domain: 'SYSTEM' | 'MASTER' | 'ORGANIZATION';
+    status: 'ACTIVE' | 'INACTIVE';
     lifecycle_id?: BigInt;
+    policy_state_codes?: Array<string>;
     actions?: Array<ResourceActionSummary>;
 };
 
@@ -920,7 +922,7 @@ export type ResourceCreate = {
 
 export type ResourcePatch = {
     name?: string;
-    lifecycle_id?: BigInt;
+    lifecycle_id?: BigInt | null;
 };
 
 export type ResourceActionCreate = {
@@ -1006,6 +1008,7 @@ export type Policy = {
     id: BigInt;
     organization_id: BigInt;
     resource_id: BigInt;
+    status: 'ACTIVE' | 'INACTIVE';
     /**
      * NULL represents the ALL_STATES scope.
      */

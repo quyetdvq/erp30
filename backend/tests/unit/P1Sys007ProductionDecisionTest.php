@@ -48,9 +48,11 @@ final class P1Sys007ProductionDecisionTest extends CIUnitTestCase
         self::assertSame('Asia/Ho_Chi_Minh', $timezone->getName());
     }
 
-    public function testPrivilegedMatrixRemainsExactApprovedNinetyThreeActions(): void
+    public function testPrivilegedMatrixRemainsExactApprovedNinetyFiveActions(): void
     {
-        self::assertSame(93, PrivilegedAuthorizationGroupSeeder::approvedActionCount());
+        self::assertSame(95, PrivilegedAuthorizationGroupSeeder::approvedActionCount());
+        self::assertContains(['resource_type' => 'policy', 'action' => 'setstate'], PrivilegedAuthorizationGroupSeeder::approvedActions());
+        self::assertContains(['resource_type' => 'resource', 'action' => 'setstate'], PrivilegedAuthorizationGroupSeeder::approvedActions());
         self::assertContains(['resource_type' => 'user', 'action' => 'reset_password'], PrivilegedAuthorizationGroupSeeder::approvedActions());
         self::assertNotContains(['resource_type' => 'display_setting', 'action' => 'view'], PrivilegedAuthorizationGroupSeeder::approvedActions());
         self::assertNotContains(['resource_type' => 'display_setting', 'action' => 'edit'], PrivilegedAuthorizationGroupSeeder::approvedActions());

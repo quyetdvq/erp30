@@ -8,10 +8,12 @@ import {
   ListShell,
   ListTable,
   TableRowActions,
+  TableStatus,
 } from '@/components/lists'
 import type { ListColumn, ListQuery } from '@/components/lists/listTypes'
 import { useListState } from '@/composables/useListState'
 import {
+  changeResourceState,
   deleteResourceActionById,
   deleteResourceById,
   listResourcePage,
@@ -40,12 +42,18 @@ const editingActionId = ref<string | undefined>()
 const busy = ref(false)
 const error = ref<unknown | null>(null)
 const lifecycles = ref<Lifecycle[]>([])
-const form = ref({ type: '', name: '', domain: 'SYSTEM' as Resource['domain'], lifecycle_id: '' })
+const form = ref({
+  type: '',
+  name: '',
+  domain: 'SYSTEM' as Resource['domain'],
+  lifecycle_id: '',
+})
 const actionForm = ref({ code: '', description: '' })
 const columns: readonly ListColumn<Resource>[] = [
   { key: 'type', labelKey: 'security.type', sortable: true },
   { key: 'name', labelKey: 'security.name', sortable: true },
   { key: 'domain', labelKey: 'security.domain', sortable: true },
+  { key: 'status', labelKey: 'security.status', sortable: true },
   { key: 'lifecycle_id', labelKey: 'security.lifecycle' },
   { key: 'action_count', labelKey: 'security.actionCount', align: 'center' },
   { key: 'actions', labelKey: 'security.actions', align: 'end' },
@@ -101,7 +109,12 @@ function openActionsTab(): void {
 }
 function openCreate(): void {
   editingId.value = undefined
-  form.value = { type: '', name: '', domain: 'SYSTEM', lifecycle_id: '' }
+  form.value = {
+    type: '',
+    name: '',
+    domain: 'SYSTEM',
+    lifecycle_id: '',
+  }
   modalOpen.value = true
 }
 function openEdit(row: Resource): void {
@@ -122,7 +135,7 @@ async function save(): Promise<void> {
       ? await saveResource(
           {
             name: form.value.name,
-            ...(form.value.lifecycle_id ? { lifecycle_id: form.value.lifecycle_id } : {}),
+            lifecycle_id: form.value.lifecycle_id || null,
           },
           editingId.value,
         )
@@ -142,6 +155,23 @@ async function save(): Promise<void> {
     busy.value = false
   }
 }
+async function toggle(row: Resource): Promise<void> {
+  const status = row.status === 'ACTIVE' ? 'INACTIVE' : 'ACTIVE'
+  const label = t(status === 'ACTIVE' ? 'common.activate' : 'common.deactivate')
+  if (typeof window !== 'undefined' && !window.confirm(`${label}: ${row.type}?`)) return
+  busy.value = true
+  error.value = null
+  try {
+    await changeResourceState(String(row.id), status)
+    await load()
+  } catch (caught: unknown) {
+    error.value = caught
+    reportApiError(caught)
+  } finally {
+    busy.value = false
+  }
+}
+
 async function loadLifecycles(): Promise<void> {
   try {
     lifecycles.value = (
@@ -266,22 +296,29 @@ onMounted(() => {
         "
         ><template #cell-domain="{ row }"
           ><code>{{ row.domain }}</code></template
+        ><template #cell-status="{ row }"><TableStatus :status="row.status" /></template
         ><template #cell-lifecycle_id="{ row }">{{ lifecycleLabel(row.lifecycle_id) }}</template
         ><template #cell-action_count="{ row }">{{ row.actions?.length ?? 0 }}</template
         ><template #cell-actions="{ row }"
           ><TableRowActions
+            :active="row.status === 'ACTIVE'"
             :busy="busy"
             :show-view="true"
             :show-edit="true"
+            :show-toggle="true"
             :show-delete="true"
             view-permission="resource.view"
             edit-permission="resource.edit"
+            toggle-permission="resource.setstate"
             delete-permission="resource.delete"
             :edit-label="t('common.edit')"
             :view-label="t('common.view')"
+            :activate-label="t('common.activate')"
+            :deactivate-label="t('common.deactivate')"
             :delete-label="t('common.delete')"
             @view="selectResource(row)"
             @edit="openEdit(row)"
+            @toggle="toggle(row)"
             @delete="remove(row)" /></template
       ></ListTable>
       <ListPagination
@@ -346,6 +383,10 @@ onMounted(() => {
               <code>{{ selected.domain }}</code>
               <small>{{ t('security.domainImmutable') }}</small>
             </dd>
+          </div>
+          <div>
+            <dt>{{ t('security.status') }}</dt>
+            <dd><TableStatus :status="selected.status" /></dd>
           </div>
           <div>
             <dt>{{ t('security.lifecycle') }}</dt>

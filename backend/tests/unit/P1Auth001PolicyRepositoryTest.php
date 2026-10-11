@@ -305,6 +305,47 @@ final class P1Auth001PolicyRepositoryTest extends CIUnitTestCase
         $this->assertCount(2, $repository->findPolicyActions($policyId), 'Existing administration reads remain unchanged.');
     }
 
+    public function testAdministrativePolicyActionBatchFetchKeepsAllActionsAndBoundedSql(): void
+    {
+        $this->seedCatalog();
+        $refs = $this->insertReferences();
+        $repository = new PolicyRepository($this->db);
+        $view = $this->resourceActionId('product', 'view');
+        $edit = $this->resourceActionId('product', 'edit');
+        $policyId = $repository->insertWithActions([
+            'organization_id' => $refs['ORGANIZATION'],
+            'resource_id' => $this->resourceId('product'),
+            'participant_type' => 'USER',
+            'participant_ref_id' => $refs['USER'],
+        ], [
+            ['resource_action_id' => $view, 'effect' => 'ALLOW'],
+            ['resource_action_id' => $edit, 'effect' => 'ABSOLUTE_DENY'],
+        ]);
+
+        $queries = [];
+        $listener = static function ($query) use (&$queries): void {
+            if (str_contains(strtolower((string) $query), 'policy_actions')) {
+                $queries[] = (string) $query;
+            }
+        };
+        Events::on('DBQuery', $listener);
+        try {
+            self::assertSame([], $repository->findAllPolicyActionsForPolicies([]));
+            self::assertCount(0, $queries);
+            $fetched = $repository->findAllPolicyActionsForPolicies([$policyId, $policyId]);
+            self::assertCount(1, $queries, 'One list page must not execute one SELECT per Policy.');
+            $many = $repository->findAllPolicyActionsForPolicies(array_merge([$policyId], range(900000000, 900001000)));
+        } finally {
+            Events::removeListener('DBQuery', $listener);
+        }
+
+        self::assertCount(4, $queries, '1002 unique Policy IDs use three additional bounded SELECTs.');
+        self::assertCount(2, $fetched);
+        self::assertSame([$view, $edit], array_map(static fn (array $row): int => (int) $row['resource_action_id'], $fetched));
+        self::assertSame(['ALLOW', 'ABSOLUTE_DENY'], array_column($fetched, 'effect'));
+        self::assertSame($fetched, $many, 'Batch boundary cannot lose an action or change its effect.');
+    }
+
     /** @return array<string, int> */
     private function insertReferences(): array
     {

@@ -33,6 +33,7 @@ final class FoundationLocationService
         ?ConnectionInterface $db = null,
         private readonly ?MutationContext $mutationContext = null,
         private readonly ?Clock $clock = null,
+        private ?ResourceWorkflowStateResolver $workflowStates = null,
     ) {
         $this->db = $db ?? db_connect();
     }
@@ -41,6 +42,7 @@ final class FoundationLocationService
     public function createProvince(array $data): int
     {
         $payload = $this->locationPayload($data, ['code', 'name', 'status']);
+        $this->assertInitialState('province', (string) $payload['status']);
         $this->assertCodeAvailable('provinces', (string) $payload['code']);
 
         return $this->repo()->insert('provinces', $payload, ['code', 'name', 'status'], $this->operation());
@@ -52,6 +54,7 @@ final class FoundationLocationService
         $current = $this->province($id);
         $payload = $this->locationPayload($data, []);
         $candidate = array_merge($current, $payload);
+        $this->assertStateMutationAllowed('province', $current, $payload);
         $this->assertCodeAvailable('provinces', (string) $candidate['code'], $id);
 
         return $this->repo()->update('provinces', $id, $payload, $this->operation());
@@ -61,6 +64,7 @@ final class FoundationLocationService
     public function createWard(array $data): int
     {
         $payload = $this->locationPayload($data, ['province_id', 'code', 'name', 'status']);
+        $this->assertInitialState('ward', (string) $payload['status']);
         $payload['province_id'] = PositiveId::normalize($payload['province_id'], 'province_id', self::ERROR_PROVINCE_REFERENCE_INVALID);
         $this->province($payload['province_id']);
         $this->assertCodeAvailable('wards', (string) $payload['code']);
@@ -74,6 +78,7 @@ final class FoundationLocationService
         $current = $this->ward($id);
         $payload = $this->locationPayload($data, []);
         $candidate = array_merge($current, $payload);
+        $this->assertStateMutationAllowed('ward', $current, $payload);
         $candidate['province_id'] = PositiveId::normalize($candidate['province_id'], 'province_id', self::ERROR_PROVINCE_REFERENCE_INVALID);
         $this->province($candidate['province_id']);
         $this->assertCodeAvailable('wards', (string) $candidate['code'], $id);
@@ -137,6 +142,32 @@ final class FoundationLocationService
         }
 
         return $data;
+    }
+
+    private function assertInitialState(string $resource, string $status): void
+    {
+        $initial = $this->states()->initialCode($resource);
+        if ($initial !== null && $initial !== $status) {
+            throw new DomainException(ResourceWorkflowStateResolver::ERROR_INITIAL_STATE_INVALID, [
+                'resource' => $resource,
+                'initial_status' => $initial,
+            ]);
+        }
+    }
+
+    /** @param array<string,mixed> $current @param array<string,mixed> $changes */
+    private function assertStateMutationAllowed(string $resource, array $current, array $changes): void
+    {
+        if (array_key_exists('status', $changes)
+            && $changes['status'] !== $current['status']
+            && $this->states()->lifecycleId($resource) !== null) {
+            throw new DomainException(Api010FoundationOrganizationContactService::ERROR_TRANSITION_REQUIRED, ['resource' => $resource]);
+        }
+    }
+
+    private function states(): ResourceWorkflowStateResolver
+    {
+        return $this->workflowStates ??= new ResourceWorkflowStateResolver($this->db);
     }
 
     private function assertCodeAvailable(string $table, string $code, ?int $ignoreId = null): void

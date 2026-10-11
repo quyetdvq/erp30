@@ -25,8 +25,8 @@ final class P1Seed001ResourceActionSeedTest extends CIUnitTestCase
         'employee_assignment' => ['view', 'create', 'edit', 'setstate'],
         'user' => ['view', 'create', 'edit', 'setstate', 'reset_password', 'assign_permission'],
         'authorization_group' => ['view', 'create', 'edit', 'setstate', 'assign_member', 'assign_permission'],
-        'resource' => ['view', 'create', 'edit', 'delete', 'configure_numbering'],
-        'policy' => ['view', 'create', 'edit', 'delete'],
+        'resource' => ['view', 'create', 'edit', 'delete', 'configure_numbering', 'setstate'],
+        'policy' => ['view', 'create', 'edit', 'delete', 'setstate'],
         'authorization_log' => ['view', 'export'],
         'workflow_state' => ['view', 'create', 'edit', 'setstate'],
         'lifecycle' => ['view', 'create', 'edit', 'setstate'],
@@ -63,7 +63,7 @@ final class P1Seed001ResourceActionSeedTest extends CIUnitTestCase
         $this->assertSame($this->normalizedMatrix(), $second);
         $this->assertSame($beforeSideEffects, $this->sideEffectCounts());
         $this->assertSame(21, count($second));
-        $this->assertSame(95, array_sum(array_map('count', $second)));
+        $this->assertSame(97, array_sum(array_map('count', $second)));
         $expectedDomains = self::DOMAINS;
         ksort($expectedDomains);
         $this->assertSame($expectedDomains, $this->domainSnapshot());
@@ -76,7 +76,7 @@ final class P1Seed001ResourceActionSeedTest extends CIUnitTestCase
 
         $this->assertSame(['create', 'edit', 'export', 'import', 'setstate', 'view'], $catalog['product']);
         $this->assertNotContains('import', array_merge(...array_values(array_diff_key($catalog, ['product' => true]))));
-        $this->assertSame(['configure_numbering', 'create', 'delete', 'edit', 'view'], $catalog['resource']);
+        $this->assertSame(['configure_numbering', 'create', 'delete', 'edit', 'setstate', 'view'], $catalog['resource']);
         $this->assertNotContains('configure_numbering', $catalog['resource'] === [] ? [] : array_values(array_diff($catalog['resource'], ['configure_numbering'])));
         $this->assertContains('assign_member', $catalog['authorization_group']);
         $this->assertContains('assign_permission', $catalog['authorization_group']);

@@ -34,6 +34,8 @@ final class Api030AuthorizationWorkflowService
 
     /** @var ConnectionInterface<mixed, mixed> */
     private ConnectionInterface $connection;
+    private ?ResourceWorkflowStateResolver $runtimeStateResolver = null;
+    private ?AuthorizationService $runtimeAuthorization = null;
 
     /** @param ConnectionInterface<mixed, mixed>|null $db */
     public function __construct(
@@ -64,7 +66,9 @@ final class Api030AuthorizationWorkflowService
         foreach ($this->rows($resource) as $row) {
             try {
                 $this->authorize($resource, 'view', $row, [], $operation);
-                $rows[] = $this->output($resource, $row, $resource !== 'resource');
+                // Keep authorization and count/filter-before-pagination unchanged.
+                // Action relations are presentation fields, loaded only for the page.
+                $rows[] = $row;
             } catch (DomainException $exception) {
                 if ($this->isVisibilityDenial($exception)) {
                     continue;
@@ -80,11 +84,13 @@ final class Api030AuthorizationWorkflowService
             new AuthorizedArrayListSource($rows),
         );
 
-        if ($includeActions) {
+        if ($resource === 'policy' || $includeActions) {
             /** @var list<array<string, mixed>> $pageRows */
             $pageRows = iterator_to_array($result->data, false);
             $result = new CommonListResult(
-                $this->attachResourceActions($pageRows),
+                $resource === 'policy'
+                    ? $this->attachPolicyActions($pageRows)
+                    : $this->attachResourceActions($pageRows),
                 $result->query,
                 $result->total,
             );
@@ -163,6 +169,9 @@ final class Api030AuthorizationWorkflowService
     public function update(string $resource, int $id, array $payload): array
     {
         $this->assertResource($resource);
+        if (in_array($resource, ['policy', 'resource'], true) && array_key_exists('status', $payload)) {
+            throw new DomainException('NATIVE_STATE_REQUIRES_SETSTATE', ['resource' => $resource]);
+        }
         $current = $this->find($resource, $id);
         $operation = $this->operation();
         $this->authorize($resource, 'edit', $current, $payload, $operation);
@@ -191,12 +200,19 @@ final class Api030AuthorizationWorkflowService
         }
         match ($resource) {
             'authorization_group' => $this->groupService($operation)->update($id, ['status' => $status], $operation),
+            'policy' => $this->policyRepository()->setStatus($id, $status, $operation, (string) $current['status']),
+            'resource' => $this->resourceRepository()->setResourceStatus($id, $status, (string) $current['status'], $operation),
             'workflow_state' => $this->lifecycleRepository()->updateWorkflowState($id, ['status' => $status], $operation),
             'lifecycle' => $this->lifecycleRepository()->updateLifecycle($id, ['status' => $status], $operation),
             default => throw new DomainException('VALIDATION_ERROR', ['field' => 'status']),
         };
 
-        return $this->get($resource, $id);
+        // Do not leak a full row to a caller who has setstate but not view.
+        // A second view check would falsely fail after a successful mutation
+        // when the destination State has ABSOLUTE_DENY:view.
+        return in_array($resource, ['resource', 'policy'], true)
+            ? ['id' => $id, 'status' => $status]
+            : $this->get($resource, $id);
     }
 
     public function deletePolicy(int $id): void
@@ -411,8 +427,11 @@ final class Api030AuthorizationWorkflowService
             persistedTarget: $target === [] ? null : $target,
             input: $input,
         );
-        $stateId = $target['state_id'] ?? null;
-        $decision = $this->auth()->authorize($operation, $resource, $action, $request, $stateId);
+        // A policy row's state_id describes the *target resource* to which
+        // that policy applies. It is not the workflow state of the policy
+        // object being authorized. Let the shared evaluator derive the
+        // actual current state from the persisted target's status.
+        $decision = $this->auth()->authorize($operation, $resource, $action, $request);
         if (! $decision->isAllowed()) {
             throw new DomainException(AuthorizationService::REASON_POLICY_DENIED, ['action' => $action]);
         }
@@ -422,11 +441,18 @@ final class Api030AuthorizationWorkflowService
     private function createResource(array $payload, OperationContext $operation): int
     {
         $type = $this->token($payload['type'] ?? null, 'type');
+        if (ResourceNativeStateCatalog::isIndependent($type) && ($payload['lifecycle_id'] ?? null) !== null) {
+            throw new DomainException(ResourceWorkflowStateResolver::ERROR_LIFECYCLE_SELF_REFERENCE, ['resource' => $type]);
+        }
         $domain = strtoupper(trim((string) ($payload['domain'] ?? '')));
         if ($domain === '' || $domain === 'COMPANY' || ! in_array($domain, array_map(static fn (ResourceDomain $d): string => $d->value, ResourceDomain::cases()), true)) {
             throw new DomainException('RESOURCE_DOMAIN_INVALID', ['field' => 'domain']);
         }
+        if (array_key_exists('status', $payload) && $payload['status'] !== 'ACTIVE') {
+            throw new DomainException('NATIVE_STATE_REQUIRES_SETSTATE', ['resource' => 'resource']);
+        }
         $row = [
+            'status' => 'ACTIVE',
             'type' => $type,
             'name' => $this->token($payload['name'] ?? null, 'name'),
             'domain' => $domain,
@@ -441,6 +467,24 @@ final class Api030AuthorizationWorkflowService
     {
         if (array_key_exists('domain', $payload)) {
             throw new DomainException('RESOURCE_DOMAIN_IMMUTABLE', ['field' => 'domain']);
+        }
+        $current = $this->resourceRepository()->findResource($id);
+        if ($current === null) {
+            throw new PageNotFoundException('Resource not found.');
+        }
+        if (array_key_exists('lifecycle_id', $payload)
+            && ResourceNativeStateCatalog::isIndependent((string) $current['type'])
+            && $payload['lifecycle_id'] !== null) {
+            throw new DomainException(ResourceWorkflowStateResolver::ERROR_LIFECYCLE_SELF_REFERENCE);
+        }
+        if (array_key_exists('lifecycle_id', $payload)) {
+            $next = $payload['lifecycle_id'];
+            $nextId = $next === null ? null : \App\Infrastructure\Id\PositiveId::normalize(
+                $next, 'lifecycle_id', ResourceWorkflowStateResolver::ERROR_RESOURCE_LIFECYCLE_INVALID,
+            );
+            (new ResourceWorkflowStateResolver($this->connection))->assertLifecycleReassignmentSafe(
+                (string) $current['type'], $nextId,
+            );
         }
         $changes = [];
         foreach (['type', 'name', 'lifecycle_id'] as $field) {
@@ -535,8 +579,12 @@ final class Api030AuthorizationWorkflowService
         if ($resource === 'policy') {
             $row['actions'] = $this->policyRepository()->findPolicyActions((int) $row['id']);
         }
-        if ($resource === 'resource' && $includeResourceActions) {
-            $row['actions'] = $this->resourceRepository()->findResourceActions((int) $row['id']);
+        if ($resource === 'resource') {
+            $states = $this->runtimeStateResolver ??= new ResourceWorkflowStateResolver($this->connection);
+            $row['policy_state_codes'] = $states->allowedPolicyStateCodes((string) $row['type']);
+            if ($includeResourceActions) {
+                $row['actions'] = $this->resourceRepository()->findResourceActions((int) $row['id']);
+            }
         }
         return $row;
     }
@@ -556,6 +604,32 @@ final class Api030AuthorizationWorkflowService
         unset($query['include']);
 
         return true;
+    }
+
+    /**
+     * Action rows are the complete Policy Action matrix, not merely the action
+     * used to authorize viewing this Policy list. No row outside the authorized
+     * and filtered page is included in the SQL IN-list.
+     *
+     * @param list<array<string, mixed>> $rows
+     * @return list<array<string, mixed>>
+     */
+    private function attachPolicyActions(array $rows): array
+    {
+        $ids = array_values(array_unique(array_map(
+            static fn (array $row): int => (int) $row['id'],
+            $rows,
+        )));
+        $byPolicy = [];
+        foreach ($this->policyRepository()->findAllPolicyActionsForPolicies($ids) as $action) {
+            $byPolicy[(int) $action['policy_id']][] = $action;
+        }
+        foreach ($rows as &$row) {
+            $row['actions'] = $byPolicy[(int) $row['id']] ?? [];
+        }
+        unset($row);
+
+        return $rows;
     }
 
     /** @param list<array<string, mixed>> $rows
@@ -615,8 +689,8 @@ final class Api030AuthorizationWorkflowService
     {
         return match ($resource) {
             'authorization_group' => new CommonListQueryAllowlist(['code', 'name'], ['status'], ['code', 'name', 'status']),
-            'resource' => new CommonListQueryAllowlist(['type', 'name'], ['domain'], ['type', 'name', 'domain']),
-            'policy' => new CommonListQueryAllowlist([], ['organization_id', 'resource_id', 'state_id', 'participant_type', 'participant_ref_id'], ['id', 'organization_id', 'resource_id']),
+            'resource' => new CommonListQueryAllowlist(['type', 'name'], ['domain', 'status'], ['type', 'name', 'domain', 'status']),
+            'policy' => new CommonListQueryAllowlist([], ['organization_id', 'resource_id', 'state_id', 'status', 'participant_type', 'participant_ref_id'], ['id', 'organization_id', 'resource_id', 'status']),
             'authorization_log' => new CommonListQueryAllowlist(['action', 'decision', 'reason', 'resource_type'], ['user_id', 'resource_type', 'resource_id', 'action', 'decision', 'organization_id', 'request_id', 'created_from', 'created_to'], ['id', 'created_at']),
             'security_user' => new CommonListQueryAllowlist(['username', 'email', 'employee_code', 'employee_name'], ['status', 'active'], ['id', 'username', 'email', 'status', 'created_at']),
             'workflow_state' => new CommonListQueryAllowlist(['code', 'name'], ['status'], ['code', 'name', 'status']),
@@ -712,7 +786,10 @@ final class Api030AuthorizationWorkflowService
 
     private function auth(): AuthorizationService
     {
-        return $this->authorization ?? new AuthorizationService(db: $this->connection);
+        return $this->authorization ?? ($this->runtimeAuthorization ??= new AuthorizationService(
+            db: $this->connection,
+            workflowStates: $this->runtimeStateResolver ??= new ResourceWorkflowStateResolver($this->connection),
+        ));
     }
 
     private function groupRepository(): AuthorizationGroupRepository

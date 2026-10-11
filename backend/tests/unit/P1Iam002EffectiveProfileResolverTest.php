@@ -111,7 +111,9 @@ final class P1Iam002EffectiveProfileResolverTest extends CIUnitTestCase
 
         $profile = $this->resolve($userId);
 
-        $this->assertCount(93, $profile->permissions);
+        $this->assertCount(95, $profile->permissions);
+        $this->assertContains('policy.setstate', $profile->keys());
+        $this->assertContains('resource.setstate', $profile->keys());
         $this->assertNotContains('product.future_action', $profile->keys());
     }
 

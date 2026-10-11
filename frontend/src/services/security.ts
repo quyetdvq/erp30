@@ -58,6 +58,7 @@ import type {
   WorkflowState,
 } from '@/api/generated/types.gen'
 import { withTypedClient } from '@/api/client'
+import { apiClient } from '@/services/api'
 import { i18n } from '@/i18n'
 import type { ListQuery, ListResponse } from '@/components/lists/listTypes'
 import { getCurrentUser, type AuthUser } from '@/services/auth'
@@ -105,6 +106,12 @@ export type SecurityPermission = {
 }
 
 export type UserState = 'ACTIVE' | 'INACTIVE' | 'LOCKED' | 'SUSPENDED' | 'BANNED' | 'DISABLED'
+
+export type ResourceStateOption = { id: string; code: string; name: string }
+export type ResourceAvailableStates = {
+  mode: 'LIFECYCLE' | 'NATIVE' | 'STATELESS'
+  states: ResourceStateOption[]
+}
 
 function headers() {
   return { 'Accept-Language': i18n.global.locale.value as 'vi' | 'en' }
@@ -334,7 +341,7 @@ export function listResourcePage(
 export async function saveResource(
   payload:
     | { type: string; name: string; domain: Resource['domain'] }
-    | { name?: string; lifecycle_id?: string },
+    | { name?: string; lifecycle_id?: string | null },
   id?: string,
 ): Promise<Resource> {
   return resource(
@@ -350,6 +357,18 @@ export async function saveResource(
   )
 }
 
+/** Canonical API transport; the OpenAPI operation is declared in the contract. */
+export async function changeResourceState(
+  id: string,
+  status: 'ACTIVE' | 'INACTIVE',
+): Promise<void> {
+  await apiClient.post(
+    `/api/v1/resources/${encodeURIComponent(id)}/actions/set-state`,
+    { status },
+    { headers: headers() },
+  )
+}
+
 export async function deleteResourceById(id: string): Promise<void> {
   await withTypedClient((client) => deleteResource({ client, path: { id }, throwOnError: true }))
 }
@@ -358,6 +377,60 @@ export async function getResourceById(id: string): Promise<Resource> {
   return resource(
     await withTypedClient((client) => getResource({ client, path: { id }, throwOnError: true })),
   )
+}
+
+/**
+ * Match server-authorized State codes to the existing Workflow State catalog.
+ * Policy.state_id is the catalog ID, never the business status string.
+ * If the catalog is inconsistent or incomplete, fail closed instead of
+ * silently replacing an existing State-scoped Policy with All States.
+ */
+export async function getResourceAvailableStates(id: string): Promise<ResourceAvailableStates> {
+  const target = await getResourceById(id)
+  const codes = target.policy_state_codes
+  if (
+    !Array.isArray(codes) ||
+    codes.some((code) => typeof code !== 'string' || code.trim() === '') ||
+    new Set(codes).size !== codes.length
+  ) {
+    throw new Error('Resource does not provide a valid PBAC State catalog.')
+  }
+
+  const mode = target.lifecycle_id ? 'LIFECYCLE' : codes.length ? 'NATIVE' : 'STATELESS'
+  if (codes.length === 0) return { mode, states: [] }
+
+  const allowed = new Set(codes)
+  const found = new Map<string, ResourceStateOption>()
+  const pageSize = 200
+  let page = 1
+  while (found.size < allowed.size) {
+    const response = await withTypedClient((client) =>
+      listWorkflowStates({
+        client,
+        headers: headers(),
+        query: { page, page_size: pageSize, sort: 'code', filter: {} },
+        throwOnError: true,
+      }),
+    )
+    const currentPage = response.data.data ?? []
+    for (const state of currentPage) {
+      if (allowed.has(state.code) && state.status === 'ACTIVE') {
+        found.set(state.code, { id: String(state.id), code: state.code, name: state.name })
+      }
+    }
+    if (page * pageSize >= response.data.meta.total || currentPage.length === 0) break
+    page += 1
+  }
+
+  if (found.size !== allowed.size) {
+    throw new Error('PBAC State codes are missing or inactive in the Workflow State catalog.')
+  }
+  const states = codes.map((code) => {
+    const match = found.get(code)
+    if (!match) throw new Error('PBAC State selection is unavailable.')
+    return match
+  })
+  return { mode, states }
 }
 
 export async function getResourceActions(id: string): Promise<SecurityAction[]> {
@@ -403,6 +476,14 @@ export function listPolicyPage(query: ListQuery): Promise<ListResponse<Policy>> 
     listPolicies({ client, headers: headers(), query: apiQuery(query), throwOnError: true }).then(
       collection,
     ),
+  )
+}
+
+export async function changePolicyState(id: string, status: 'ACTIVE' | 'INACTIVE'): Promise<void> {
+  await apiClient.post(
+    `/api/v1/policies/${encodeURIComponent(id)}/actions/set-state`,
+    { status },
+    { headers: headers() },
   )
 }
 

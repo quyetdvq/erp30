@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Repositories;
 
+use App\Exceptions\ConcurrencyException;
 use App\Exceptions\DomainException;
 use App\Exceptions\PersistenceException;
 use App\Infrastructure\Mutation\MutationContext;
@@ -36,7 +37,7 @@ final class PolicyRepository
     ];
 
     /** Keep generated database-only scope columns out of policy rows returned to callers. */
-    private const POLICY_SELECT = 'id, organization_id, resource_id, state_id, participant_type, participant_ref_id, created_by, updated_by, created_at, updated_at';
+    private const POLICY_SELECT = 'id, organization_id, resource_id, state_id, status, participant_type, participant_ref_id, created_by, updated_by, created_at, updated_at';
 
     /** @var list<string> */
     private const ACTION_FIELDS = [
@@ -138,6 +139,20 @@ final class PolicyRepository
         return array_values($result->getResultArray());
     }
 
+    /** Used by list APIs to prevent SQL pagination before State PBAC filtering. */
+    public function hasActiveStateScopedPolicies(int $resourceId): bool
+    {
+        try {
+            return $this->db->table('policies')
+                ->where('resource_id', $resourceId)
+                ->where('status', 'ACTIVE')
+                ->where('state_id IS NOT NULL', null, false)
+                ->countAllResults() > 0;
+        } catch (\Throwable $exception) {
+            throw new PersistenceException(self::ERROR_PERSISTENCE_FAILED, 'hasActiveStateScopedPolicies', $exception);
+        }
+    }
+
     /**
      * Assert that the canonical five-dimensional Policy scope is available.
      * The optional lock is used inside the mutation transaction; the unique
@@ -151,6 +166,33 @@ final class PolicyRepository
         if ($row !== null) {
             throw new DomainException(self::ERROR_SCOPE_ALREADY_EXISTS, ['field' => 'scope']);
         }
+    }
+
+    /** Native state mutation is only exposed after policy.setstate authorization. */
+    public function setStatus(int $policyId, string $status, OperationContext $operation, ?string $expectedStatus = null): bool
+    {
+        if (! in_array($status, ['ACTIVE', 'INACTIVE'], true)) {
+            throw new DomainException('POLICY_STATUS_INVALID');
+        }
+        try {
+            $query = $this->db->table('policies')->where('id', $policyId);
+            if ($expectedStatus !== null) {
+                $query->where('status', $expectedStatus);
+            }
+            $updated = $query->update([
+                'status' => $status,
+                ...$operation->updatedAudit(),
+            ]);
+        } catch (\Throwable $exception) {
+            throw new PersistenceException(self::ERROR_PERSISTENCE_FAILED, 'setStatus', $exception);
+        }
+        if ($updated === false) {
+            throw new PersistenceException(self::ERROR_PERSISTENCE_FAILED, 'setStatus');
+        }
+        if ($expectedStatus !== null && $this->db->affectedRows() === 0) {
+            throw new ConcurrencyException('policy.setstate');
+        }
+        return true;
     }
 
     /** @return list<array<string, mixed>> */
@@ -169,6 +211,43 @@ final class PolicyRepository
         }
 
         return array_values($result->getResultArray());
+    }
+
+    /**
+     * Hydrate all action/effect rows for a Policy list page in bounded batches.
+     * Unlike findPolicyActionsForPolicies(), this read is for administration
+     * output and must not filter out unrelated action codes.
+     *
+     * @param list<int> $policyIds
+     * @return list<array<string, mixed>>
+     */
+    public function findAllPolicyActionsForPolicies(array $policyIds): array
+    {
+        $ids = array_values(array_unique($policyIds));
+        if ($ids === []) {
+            return [];
+        }
+
+        $actions = [];
+        foreach (array_chunk($ids, 500) as $batch) {
+            try {
+                $result = $this->db->table('policy_actions')
+                    ->whereIn('policy_id', $batch)
+                    ->orderBy('policy_id', 'ASC')
+                    ->orderBy('id', 'ASC')
+                    ->get();
+            } catch (\Throwable $exception) {
+                throw new PersistenceException(self::ERROR_PERSISTENCE_FAILED, 'findAllPolicyActionsForPolicies', $exception);
+            }
+            if ($result === false) {
+                throw new PersistenceException(self::ERROR_PERSISTENCE_FAILED, 'findAllPolicyActionsForPolicies');
+            }
+            foreach ($result->getResultArray() as $action) {
+                $actions[] = $action;
+            }
+        }
+
+        return $actions;
     }
 
     /**

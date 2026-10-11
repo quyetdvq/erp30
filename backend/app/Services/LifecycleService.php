@@ -191,6 +191,7 @@ final class LifecycleService
         mixed $targetId,
         string $actionCode,
         ?OperationContext $operation = null,
+        ?int $expectedDestinationStateId = null,
     ): array {
         $operation ??= $this->operation();
         $resourceType = $this->resourceType($resourceType);
@@ -204,6 +205,15 @@ final class LifecycleService
             throw new DomainException(self::ERROR_TARGET_ADAPTER_UNAVAILABLE, ['resource' => $resourceType]);
         }
         $transition = $this->resolveTransition($snapshot->lifecycleId, $snapshot->currentStateId, $actionCode);
+        $destinationStateId = PositiveId::normalize($transition['to_state_id'] ?? null, 'to_state_id', self::ERROR_INVALID_TRANSITION);
+        // The caller may request a target status, but must not redirect a
+        // deterministic lifecycle transition to a different destination.
+        if ($expectedDestinationStateId !== null && $destinationStateId !== $expectedDestinationStateId) {
+            throw new DomainException(self::ERROR_INVALID_TRANSITION, [
+                'action_code' => $actionCode,
+                'expected_destination_state_id' => $expectedDestinationStateId,
+            ]);
+        }
         $actionCode = $this->actionCode($actionCode);
         $request = new EvaluationOrganizationRequest(
             persistedTarget: $snapshot->authorizationTarget,
@@ -221,7 +231,6 @@ final class LifecycleService
             throw new DomainException(self::ERROR_AUTHORIZATION_DENIED, ['action' => $actionCode]);
         }
 
-        $destinationStateId = PositiveId::normalize($transition['to_state_id'] ?? null, 'to_state_id', self::ERROR_INVALID_TRANSITION);
         $adapter->transactional(function () use ($adapter, $snapshot, $operation, $decision, $destinationStateId): void {
             $locked = $adapter->lockAndReload($snapshot, $operation);
             if ($locked->resourceType !== $snapshot->resourceType

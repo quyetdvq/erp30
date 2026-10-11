@@ -8,6 +8,7 @@ use App\Exceptions\DomainException;
 use App\Infrastructure\Id\PositiveId;
 use App\Repositories\PolicyRepository;
 use App\Repositories\ResourceCatalogRepository;
+use App\Services\ResourceWorkflowStateResolver;
 
 /** Business validation for policy inputs; it does not evaluate authorization. */
 final class PolicyValidator
@@ -22,6 +23,7 @@ final class PolicyValidator
         private readonly PolicyRepository $repository,
         private readonly ?PolicyParticipantValidator $participants = null,
         private readonly ?ResourceCatalogRepository $catalog = null,
+        private readonly ?ResourceWorkflowStateResolver $workflowStates = null,
     ) {
     }
 
@@ -43,6 +45,10 @@ final class PolicyValidator
         }
         if (array_key_exists('state_id', $result) && $result['state_id'] !== null) {
             $result['state_id'] = PositiveId::normalize($result['state_id'], 'state_id', PolicyParticipantValidator::ERROR_INVALID_PARTICIPANT);
+            ($this->workflowStates ?? new ResourceWorkflowStateResolver())->assertPolicyState(
+                $result['resource_id'],
+                $result['state_id'],
+            );
         }
 
         return $result;

@@ -4,8 +4,10 @@ declare(strict_types=1);
 
 namespace App\Repositories;
 
+use App\Exceptions\ConcurrencyException;
 use App\Exceptions\DomainException;
 use App\Exceptions\PersistenceException;
+use App\Infrastructure\Mutation\OperationContext;
 use CodeIgniter\Database\BaseConnection;
 use CodeIgniter\Database\ConnectionInterface;
 
@@ -142,6 +144,29 @@ final class ResourceCatalogRepository
             throw new PersistenceException(self::ERROR_PERSISTENCE_FAILED, 'updateResource');
         }
 
+        return true;
+    }
+
+    /** Native status compare-and-set after resource.setstate authorization. */
+    public function setResourceStatus(int $id, string $status, string $expected, OperationContext $operation): bool
+    {
+        if (! in_array($status, ['ACTIVE', 'INACTIVE'], true)
+            || ! in_array($expected, ['ACTIVE', 'INACTIVE'], true)) {
+            throw new DomainException('RESOURCE_STATUS_INVALID');
+        }
+        try {
+            $updated = $this->db->table('resources')
+                ->where('id', $id)->where('status', $expected)
+                ->update(['status' => $status, ...$operation->updatedAudit()]);
+        } catch (\Throwable $exception) {
+            throw new PersistenceException(self::ERROR_PERSISTENCE_FAILED, 'setResourceStatus', $exception);
+        }
+        if ($updated === false) {
+            throw new PersistenceException(self::ERROR_PERSISTENCE_FAILED, 'setResourceStatus');
+        }
+        if ($this->db->affectedRows() === 0) {
+            throw new ConcurrencyException('resource.setstate');
+        }
         return true;
     }
 

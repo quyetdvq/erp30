@@ -523,6 +523,13 @@ paths:
       operationId: deleteResource
       summary: Delete resource
       responses: {'204': {$ref: '#/components/responses/NoContent'}, '401': {$ref: '#/components/responses/Unauthorized'}, '403': {$ref: '#/components/responses/Forbidden'}, '404': {$ref: '#/components/responses/NotFound'}, '409': {$ref: '#/components/responses/Conflict'}}
+  /api/v1/resources/{id}/actions/set-state:
+    parameters: [{$ref: '#/components/parameters/Id'}]
+    post:
+      operationId: setResourceState
+      summary: Activate or deactivate a Resource Type (requires resource.setstate)
+      requestBody: {$ref: '#/components/requestBodies/Api030State'}
+      responses: {'200': {$ref: '#/components/responses/Success'}, '401': {$ref: '#/components/responses/Unauthorized'}, '403': {$ref: '#/components/responses/Forbidden'}, '404': {$ref: '#/components/responses/NotFound'}, '422': {$ref: '#/components/responses/UnprocessableEntity'}}
   /api/v1/resources/{id}/actions:
     parameters: [{$ref: '#/components/parameters/Id'}]
     get:
@@ -632,6 +639,13 @@ paths:
       operationId: deletePolicy
       summary: Delete policy
       responses: {'204': {$ref: '#/components/responses/NoContent'}, '401': {$ref: '#/components/responses/Unauthorized'}, '403': {$ref: '#/components/responses/Forbidden'}, '404': {$ref: '#/components/responses/NotFound'}}
+  /api/v1/policies/{id}/actions/set-state:
+    parameters: [{$ref: '#/components/parameters/Id'}]
+    post:
+      operationId: setPolicyState
+      summary: Activate or deactivate one PBAC Policy (requires policy.setstate)
+      requestBody: {$ref: '#/components/requestBodies/Api030State'}
+      responses: {'200': {$ref: '#/components/responses/Success'}, '401': {$ref: '#/components/responses/Unauthorized'}, '403': {$ref: '#/components/responses/Forbidden'}, '404': {$ref: '#/components/responses/NotFound'}, '422': {$ref: '#/components/responses/UnprocessableEntity'}}
   /api/v1/authorization-logs:
     get:
       operationId: listAuthorizationLogs
@@ -2096,9 +2110,9 @@ components:
     AuthorizationGroupPatch: {type: object, properties: {code: {type: string}, name: {type: string}, description: {type: [string, 'null']}, status: {type: string, enum: [ACTIVE, INACTIVE]}}}
     AuthorizationGroupMembers: {type: object, required: [user_ids], properties: {user_ids: {type: array, items: {$ref: '#/components/schemas/BigInt'}}}}
     AuthorizationGroupPermissions: {type: object, required: [resource_action_ids], properties: {resource_action_ids: {type: array, items: {$ref: '#/components/schemas/BigInt'}}}}
-    Resource: {type: object, required: [id, type, name, domain], properties: {id: {$ref: '#/components/schemas/BigInt'}, type: {type: string}, name: {type: string}, domain: {type: string, enum: [SYSTEM, MASTER, ORGANIZATION]}, lifecycle_id: {$ref: '#/components/schemas/BigInt'}, actions: {type: array, items: {$ref: '#/components/schemas/ResourceActionSummary'}}}}
+    Resource: {type: object, required: [id, type, name, domain, status], properties: {id: {$ref: '#/components/schemas/BigInt'}, type: {type: string}, name: {type: string}, domain: {type: string, enum: [SYSTEM, MASTER, ORGANIZATION]}, status: {type: string, enum: [ACTIVE, INACTIVE]}, lifecycle_id: {$ref: '#/components/schemas/BigInt'}, policy_state_codes: {type: array, items: {type: string}, description: "Allowed PBAC State codes computed by server for the selected Resource."}, actions: {type: array, items: {$ref: '#/components/schemas/ResourceActionSummary'}}}}
     ResourceCreate: {type: object, required: [type, name, domain], properties: {type: {type: string}, name: {type: string}, domain: {type: string, enum: [SYSTEM, MASTER, ORGANIZATION]}, lifecycle_id: {$ref: '#/components/schemas/BigInt'}}}
-    ResourcePatch: {type: object, properties: {name: {type: string}, lifecycle_id: {$ref: '#/components/schemas/BigInt'}}}
+    ResourcePatch: {type: object, properties: {name: {type: string}, lifecycle_id: {anyOf: [{$ref: '#/components/schemas/BigInt'}, {type: 'null'}]}}}
     ResourceActionCreate: {type: object, required: [code], properties: {code: {type: string}, description: {type: string}}}
     ResourceActionPatch: {type: object, properties: {description: {type: [string, 'null']}}}
     ResourceAction: {type: object, required: [id, resource_id, code, description], additionalProperties: false, properties: {id: {$ref: '#/components/schemas/BigInt'}, resource_id: {$ref: '#/components/schemas/BigInt'}, code: {type: string}, description: {type: [string, 'null']}}}
@@ -2109,7 +2123,7 @@ components:
     NumberingSeriesState: {type: object, required: [status], properties: {status: {type: string, enum: [ACTIVE, INACTIVE]}}}
     NumberingSeriesValidation: {type: object, required: [valid, normalized_pattern, validation_messages], properties: {valid: {type: boolean}, normalized_pattern: {type: string}, validation_messages: {type: array, items: {type: string}}}}
     PolicyAction: {type: object, required: [resource_action_id, effect], properties: {resource_action_id: {$ref: '#/components/schemas/BigInt'}, effect: {type: string, enum: [ALLOW, DENY, ABSOLUTE_DENY]}}}
-    Policy: {type: object, required: [id, organization_id, resource_id, participant_type, participant_ref_id, actions], properties: {id: {$ref: '#/components/schemas/BigInt'}, organization_id: {$ref: '#/components/schemas/BigInt'}, resource_id: {$ref: '#/components/schemas/BigInt'}, state_id: {allOf: [{$ref: '#/components/schemas/NullableBigInt'}], description: "NULL represents the ALL_STATES scope."}, participant_type: {type: string, enum: [USER, GROUP, POSITION, DEPARTMENT, ORGANIZATION]}, participant_ref_id: {$ref: '#/components/schemas/BigInt'}, actions: {type: array, items: {$ref: '#/components/schemas/PolicyAction'}}}}
+    Policy: {type: object, required: [id, organization_id, resource_id, status, participant_type, participant_ref_id, actions], properties: {id: {$ref: '#/components/schemas/BigInt'}, organization_id: {$ref: '#/components/schemas/BigInt'}, resource_id: {$ref: '#/components/schemas/BigInt'}, status: {type: string, enum: [ACTIVE, INACTIVE]}, state_id: {allOf: [{$ref: '#/components/schemas/NullableBigInt'}], description: "NULL represents the ALL_STATES scope."}, participant_type: {type: string, enum: [USER, GROUP, POSITION, DEPARTMENT, ORGANIZATION]}, participant_ref_id: {$ref: '#/components/schemas/BigInt'}, actions: {type: array, items: {$ref: '#/components/schemas/PolicyAction'}}}}
     PolicyCreate: {type: object, required: [organization_id, resource_id, participant_type, participant_ref_id, actions], properties: {organization_id: {$ref: '#/components/schemas/BigInt'}, resource_id: {$ref: '#/components/schemas/BigInt'}, state_id: {allOf: [{$ref: '#/components/schemas/NullableBigInt'}], description: "NULL represents the ALL_STATES scope."}, participant_type: {type: string, enum: [USER, GROUP, POSITION, DEPARTMENT, ORGANIZATION]}, participant_ref_id: {$ref: '#/components/schemas/BigInt'}, actions: {type: array, items: {$ref: '#/components/schemas/PolicyAction'}}}}
     PolicyPatch: {type: object, properties: {organization_id: {$ref: '#/components/schemas/BigInt'}, resource_id: {$ref: '#/components/schemas/BigInt'}, state_id: {allOf: [{$ref: '#/components/schemas/NullableBigInt'}], description: "NULL represents the ALL_STATES scope."}, participant_type: {type: string, enum: [USER, GROUP, POSITION, DEPARTMENT, ORGANIZATION]}, participant_ref_id: {$ref: '#/components/schemas/BigInt'}, actions: {type: array, items: {$ref: '#/components/schemas/PolicyAction'}}}}
     AuthorizationLog: {type: object, required: [id, user_id, resource_id, action, decision, created_at], properties: {id: {$ref: '#/components/schemas/BigInt'}, user_id: {$ref: '#/components/schemas/BigInt'}, organization_id: {$ref: '#/components/schemas/BigInt'}, resource_id: {$ref: '#/components/schemas/BigInt'}, action: {type: string}, state_id: {$ref: '#/components/schemas/BigInt'}, decision: {type: string, enum: [ALLOW, DENY]}, matched_policy_id: {$ref: '#/components/schemas/BigInt'}, reason: {type: [string, 'null']}, request_id: {type: [string, 'null']}, created_at: {type: string, format: date-time}}}

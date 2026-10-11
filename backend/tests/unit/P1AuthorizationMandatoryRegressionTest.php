@@ -193,9 +193,8 @@ final class P1AuthorizationMandatoryRegressionTest extends CIUnitTestCase
         ]);
         $companyA = $this->organization('COMPANY', $rootId);
         $companyB = $this->organization('COMPANY', $rootId);
-        $stateOne = $this->state();
-        $stateTwo = $this->state();
-        $stateThree = $this->state();
+        $stateOne = $this->stateForCode('ACTIVE');
+        $stateTwo = $this->stateForCode('INACTIVE');
         $repository = new PolicyRepository($this->db);
         $action = $this->resourceActionId('price_list', 'view');
         $repository->insertWithActions(
@@ -215,14 +214,22 @@ final class P1AuthorizationMandatoryRegressionTest extends CIUnitTestCase
             [['resource_action_id' => $action, 'effect' => 'DENY']],
         );
 
-        $stateOneDecision = $this->authorize($userId, 'price_list', 'view', $companyA, $stateOne);
+        $stateOneDecision = (new AuthorizationService(db: $this->db))->authorize(
+            $this->operation($userId), 'price_list', 'view',
+            new EvaluationOrganizationRequest(persistedTarget: $this->priceListRow($companyA, 'ACTIVE')),
+            $stateOne,
+        );
         $this->assertSame('ALLOW', $stateOneDecision->decision);
         $this->assertContains($stateOnePolicy, $stateOneDecision->matchedPolicyIds);
         $this->assertNotContains($stateTwoPolicy, $stateOneDecision->matchedPolicyIds);
-        $stateThreeDecision = $this->authorize($userId, 'price_list', 'view', $companyA, $stateThree);
-        $this->assertSame('DENY', $stateThreeDecision->decision);
-        $this->assertNotContains($stateOnePolicy, $stateThreeDecision->matchedPolicyIds);
-        $this->assertNotContains($stateTwoPolicy, $stateThreeDecision->matchedPolicyIds);
+        $inactiveDecision = (new AuthorizationService(db: $this->db))->authorize(
+            $this->operation($userId), 'price_list', 'view',
+            new EvaluationOrganizationRequest(persistedTarget: $this->priceListRow($companyA, 'INACTIVE')),
+            $stateTwo,
+        );
+        $this->assertSame('DENY', $inactiveDecision->decision);
+        $this->assertNotContains($stateOnePolicy, $inactiveDecision->matchedPolicyIds);
+        $this->assertContains($stateTwoPolicy, $inactiveDecision->matchedPolicyIds);
 
         $service = new AuthorizationService(db: $this->db);
         $existing = $service->authorize(
@@ -502,11 +509,29 @@ final class P1AuthorizationMandatoryRegressionTest extends CIUnitTestCase
         return (int) $this->db->insertID();
     }
 
-    private function state(): int
+    private function stateForCode(string $code): int
     {
-        $this->db->table('workflow_states')->insert(['code' => 'AUTH090-S-' . uniqid(), 'name' => 'Auth 090', 'status' => 'ACTIVE', 'created_at' => '2026-10-05 00:00:00']);
-
+        $existing = $this->db->table('workflow_states')->where('code', $code)->get()->getRowArray();
+        if ($existing !== null) {
+            return (int) $existing['id'];
+        }
+        $this->db->table('workflow_states')->insert(['code' => $code, 'name' => $code, 'status' => 'ACTIVE', 'created_at' => '2026-10-05 00:00:00']);
         return (int) $this->db->insertID();
+    }
+
+    /** @return array<string,mixed> Persisted master row used as trusted target. */
+    private function priceListRow(int $company, string $status): array
+    {
+        $this->db->table('price_lists')->insert([
+            'code' => 'AUTH090-PL-' . uniqid(), 'name' => 'Native State Test',
+            'organization_id' => $company, 'effective_from' => '2026-01-01 00:00:00',
+            'effective_to' => null, 'priority' => 0, 'status' => $status,
+            'created_at' => '2026-10-05 00:00:00',
+        ]);
+        $id = (int) $this->db->insertID();
+        $row = $this->db->table('price_lists')->where('id', $id)->get()->getRowArray();
+        $this->assertNotNull($row);
+        return $row;
     }
 
     /** @return array<string, mixed> */

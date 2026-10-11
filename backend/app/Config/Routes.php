@@ -64,7 +64,7 @@ $routes->group('api/v1', ['filter' => 'cors'], static function (RouteCollection 
                 $routes->delete($path . '/(:num)', 'Api\\AuthorizationWorkflow::deletePolicy/$1');
             }
         }
-        if (in_array($resource, ['authorization_group', 'workflow_state', 'lifecycle'], true)) {
+        if (in_array($resource, ['authorization_group', 'workflow_state', 'lifecycle', 'policy', 'resource'], true)) {
             $routes->post($path . '/(:num)/actions/set-state', 'Api\\AuthorizationWorkflow::setState/' . $resource . '/$1');
         }
     }

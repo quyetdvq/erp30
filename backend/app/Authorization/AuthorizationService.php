@@ -15,6 +15,7 @@ use App\Services\EmployeeAssignmentService;
 use App\Services\LifecycleAuthorizationPort;
 use App\Services\NumberingAuthorizationPort;
 use App\Services\OrganizationService;
+use App\Services\ResourceWorkflowStateResolver;
 use CodeIgniter\Database\ConnectionInterface;
 
 /**
@@ -33,6 +34,7 @@ final class AuthorizationService implements LifecycleAuthorizationPort, Numberin
     public const REASON_ABSOLUTE_DENY = 'AUTH_ABSOLUTE_DENY';
     public const REASON_NO_MATCH = 'AUTH_NO_MATCH_ALLOW';
     public const REASON_POLICY_ALLOWED = 'AUTH_POLICY_ALLOWED';
+    public const REASON_RESOURCE_INACTIVE = 'AUTH_RESOURCE_INACTIVE';
     public const REASON_CONTEXT_REQUIRED = 'AUTH_CONTEXT_REQUIRED';
     public const ERROR_RESOURCE_INVALID = 'AUTH_RESOURCE_INVALID';
     public const ERROR_ACTION_INVALID = 'AUTH_ACTION_INVALID';
@@ -46,6 +48,7 @@ final class AuthorizationService implements LifecycleAuthorizationPort, Numberin
     private EmployeeAssignmentService $assignments;
     private OrganizationService $organizations;
     private ShieldIdentityAdapter $identities;
+    private ResourceWorkflowStateResolver $workflowStates;
 
     /** @param ConnectionInterface<mixed, mixed>|null $db */
     public function __construct(
@@ -58,11 +61,13 @@ final class AuthorizationService implements LifecycleAuthorizationPort, Numberin
         ?ShieldIdentityAdapter $identities = null,
         ?ConnectionInterface $db = null,
         ?ResourceCatalogRepository $catalog = null,
+        ?ResourceWorkflowStateResolver $workflowStates = null,
     ) {
         $connection = $db ?? db_connect();
         $this->profiles = $profiles ?? new EffectiveProfileResolver($connection);
         $this->policies = $policies ?? new PolicyRepository($connection);
         $this->catalog = $catalog ?? new ResourceCatalogRepository($connection);
+        $this->workflowStates = $workflowStates ?? new ResourceWorkflowStateResolver($connection);
         $this->employees = $employees ?? new EmployeeRepository($connection);
         $this->assignments = $assignments ?? new EmployeeAssignmentService(null, $connection);
         $this->organizations = $organizations ?? new OrganizationService(null, $connection);
@@ -88,7 +93,7 @@ final class AuthorizationService implements LifecycleAuthorizationPort, Numberin
         $userId = PositiveId::normalize($operation->actorUserId, 'user_id', self::REASON_CONTEXT_REQUIRED);
         $resource = $this->token($resourceType, 'resource', self::ERROR_RESOURCE_INVALID);
         $resourceAction = $this->token($action, 'action', self::ERROR_ACTION_INVALID);
-        $normalizedState = $stateId === null
+        $suppliedState = $stateId === null
             ? null
             : PositiveId::normalize($stateId, 'state_id', self::ERROR_ACTION_INVALID);
 
@@ -96,7 +101,31 @@ final class AuthorizationService implements LifecycleAuthorizationPort, Numberin
         if ($resourceRow === null) {
             throw new DomainException(self::ERROR_RESOURCE_INVALID, ['resource' => $resource]);
         }
+        // State-aware PBAC is a generic authorization invariant. For any
+        // lifecycle-configured resource and persisted target, read the state
+        // from the trusted target, never from input['state_id'] or a caller
+        // hint. For transitions, verify the provided From-State matches it.
+        $normalizedState = $this->workflowStates->stateForAuthorization(
+            $resource,
+            $contextRequest->persistedTarget,
+            $suppliedState,
+            $resourceRow,
+            $resourceAction,
+            $contextRequest->input,
+        );
         $context = $this->contexts->resolveResource($resource, $resourceAction, $resourceRow, $contextRequest);
+
+        // Disabling a Resource Type denies its normal business actions,
+        // even when Base Permission exists. The sole recovery endpoint is
+        // resource.setstate, still subject to regular PBAC and eligibility.
+        if (($resourceRow['status'] ?? 'ACTIVE') !== 'ACTIVE'
+            && ! ($resource === 'resource' && $resourceAction === 'setstate')) {
+            return $this->decision(
+                self::DECISION_DENY, self::REASON_RESOURCE_INACTIVE,
+                $userId, $resource, $resourceAction, $context->organizationId,
+                $normalizedState, $operation, [],
+            );
+        }
 
         $profile = $this->profiles->resolve($operation);
         $permission = null;
@@ -267,6 +296,11 @@ final class AuthorizationService implements LifecycleAuthorizationPort, Numberin
         // deterministic order before loading actions in batches.
         $eligiblePolicies = [];
         foreach ($this->policies->findAll(['resource_id' => $resourceId]) as $policy) {
+            // Inactive PBAC policies NEVER participate, including their
+            // previously configured ABSOLUTE_DENY effects.
+            if (($policy['status'] ?? 'ACTIVE') !== 'ACTIVE') {
+                continue;
+            }
             $organizationId = PositiveId::normalize($policy['organization_id'] ?? null, 'organization_id', self::ERROR_POLICY_INVALID);
             if (! in_array($organizationId, $scopeIds, true)) {
                 continue;
