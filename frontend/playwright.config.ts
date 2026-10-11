@@ -12,6 +12,8 @@ import { defineConfig, devices } from '@playwright/test'
  */
 export default defineConfig({
   testDir: './e2e',
+  // Real-backend tests have a separate, explicitly opted-in staging config.
+  testIgnore: ['**/live/**'],
   /* Maximum time one test can run for. */
   timeout: 30 * 1000,
   expect: {

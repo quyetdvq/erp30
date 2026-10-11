@@ -145,6 +145,53 @@ async function mockCatalog(page: Page): Promise<{
       }),
     }),
   )
+  // The post-v1.0.7 frontend uses lookup/batch APIs. Exact route mocks must
+  // supersede the broad legacy products*/organizations*/product-uoms* mocks;
+  // otherwise a Product list response is incorrectly returned for a resolve.
+  const lookupResponse = (
+    route: import('@playwright/test').Route,
+    data: unknown,
+    meta?: object,
+  ) => {
+    const headers = {
+      'Access-Control-Allow-Origin': route.request().headers()['origin'] ?? 'http://localhost:5173',
+      'Access-Control-Allow-Credentials': 'true',
+      'Access-Control-Allow-Methods': 'GET,POST,PATCH,PUT,OPTIONS',
+      'Access-Control-Allow-Headers':
+        'Accept,Accept-Language,Content-Type,X-Request-ID,X-CSRF-TOKEN',
+    }
+    if (route.request().method() === 'OPTIONS') return route.fulfill({ status: 204, headers })
+    return route.fulfill({
+      status: 200,
+      headers,
+      contentType: 'application/json',
+      body: JSON.stringify({ data, ...(meta ? { meta } : {}) }),
+    })
+  }
+  await page.route('**/api/v1/products/options?*', (route) =>
+    lookupResponse(route, [simple, combo], { page: 1, page_size: 20, total: 2 }),
+  )
+  await page.route('**/api/v1/products/options/resolve', (route) =>
+    lookupResponse(route, [simple, combo]),
+  )
+  await page.route('**/api/v1/products/sales-uom-options/resolve', (route) =>
+    lookupResponse(route, [
+      {
+        product_id: '30',
+        options: [
+          { id: '20', code: 'PCS' },
+          { id: '21', code: 'BOX' },
+        ],
+      },
+      { product_id: '32', options: [{ id: '20', code: 'PCS' }] },
+    ]),
+  )
+  await page.route('**/api/v1/organizations/labels/resolve', (route) =>
+    lookupResponse(route, [organization]),
+  )
+  await page.route('**/api/v1/product-uoms/labels/resolve', (route) =>
+    lookupResponse(route, [baseUom, alternateUom]),
+  )
   await page.route(/\/api\/v1\/price-lists(?:\/|\?|$)/, async (route) => {
     const request = route.request()
     const url = request.url()

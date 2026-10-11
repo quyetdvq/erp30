@@ -38,3 +38,23 @@ pnpm exec playwright test e2e/fe030-security.spec.ts --project=webkit --trace=re
 Trace nếu sinh ra ở `test-results/` có thể chứa nội dung phiên browser/mock; kiểm tra trước khi chia sẻ.
 
 Lưu ý: chỉ xác minh patch áp dụng vào snapshot Batch 1; CHƯA chạy Playwright trong môi trường này.
+
+## E2E-LOOKUP-BATCH — Products / Price Lists (post v1.0.7)
+
+The **deterministic browser regression** `fe090-lookup-batch-regression.spec.ts`
+uses Playwright route fixtures and exercises Vue -> API request/response wiring:
+initial list overfetch, relation preview/Combo expansion, lazy Price List hydration,
+server Product selector, persisted INACTIVE UOM label, canonical item submission,
+and Base Permission UI hints. It **does not test real PBAC**.
+
+```powershell
+cd D:\XAMPP\htdocs\erp\frontend
+pnpm exec playwright test e2e/fe090-lookup-batch-regression.spec.ts --project=chromium --reporter=line
+```
+
+The separate **live, read-only PBAC** tests in `e2e/live/` exercise real
+CodeIgniter AuthorizationService with dedicated staging accounts, validating
+invisible IDs, filtered batch payloads/totals and Organization Scope.
+They are **excluded by default** from `playwright.config.ts`; read
+`e2e/live/README.md` to configure fixtures and run them explicitly.
+No live test writes Product, Price List, Policy, or permission records.
