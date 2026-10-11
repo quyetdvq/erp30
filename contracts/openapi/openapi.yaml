@@ -1900,12 +1900,12 @@ components:
         ward_name: {type: [string, 'null']}
     ContactCreate:
       type: object
-      required: [contact_type, contact_ref_id, status]
+      description: "Owner type selects organization_contact or employee_contact. Backend derives initial status from the configured Lifecycle (DRAFT for BASIC); without a Lifecycle, defaults to native ACTIVE. Other owner kinds are denied."
+      required: [contact_type, contact_ref_id]
       properties:
         contact_type: {type: string, enum: [EMPLOYEE, ORGANIZATION]}
         contact_ref_id: {$ref: '#/components/schemas/BigInt'}
         description: {type: string}
-        status: {type: string}
         name: {type: string}
         email: {type: string}
         phone: {type: string}
@@ -1916,8 +1916,19 @@ components:
         province_name: {type: string}
         ward_name: {type: string}
     ContactPatch:
-      allOf: [{$ref: '#/components/schemas/ContactCreate'}]
-      required: []
+      type: object
+      description: "Contact ownership and status are immutable through PATCH. Use the set-state action for status changes."
+      properties:
+        description: {type: string}
+        name: {type: string}
+        email: {type: string}
+        phone: {type: string}
+        mobile: {type: string}
+        address: {type: string}
+        province_id: {$ref: '#/components/schemas/BigInt'}
+        ward_id: {$ref: '#/components/schemas/BigInt'}
+        province_name: {type: string}
+        ward_name: {type: string}
     Department:
       type: object
       required: [id, code, name, status]

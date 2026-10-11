@@ -9,6 +9,7 @@ use App\Authorization\ContactAuthorizationRegistry;
 use App\Authorization\EmployeeContactScopeResolver;
 use App\Authorization\EvaluationOrganizationResolver;
 use App\Authorization\EffectiveListBucketCompiler;
+use App\Authorization\OwnerAwareListBucketCompiler;
 use App\Authorization\EvaluationOrganizationRequest;
 use App\Exceptions\DomainException;
 use App\Infrastructure\Api\AuthorizedArrayListSource;
@@ -16,6 +17,7 @@ use App\Infrastructure\Api\CommonListQueryAllowlist;
 use App\Infrastructure\Api\CommonListQueryAdapter;
 use App\Infrastructure\Api\CommonListResult;
 use App\Infrastructure\Api\SqlAuthorizedBucketListSource;
+use App\Infrastructure\Api\SqlOwnerAwareListSource;
 use App\Infrastructure\Mutation\MutationContext;
 use App\Infrastructure\Mutation\OperationContext;
 use App\Infrastructure\RequestContext;
@@ -173,13 +175,16 @@ final class Api010FoundationOrganizationContactService
     /**
      * MASTER location rows share GROUP scope. The authoritative State is
      * persisted status; compile each State once, then SQL count/page.
-     * Organization and Contact have per-target owner/scope resolution and
-     * intentionally keep the original authorization-before-pagination path.
+     * Organization/Contact now have an additional owner-aware SQL fast-path,
+     * with the original authorization-before-pagination path as fallback.
      *
      * @param array<string,mixed> $query
      */
     private function authorizedSqlPage(string $resource, array $query, OperationContext $operation): ?CommonListResult
     {
+        if (in_array($resource, ['organization', 'contact'], true)) {
+            return $this->ownerAwareSqlPage($resource, $query, $operation);
+        }
         if (! in_array($resource, ['province', 'ward'], true)
             || array_key_exists('q', $query)
             || (isset($query['sort']) && ! in_array($query['sort'], ['id', '-id'], true))) {
@@ -212,6 +217,59 @@ final class Api010FoundationOrganizationContactService
             }
         }
         return new CommonListResult($data, $result->query, $result->total);
+    }
+
+    /**
+     * SQL filters only PBAC-approved, persisted Owner/State groups. Never use
+     * a raw Policy ALLOW/DENY JOIN or paginate before authorization. Only ID
+     * sort + exactly reproducible filters may take this fast-path.
+     *
+     * @param array<string,mixed> $query
+     */
+    private function ownerAwareSqlPage(string $resource, array $query, OperationContext $operation): ?CommonListResult
+    {
+        $adapter = $this->queryAdapter ?? new CommonListQueryAdapter();
+        $allowlist = $this->allowlist($resource);
+        $parsed = $adapter->parse($query, $allowlist);
+        if (! SqlOwnerAwareListSource::supports($resource, $parsed)) {
+            return null;
+        }
+        $db = db_connect();
+        $compiler = new OwnerAwareListBucketCompiler($db, $this->auth());
+        $approved = $resource === 'organization'
+            ? $compiler->organizations($operation)
+            : $compiler->contacts($operation);
+        if ($approved === null) {
+            return null;
+        }
+        $result = $adapter->paginate($query, $allowlist,
+            new SqlOwnerAwareListSource($db, $resource, $approved));
+
+        // The compiler only authorizes representative targets. Verify every
+        // returned row again before exposing it, including after concurrent
+        // owner/State changes. If a bucket went stale, rerun the legacy path.
+        $rows = [];
+        foreach ($result->data as $row) {
+            if (! is_array($row)) {
+                return null;
+            }
+            try {
+                $this->authorize($operation, $resource, 'view', $row, []);
+            } catch (DomainException $exception) {
+                if (in_array($exception->getErrorCode(), [
+                    AuthorizationService::REASON_POLICY_DENIED,
+                    AuthorizationService::REASON_NO_BASE_PERMISSION,
+                    ContactAuthorizationRegistry::ERROR_TYPE_UNSUPPORTED,
+                    EmployeeContactScopeResolver::ERROR_PRIMARY_SCOPE_UNAVAILABLE,
+                    EvaluationOrganizationResolver::ERROR_CONTEXT_NOT_FOUND,
+                ], true)) {
+                    return null;
+                }
+                throw $exception;
+            }
+            $rows[] = $row;
+        }
+        return new CommonListResult($rows, $result->query, $result->total);
     }
 
     /** @return list<array<string, mixed>> */
