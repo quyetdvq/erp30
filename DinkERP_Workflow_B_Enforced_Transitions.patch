@@ -1,0 +1,381 @@
+diff --git a/backend/app/Services/Api010FoundationOrganizationContactService.php b/backend/app/Services/Api010FoundationOrganizationContactService.php
+index 1915d19..df941cb 100644
+--- a/backend/app/Services/Api010FoundationOrganizationContactService.php
++++ b/backend/app/Services/Api010FoundationOrganizationContactService.php
+@@ -23,6 +23,8 @@ use CodeIgniter\Shield\Entities\User;
+ /** Application boundary for the CONTRACT_READY API-010 surfaces. */
+ final class Api010FoundationOrganizationContactService
+ {
++    public const ERROR_TRANSITION_REQUIRED = 'WF_TRANSITION_REQUIRED';
++
+     public function __construct(
+         private readonly ?CommonListQueryAdapter $queryAdapter = null,
+         private readonly ?FoundationLocationRepository $locations = null,
+@@ -30,6 +32,7 @@ final class Api010FoundationOrganizationContactService
+         private readonly ?ContactRepository $contacts = null,
+         private ?AuthorizationService $authorization = null,
+         private ?ResourceWorkflowStateResolver $workflowStates = null,
++        private readonly ?LifecycleService $lifecycleService = null,
+     ) {
+     }
+ 
+@@ -84,6 +87,11 @@ final class Api010FoundationOrganizationContactService
+         $operation = $this->operation();
+         $row = $this->row($resource, $id);
+         $this->authorizeVisible($resource, $row, $operation);
++        // State changes must go through a validated Transition rather than
++        // smuggling a status field through an ordinary edit operation.
++        if (array_key_exists('status', $payload) && $this->stateResolver()->lifecycleId($resource) !== null) {
++            throw new DomainException(self::ERROR_TRANSITION_REQUIRED, ['resource' => $resource]);
++        }
+         $this->authorizeAction($resource, 'edit', $row, $payload, $operation);
+ 
+         match ($resource) {
+@@ -103,6 +111,16 @@ final class Api010FoundationOrganizationContactService
+         $operation = $this->operation();
+         $row = $this->row($resource, $id);
+         $this->authorizeVisible($resource, $row, $operation);
++        if ($this->stateResolver()->lifecycleId($resource) !== null) {
++            if (! in_array($resource, ['province', 'ward'], true)) {
++                throw new DomainException(LifecycleService::ERROR_TARGET_ADAPTER_UNAVAILABLE, ['resource' => $resource]);
++            }
++            $destinationStateId = $this->stateResolver()->stateIdForCode($resource, $status);
++            $this->lifecycle()->execute($resource, $id, 'setstate', $operation, $destinationStateId);
++
++            return $this->get($resource, $id);
++        }
++        // Legacy resources without a configured Lifecycle retain their API.
+         $this->authorizeAction($resource, 'setstate', $row, ['status' => $status], $operation);
+ 
+         match ($resource) {
+@@ -230,6 +248,7 @@ final class Api010FoundationOrganizationContactService
+     /** @param array<string, mixed> $payload */
+     private function createProvince(array $payload, OperationContext $operation): int
+     {
++        $this->assertInitialStatus('province', $payload);
+         $this->authorize($operation, 'province', 'create', [], $payload);
+ 
+         return $this->locationService($operation)->createProvince($payload);
+@@ -238,6 +257,7 @@ final class Api010FoundationOrganizationContactService
+     /** @param array<string, mixed> $payload */
+     private function createWard(array $payload, OperationContext $operation): int
+     {
++        $this->assertInitialStatus('ward', $payload);
+         $this->authorize($operation, 'ward', 'create', [], $payload);
+ 
+         return $this->locationService($operation)->createWard($payload);
+@@ -246,6 +266,7 @@ final class Api010FoundationOrganizationContactService
+     /** @param array<string, mixed> $payload */
+     private function createOrganization(array $payload, OperationContext $operation): int
+     {
++        $this->assertInitialStatus('organization', $payload);
+         $this->authorize($operation, 'organization', 'create', [], $payload);
+ 
+         return $this->organizationService($operation)->create($payload);
+@@ -254,6 +275,7 @@ final class Api010FoundationOrganizationContactService
+     /** @param array<string, mixed> $payload */
+     private function createContact(array $payload, OperationContext $operation): int
+     {
++        $this->assertInitialStatus('contact', $payload);
+         $this->authorize($operation, 'contact', 'create', [], $payload);
+ 
+         return $this->contactService($operation)->create($payload);
+@@ -287,6 +309,17 @@ final class Api010FoundationOrganizationContactService
+         return new FoundationLocationService($this->locationRepo(), null, new MutationContext(service('clock'), $operation->actorUserId, $operation->requestId, false));
+     }
+ 
++    private function lifecycle(): LifecycleService
++    {
++        if ($this->lifecycleService !== null) {
++            return $this->lifecycleService;
++        }
++        $adapterProvince = new FoundationLocationLifecycleAdapter('province');
++        $adapterWard = new FoundationLocationLifecycleAdapter('ward');
++
++        return new LifecycleService(adapters: [$adapterProvince, $adapterWard]);
++    }
++
+     private function organizationService(OperationContext $operation): OrganizationService
+     {
+         return new OrganizationService($this->organizationRepo(), null, null, new MutationContext(service('clock'), $operation->actorUserId, $operation->requestId, false));
+@@ -302,6 +335,19 @@ final class Api010FoundationOrganizationContactService
+         return $this->authorization ??= new AuthorizationService();
+     }
+ 
++    /** @param array<string,mixed> $payload */
++    private function assertInitialStatus(string $resource, array $payload): void
++    {
++        $initial = $this->stateResolver()->initialCode($resource);
++        if ($initial !== null && (! is_string($payload['status'] ?? null)
++            || strtoupper(trim($payload['status'])) !== $initial)) {
++            throw new DomainException(ResourceWorkflowStateResolver::ERROR_INITIAL_STATE_INVALID, [
++                'resource' => $resource,
++                'initial_status' => $initial,
++            ]);
++        }
++    }
++
+     private function stateResolver(): ResourceWorkflowStateResolver
+     {
+         return $this->workflowStates ??= new ResourceWorkflowStateResolver();
+diff --git a/backend/app/Services/FoundationLocationLifecycleAdapter.php b/backend/app/Services/FoundationLocationLifecycleAdapter.php
+new file mode 100644
+index 0000000..e22466d
+--- /dev/null
++++ b/backend/app/Services/FoundationLocationLifecycleAdapter.php
+@@ -0,0 +1,142 @@
++<?php
++
++declare(strict_types=1);
++
++namespace App\Services;
++
++use App\Authorization\EvaluationOrganizationRequest;
++use App\Authorization\EvaluationOrganizationResolver;
++use App\Exceptions\ConcurrencyException;
++use App\Exceptions\DomainException;
++use App\Exceptions\PersistenceException;
++use App\Infrastructure\Id\PositiveId;
++use App\Infrastructure\Mutation\OperationContext;
++use App\Repositories\FoundationLocationRepository;
++use CodeIgniter\Database\BaseConnection;
++use CodeIgniter\Database\ConnectionInterface;
++
++/** Canonical workflow adapter for persisted province/ward status columns. */
++final class FoundationLocationLifecycleAdapter implements LifecycleTargetAdapter
++{
++    /** @var ConnectionInterface<mixed,mixed> */
++    private ConnectionInterface $db;
++    private FoundationLocationRepository $repository;
++    private ResourceWorkflowStateResolver $states;
++
++    /** @param ConnectionInterface<mixed,mixed>|null $db */
++    public function __construct(
++        private readonly string $type,
++        ?ConnectionInterface $db = null,
++        ?FoundationLocationRepository $repository = null,
++        ?ResourceWorkflowStateResolver $states = null,
++    ) {
++        if (! in_array($type, ['province', 'ward'], true)) {
++            throw new DomainException(LifecycleService::ERROR_TARGET_ADAPTER_UNAVAILABLE, ['resource' => $type]);
++        }
++        $this->db = $db ?? db_connect();
++        $this->repository = $repository ?? new FoundationLocationRepository($this->db);
++        $this->states = $states ?? new ResourceWorkflowStateResolver($this->db);
++    }
++
++    public function resourceType(): string
++    {
++        return $this->type;
++    }
++
++    public function load(mixed $targetId, OperationContext $operation): LifecycleTargetSnapshot
++    {
++        $id = PositiveId::normalize($targetId, 'target_id', LifecycleService::ERROR_TARGET_NOT_FOUND);
++        $row = $this->repository->find($this->table(), $id);
++        if ($row === null) {
++            throw new DomainException(LifecycleService::ERROR_TARGET_NOT_FOUND, ['target_id' => $id]);
++        }
++
++        return $this->snapshot($id, $row);
++    }
++
++    public function transactional(callable $callback): mixed
++    {
++        if (! $this->db instanceof BaseConnection || ! $this->db->transBegin()) {
++            throw new PersistenceException(FoundationLocationRepository::ERROR_PERSISTENCE_FAILED, 'workflowTransactionBegin');
++        }
++        try {
++            $value = $callback();
++            if (! $this->db->transStatus() || ! $this->db->transCommit()) {
++                throw new PersistenceException(FoundationLocationRepository::ERROR_PERSISTENCE_FAILED, 'workflowTransactionCommit');
++            }
++
++            return $value;
++        } catch (\Throwable $exception) {
++            $this->db->transRollback();
++            throw $exception;
++        }
++    }
++
++    public function lockAndReload(LifecycleTargetSnapshot $authorizedTarget, OperationContext $operation): LifecycleTargetSnapshot
++    {
++        if (! $this->db instanceof BaseConnection) {
++            throw new PersistenceException(FoundationLocationRepository::ERROR_PERSISTENCE_FAILED, 'workflowLockConnection');
++        }
++        // Table name is taken from a closed enum, never from client input.
++        $table = $this->db->prefixTable($this->table());
++        $result = $this->db->query("SELECT * FROM `{$table}` WHERE id = ? FOR UPDATE", [$authorizedTarget->targetId]);
++        if ($result === false) {
++            throw new PersistenceException(FoundationLocationRepository::ERROR_PERSISTENCE_FAILED, 'workflowLock');
++        }
++        $row = $result->getRowArray();
++        if ($row === null) {
++            throw new ConcurrencyException('lifecycle.target_missing');
++        }
++
++        return $this->snapshot($authorizedTarget->targetId, $row);
++    }
++
++    public function mutate(
++        LifecycleTargetSnapshot $lockedTarget,
++        int $expectedCurrentStateId,
++        int $destinationStateId,
++        OperationContext $operation,
++    ): void {
++        if ($lockedTarget->currentStateId !== $expectedCurrentStateId) {
++            throw new ConcurrencyException('lifecycle.state_change');
++        }
++        $fromCode = $this->states->codeForStateId($this->type, $expectedCurrentStateId);
++        $destinationCode = $this->states->codeForStateId($this->type, $destinationStateId);
++        // The row is locked. Retain the persisted status predicate as a
++        // secondary guard against a stale or mismatched source state.
++        try {
++            $updated = $this->db->table($this->table())
++                ->where('id', $lockedTarget->targetId)
++                ->where('status', $fromCode)
++                ->update(['status' => $destinationCode, ...$operation->updatedAudit()]);
++        } catch (\Throwable $exception) {
++            throw new PersistenceException(FoundationLocationRepository::ERROR_PERSISTENCE_FAILED, 'workflowMutate', $exception);
++        }
++        if ($updated === false || $this->db->affectedRows() !== 1) {
++            throw new ConcurrencyException('lifecycle.state_change');
++        }
++    }
++
++    private function table(): string
++    {
++        return $this->type === 'province' ? 'provinces' : 'wards';
++    }
++
++    /** @param array<string,mixed> $row */
++    private function snapshot(int $id, array $row): LifecycleTargetSnapshot
++    {
++        $lifecycleId = $this->states->lifecycleId($this->type);
++        $stateId = $this->states->persistedStateId($this->type, $row);
++        if ($lifecycleId === null || $stateId === null) {
++            throw new DomainException(LifecycleService::ERROR_INVALID_CONFIGURATION, ['resource' => $this->type]);
++        }
++        $organization = (new EvaluationOrganizationResolver(db: $this->db))->resolveResource(
++            $this->type,
++            'setstate',
++            $this->states->resource($this->type),
++            new EvaluationOrganizationRequest(persistedTarget: $row),
++        );
++
++        return new LifecycleTargetSnapshot($this->type, $id, $stateId, $lifecycleId, $organization->organizationId, $row);
++    }
++}
+diff --git a/backend/app/Services/FoundationLocationService.php b/backend/app/Services/FoundationLocationService.php
+index 670a4a0..7cf6c24 100644
+--- a/backend/app/Services/FoundationLocationService.php
++++ b/backend/app/Services/FoundationLocationService.php
+@@ -33,6 +33,7 @@ final class FoundationLocationService
+         ?ConnectionInterface $db = null,
+         private readonly ?MutationContext $mutationContext = null,
+         private readonly ?Clock $clock = null,
++        private ?ResourceWorkflowStateResolver $workflowStates = null,
+     ) {
+         $this->db = $db ?? db_connect();
+     }
+@@ -41,6 +42,7 @@ final class FoundationLocationService
+     public function createProvince(array $data): int
+     {
+         $payload = $this->locationPayload($data, ['code', 'name', 'status']);
++        $this->assertInitialState('province', (string) $payload['status']);
+         $this->assertCodeAvailable('provinces', (string) $payload['code']);
+ 
+         return $this->repo()->insert('provinces', $payload, ['code', 'name', 'status'], $this->operation());
+@@ -52,6 +54,7 @@ final class FoundationLocationService
+         $current = $this->province($id);
+         $payload = $this->locationPayload($data, []);
+         $candidate = array_merge($current, $payload);
++        $this->assertStateMutationAllowed('province', $current, $payload);
+         $this->assertCodeAvailable('provinces', (string) $candidate['code'], $id);
+ 
+         return $this->repo()->update('provinces', $id, $payload, $this->operation());
+@@ -61,6 +64,7 @@ final class FoundationLocationService
+     public function createWard(array $data): int
+     {
+         $payload = $this->locationPayload($data, ['province_id', 'code', 'name', 'status']);
++        $this->assertInitialState('ward', (string) $payload['status']);
+         $payload['province_id'] = PositiveId::normalize($payload['province_id'], 'province_id', self::ERROR_PROVINCE_REFERENCE_INVALID);
+         $this->province($payload['province_id']);
+         $this->assertCodeAvailable('wards', (string) $payload['code']);
+@@ -74,6 +78,7 @@ final class FoundationLocationService
+         $current = $this->ward($id);
+         $payload = $this->locationPayload($data, []);
+         $candidate = array_merge($current, $payload);
++        $this->assertStateMutationAllowed('ward', $current, $payload);
+         $candidate['province_id'] = PositiveId::normalize($candidate['province_id'], 'province_id', self::ERROR_PROVINCE_REFERENCE_INVALID);
+         $this->province($candidate['province_id']);
+         $this->assertCodeAvailable('wards', (string) $candidate['code'], $id);
+@@ -139,6 +144,32 @@ final class FoundationLocationService
+         return $data;
+     }
+ 
++    private function assertInitialState(string $resource, string $status): void
++    {
++        $initial = $this->states()->initialCode($resource);
++        if ($initial !== null && $initial !== $status) {
++            throw new DomainException(ResourceWorkflowStateResolver::ERROR_INITIAL_STATE_INVALID, [
++                'resource' => $resource,
++                'initial_status' => $initial,
++            ]);
++        }
++    }
++
++    /** @param array<string,mixed> $current @param array<string,mixed> $changes */
++    private function assertStateMutationAllowed(string $resource, array $current, array $changes): void
++    {
++        if (array_key_exists('status', $changes)
++            && $changes['status'] !== $current['status']
++            && $this->states()->lifecycleId($resource) !== null) {
++            throw new DomainException(Api010FoundationOrganizationContactService::ERROR_TRANSITION_REQUIRED, ['resource' => $resource]);
++        }
++    }
++
++    private function states(): ResourceWorkflowStateResolver
++    {
++        return $this->workflowStates ??= new ResourceWorkflowStateResolver($this->db);
++    }
++
+     private function assertCodeAvailable(string $table, string $code, ?int $ignoreId = null): void
+     {
+         $existing = $this->repo()->findByCode($table, $code);
+diff --git a/backend/app/Services/LifecycleService.php b/backend/app/Services/LifecycleService.php
+index 274497c..fce12cb 100644
+--- a/backend/app/Services/LifecycleService.php
++++ b/backend/app/Services/LifecycleService.php
+@@ -191,6 +191,7 @@ final class LifecycleService
+         mixed $targetId,
+         string $actionCode,
+         ?OperationContext $operation = null,
++        ?int $expectedDestinationStateId = null,
+     ): array {
+         $operation ??= $this->operation();
+         $resourceType = $this->resourceType($resourceType);
+@@ -204,6 +205,15 @@ final class LifecycleService
+             throw new DomainException(self::ERROR_TARGET_ADAPTER_UNAVAILABLE, ['resource' => $resourceType]);
+         }
+         $transition = $this->resolveTransition($snapshot->lifecycleId, $snapshot->currentStateId, $actionCode);
++        $destinationStateId = PositiveId::normalize($transition['to_state_id'] ?? null, 'to_state_id', self::ERROR_INVALID_TRANSITION);
++        // The caller may request a target status, but must not redirect a
++        // deterministic lifecycle transition to a different destination.
++        if ($expectedDestinationStateId !== null && $destinationStateId !== $expectedDestinationStateId) {
++            throw new DomainException(self::ERROR_INVALID_TRANSITION, [
++                'action_code' => $actionCode,
++                'expected_destination_state_id' => $expectedDestinationStateId,
++            ]);
++        }
+         $actionCode = $this->actionCode($actionCode);
+         $request = new EvaluationOrganizationRequest(
+             persistedTarget: $snapshot->authorizationTarget,
+@@ -221,7 +231,6 @@ final class LifecycleService
+             throw new DomainException(self::ERROR_AUTHORIZATION_DENIED, ['action' => $actionCode]);
+         }
+ 
+-        $destinationStateId = PositiveId::normalize($transition['to_state_id'] ?? null, 'to_state_id', self::ERROR_INVALID_TRANSITION);
+         $adapter->transactional(function () use ($adapter, $snapshot, $operation, $decision, $destinationStateId): void {
+             $locked = $adapter->lockAndReload($snapshot, $operation);
+             if ($locked->resourceType !== $snapshot->resourceType

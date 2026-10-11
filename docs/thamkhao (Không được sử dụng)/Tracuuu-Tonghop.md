@@ -1075,3 +1075,147 @@ Decision register	Đối soát trạng thái theo kết quả recheck mới nh�
 | **SYSTEM_ADMIN** | Chính xác **93 actions** sau migration `000013`; thực hiện đối chiếu theo **exact-set**. |
 | **Production host** | Hoàn thiện **PHP startup errors, timezone, OPcache, TLS** và bổ sung **authenticated browser evidence**. |
 | **Decision register** | Đối soát trạng thái theo **kết quả recheck mới nhất**. |
+
+
+
+PS D:\XAMPP\htdocs\erp> git status
+On branch main
+Your branch is up to date with 'origin/main'.
+
+Changes not staged for commit:
+  (use "git add <file>..." to update what will be committed)
+  (use "git restore <file>..." to discard changes in working directory)
+        modified:   backend/app/Repositories/EmployeeAssignmentRepository.php
+        modified:   backend/app/Services/Api020EmployeeStructureService.php
+        modified:   backend/app/Services/EmployeeAssignmentService.php
+        modified:   backend/tests/unit/P1Api020EmployeeStructureTest.php
+        modified:   backend/tests/unit/P1Emp002EmployeeAssignmentRepositoryTest.php
+        modified:   backend/tests/unit/P1Emp003EmployeeAssignmentServiceTest.php
+
+Untracked files:
+  (use "git add <file>..." to include in what will be committed)
+        DinkERP_Batch4_Bundle_Report_Metrics_Fix.patch
+        DinkERP_Batch4_ListLookups_Oxlint_Fix.patch
+        DinkERP_Increment3_EmployeeAssignment_Nplus1_Batch.patch
+        DinkERP_Increment3_ProductList_Nplus1_Batch.patch
+
+no changes added to commit (use "git add" and/or "git commit -a")
+PS D:\XAMPP\htdocs\erp> git diff --check
+PS D:\XAMPP\htdocs\erp> git diff --stat
+ .../Repositories/EmployeeAssignmentRepository.php  | 49 +++++++++++++
+ .../Services/Api020EmployeeStructureService.php    | 19 ++++-
+ backend/app/Services/EmployeeAssignmentService.php | 26 +++++++
+ .../tests/unit/P1Api020EmployeeStructureTest.php   | 81 ++++++++++++++++++++++
+ .../P1Emp002EmployeeAssignmentRepositoryTest.php   | 62 +++++++++++++++++
+ .../unit/P1Emp003EmployeeAssignmentServiceTest.php | 30 ++++++++
+ 6 files changed, 264 insertions(+), 3 deletions(-)
+PS D:\XAMPP\htdocs\erp> git status
+On branch main
+Your branch is up to date with 'origin/main'.
+
+Changes not staged for commit:
+  (use "git add <file>..." to update what will be committed)
+  (use "git restore <file>..." to discard changes in working directory)
+        modified:   backend/app/Repositories/EmployeeAssignmentRepository.php
+        modified:   backend/app/Services/Api020EmployeeStructureService.php
+        modified:   backend/app/Services/EmployeeAssignmentService.php
+        modified:   backend/tests/unit/P1Api020EmployeeStructureTest.php
+        modified:   backend/tests/unit/P1Emp002EmployeeAssignmentRepositoryTest.php
+        modified:   backend/tests/unit/P1Emp003EmployeeAssignmentServiceTest.php
+
+Untracked files:
+  (use "git add <file>..." to include in what will be committed)
+        DinkERP_Batch4_Bundle_Report_Metrics_Fix.patch
+        DinkERP_Batch4_ListLookups_Oxlint_Fix.patch
+        DinkERP_Increment3_EmployeeAssignment_Nplus1_Batch.patch
+        DinkERP_Increment3_ProductList_Nplus1_Batch.patch
+
+no changes added to commit (use "git add" and/or "git commit -a")
+PS D:\XAMPP\htdocs\erp> git diff --check
+PS D:\XAMPP\htdocs\erp> git diff --stat
+ .../Repositories/EmployeeAssignmentRepository.php  | 49 +++++++++++++
+ .../Services/Api020EmployeeStructureService.php    | 19 ++++-
+ backend/app/Services/EmployeeAssignmentService.php | 26 +++++++
+ .../tests/unit/P1Api020EmployeeStructureTest.php   | 81 ++++++++++++++++++++++
+ .../P1Emp002EmployeeAssignmentRepositoryTest.php   | 62 +++++++++++++++++
+ .../unit/P1Emp003EmployeeAssignmentServiceTest.php | 30 ++++++++
+ 6 files changed, 264 insertions(+), 3 deletions(-)
+PS D:\XAMPP\htdocs\erp>
+PS D:\XAMPP\htdocs\erp> git add -- `
+>>   backend/app/Repositories/EmployeeAssignmentRepository.php `
+>>   backend/app/Services/Api020EmployeeStructureService.php `
+>>   backend/app/Services/EmployeeAssignmentService.php `
+>>   backend/tests/unit/P1Api020EmployeeStructureTest.php `
+>>   backend/tests/unit/P1Emp002EmployeeAssignmentRepositoryTest.php `
+>>   backend/tests/unit/P1Emp003EmployeeAssignmentServiceTest.php
+PS D:\XAMPP\htdocs\erp>
+PS D:\XAMPP\htdocs\erp> git diff --cached --check
+PS D:\XAMPP\htdocs\erp> git diff --cached --stat
+ .../Repositories/EmployeeAssignmentRepository.php  | 49 +++++++++++++
+ .../Services/Api020EmployeeStructureService.php    | 19 ++++-
+ backend/app/Services/EmployeeAssignmentService.php | 26 +++++++
+ .../tests/unit/P1Api020EmployeeStructureTest.php   | 81 ++++++++++++++++++++++
+ .../P1Emp002EmployeeAssignmentRepositoryTest.php   | 62 +++++++++++++++++
+ .../unit/P1Emp003EmployeeAssignmentServiceTest.php | 30 ++++++++
+ 6 files changed, 264 insertions(+), 3 deletions(-)
+PS D:\XAMPP\htdocs\erp>
+PS D:\XAMPP\htdocs\erp> git commit -m "perf(backend): batch effective employee assignment lookups"
+[main 9f32e79] perf(backend): batch effective employee assignment lookups
+ 6 files changed, 264 insertions(+), 3 deletions(-)
+PS D:\XAMPP\htdocs\erp>
+PS D:\XAMPP\htdocs\erp> git push origin main
+Enumerating objects: 27, done.
+Counting objects: 100% (27/27), done.
+Delta compression using up to 16 threads
+Compressing objects: 100% (14/14), done.
+Writing objects: 100% (14/14), 5.68 KiB | 2.84 MiB/s, done.
+Total 14 (delta 11), reused 0 (delta 0), pack-reused 0 (from 0)
+remote: Resolving deltas: 100% (11/11), completed with 11 local objects.
+To https://github.com/quyetdvq/erp30.git
+   f9824a7..9f32e79  main -> main
+PS D:\XAMPP\htdocs\erp>
+PS D:\XAMPP\htdocs\erp> git status
+On branch main
+Your branch is up to date with 'origin/main'.
+
+Untracked files:
+  (use "git add <file>..." to include in what will be committed)
+        DinkERP_Batch4_Bundle_Report_Metrics_Fix.patch
+        DinkERP_Batch4_ListLookups_Oxlint_Fix.patch
+        DinkERP_Increment3_EmployeeAssignment_Nplus1_Batch.patch
+        DinkERP_Increment3_ProductList_Nplus1_Batch.patch
+
+nothing added to commit but untracked files present (use "git add" to track)
+PS D:\XAMPP\htdocs\erp> git log -1 --oneline
+9f32e79 (HEAD -> main, origin/main) perf(backend): batch effective employee assignment lookups
+PS D:\XAMPP\htdocs\erp>
+
+Trước khi làm tiếp tôi muốn xác nhận và fix nội dung sau:
+
+
+Bạn hãy kiểm tra lại toàn bộ luồng xử lý và xác nhận bằng code.
+Tôi muốn xác minh giả định sau (Theo thiế kế):
+- Khi một User chưa được Assignment với bất kỳ Employee nào, thì User đó sẽ không thuộc bất kỳ Organization nào (Company, Branch, Plant, Department, Group, ...).
+- Nếu User không thuộc bất kỳ Organization nào, thì User đó sẽ không có bất kỳ quyền (permission) nào được cấp thông qua cơ chế PBAC/Authorization.
+- Phạn vi quyền của 1 user gắn liền với tập đoàn/ công ty/ nhà máy ... Mà user đó làm việc (user Assignment với Employee)
+- Khi nhân viên được Assignment cấp Group thì đương nhiên sẽ thuộc các cấp thấp hơn như COMPANY/BRANCH/PLANT/WAREHOUSE (theo kế thừa).
+- Khi nhân viên được Assignment cấp COMPANY thì đương nhiên sẽ thuộc các cấp thấp hơn như BRANCH/PLANT/WAREHOUSE (theo kế thừa trong nhánh đó).
+Hãy kiểm tra và xác nhận các nội dung sau:
+1. Một User chưa có Assignment có thực sự không thuộc bất kỳ Organization nào hay không.
+2. Trong trường hợp đó, hệ thống sẽ đánh giá quyền (permission) như thế nào.
+3. Nếu kết luận là User không có Assignment thì không có quyền nào, hãy chỉ rõ đoạn code hoặc luồng xử lý chứng minh kết luận đó. Nếu không đúng, hãy mô tả chính xác các trường hợp ngoại lệ.
+
+
+--
+Đồng ý triển khai lại code bằng cách áp dụng thêm 2 luật này: 
+1. Employee eligibility: User phải liên kết với Employee ACTIVE và có tối thiểu một Assignment hiệu lực. Nếu không, DENY bất kể có Base Permission hay policy ALLOW.
+
+2. Organization eligibility: Với resource thuộc domain ORGANIZATION, phải có Assignment hiệu lực tại chính Organization đang xét hoặc một tổ tiên trên cùng nhánh. Nếu chỉ được Assignment tại Company A thì không được dùng quyền actor lane để truy cập Company B.
+---
+
+---
+3. Có một quyết định thiết kế còn mở: các resource SYSTEM và MASTER hiện được đánh giá ở cấp GROUP, kể cả Product và Employee Master. Chúng ta phải xác định User có Assignment ở Company bất kỳ có được sử dụng các tài nguyên chung này hay cần Assignment tại GROUP.
+---
+
+Chốt vấn đề 3: User Có Assignment Ở bất kỳ GROUP hoặc COMPANY/BRANCH/PLANT/WAREHOUSE nào đều thấy các resource SYSTEM và MASTER.
+

@@ -10,8 +10,9 @@ use App\Modules\Product\Product\ProductRepository;
 use App\Modules\Product\Product\ProductRoleService;
 
 /**
- * SQL-backed Product list entered only after the product.view authorization
- * gate. Product is a MASTER resource without row-level PBAC in this endpoint.
+ * SQL-backed Product list. For State-aware PBAC, optional authorizedStatuses
+ * are compiled through AuthorizationService from persisted Product samples;
+ * the same State predicate is used by COUNT and page/key SQL.
  *
  * For id sorting with no text search, COUNT and LIMIT/OFFSET run in SQL.
  * For other canonical list queries, SQL projects only searchable/sortable
@@ -27,6 +28,8 @@ final class SqlProductListSource implements AuthorizedListSource
     public function __construct(
         private readonly ProductRepository $repository,
         private readonly ProductRoleService $roles,
+        /** @var list<string>|null */
+        private readonly ?array $authorizedStatuses = null,
     ) {
     }
 
@@ -34,7 +37,7 @@ final class SqlProductListSource implements AuthorizedListSource
     {
         $this->assertCatalogStructure();
         if ($this->repository->supportsSqlList($query)) {
-            return $this->repository->countListMatching($query);
+            return $this->repository->countListMatching($query, $this->authorizedStatuses);
         }
         return $this->projected($query)->countAuthorized($this->withoutSqlFilters($query));
     }
@@ -44,7 +47,7 @@ final class SqlProductListSource implements AuthorizedListSource
     {
         $this->assertCatalogStructure();
         if ($this->repository->supportsSqlList($query)) {
-            return $this->roles->describePage($this->repository->listPageMatching($query));
+            return $this->roles->describePage($this->repository->listPageMatching($query, $this->authorizedStatuses));
         }
 
         $ids = array_map(
@@ -87,7 +90,7 @@ final class SqlProductListSource implements AuthorizedListSource
     private function projected(CommonListQuery $query): AuthorizedArrayListSource
     {
         if ($this->projected === null || $this->projectedQuery !== $query) {
-            $this->projected = new AuthorizedArrayListSource($this->repository->listProjectedKeys($query));
+            $this->projected = new AuthorizedArrayListSource($this->repository->listProjectedKeys($query, $this->authorizedStatuses));
             $this->projectedQuery = $query;
         }
         return $this->projected;

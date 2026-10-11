@@ -1,0 +1,117 @@
+diff --git a/backend/app/Modules/Product/Product/ProductRepository.php b/backend/app/Modules/Product/Product/ProductRepository.php
+index 7ff0844..38c3151 100644
+--- a/backend/app/Modules/Product/Product/ProductRepository.php
++++ b/backend/app/Modules/Product/Product/ProductRepository.php
+@@ -215,10 +215,13 @@ SQL;
+     }
+ 
+     /**
+-     * Run the complete Product list read (integrity check, count, page,
+-     * relations) under one InnoDB REPEATABLE READ consistent snapshot.
+-     * If the caller/session uses weaker isolation, fail closed instead of
+-     * returning a total and page from different database versions.
++     * Read integrity, count, page and relationships from one consistent
++     * InnoDB REPEATABLE READ snapshot. The isolation override applies to
++     * ONLY this transaction; it never changes the session/global default.
++     *
++     * CI4 nested transactions do not start a new database transaction.
++     * Reject them: an enclosing READ COMMITTED transaction (or a per-
++     * transaction override) cannot be upgraded safely once started.
+      *
+      * @template T
+      * @param callable():T $read
+@@ -226,21 +229,31 @@ SQL;
+      */
+     public function withConsistentListSnapshot(callable $read): mixed
+     {
+-        if (! $this->db instanceof BaseConnection || ! $this->db->transBegin()) {
++        if (! $this->db instanceof BaseConnection) {
+             throw new PersistenceException(self::ERROR_PERSISTENCE_FAILED, 'beginProductListSnapshot');
+         }
++        if ($this->db->transDepth !== 0) {
++            throw new PersistenceException(self::ERROR_PERSISTENCE_FAILED, 'nestedProductListSnapshot');
++        }
++
++        // SET TRANSACTION without SESSION applies only to the next transaction
++        // (MariaDB/MySQL). This also works if the session default is READ
++        // COMMITTED; merely checking @@tx_isolation after BEGIN would fail or
++        // report the session default instead of this transaction's override.
+         try {
+-            // MariaDB exposes the current session transaction isolation via
+-            // @@tx_isolation. A nested transaction inherits its outer scope.
+-            $setting = $this->db->query('SELECT @@tx_isolation AS isolation_level');
+-            if (! $setting instanceof BaseResult) {
+-                throw new PersistenceException(self::ERROR_PERSISTENCE_FAILED, 'readProductListIsolation');
+-            }
+-            $isolation = strtoupper(str_replace('_', '-', (string) ($setting->getRowArray()['isolation_level'] ?? '')));
+-            if ($isolation !== 'REPEATABLE-READ') {
+-                throw new PersistenceException(self::ERROR_PERSISTENCE_FAILED, 'requireRepeatableReadProductList');
++            if ($this->db->query('SET TRANSACTION ISOLATION LEVEL REPEATABLE READ') !== true) {
++                throw new PersistenceException(self::ERROR_PERSISTENCE_FAILED, 'setProductListIsolation');
+             }
++        } catch (PersistenceException $exception) {
++            throw $exception;
++        } catch (\Throwable $exception) {
++            throw new PersistenceException(self::ERROR_PERSISTENCE_FAILED, 'setProductListIsolation', $exception);
++        }
+ 
++        if (! $this->db->transBegin()) {
++            throw new PersistenceException(self::ERROR_PERSISTENCE_FAILED, 'beginProductListSnapshot');
++        }
++        try {
+             $result = $read();
+             if (! $this->db->transStatus() || ! $this->db->transCommit()) {
+                 throw new PersistenceException(self::ERROR_PERSISTENCE_FAILED, 'commitProductListSnapshot');
+diff --git a/backend/tests/unit/P1Api050ProductSqlPaginationTest.php b/backend/tests/unit/P1Api050ProductSqlPaginationTest.php
+index 77d7c01..e5c6f38 100644
+--- a/backend/tests/unit/P1Api050ProductSqlPaginationTest.php
++++ b/backend/tests/unit/P1Api050ProductSqlPaginationTest.php
+@@ -226,15 +226,41 @@ final class P1Api050ProductSqlPaginationTest extends CIUnitTestCase
+         try {
+             $this->assertTrue($connection->query('SET SESSION TRANSACTION ISOLATION LEVEL READ COMMITTED'));
+             $repository = new ProductRepository($connection);
++            // The list must use REPEATABLE READ even if the session default
++            // is READ COMMITTED, and must not change that session default.
++            $this->assertSame(42, $repository->withConsistentListSnapshot(static fn (): int => 42));
++            $this->assertSame(0, $connection->transDepth);
++            $isolation = $connection->query('SELECT @@tx_isolation AS isolation_level')->getRowArray();
++            $this->assertSame(
++                'READ-COMMITTED',
++                strtoupper(str_replace('_', '-', (string) $isolation['isolation_level'])),
++            );
++            $this->assertNotFalse($connection->table('products')->countAllResults());
++        } finally {
++            $connection->close();
++        }
++    }
++
++    public function testNestedTransactionIsRejectedWithoutChangingOuterTransaction(): void
++    {
++        $connection = \Config\Database::connect('tests', false);
++        try {
++            $this->assertTrue($connection->query('SET SESSION TRANSACTION ISOLATION LEVEL READ COMMITTED'));
++            $this->assertTrue($connection->transBegin());
+             try {
+-                $repository->withConsistentListSnapshot(static fn (): int => 42);
+-                $this->fail('Product list must not run under READ COMMITTED.');
+-            } catch (PersistenceException $exception) {
+-                $this->assertSame(ProductRepository::ERROR_PERSISTENCE_FAILED, $exception->getErrorCode());
++                $repository = new ProductRepository($connection);
++                try {
++                    $repository->withConsistentListSnapshot(static fn (): int => 42);
++                    $this->fail('An existing transaction cannot be upgraded to a fresh list snapshot.');
++                } catch (PersistenceException $exception) {
++                    $this->assertSame(ProductRepository::ERROR_PERSISTENCE_FAILED, $exception->getErrorCode());
++                    $this->assertSame('nestedProductListSnapshot', $exception->getContext()['operation']);
++                }
++                $this->assertSame(1, $connection->transDepth, 'List rejection must not end the enclosing transaction.');
++                $this->assertNotFalse($connection->table('products')->countAllResults());
++            } finally {
++                $this->assertTrue($connection->transRollback());
+             }
+-            // Rollback after the rejected transaction must leave the same
+-            // connection usable for regular database work.
+-            $this->assertNotFalse($connection->table('products')->countAllResults());
+         } finally {
+             $connection->close();
+         }

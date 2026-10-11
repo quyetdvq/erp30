@@ -1,0 +1,246 @@
+diff --git a/backend/app/Authorization/PolicyValidator.php b/backend/app/Authorization/PolicyValidator.php
+index 35f6c1d..f53d9ec 100644
+--- a/backend/app/Authorization/PolicyValidator.php
++++ b/backend/app/Authorization/PolicyValidator.php
+@@ -8,6 +8,7 @@ use App\Exceptions\DomainException;
+ use App\Infrastructure\Id\PositiveId;
+ use App\Repositories\PolicyRepository;
+ use App\Repositories\ResourceCatalogRepository;
++use App\Services\ResourceWorkflowStateResolver;
+ 
+ /** Business validation for policy inputs; it does not evaluate authorization. */
+ final class PolicyValidator
+@@ -22,6 +23,7 @@ final class PolicyValidator
+         private readonly PolicyRepository $repository,
+         private readonly ?PolicyParticipantValidator $participants = null,
+         private readonly ?ResourceCatalogRepository $catalog = null,
++        private readonly ?ResourceWorkflowStateResolver $workflowStates = null,
+     ) {
+     }
+ 
+@@ -43,6 +45,10 @@ final class PolicyValidator
+         }
+         if (array_key_exists('state_id', $result) && $result['state_id'] !== null) {
+             $result['state_id'] = PositiveId::normalize($result['state_id'], 'state_id', PolicyParticipantValidator::ERROR_INVALID_PARTICIPANT);
++            ($this->workflowStates ?? new ResourceWorkflowStateResolver())->assertPolicyState(
++                $result['resource_id'],
++                $result['state_id'],
++            );
+         }
+ 
+         return $result;
+diff --git a/backend/app/Services/Api010FoundationOrganizationContactService.php b/backend/app/Services/Api010FoundationOrganizationContactService.php
+index 9d6f2ba..1915d19 100644
+--- a/backend/app/Services/Api010FoundationOrganizationContactService.php
++++ b/backend/app/Services/Api010FoundationOrganizationContactService.php
+@@ -29,6 +29,7 @@ final class Api010FoundationOrganizationContactService
+         private readonly ?OrganizationRepository $organizations = null,
+         private readonly ?ContactRepository $contacts = null,
+         private ?AuthorizationService $authorization = null,
++        private ?ResourceWorkflowStateResolver $workflowStates = null,
+     ) {
+     }
+ 
+@@ -219,6 +220,7 @@ final class Api010FoundationOrganizationContactService
+                 persistedTarget: $target === [] ? null : $target,
+                 input: $input,
+             ),
++            $target === [] ? null : $this->stateResolver()->persistedStateId($resource, $target),
+         );
+         if (! $decision->isAllowed()) {
+             throw new DomainException(AuthorizationService::REASON_POLICY_DENIED);
+@@ -300,6 +302,11 @@ final class Api010FoundationOrganizationContactService
+         return $this->authorization ??= new AuthorizationService();
+     }
+ 
++    private function stateResolver(): ResourceWorkflowStateResolver
++    {
++        return $this->workflowStates ??= new ResourceWorkflowStateResolver();
++    }
++
+     private function locationRepo(): FoundationLocationRepository
+     {
+         return $this->locations ?? new FoundationLocationRepository();
+diff --git a/backend/app/Services/ResourceWorkflowStateResolver.php b/backend/app/Services/ResourceWorkflowStateResolver.php
+new file mode 100644
+index 0000000..b6e7e77
+--- /dev/null
++++ b/backend/app/Services/ResourceWorkflowStateResolver.php
+@@ -0,0 +1,177 @@
++<?php
++
++declare(strict_types=1);
++
++namespace App\Services;
++
++use App\Exceptions\DomainException;
++use App\Infrastructure\Id\PositiveId;
++use App\Repositories\LifecycleRepository;
++use App\Repositories\ResourceCatalogRepository;
++use CodeIgniter\Database\ConnectionInterface;
++
++/**
++ * Converts a resource's persisted status code into its canonical workflow ID.
++ * Client state_id and to-state hints are never authoritative inputs.
++ *
++ * The catalog and membership caches are request-local, not cross-request caches:
++ * a later HTTP request must observe administrative lifecycle changes.
++ */
++final class ResourceWorkflowStateResolver
++{
++    public const ERROR_STATE_NOT_MAPPED = 'WF_RESOURCE_STATE_NOT_MAPPED';
++    public const ERROR_RESOURCE_LIFECYCLE_INVALID = 'WF_RESOURCE_LIFECYCLE_INVALID';
++    public const ERROR_INITIAL_STATE_INVALID = 'WF_INITIAL_STATE_INVALID';
++    public const ERROR_POLICY_STATE_INVALID = 'POLICY_STATE_NOT_IN_RESOURCE_LIFECYCLE';
++
++    private ResourceCatalogRepository $resources;
++    private LifecycleRepository $lifecycles;
++
++    /** @var array<string, array<string, mixed>> */
++    private array $resourceCache = [];
++
++    /** @var array<int, array<int, string>> */
++    private array $memberCodes = [];
++
++    /** @param ConnectionInterface<mixed,mixed>|null $db */
++    public function __construct(
++        ?ConnectionInterface $db = null,
++        ?ResourceCatalogRepository $resources = null,
++        ?LifecycleRepository $lifecycles = null,
++    ) {
++        $this->resources = $resources ?? new ResourceCatalogRepository($db);
++        $this->lifecycles = $lifecycles ?? new LifecycleRepository($db);
++    }
++
++    /** @return array<string,mixed> */
++    public function resource(string $type): array
++    {
++        $type = strtolower(trim($type));
++        if (! isset($this->resourceCache[$type])) {
++            $row = $this->resources->findResourceByType($type);
++            if ($row === null) {
++                throw new DomainException(self::ERROR_RESOURCE_LIFECYCLE_INVALID, ['resource' => $type]);
++            }
++            $this->resourceCache[$type] = $row;
++        }
++
++        return $this->resourceCache[$type];
++    }
++
++    public function lifecycleId(string $type): ?int
++    {
++        $resource = $this->resource($type);
++        $value = $resource['lifecycle_id'] ?? null;
++        if ($value === null) {
++            return null;
++        }
++
++        $id = PositiveId::normalize($value, 'lifecycle_id', self::ERROR_RESOURCE_LIFECYCLE_INVALID);
++        $this->members($id);
++
++        return $id;
++    }
++
++    /** @param array<string,mixed> $row */
++    public function persistedStateId(string $type, array $row): ?int
++    {
++        if ($this->lifecycleId($type) === null) {
++            return null;
++        }
++        // Only a status actually loaded from persistence is accepted here.
++        return $this->stateIdForCode($type, $row['status'] ?? null);
++    }
++
++    public function stateIdForCode(string $type, mixed $code): ?int
++    {
++        $lifecycleId = $this->lifecycleId($type);
++        if ($lifecycleId === null) {
++            return null;
++        }
++        if (! is_string($code) || trim($code) === '') {
++            throw new DomainException(self::ERROR_STATE_NOT_MAPPED, ['resource' => $type]);
++        }
++        $normalized = strtoupper(trim($code));
++        foreach ($this->members($lifecycleId) as $stateId => $memberCode) {
++            if ($memberCode === $normalized) {
++                return $stateId;
++            }
++        }
++        throw new DomainException(self::ERROR_STATE_NOT_MAPPED, ['resource' => $type, 'status' => $normalized]);
++    }
++
++    public function codeForStateId(string $type, int $stateId): string
++    {
++        $lifecycleId = $this->lifecycleId($type);
++        if ($lifecycleId === null) {
++            throw new DomainException(self::ERROR_RESOURCE_LIFECYCLE_INVALID, ['resource' => $type]);
++        }
++        $codes = $this->members($lifecycleId);
++        if (! isset($codes[$stateId])) {
++            throw new DomainException(self::ERROR_STATE_NOT_MAPPED, ['resource' => $type, 'state_id' => $stateId]);
++        }
++
++        return $codes[$stateId];
++    }
++
++    public function initialCode(string $type): ?string
++    {
++        $lifecycleId = $this->lifecycleId($type);
++        if ($lifecycleId === null) {
++            return null;
++        }
++        $initials = [];
++        foreach ($this->lifecycles->findLifecycleStates($lifecycleId) as $member) {
++            if (in_array($member['is_initial'] ?? null, [true, 1, '1'], true)) {
++                $id = PositiveId::normalize($member['state_id'] ?? null, 'state_id', self::ERROR_INITIAL_STATE_INVALID);
++                if (isset($this->members($lifecycleId)[$id])) {
++                    $initials[] = $this->members($lifecycleId)[$id];
++                }
++            }
++        }
++        if (count($initials) !== 1) {
++            throw new DomainException(self::ERROR_INITIAL_STATE_INVALID, ['resource' => $type]);
++        }
++
++        return $initials[0];
++    }
++
++    /** Reject policy state IDs outside the configured active lifecycle. */
++    public function assertPolicyState(int $resourceId, int $stateId): void
++    {
++        $resource = $this->resources->findResource($resourceId);
++        if ($resource === null || ! is_string($resource['type'] ?? null)) {
++            throw new DomainException(self::ERROR_POLICY_STATE_INVALID, ['resource_id' => $resourceId]);
++        }
++        $type = $resource['type'];
++        $lifecycleId = $this->lifecycleId($type);
++        if ($lifecycleId === null || ! isset($this->members($lifecycleId)[$stateId])) {
++            throw new DomainException(self::ERROR_POLICY_STATE_INVALID, ['resource_id' => $resourceId, 'state_id' => $stateId]);
++        }
++    }
++
++    /** @return array<int,string> state ID -> active Workflow State code */
++    private function members(int $lifecycleId): array
++    {
++        if (isset($this->memberCodes[$lifecycleId])) {
++            return $this->memberCodes[$lifecycleId];
++        }
++        $lifecycle = $this->lifecycles->findLifecycle($lifecycleId);
++        if ($lifecycle === null || strtoupper((string) ($lifecycle['status'] ?? '')) !== 'ACTIVE') {
++            throw new DomainException(self::ERROR_RESOURCE_LIFECYCLE_INVALID, ['lifecycle_id' => $lifecycleId]);
++        }
++        $members = [];
++        foreach ($this->lifecycles->findLifecycleStates($lifecycleId) as $member) {
++            $id = PositiveId::normalize($member['state_id'] ?? null, 'state_id', self::ERROR_RESOURCE_LIFECYCLE_INVALID);
++            $state = $this->lifecycles->findActiveWorkflowState($id);
++            if ($state === null) {
++                // An invalid/inactive member must not silently match a policy.
++                throw new DomainException(self::ERROR_RESOURCE_LIFECYCLE_INVALID, ['state_id' => $id]);
++            }
++            $members[$id] = strtoupper((string) ($state['code'] ?? ''));
++        }
++        $this->memberCodes[$lifecycleId] = $members;
++
++        return $members;
++    }
++}

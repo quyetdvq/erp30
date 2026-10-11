@@ -13,6 +13,7 @@ use App\Infrastructure\Api\CommonListQueryAllowlist;
 use App\Infrastructure\Api\SqlProductListSource;
 use App\Infrastructure\Mutation\MutationContext;
 use App\Modules\Product\Product\ProductRepository;
+use App\Repositories\PolicyRepository;
 use App\Modules\Product\Product\ProductRoleService;
 use App\Services\Api050ProductCatalogService;
 use CodeIgniter\Events\Events;
@@ -418,6 +419,70 @@ final class P1Api050ProductSqlPaginationTest extends CIUnitTestCase
         $this->assertCount(1, $response['items']);
         $this->assertArrayHasKey('product_code', $response['items'][0]);
         $this->assertArrayNotHasKey('code', $response['items'][0]);
+
+        // Turn on row-state PBAC after the service already exists; the next
+        // list must compile the new ABSOLUTE_DENY rather than reuse a stale
+        // global MASTER gate or paginate before rejecting inactive rows.
+        $this->insertProduct('SQL050-AUTH-INACTIVE', 'STANDARD', 'INACTIVE', null, 'Hidden');
+        $state = $this->db->table('workflow_states')->select('id')->where('code', 'INACTIVE')->get()->getRowArray();
+        $resource = $this->db->table('resources')->select('id')->where('type', 'product')->get()->getRowArray();
+        $this->assertNotNull($state);
+        $this->assertNotNull($resource);
+        (new PolicyRepository($this->db))->insertWithActions([
+            'organization_id' => $rootId,
+            'resource_id' => (int) $resource['id'],
+            'state_id' => (int) $state['id'],
+            'participant_type' => 'USER', 'participant_ref_id' => $userId,
+        ], [['resource_action_id' => (int) $action['id'], 'effect' => 'ABSOLUTE_DENY']]);
+        $filtered = $service->listProducts(['page_size' => '1']);
+        $this->assertSame('1', (string) $filtered['total']);
+        $this->assertCount(1, $filtered['items']);
+        $this->assertSame('ACTIVE', $filtered['items'][0]['status']);
+    }
+
+    public function testStateBucketPredicateMatchesLegacyBeforeCountAndPagination(): void
+    {
+        $this->insertProducts(87);
+        $repository = new ProductRepository($this->db);
+        $roles = new ProductRoleService(repository: $repository, db: $this->db);
+        $legacyAll = array_map(static function (array $row): array {
+            $row['product_code'] = $row['code'];
+            unset($row['code']);
+            return $row;
+        }, $roles->describeList($repository->listAll()));
+        $authorizedRows = array_values(array_filter($legacyAll, static fn (array $row): bool => $row['status'] === 'ACTIVE'));
+        foreach ([
+            ['page_size' => '7'],
+            ['page_size' => '7', 'page' => '3', 'sort' => '-id'],
+            ['page_size' => '5', 'q' => 'product 2', 'sort' => 'product_code'],
+            ['filter' => ['status' => ['ACTIVE', 'INACTIVE']]],
+            ['filter' => ['product_type' => 'STANDARD'], 'sort' => '-product_name'],
+        ] as $input) {
+            $query = $this->query($input);
+            $legacy = new AuthorizedArrayListSource($authorizedRows);
+            $sql = new SqlProductListSource($repository, $roles, ['ACTIVE']);
+            $this->assertSame($legacy->countAuthorized($query), $sql->countAuthorized($query), json_encode($input));
+            $actual = array_map(static function (array $row): array {
+                $row['product_code'] = $row['code'];
+                unset($row['code']);
+                return $row;
+            }, iterator_to_array($sql->fetchAuthorized($query)));
+            $this->assertSame($legacy->fetchAuthorized($query), $actual, json_encode($input));
+        }
+    }
+
+    public function testZeroAllowedStateStillChecksGlobalProductIntegrity(): void
+    {
+        $id = $this->insertProduct('SQL050-PBAC-INVALID', 'STANDARD', 'ACTIVE', null, '  ');
+        $repository = new ProductRepository($this->db);
+        $sql = new SqlProductListSource($repository, new ProductRoleService(repository: $repository, db: $this->db), []);
+        try {
+            $sql->countAuthorized($this->query(['page_size' => '1']));
+            $this->fail('A denied Product must not bypass global catalog consistency.');
+        } catch (DomainException $exception) {
+            $this->assertSame(ProductRoleService::ERROR_INVALID_ROLE, $exception->getErrorCode());
+        }
+        $this->assertNotNull($repository->findById($id));
     }
 
     /** @param array<string,mixed> $input */

@@ -346,6 +346,88 @@ final class P1Auth001PolicyRepositoryTest extends CIUnitTestCase
         self::assertSame($fetched, $many, 'Batch boundary cannot lose an action or change its effect.');
     }
 
+    public function testPolicySqlPushdownMatchesLegacySelectionWithOneSelect(): void
+    {
+        $this->seedCatalog();
+        $refs = $this->insertReferences();
+        $repository = new PolicyRepository($this->db);
+        $resourceId = $this->resourceId('product');
+        $view = $this->resourceActionId('product', 'view');
+        $edit = $this->resourceActionId('product', 'edit');
+        $this->db->table('workflow_states')->insert([
+            'code' => 'PERF004-' . uniqid(), 'name' => 'Performance Test',
+            'status' => 'ACTIVE', 'created_at' => '2026-10-11 00:00:00',
+        ]);
+        $stateId = (int) $this->db->insertID();
+        $orgId = $refs['ORGANIZATION'];
+        $this->db->table('organizations')->insert([
+            'type' => 'COMPANY', 'code' => 'PERF004-' . uniqid(), 'name' => 'Other scope',
+            'status' => 'ACTIVE', 'created_at' => '2026-10-11 00:00:00',
+        ]);
+        $otherOrg = (int) $this->db->insertID();
+        $base = [
+            'organization_id' => $orgId,
+            'resource_id' => $resourceId,
+            'participant_type' => 'USER',
+            'participant_ref_id' => $refs['USER'],
+        ];
+        $allStates = $repository->insertWithActions($base, [
+            ['resource_action_id' => $view, 'effect' => 'ALLOW'],
+            ['resource_action_id' => $edit, 'effect' => 'DENY'],
+        ]);
+        $specific = $repository->insertWithActions([...$base, 'state_id' => $stateId], [
+            ['resource_action_id' => $view, 'effect' => 'DENY'],
+        ]);
+        $inactive = $repository->insertWithActions([
+            ...$base, 'participant_type' => 'GROUP', 'participant_ref_id' => $refs['GROUP'],
+        ], [['resource_action_id' => $view, 'effect' => 'ABSOLUTE_DENY']]);
+        $repository->insertWithActions([
+            ...$base, 'organization_id' => $otherOrg,
+        ], [['resource_action_id' => $view, 'effect' => 'DENY']]);
+        $this->db->table('policies')->where('id', $inactive)->update(['status' => 'INACTIVE']);
+        try {
+            $queries = [];
+            $listener = static function ($query) use (&$queries): void {
+                if (str_contains(strtolower((string) $query), 'policy_actions')) {
+                    $queries[] = (string) $query;
+                }
+            };
+            Events::on('DBQuery', $listener);
+            try {
+                $actual = $repository->findApplicablePolicyRows($resourceId, [$orgId], $view, $stateId);
+            } finally {
+                Events::removeListener('DBQuery', $listener);
+            }
+            self::assertCount(1, $queries, 'Policy selection must use one filtered JOIN, not catalog-wide reads.');
+            self::assertSame([$allStates, $specific], array_map(
+                static fn (array $entry): int => (int) $entry['policy']['id'], $actual,
+            ));
+            self::assertSame(['ALLOW', 'DENY'], array_column($actual, 'effect'));
+            self::assertSame([$allStates], array_map(
+                static fn (array $entry): int => (int) $entry['policy']['id'],
+                $repository->findApplicablePolicyRows($resourceId, [$orgId], $view, null),
+            ));
+            self::assertSame([], $repository->findApplicablePolicyRows($resourceId, [], $view, $stateId));
+            self::assertSame([], $repository->findApplicablePolicyRows($resourceId, [$orgId], $view + 900000, $stateId));
+            self::assertSame([$allStates], array_map(
+                static fn (array $entry): int => (int) $entry['policy']['id'],
+                $repository->findApplicablePolicyRows($resourceId, [$orgId], $view, null),
+            ));
+            // On a case-insensitive MariaDB collation, the malformed value
+            // 'active' must NOT silently become an active Policy.
+            $this->db->table('policies')->where('id', $inactive)->update(['status' => 'active']);
+            self::assertNull($repository->findPolicyVisibilityBuckets(),
+                'Unexpected/case-mismatched status must force row-by-row fallback.');
+            self::assertSame([$allStates], array_map(
+                static fn (array $entry): int => (int) $entry['policy']['id'],
+                $repository->findApplicablePolicyRows($resourceId, [$orgId], $view, null),
+            ));
+        } finally {
+            // Prevent rollback guard from seeing fixture INACTIVE statuses.
+            $this->db->table('policies')->where('id', $inactive)->update(['status' => 'ACTIVE']);
+        }
+    }
+
     /** @return array<string, int> */
     private function insertReferences(): array
     {

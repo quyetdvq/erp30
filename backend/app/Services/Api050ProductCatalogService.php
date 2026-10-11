@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Services;
 
 use App\Authorization\AuthorizationService;
+use App\Authorization\EffectiveListBucketCompiler;
 use App\Authorization\EvaluationOrganizationRequest;
 use App\Exceptions\DomainException;
 use App\Infrastructure\Api\AuthorizedArrayListSource;
@@ -173,10 +174,48 @@ final class Api050ProductCatalogService
         $adapter = $this->queryAdapter ?? new CommonListQueryAdapter();
         $repository = $this->productRepository ?? new ProductRepository($this->connection());
         if ($this->requiresRowStateAuthorization('product')) {
-            // SQL LIMIT/OFFSET must NOT precede per-record state-aware PBAC:
-            // it would leak an incorrect total and underfill result pages.
-            // Retain the full compatibility path until a secure SQL predicate
-            // can express the complete actor/assignment/policy lane decision.
+            // MASTER resources have GROUP scope; only persisted State affects
+            // per-row PBAC. Compile the *effective* decision through the
+            // existing engine once for each byte-exact State bucket.
+            // The Product structure scan remains global even when a Policy
+            // denies every row. The transaction spans State samples, count,
+            // paginated Product records and all relationship hydration.
+            $parsed = $adapter->parse($query, $allowlist);
+            if ($repository->supportsSqlProjection($parsed)) {
+                $operation = $this->operation();
+                $optimized = $repository->withConsistentListSnapshot(function () use ($repository, $operation, $adapter, $query, $allowlist): ?array {
+                    return $this->authorization()->withReadOnlyBatch($operation, function () use ($repository, $operation, $adapter, $query, $allowlist): ?array {
+                        $buckets = (new EffectiveListBucketCompiler($this->connection(), $this->authorization()))
+                            ->compile('product', $operation, static fn (DomainException $_): bool => false);
+                        if ($buckets === null) {
+                            return null;
+                        }
+                        $roles = new ProductRoleService(repository: $repository, db: $this->connection());
+                        $result = $adapter->paginate($query, $allowlist,
+                            new SqlProductListSource($repository, $roles, array_column($buckets, 'status')));
+                        $items = [];
+                        foreach ($result->data as $row) {
+                            // Revalidate every returned row using its real
+                            // State. A concurrent permissions change must
+                            // fail closed, never serve a denied row.
+                            if (! $this->authorization()->authorize(
+                                $operation, 'product', 'view',
+                                new EvaluationOrganizationRequest(persistedTarget: $row),
+                            )->isAllowed()) {
+                                throw new DomainException('PRODUCT_AUTHORIZATION_DENIED');
+                            }
+                            $items[] = $this->productCodeForApi($row);
+                        }
+                        return ['items' => $items, 'page' => $result->query->page,
+                            'page_size' => $result->query->pageSize, 'total' => $result->total];
+                    });
+                });
+                if ($optimized !== null) {
+                    return $optimized;
+                }
+            }
+            // Non-canonical numeric filters, too many Scope/State buckets or
+            // custom resource metadata keep the original fail-closed path.
             $rows = array_values(array_filter(
                 $this->roles()->describeList($this->products()->listAll()),
                 fn (array $row): bool => $this->decision('product', 'view', $row)->isAllowed(),

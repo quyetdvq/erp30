@@ -1,0 +1,397 @@
+diff --git a/backend/app/Infrastructure/Api/SqlProductListSource.php b/backend/app/Infrastructure/Api/SqlProductListSource.php
+index fa1e56b..7025793 100644
+--- a/backend/app/Infrastructure/Api/SqlProductListSource.php
++++ b/backend/app/Infrastructure/Api/SqlProductListSource.php
+@@ -4,6 +4,7 @@ declare(strict_types=1);
+ 
+ namespace App\Infrastructure\Api;
+ 
++use App\Exceptions\DomainException;
+ use App\Exceptions\PersistenceException;
+ use App\Modules\Product\Product\ProductRepository;
+ use App\Modules\Product\Product\ProductRoleService;
+@@ -21,6 +22,7 @@ final class SqlProductListSource implements AuthorizedListSource
+ {
+     private ?AuthorizedArrayListSource $projected = null;
+     private ?CommonListQuery $projectedQuery = null;
++    private bool $structureValidated = false;
+ 
+     public function __construct(
+         private readonly ProductRepository $repository,
+@@ -30,6 +32,7 @@ final class SqlProductListSource implements AuthorizedListSource
+ 
+     public function countAuthorized(CommonListQuery $query): int
+     {
++        $this->assertCatalogStructure();
+         if ($this->repository->supportsSqlList($query)) {
+             return $this->repository->countListMatching($query);
+         }
+@@ -39,6 +42,7 @@ final class SqlProductListSource implements AuthorizedListSource
+     /** @return list<array<string, mixed>> */
+     public function fetchAuthorized(CommonListQuery $query): iterable
+     {
++        $this->assertCatalogStructure();
+         if ($this->repository->supportsSqlList($query)) {
+             return $this->roles->describePage($this->repository->listPageMatching($query));
+         }
+@@ -66,6 +70,20 @@ final class SqlProductListSource implements AuthorizedListSource
+         return $this->roles->describePage($pageRows);
+     }
+ 
++    private function assertCatalogStructure(): void
++    {
++        if ($this->structureValidated) {
++            return;
++        }
++        $invalid = $this->repository->firstInvalidListStructure();
++        if ($invalid !== null) {
++            throw new DomainException(ProductRoleService::ERROR_INVALID_ROLE, [
++                'product_id' => $invalid['id'], 'reason' => $invalid['reason'],
++            ]);
++        }
++        $this->structureValidated = true;
++    }
++
+     private function projected(CommonListQuery $query): AuthorizedArrayListSource
+     {
+         if ($this->projected === null || $this->projectedQuery !== $query) {
+diff --git a/backend/app/Modules/Product/Product/ProductRepository.php b/backend/app/Modules/Product/Product/ProductRepository.php
+index 369c4fd..7ff0844 100644
+--- a/backend/app/Modules/Product/Product/ProductRepository.php
++++ b/backend/app/Modules/Product/Product/ProductRepository.php
+@@ -150,6 +150,108 @@ final class ProductRepository
+         return array_values($result->getResultArray());
+     }
+ 
++    /**
++     * Fail closed if any Product in the catalog has an invalid role graph,
++     * including Products outside the requested page or SQL filter.
++     *
++     * The legacy list validated the entire catalog before pagination. This
++     * indexed, single-result scan restores that behavior without loading
++     * complete Product records. Name checks use the exact six ASCII bytes
++     * removed by PHP trim(), avoiding SQL collation/Unicode differences.
++     * It MUST share the list's read snapshot.
++     *
++     * @return array{id:int,reason:string}|null
++     */
++    public function firstInvalidListStructure(): ?array
++    {
++        $table = '`' . str_replace('`', '``', $this->db->prefixTable('products')) . '`';
++        $sql = <<<SQL
++SELECT violations.id, violations.reason
++FROM (
++    SELECT p.id,
++        CASE
++            WHEN BINARY UPPER(p.product_type) NOT IN (BINARY 'STANDARD', BINARY 'COMBO')
++                THEN 'product_type'
++            WHEN BINARY UPPER(p.product_type) = BINARY 'COMBO'
++                AND (p.parent_product_id IS NOT NULL
++                    OR EXISTS (SELECT 1 FROM {$table} AS child WHERE child.parent_product_id = p.id))
++                THEN 'combo_structure'
++            WHEN p.parent_product_id = p.id THEN 'self_parent'
++            WHEN p.parent_product_id IS NOT NULL AND parent.id IS NULL THEN 'parent_not_found'
++            WHEN p.parent_product_id IS NOT NULL
++                AND (BINARY UPPER(parent.product_type) <> BINARY 'STANDARD'
++                    OR parent.parent_product_id IS NOT NULL)
++                THEN 'parent_not_root_standard'
++            WHEN p.parent_product_id IS NOT NULL
++                AND EXISTS (SELECT 1 FROM {$table} AS grandchild WHERE grandchild.parent_product_id = p.id)
++                THEN 'child_has_children'
++            WHEN p.parent_product_id IS NULL
++                AND (p.product_name IS NULL OR HEX(p.product_name) REGEXP '^(00|09|0A|0B|0D|20)*$')
++                THEN 'required_name'
++            WHEN p.parent_product_id IS NOT NULL
++                AND (p.product_child_name IS NULL OR HEX(p.product_child_name) REGEXP '^(00|09|0A|0B|0D|20)*$')
++                THEN 'required_name'
++            ELSE NULL
++        END AS reason
++    FROM {$table} AS p
++    LEFT JOIN {$table} AS parent ON parent.id = p.parent_product_id
++) AS violations
++WHERE violations.reason IS NOT NULL
++ORDER BY violations.id ASC
++LIMIT 1
++SQL;
++        try {
++            $result = $this->db->query($sql);
++            if (! $result instanceof BaseResult) {
++                throw new PersistenceException(self::ERROR_PERSISTENCE_FAILED, 'firstInvalidListStructure');
++            }
++            $row = $result->getRowArray();
++            return $row === null ? null : ['id' => (int) $row['id'], 'reason' => (string) $row['reason']];
++        } catch (PersistenceException $exception) {
++            throw $exception;
++        } catch (\Throwable $exception) {
++            throw new PersistenceException(self::ERROR_PERSISTENCE_FAILED, 'firstInvalidListStructure', $exception);
++        }
++    }
++
++    /**
++     * Run the complete Product list read (integrity check, count, page,
++     * relations) under one InnoDB REPEATABLE READ consistent snapshot.
++     * If the caller/session uses weaker isolation, fail closed instead of
++     * returning a total and page from different database versions.
++     *
++     * @template T
++     * @param callable():T $read
++     * @return T
++     */
++    public function withConsistentListSnapshot(callable $read): mixed
++    {
++        if (! $this->db instanceof BaseConnection || ! $this->db->transBegin()) {
++            throw new PersistenceException(self::ERROR_PERSISTENCE_FAILED, 'beginProductListSnapshot');
++        }
++        try {
++            // MariaDB exposes the current session transaction isolation via
++            // @@tx_isolation. A nested transaction inherits its outer scope.
++            $setting = $this->db->query('SELECT @@tx_isolation AS isolation_level');
++            if (! $setting instanceof BaseResult) {
++                throw new PersistenceException(self::ERROR_PERSISTENCE_FAILED, 'readProductListIsolation');
++            }
++            $isolation = strtoupper(str_replace('_', '-', (string) ($setting->getRowArray()['isolation_level'] ?? '')));
++            if ($isolation !== 'REPEATABLE-READ') {
++                throw new PersistenceException(self::ERROR_PERSISTENCE_FAILED, 'requireRepeatableReadProductList');
++            }
++
++            $result = $read();
++            if (! $this->db->transStatus() || ! $this->db->transCommit()) {
++                throw new PersistenceException(self::ERROR_PERSISTENCE_FAILED, 'commitProductListSnapshot');
++            }
++            return $result;
++        } catch (\Throwable $exception) {
++            $this->db->transRollback();
++            throw $exception;
++        }
++    }
++
+     /**
+      * Only push down queries whose PHP list semantics are equivalent to SQL.
+      *
+diff --git a/backend/app/Services/Api050ProductCatalogService.php b/backend/app/Services/Api050ProductCatalogService.php
+index 57b3ed9..20e3db1 100644
+--- a/backend/app/Services/Api050ProductCatalogService.php
++++ b/backend/app/Services/Api050ProductCatalogService.php
+@@ -164,16 +164,23 @@ final class Api050ProductCatalogService
+         // search or string sorting, a projection preserves the existing PHP
+         // comparator without loading every complete Product row.
+         if ($repository->supportsSqlProjection($adapter->parse($query, $allowlist))) {
+-            $result = $adapter->paginate($query, $allowlist, new SqlProductListSource($repository, $this->roles()));
+-            return [
+-                'items' => array_map(
+-                    fn (array $row): array => $this->productCodeForApi($row),
+-                    array_values(iterator_to_array($result->data)),
+-                ),
+-                'page' => $result->query->page,
+-                'page_size' => $result->query->pageSize,
+-                'total' => $result->total,
+-            ];
++            // COUNT and full-row/page/relationship reads must observe the
++            // same InnoDB snapshot. Materialize the iterable before commit.
++            return $repository->withConsistentListSnapshot(function () use ($adapter, $query, $allowlist, $repository): array {
++                // Use the same repository/connection for relationship reads;
++                // a separately injected roles service could observe a different snapshot.
++                $roles = new ProductRoleService(repository: $repository, db: $this->connection());
++                $result = $adapter->paginate($query, $allowlist, new SqlProductListSource($repository, $roles));
++                return [
++                    'items' => array_map(
++                        fn (array $row): array => $this->productCodeForApi($row),
++                        array_values(iterator_to_array($result->data)),
++                    ),
++                    'page' => $result->query->page,
++                    'page_size' => $result->query->pageSize,
++                    'total' => $result->total,
++                ];
++            });
+         }
+ 
+         // A noncanonical numeric filter (e.g. "01") must stay on the exact
+diff --git a/backend/tests/unit/P1Api050ProductSqlPaginationTest.php b/backend/tests/unit/P1Api050ProductSqlPaginationTest.php
+index e19d1a1..77d7c01 100644
+--- a/backend/tests/unit/P1Api050ProductSqlPaginationTest.php
++++ b/backend/tests/unit/P1Api050ProductSqlPaginationTest.php
+@@ -5,6 +5,7 @@ declare(strict_types=1);
+ use App\Authorization\AuthorizationService;
+ use App\Database\Seeds\ResourceActionSeeder;
+ use App\Exceptions\DomainException;
++use App\Exceptions\PersistenceException;
+ use App\Infrastructure\Api\AuthorizedArrayListSource;
+ use App\Infrastructure\Api\CommonListQuery;
+ use App\Infrastructure\Api\CommonListQueryAdapter;
+@@ -88,6 +89,157 @@ final class P1Api050ProductSqlPaginationTest extends CIUnitTestCase
+         }
+     }
+ 
++    public function testInvalidProductOutsideSelectedPageAndFilterFailsClosed(): void
++    {
++        $valid = $this->insertProduct('SQL050-VALID-EARLY', 'STANDARD', 'ACTIVE', null, 'Visible');
++        $root = $this->insertProduct('SQL050-INVALID-ROOT', 'STANDARD', 'INACTIVE', null, 'Root');
++        $child = $this->insertProduct('SQL050-INVALID-CHILD', 'STANDARD', 'INACTIVE', $root, null, 'Child');
++        $this->insertProduct('SQL050-INVALID-GRANDCHILD', 'STANDARD', 'INACTIVE', $child, null, 'Nested');
++
++        $repo = new ProductRepository($this->db);
++        foreach ([
++            ['page_size' => '1', 'sort' => 'id', 'filter' => ['status' => 'ACTIVE']],
++            ['page_size' => '1', 'sort' => 'product_code', 'filter' => ['status' => 'ACTIVE']],
++        ] as $input) {
++            $source = new SqlProductListSource($repo, new ProductRoleService(db: $this->db));
++            $query = $this->query($input);
++            try {
++                $source->countAuthorized($query);
++                $this->fail('A corrupt Product outside both the page and filter must reject the entire list.');
++            } catch (DomainException $exception) {
++                $this->assertSame(ProductRoleService::ERROR_INVALID_ROLE, $exception->getErrorCode());
++            }
++        }
++        $this->assertNotNull($repo->findById($valid));
++    }
++
++    public function testInvalidNameOutsidePageFailsClosedAndValidCatalogStillPaginates(): void
++    {
++        $this->insertProduct('SQL050-NAME-VALID', 'STANDARD', 'ACTIVE', null, 'Visible');
++        $badId = $this->insertProduct('SQL050-NAME-BAD', 'STANDARD', 'INACTIVE', null, " \t ");
++        $repo = new ProductRepository($this->db);
++        $query = $this->query(['page_size' => '1', 'filter' => ['status' => 'ACTIVE']]);
++
++        try {
++            $repo->withConsistentListSnapshot(static fn (): int =>
++                (new SqlProductListSource($repo, new ProductRoleService(repository: $repo)))->countAuthorized($query));
++            $this->fail('A Product with a blank name outside the page must fail closed.');
++        } catch (DomainException $exception) {
++            $this->assertSame(ProductRoleService::ERROR_INVALID_ROLE, $exception->getErrorCode());
++        }
++        $this->assertTrue($this->db->table('products')->where('id', $badId)->update(['product_name' => 'Repaired']));
++        $source = new SqlProductListSource($repo, new ProductRoleService(db: $this->db));
++        $result = $repo->withConsistentListSnapshot(static function () use ($source, $query): array {
++            $total = $source->countAuthorized($query);
++            return [$total, array_values(iterator_to_array($source->fetchAuthorized($query)))];
++        });
++        $this->assertSame(1, $result[0]);
++        $this->assertCount(1, $result[1]);
++    }
++
++    public function testRepeatableReadSnapshotExcludesInsertBetweenCountAndSqlPage(): void
++    {
++        $originalId = $this->insertProduct('SQL050-SNAP-OLD', 'STANDARD', 'ACTIVE', null, 'Original');
++        $beforeCount = (int) $this->db->table('products')->countAllResults();
++        $repo = new ProductRepository($this->db);
++        $other = \Config\Database::connect('tests', false);
++        $this->assertNotSame($this->db, $other, 'The concurrent writer must use a separate database connection.');
++        $inserted = false;
++        $listener = static function ($statement) use (&$inserted, $other): void {
++            $sql = (string) $statement;
++            if ($inserted || stripos($sql, 'products') === false || preg_match('/COUNT\s*\(/i', $sql) !== 1) {
++                return;
++            }
++            $inserted = true;
++            if (! $other->table('products')->insert([
++                'code' => 'SQL050-SNAP-NEW', 'product_name' => 'Concurrent',
++                'product_type' => 'STANDARD', 'status' => 'ACTIVE',
++                'created_at' => '2026-10-06 00:00:00',
++            ])) {
++                throw new \RuntimeException('Concurrent Product insert failed.');
++            }
++        };
++        Events::on('DBQuery', $listener);
++        try {
++            $response = $repo->withConsistentListSnapshot(function () use ($repo): array {
++                $adapter = new CommonListQueryAdapter();
++                $result = $adapter->paginate(
++                    ['sort' => '-id', 'page_size' => '1'],
++                    $this->productAllowlist(),
++                    new SqlProductListSource($repo, new ProductRoleService(db: $this->db)),
++                );
++                return ['total' => $result->total, 'rows' => array_values(iterator_to_array($result->data))];
++            });
++        } finally {
++            Events::removeListener('DBQuery', $listener);
++            $other->close();
++        }
++        $this->assertTrue($inserted, 'Insert should occur between COUNT and page SQL.');
++        $this->assertSame((string) $beforeCount, $response['total']);
++        $this->assertCount(1, $response['rows']);
++        $this->assertSame($originalId, (int) $response['rows'][0]['id']);
++        $this->assertSame($beforeCount + 1, (int) $this->db->table('products')->countAllResults());
++    }
++
++    public function testRepeatableReadSnapshotKeepsProjectedKeysAndFullRowConsistent(): void
++    {
++        $id = $this->insertProduct('SQL050-SNAP-PROJECT', 'STANDARD', 'ACTIVE', null, 'Before');
++        $repo = new ProductRepository($this->db);
++        $other = \Config\Database::connect('tests', false);
++        $updated = false;
++        $listener = static function ($statement) use (&$updated, $other, $id): void {
++            $sql = (string) $statement;
++            if ($updated || stripos($sql, 'products') === false
++                || stripos($sql, 'ORDER BY') === false || stripos($sql, 'code') === false
++                || stripos($sql, 'SELECT') === false || stripos($sql, 'product_name') === false) {
++                return;
++            }
++            $updated = true;
++            if (! $other->table('products')->where('id', $id)->update(['product_name' => 'After'])) {
++                throw new \RuntimeException('Concurrent Product update failed.');
++            }
++        };
++        Events::on('DBQuery', $listener);
++        try {
++            $response = $repo->withConsistentListSnapshot(function () use ($repo): array {
++                $adapter = new CommonListQueryAdapter();
++                $result = $adapter->paginate(
++                    ['sort' => 'product_code', 'page_size' => '1'],
++                    $this->productAllowlist(),
++                    new SqlProductListSource($repo, new ProductRoleService(db: $this->db)),
++                );
++                return ['total' => $result->total, 'rows' => array_values(iterator_to_array($result->data))];
++            });
++        } finally {
++            Events::removeListener('DBQuery', $listener);
++            $other->close();
++        }
++        $this->assertTrue($updated, 'Concurrent update should occur after key projection, before the full-row read.');
++        $this->assertSame('1', $response['total']);
++        $this->assertSame('Before', $response['rows'][0]['product_name']);
++        $this->assertSame('After', (new ProductRepository($this->db))->findById($id)['product_name']);
++    }
++
++    public function testReadCommittedCannotSilentlyProduceMixedListSnapshot(): void
++    {
++        $connection = \Config\Database::connect('tests', false);
++        try {
++            $this->assertTrue($connection->query('SET SESSION TRANSACTION ISOLATION LEVEL READ COMMITTED'));
++            $repository = new ProductRepository($connection);
++            try {
++                $repository->withConsistentListSnapshot(static fn (): int => 42);
++                $this->fail('Product list must not run under READ COMMITTED.');
++            } catch (PersistenceException $exception) {
++                $this->assertSame(ProductRepository::ERROR_PERSISTENCE_FAILED, $exception->getErrorCode());
++            }
++            // Rollback after the rejected transaction must leave the same
++            // connection usable for regular database work.
++            $this->assertNotFalse($connection->table('products')->countAllResults());
++        } finally {
++            $connection->close();
++        }
++    }
++
+     public function testSqlFiltersPreserveExactStatusNullFkRepeatedValuesAndPageTotals(): void
+     {
+         $parent = $this->insertProduct('SQL050-FPARENT', 'STANDARD', 'ACTIVE', null, 'Parent');
+@@ -292,11 +444,16 @@ final class P1Api050ProductSqlPaginationTest extends CIUnitTestCase
+     /** @param array<string,mixed> $input */
+     private function query(array $input): CommonListQuery
+     {
+-        return (new CommonListQueryAdapter())->parse($input, new CommonListQueryAllowlist(
++        return (new CommonListQueryAdapter())->parse($input, $this->productAllowlist());
++    }
++
++    private function productAllowlist(): CommonListQueryAllowlist
++    {
++        return new CommonListQueryAllowlist(
+             search: ['product_code', 'sku', 'barcode', 'product_name', 'product_child_name'],
+             filters: ['base_uom_id', 'parent_product_id', 'product_group_id', 'product_type', 'status'],
+             sort: ['id', 'product_code', 'product_name', 'product_type', 'status'],
+-        ));
++        );
+     }
+ 
+     private function insertProducts(int $count): void

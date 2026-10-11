@@ -5,12 +5,14 @@ declare(strict_types=1);
 namespace App\Services;
 
 use App\Authorization\AuthorizationService;
+use App\Authorization\EffectiveListBucketCompiler;
 use App\Authorization\EvaluationOrganizationRequest;
 use App\Exceptions\DomainException;
 use App\Infrastructure\Api\AuthorizedArrayListSource;
 use App\Infrastructure\Api\CommonListQueryAllowlist;
 use App\Infrastructure\Api\CommonListQueryAdapter;
 use App\Infrastructure\Api\CommonListResult;
+use App\Infrastructure\Api\SqlAuthorizedBucketListSource;
 use App\Infrastructure\Mutation\MutationContext;
 use App\Infrastructure\Mutation\OperationContext;
 use App\Infrastructure\RequestContext;
@@ -40,14 +42,20 @@ final class Api010FoundationOrganizationContactService
     public function list(string $resource, array $query): CommonListResult
     {
         $operation = $this->operation();
-        $rows = $this->authorizedRows($resource, $operation);
-        $allowlist = $this->allowlist($resource);
+        return $this->auth()->withReadOnlyBatch($operation, function () use ($resource, $query, $operation) {
+            $sql = $this->authorizedSqlPage($resource, $query, $operation);
+            if ($sql !== null) {
+                return $sql;
+            }
+            $rows = $this->authorizedRows($resource, $operation);
+            $allowlist = $this->allowlist($resource);
 
-        return ($this->queryAdapter ?? new CommonListQueryAdapter())->paginate(
-            $query,
-            $allowlist,
-            new AuthorizedArrayListSource($rows),
-        );
+            return ($this->queryAdapter ?? new CommonListQueryAdapter())->paginate(
+                $query,
+                $allowlist,
+                new AuthorizedArrayListSource($rows),
+            );
+        });
     }
 
     /** @return array<string, mixed> */
@@ -153,6 +161,50 @@ final class Api010FoundationOrganizationContactService
         unset($row);
 
         return new CommonListResult($rows, $result->query, $result->total);
+    }
+
+    /**
+     * MASTER location rows share GROUP scope. The authoritative State is
+     * persisted status; compile each State once, then SQL count/page.
+     * Organization and Contact have per-target owner/scope resolution and
+     * intentionally keep the original authorization-before-pagination path.
+     *
+     * @param array<string,mixed> $query
+     */
+    private function authorizedSqlPage(string $resource, array $query, OperationContext $operation): ?CommonListResult
+    {
+        if (! in_array($resource, ['province', 'ward'], true)
+            || array_key_exists('q', $query)
+            || (isset($query['sort']) && ! in_array($query['sort'], ['id', '-id'], true))) {
+            return null;
+        }
+        $adapter = $this->queryAdapter ?? new CommonListQueryAdapter();
+        $parsed = $adapter->parse($query, $this->allowlist($resource));
+        if (! SqlAuthorizedBucketListSource::supports($resource, $parsed)) {
+            return null;
+        }
+        $db = db_connect();
+        $buckets = (new EffectiveListBucketCompiler($db, $this->auth()))->compile(
+            $resource,
+            $operation,
+            static fn (DomainException $exception): bool => in_array($exception->getErrorCode(), [
+                AuthorizationService::REASON_POLICY_DENIED,
+                AuthorizationService::REASON_NO_BASE_PERMISSION,
+            ], true),
+        );
+        if ($buckets === null) {
+            return null;
+        }
+        $result = $adapter->paginate($query, $this->allowlist($resource),
+            new SqlAuthorizedBucketListSource($db, $resource, $buckets));
+        $data = [];
+        foreach ($result->data as $row) {
+            if (is_array($row)) {
+                $this->authorize($operation, $resource, 'view', $row, []);
+                $data[] = $row;
+            }
+        }
+        return new CommonListResult($data, $result->query, $result->total);
     }
 
     /** @return list<array<string, mixed>> */

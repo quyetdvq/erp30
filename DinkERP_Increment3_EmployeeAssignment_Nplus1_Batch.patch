@@ -1,0 +1,344 @@
+diff --git a/backend/app/Repositories/EmployeeAssignmentRepository.php b/backend/app/Repositories/EmployeeAssignmentRepository.php
+index 53345cf..78f7bf7 100644
+--- a/backend/app/Repositories/EmployeeAssignmentRepository.php
++++ b/backend/app/Repositories/EmployeeAssignmentRepository.php
+@@ -148,6 +148,55 @@ final class EmployeeAssignmentRepository
+         return array_values($result->getResultArray());
+     }
+ 
++    /**
++     * Fetch effective assignments for visible employees with bounded IN clauses.
++     * Per-employee ordering matches findEffective(); employees without an
++     * effective assignment are represented by an empty list.
++     *
++     * @param list<int> $employeeIds
++     * @return array<int, list<array<string, mixed>>>
++     */
++    public function findEffectiveForEmployees(array $employeeIds, string $onDate): array
++    {
++        if ($employeeIds === []) {
++            return [];
++        }
++
++        $grouped = [];
++        foreach ($employeeIds as $employeeId) {
++            $grouped[$employeeId] = [];
++        }
++
++        // Bound the number of values in a SQL IN clause on large employee lists.
++        foreach (array_chunk(array_keys($grouped), 500) as $batch) {
++            $builder = $this->db->table('employee_assignments')
++                ->whereIn('employee_id', $batch)
++                ->where('status', 'ACTIVE')
++                ->where('effective_from <=', $onDate)
++                ->groupStart()
++                ->where('effective_to IS NULL', null, false)
++                ->orWhere('effective_to >=', $onDate)
++                ->groupEnd()
++                ->orderBy('is_primary', 'DESC')
++                ->orderBy('effective_from', 'DESC');
++            try {
++                $result = $builder->get();
++            } catch (\Throwable $exception) {
++                throw new PersistenceException(self::ERROR_PERSISTENCE_FAILED, 'findEffectiveForEmployees', $exception);
++            }
++            if ($result === false) {
++                throw new PersistenceException(self::ERROR_PERSISTENCE_FAILED, 'findEffectiveForEmployees');
++            }
++
++            foreach ($result->getResultArray() as $row) {
++                $employeeId = (int) $row['employee_id'];
++                $grouped[$employeeId][] = $row;
++            }
++        }
++
++        return $grouped;
++    }
++
+     /** @return list<array<string, mixed>> */
+     public function findOverlappingPrimary(
+         int $employeeId,
+diff --git a/backend/app/Services/Api020EmployeeStructureService.php b/backend/app/Services/Api020EmployeeStructureService.php
+index 268e230..29c1ebe 100644
+--- a/backend/app/Services/Api020EmployeeStructureService.php
++++ b/backend/app/Services/Api020EmployeeStructureService.php
+@@ -191,13 +191,26 @@ final class Api020EmployeeStructureService
+                 }
+             }
+             if ($requested !== []) {
+-                $evaluationTime = $operation->evaluationTime;
+-                $rows = array_values(array_filter($rows, function (array $row) use ($requested, $evaluationTime, $operation): bool {
++                // Query only IDs already permitted by authorizedRows().
++                $visibleEmployeeIds = [];
++                foreach ($rows as $row) {
++                    $employeeId = (int) ($row['id'] ?? 0);
++                    if ($employeeId > 0) {
++                        $visibleEmployeeIds[] = $employeeId;
++                    }
++                }
++                $effectiveByEmployee = $this->assignmentService($operation)->findEffectiveForEmployees(
++                    $visibleEmployeeIds,
++                    $operation->evaluationTime,
++                );
++                $rows = array_values(array_filter($rows, static function (array $row) use ($requested, $effectiveByEmployee): bool {
+                     $employeeId = (int) ($row['id'] ?? 0);
+                     if ($employeeId < 1) {
+                         return false;
+                     }
+-                    $effective = $this->assignmentService($operation)->findEffective($employeeId, $evaluationTime);
++                    $effective = $effectiveByEmployee[$employeeId] ?? [];
++                    // Preserve existing semantics: different assignments may satisfy
++                    // different filter fields for the same employee.
+                     foreach ($requested as $field => $values) {
+                         if (! array_filter($effective, static fn (array $assignment): bool => in_array((string) ($assignment[$field] ?? ''), $values, true))) {
+                             return false;
+diff --git a/backend/app/Services/EmployeeAssignmentService.php b/backend/app/Services/EmployeeAssignmentService.php
+index c677a58..ea7aa4e 100644
+--- a/backend/app/Services/EmployeeAssignmentService.php
++++ b/backend/app/Services/EmployeeAssignmentService.php
+@@ -156,6 +156,32 @@ final class EmployeeAssignmentService
+         );
+     }
+ 
++    /**
++     * Batch equivalent of findEffective(), retaining the same UTC business date.
++     * Only the supplied employee IDs are queried; empty groups remain visible.
++     *
++     * @param list<int> $employeeIds
++     * @return array<int, list<array<string, mixed>>>
++     */
++    public function findEffectiveForEmployees(array $employeeIds, ?EvaluationTime $evaluationTime = null): array
++    {
++        if ($employeeIds === []) {
++            return [];
++        }
++
++        $normalized = [];
++        foreach ($employeeIds as $employeeId) {
++            $id = PositiveId::normalize($employeeId, 'employee_id', self::ERROR_REFERENCE_INVALID);
++            $normalized[$id] = $id;
++        }
++        $operation = $this->operation($evaluationTime);
++
++        return $this->repo()->findEffectiveForEmployees(
++            array_values($normalized),
++            $operation->evaluationTime->businessDate(new DateTimeZone('UTC')),
++        );
++    }
++
+     /** @return array<string, mixed>|null */
+     public function resolvePrimary(int $employeeId, ?EvaluationTime $evaluationTime = null): ?array
+     {
+diff --git a/backend/tests/unit/P1Api020EmployeeStructureTest.php b/backend/tests/unit/P1Api020EmployeeStructureTest.php
+index ba5cd18..2649308 100644
+--- a/backend/tests/unit/P1Api020EmployeeStructureTest.php
++++ b/backend/tests/unit/P1Api020EmployeeStructureTest.php
+@@ -3,6 +3,10 @@
+ declare(strict_types=1);
+ 
+ use App\Exceptions\DomainException;
++use App\Infrastructure\Mutation\OperationContext;
++use App\Infrastructure\Time\EvaluationTime;
++use App\Repositories\EmployeeAssignmentRepository;
++use App\Services\Api020EmployeeStructureService;
+ use App\Repositories\DepartmentRepository;
+ use App\Repositories\EmployeeRepository;
+ use App\Repositories\PositionRepository;
+@@ -37,6 +41,83 @@ final class P1Api020EmployeeStructureTest extends CIUnitTestCase
+         $this->assertSame('Updated Child', (new DepartmentRepository($this->db))->find($child)['name']);
+     }
+ 
++    public function testEmployeeFiltersPreserveVisibleScopeAndIndependentAssignmentMatches(): void
++    {
++        $organizations = [];
++        $departments = [];
++        $positions = [];
++        $employees = [];
++        foreach (['A', 'B'] as $suffix) {
++            $this->db->table('organizations')->insert([
++                'type' => 'GROUP', 'code' => 'API020-BATCH-O-' . uniqid(), 'name' => 'Org ' . $suffix,
++                'status' => 'ACTIVE', 'created_at' => '2026-10-05 00:00:00',
++            ]);
++            $organizations[$suffix] = (int) $this->db->insertID();
++            $this->db->table('departments')->insert([
++                'code' => 'API020-BATCH-D-' . uniqid(), 'name' => 'Dept ' . $suffix,
++                'status' => 'ACTIVE', 'created_at' => '2026-10-05 00:00:00',
++            ]);
++            $departments[$suffix] = (int) $this->db->insertID();
++            $this->db->table('positions')->insert([
++                'code' => 'API020-BATCH-P-' . uniqid(), 'name' => 'Position ' . $suffix,
++                'status' => 'ACTIVE', 'created_at' => '2026-10-05 00:00:00',
++            ]);
++            $positions[$suffix] = (int) $this->db->insertID();
++        }
++        foreach (['visible_match', 'visible_no_match', 'not_visible'] as $key) {
++            $this->db->table('employees')->insert([
++                'employee_code' => 'API020-BATCH-E-' . uniqid(),
++                'employee_name' => $key,
++                'status' => 'ACTIVE',
++                'created_at' => '2026-10-05 00:00:00',
++            ]);
++            $employees[$key] = (int) $this->db->insertID();
++        }
++        $repo = new EmployeeAssignmentRepository($this->db);
++        $insert = static function (int $employeeId, int $orgId, int $depId, int $posId, string $status, ?string $until) use ($repo): void {
++            $repo->insert([
++                'employee_id' => $employeeId,
++                'organization_id' => $orgId,
++                'department_id' => $depId,
++                'position_id' => $posId,
++                'is_primary' => 0,
++                'effective_from' => '2026-01-01',
++                'effective_to' => $until,
++                'status' => $status,
++                'created_at' => '2026-10-05 00:00:00',
++            ]);
++        };
++        // The matching employee has the requested organization on one
++        // assignment and the requested department/position on another.
++        $insert($employees['visible_match'], $organizations['A'], $departments['A'], $positions['A'], 'ACTIVE', null);
++        $insert($employees['visible_match'], $organizations['B'], $departments['B'], $positions['B'], 'ACTIVE', null);
++        $insert($employees['visible_no_match'], $organizations['A'], $departments['A'], $positions['A'], 'ACTIVE', null);
++        $insert($employees['visible_no_match'], $organizations['B'], $departments['B'], $positions['B'], 'INACTIVE', null);
++        $insert($employees['visible_no_match'], $organizations['B'], $departments['B'], $positions['B'], 'ACTIVE', '2026-10-04');
++        $insert($employees['not_visible'], $organizations['A'], $departments['B'], $positions['B'], 'ACTIVE', null);
++
++        // applyDataFilters receives already-authorized rows from authorizedRows().
++        // Invoke it directly to isolate the data-filter behavior from PBAC setup.
++        $service = new Api020EmployeeStructureService(assignments: $repo, db: $this->db);
++        $operation = new OperationContext(null, new EvaluationTime(new DateTimeImmutable('2026-10-05T12:00:00+00:00')), null, true);
++        $rows = [
++            ['id' => $employees['visible_no_match']],
++            ['id' => $employees['visible_match']],
++            ['id' => 0],
++        ];
++        $query = ['filter' => [
++            'organization_id' => (string) $organizations['A'],
++            'department_id' => (string) $departments['B'],
++            'position_id' => (string) $positions['B'],
++            'status' => 'ACTIVE',
++        ]];
++        $method = new ReflectionMethod(Api020EmployeeStructureService::class, 'applyDataFilters');
++        $args = ['employee', $query, &$rows, $operation];
++        $remainingQuery = $method->invokeArgs($service, $args);
++        $this->assertSame([['id' => $employees['visible_match']]], $rows);
++        $this->assertSame(['filter' => ['status' => 'ACTIVE']], $remainingQuery);
++    }
++
+     public function testPositionAndEmployeeUniqueRulesPreserveNullableUserAndCanonicalGender(): void
+     {
+         $position = new PositionService(null, $this->db);
+diff --git a/backend/tests/unit/P1Emp002EmployeeAssignmentRepositoryTest.php b/backend/tests/unit/P1Emp002EmployeeAssignmentRepositoryTest.php
+index 7f7b1df..59565b8 100644
+--- a/backend/tests/unit/P1Emp002EmployeeAssignmentRepositoryTest.php
++++ b/backend/tests/unit/P1Emp002EmployeeAssignmentRepositoryTest.php
+@@ -37,6 +37,68 @@ final class P1Emp002EmployeeAssignmentRepositoryTest extends CIUnitTestCase
+         $this->assertCount(0, $repository->findEffective($employeeId, '2026-10-05'));
+     }
+ 
++    public function testBatchedEffectiveAssignmentsMatchIndividualQueriesAndPreserveDateBoundaries(): void
++    {
++        [$employeeId, $organizationId, $departmentId, $positionId] = $this->insertReferences();
++        $this->db->table('employees')->insert([
++            'employee_code' => 'EMP-ASG-BATCH-' . uniqid(),
++            'employee_name' => 'Second Employee',
++            'status' => 'ACTIVE',
++            'created_at' => '2026-10-05 00:00:00',
++        ]);
++        $secondEmployeeId = (int) $this->db->insertID();
++        $repo = new EmployeeAssignmentRepository($this->db);
++        $base = [
++            'organization_id' => $organizationId,
++            'department_id' => $departmentId,
++            'position_id' => $positionId,
++            'created_at' => '2026-10-05 00:00:00',
++        ];
++        $assignments = [
++            ['employee_id' => $employeeId, 'is_primary' => 1, 'effective_from' => '2026-01-01', 'effective_to' => '2026-12-31', 'status' => 'ACTIVE'],
++            ['employee_id' => $employeeId, 'is_primary' => 0, 'effective_from' => '2026-06-01', 'effective_to' => null, 'status' => 'ACTIVE'],
++            ['employee_id' => $employeeId, 'is_primary' => 0, 'effective_from' => '2025-01-01', 'effective_to' => '2026-10-04', 'status' => 'ACTIVE'],
++            ['employee_id' => $employeeId, 'is_primary' => 0, 'effective_from' => '2026-10-06', 'effective_to' => null, 'status' => 'ACTIVE'],
++            ['employee_id' => $employeeId, 'is_primary' => 0, 'effective_from' => '2026-01-01', 'effective_to' => null, 'status' => 'INACTIVE'],
++            ['employee_id' => $secondEmployeeId, 'is_primary' => 1, 'effective_from' => '2026-10-05', 'effective_to' => '2026-10-05', 'status' => 'ACTIVE'],
++        ];
++        foreach ($assignments as $assignment) {
++            $repo->insert(array_merge($base, $assignment));
++        }
++
++        $date = '2026-10-05';
++        $missingEmployeeId = 999999999;
++        $actual = $repo->findEffectiveForEmployees([$employeeId, $secondEmployeeId, $missingEmployeeId], $date);
++        $this->assertSame($repo->findEffective($employeeId, $date), $actual[$employeeId]);
++        $this->assertSame($repo->findEffective($secondEmployeeId, $date), $actual[$secondEmployeeId]);
++        $this->assertCount(2, $actual[$employeeId]);
++        $this->assertCount(1, $actual[$secondEmployeeId]);
++        $this->assertSame([], $actual[$missingEmployeeId]);
++        $this->assertSame([], $repo->findEffectiveForEmployees([], $date));
++    }
++
++    public function testBatchedEffectiveAssignmentsUseBoundedIdGroups(): void
++    {
++        [$employeeId, $organizationId] = $this->insertReferences();
++        $repo = new EmployeeAssignmentRepository($this->db);
++        $id = $repo->insert([
++            'employee_id' => $employeeId,
++            'organization_id' => $organizationId,
++            'is_primary' => 1,
++            'effective_from' => '2026-01-01',
++            'effective_to' => null,
++            'status' => 'ACTIVE',
++            'created_at' => '2026-10-05 00:00:00',
++        ]);
++        // 501 other IDs cross the internal 500-ID SQL chunk boundary.
++        $ids = array_merge(range(9000000, 9000500), [$employeeId]);
++        $grouped = $repo->findEffectiveForEmployees($ids, '2026-10-05');
++        $this->assertCount(count($ids), $grouped);
++        $this->assertSame([$id], array_map(static fn (array $row): int => (int) $row['id'], $grouped[$employeeId]));
++        $this->assertSame([], $grouped[9000000]);
++        $this->assertSame([], $grouped[9000500]);
++    }
++
+     /** @return array{int, int, int, int} */
+     private function insertReferences(): array
+     {
+diff --git a/backend/tests/unit/P1Emp003EmployeeAssignmentServiceTest.php b/backend/tests/unit/P1Emp003EmployeeAssignmentServiceTest.php
+index 7d8dc8a..c5bf1c2 100644
+--- a/backend/tests/unit/P1Emp003EmployeeAssignmentServiceTest.php
++++ b/backend/tests/unit/P1Emp003EmployeeAssignmentServiceTest.php
+@@ -74,6 +74,36 @@ final class P1Emp003EmployeeAssignmentServiceTest extends CIUnitTestCase
+         $this->assertContains($secondaryId, array_map(static fn (array $row): int => (int) $row['id'], $effective));
+     }
+ 
++    public function testBatchedEffectiveAssignmentsReuseUtcEvaluationDateAndValidateIds(): void
++    {
++        [$employeeId, $organizationId] = $this->references();
++        $repo = new EmployeeAssignmentRepository($this->db);
++        $repo->insert([
++            'employee_id' => $employeeId,
++            'organization_id' => $organizationId,
++            'is_primary' => 1,
++            'effective_from' => '2026-10-05',
++            'effective_to' => '2026-10-05',
++            'status' => 'ACTIVE',
++            'created_at' => '2026-10-05 00:00:00',
++        ]);
++        $service = new EmployeeAssignmentService($repo, $this->db);
++        $instant = new EvaluationTime(new DateTimeImmutable('2026-10-06T01:00:00+07:00'));
++        $batched = $service->findEffectiveForEmployees([$employeeId, $employeeId], $instant);
++        $this->assertCount(1, $batched);
++        $this->assertSame($service->findEffective($employeeId, $instant), $batched[$employeeId]);
++        $this->assertCount(1, $batched[$employeeId]);
++        $this->assertSame([], $service->findEffectiveForEmployees([], $instant));
++        $nextDay = new EvaluationTime(new DateTimeImmutable('2026-10-06T00:00:00+00:00'));
++        $this->assertSame([], $service->findEffectiveForEmployees([$employeeId], $nextDay)[$employeeId]);
++        try {
++            $service->findEffectiveForEmployees([0], $instant);
++            $this->fail('Expected invalid employee ID rejection.');
++        } catch (DomainException $exception) {
++            $this->assertSame(EmployeeAssignmentService::ERROR_REFERENCE_INVALID, $exception->getErrorCode());
++        }
++    }
++
+     public function testUpdateAndEndAreSerializedAndPreserveHistory(): void
+     {
+         [$employeeId, $organizationId] = $this->references();

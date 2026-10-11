@@ -309,22 +309,22 @@ SQL;
     }
 
     /** Count after the same SQL predicates that will be used for the page. */
-    public function countListMatching(CommonListQuery $query): int
+    public function countListMatching(CommonListQuery $query, ?array $authorizedStatuses = null): int
     {
         $this->assertSupportedSqlList($query);
         try {
-            return (int) $this->listBuilder($query)->countAllResults();
+            return (int) $this->listBuilder($query, $authorizedStatuses)->countAllResults();
         } catch (\Throwable $exception) {
             throw new PersistenceException(self::ERROR_PERSISTENCE_FAILED, 'countListMatching', $exception);
         }
     }
 
     /** @return list<array<string, mixed>> */
-    public function listPageMatching(CommonListQuery $query): array
+    public function listPageMatching(CommonListQuery $query, ?array $authorizedStatuses = null): array
     {
         $this->assertSupportedSqlList($query);
         try {
-            $result = $this->listBuilder($query)
+            $result = $this->listBuilder($query, $authorizedStatuses)
                 ->orderBy('id', $query->sort[0]->direction)
                 ->limit($query->pageSize, $query->offset)
                 ->get();
@@ -346,13 +346,13 @@ SQL;
      *
      * @return list<array<string, mixed>>
      */
-    public function listProjectedKeys(CommonListQuery $query): array
+    public function listProjectedKeys(CommonListQuery $query, ?array $authorizedStatuses = null): array
     {
         if (! $this->supportsSqlProjection($query)) {
             throw new \InvalidArgumentException('Unsupported SQL Product key projection.');
         }
         try {
-            $result = $this->listBuilder($query)
+            $result = $this->listBuilder($query, $authorizedStatuses)
                 ->select(['id', 'code', 'sku', 'barcode', 'product_name', 'product_child_name', 'product_type', 'status'])
                 ->orderBy('code', 'ASC')->orderBy('id', 'ASC')->get();
             if ($result === false) {
@@ -456,9 +456,24 @@ SQL;
     }
 
     /** @return \CodeIgniter\Database\BaseBuilder */
-    private function listBuilder(CommonListQuery $query): \CodeIgniter\Database\BaseBuilder
+    private function listBuilder(CommonListQuery $query, ?array $authorizedStatuses = null): \CodeIgniter\Database\BaseBuilder
     {
         $builder = $this->db->table('products');
+        if ($authorizedStatuses !== null) {
+            // Statuses are authoritative AuthorizationService-approved State
+            // buckets, never client input. HEX preserves byte-exact semantics
+            // under case/accent-insensitive MariaDB collations.
+            if ($authorizedStatuses === []) {
+                $builder->where('1 = 0', null, false);
+            } else {
+                $builder->whereIn('status', $authorizedStatuses);
+                $quoted = array_map(
+                    fn (string $status): string => $this->db->escape(strtoupper(bin2hex($status))),
+                    $authorizedStatuses,
+                );
+                $builder->where('HEX(status) IN (' . implode(', ', $quoted) . ')', null, false);
+            }
+        }
         foreach ($query->filters as $field => $values) {
             if (in_array($field, ['product_type', 'status'], true)) {
                 // PHP's strict string comparison is byte-exact; avoid the

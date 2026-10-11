@@ -9,6 +9,7 @@ use App\Exceptions\DomainException;
 use App\Exceptions\PersistenceException;
 use App\Infrastructure\Mutation\MutationContext;
 use App\Infrastructure\Mutation\OperationContext;
+use App\Infrastructure\Api\CommonListQuery;
 use CodeIgniter\Database\BaseConnection;
 use CodeIgniter\Database\BaseResult;
 use CodeIgniter\Database\ConnectionInterface;
@@ -137,6 +138,209 @@ final class PolicyRepository
         }
 
         return array_values($result->getResultArray());
+    }
+
+    /**
+     * Select only Policies that can affect the requested action, scope and
+     * persisted State. Evaluation of lane precedence remains in AuthorizationService.
+     * The JOIN replaces a catalog-wide policy scan plus action IN-batches.
+     *
+     * @param list<int> $ancestorOrganizationIds
+     * @return list<array{policy: array<string, mixed>, effect: string}>
+     */
+    public function findApplicablePolicyRows(
+        int $resourceId,
+        array $ancestorOrganizationIds,
+        int $resourceActionId,
+        ?int $stateId,
+    ): array {
+        if ($ancestorOrganizationIds === []) {
+            return [];
+        }
+        try {
+            $columns = implode(', ', array_map(
+                static fn (string $name): string => 'p.' . trim($name),
+                explode(',', self::POLICY_SELECT),
+            ));
+            $builder = $this->db->table('policies p')
+                ->select($columns . ', pa.effect AS policy_effect')
+                ->join('policy_actions pa', 'pa.policy_id = p.id', 'inner')
+                ->where('p.resource_id', $resourceId)
+                // Preserve PHP's exact policy.status ACTIVE check even on
+                // MariaDB installations with case-insensitive collations.
+                ->where("BINARY p.status = 'ACTIVE'", null, false)
+                ->whereIn('p.organization_id', array_values(array_unique($ancestorOrganizationIds)))
+                ->where('pa.resource_action_id', $resourceActionId);
+            if ($stateId === null) {
+                $builder->where('p.state_id', null);
+            } else {
+                $builder->groupStart()
+                    ->where('p.state_id', null)
+                    ->orWhere('p.state_id', $stateId)
+                    ->groupEnd();
+            }
+            $result = $builder->orderBy('p.id', 'ASC')->orderBy('pa.id', 'ASC')->get();
+        } catch (\Throwable $exception) {
+            throw new PersistenceException(self::ERROR_PERSISTENCE_FAILED, 'findApplicablePolicyRows', $exception);
+        }
+        if ($result === false) {
+            throw new PersistenceException(self::ERROR_PERSISTENCE_FAILED, 'findApplicablePolicyRows');
+        }
+        $rows = [];
+        foreach ($result->getResultArray() as $row) {
+            $effect = (string) $row['policy_effect'];
+            unset($row['policy_effect']);
+            $rows[] = ['policy' => $row, 'effect' => $effect];
+        }
+        return $rows;
+    }
+
+    /**
+     * Build a bounded list of REAL target contexts, never contexts supplied
+     * by a client. If the list is too diverse or contains unexpected status,
+     * the caller MUST use row-by-row authorization instead.
+     *
+     * @return list<array{id:int,organization_id:int,status:string}>|null
+     */
+    public function findPolicyVisibilityBuckets(int $maxBuckets = 64): ?array
+    {
+        if ($maxBuckets < 1) {
+            throw new \InvalidArgumentException('maxBuckets must be positive.');
+        }
+        try {
+            $result = $this->db->table('policies')
+                // HEX groups native status BYTES, not a case-insensitive
+                // collation. One malformed 'active' row must disable this
+                // shortcut instead of being merged into the ACTIVE bucket.
+                ->select('MIN(id) AS id, organization_id, HEX(status) AS status_hex', false)
+                ->groupBy('organization_id')
+                ->groupBy('HEX(status)', false)
+                ->orderBy('organization_id', 'ASC')
+                ->orderBy('status_hex', 'ASC')
+                ->limit($maxBuckets + 1)
+                ->get();
+        } catch (\Throwable $exception) {
+            throw new PersistenceException(self::ERROR_PERSISTENCE_FAILED, 'findPolicyVisibilityBuckets', $exception);
+        }
+        if ($result === false) {
+            throw new PersistenceException(self::ERROR_PERSISTENCE_FAILED, 'findPolicyVisibilityBuckets');
+        }
+        $rows = $result->getResultArray();
+        if (count($rows) > $maxBuckets) {
+            return null;
+        }
+        $buckets = [];
+        foreach ($rows as $row) {
+            $id = filter_var($row['id'] ?? null, FILTER_VALIDATE_INT, ['options' => ['min_range' => 1]]);
+            $organizationId = filter_var($row['organization_id'] ?? null, FILTER_VALIDATE_INT, ['options' => ['min_range' => 1]]);
+            $encoded = $row['status_hex'] ?? null;
+            $status = is_string($encoded) ? hex2bin($encoded) : false;
+            if ($id === false || $organizationId === false || ! in_array($status, ['ACTIVE', 'INACTIVE'], true)) {
+                return null;
+            }
+            $buckets[] = ['id' => $id, 'organization_id' => $organizationId, 'status' => $status];
+        }
+        return $buckets;
+    }
+
+    /**
+     * PHP's legacy AuthorizedArrayListSource does exact string comparisons.
+     * Restrict SQL fast path to canonical filter values so DB collation/number
+     * coercion cannot broaden a filter (e.g. "01" must not equal ID 1).
+     */
+    public function supportsSqlPolicyList(CommonListQuery $query): bool
+    {
+        if ($query->q !== null) {
+            return false;
+        }
+        foreach ($query->filters as $field => $values) {
+            if (! in_array($field, ['organization_id', 'resource_id', 'state_id', 'participant_ref_id', 'status'], true)) {
+                return false;
+            }
+            foreach ($values as $value) {
+                if ($field === 'status') {
+                    if (! in_array($value, ['ACTIVE', 'INACTIVE'], true)) {
+                        return false;
+                    }
+                } elseif (! ($field === 'state_id' && $value === '')
+                    && (preg_match('/\A[1-9][0-9]*\z/', $value) !== 1
+                        || filter_var($value, FILTER_VALIDATE_INT, ['options' => ['min_range' => 1]]) === false)) {
+                    return false;
+                }
+            }
+        }
+        foreach ($query->sort as $sort) {
+            if (! in_array($sort->field, ['id', 'organization_id', 'resource_id', 'status'], true)) {
+                return false;
+            }
+        }
+        return true;
+    }
+
+    /**
+     * The input buckets have already passed the SAME authoritative PBAC
+     * engine used for individual Policy objects. Reuse the predicate for both
+     * total and paginated page so no forbidden Policy contributes to COUNT.
+     *
+     * @param list<array{id:int,organization_id:int,status:string}> $allowedBuckets
+     * @return array{total:int,rows:list<array<string,mixed>>}
+     */
+    public function findAuthorizedPolicyPage(CommonListQuery $query, array $allowedBuckets): array
+    {
+        if ($allowedBuckets === []) {
+            return ['total' => 0, 'rows' => []];
+        }
+        if (! $this->supportsSqlPolicyList($query)) {
+            throw new \InvalidArgumentException('Unsupported SQL Policy list query.');
+        }
+        try {
+            $count = $this->authorizedPolicyBuilder($query, $allowedBuckets)->countAllResults();
+            $builder = $this->authorizedPolicyBuilder($query, $allowedBuckets)
+                ->select(self::POLICY_SELECT);
+            foreach ($query->sort as $term) {
+                $builder->orderBy($term->field, $term->direction);
+            }
+            $result = $builder->limit($query->pageSize, $query->offset)->get();
+        } catch (\Throwable $exception) {
+            throw new PersistenceException(self::ERROR_PERSISTENCE_FAILED, 'findAuthorizedPolicyPage', $exception);
+        }
+        if ($result === false) {
+            throw new PersistenceException(self::ERROR_PERSISTENCE_FAILED, 'findAuthorizedPolicyPage');
+        }
+        return ['total' => (int) $count, 'rows' => array_values($result->getResultArray())];
+    }
+
+    /**
+     * @param list<array{id:int,organization_id:int,status:string}> $allowedBuckets
+     * @return \CodeIgniter\Database\BaseBuilder
+     */
+    private function authorizedPolicyBuilder(CommonListQuery $query, array $allowedBuckets): \CodeIgniter\Database\BaseBuilder
+    {
+        $builder = $this->db->table('policies')->groupStart();
+        foreach ($allowedBuckets as $index => $bucket) {
+            if ($index === 0) {
+                $builder->groupStart();
+            } else {
+                $builder->orGroupStart();
+            }
+            $status = $bucket['status'] === 'ACTIVE' ? 'ACTIVE' : 'INACTIVE';
+            $builder->where('organization_id', $bucket['organization_id'])
+                ->where("BINARY status = '{$status}'", null, false)->groupEnd();
+        }
+        $builder->groupEnd();
+        foreach ($query->filters as $field => $values) {
+            if ($field === 'state_id' && in_array('', $values, true)) {
+                $notNull = array_values(array_filter($values, static fn (string $value): bool => $value !== ''));
+                $builder->groupStart()->where('state_id', null);
+                if ($notNull !== []) {
+                    $builder->orWhereIn('state_id', $notNull);
+                }
+                $builder->groupEnd();
+            } else {
+                $builder->whereIn($field, $values);
+            }
+        }
+        return $builder;
     }
 
     /** Used by list APIs to prevent SQL pagination before State PBAC filtering. */

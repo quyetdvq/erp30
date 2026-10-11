@@ -62,65 +62,120 @@ final class Api030AuthorizationWorkflowService
         $this->assertResource($resource);
         $includeActions = $this->includeResourceActions($resource, $query);
         $operation = $this->operation();
-        $rows = [];
-        foreach ($this->rows($resource) as $row) {
-            try {
-                $this->authorize($resource, 'view', $row, [], $operation);
-                // Keep authorization and count/filter-before-pagination unchanged.
-                // Action relations are presentation fields, loaded only for the page.
-                $rows[] = $row;
-            } catch (DomainException $exception) {
-                if ($this->isVisibilityDenial($exception)) {
-                    continue;
+        return $this->auth()->withReadOnlyBatch($operation, function () use ($resource, $query, $includeActions, $operation) {
+            // This fast path evaluates trusted, persisted Policy State/scope with
+            // the existing AuthorizationService before SQL pagination.
+            if ($resource === 'policy') {
+                $sqlResult = $this->tryPolicySqlList($query, $operation);
+                if ($sqlResult !== null) {
+                    return $sqlResult;
                 }
-                throw $exception;
+            }
+            $rows = [];
+            foreach ($this->rows($resource) as $row) {
+                try {
+                    $this->authorize($resource, 'view', $row, [], $operation);
+                    // Keep authorization and count/filter-before-pagination unchanged.
+                    // Action relations are presentation fields, loaded only for the page.
+                    $rows[] = $row;
+                } catch (DomainException $exception) {
+                    if ($this->isVisibilityDenial($exception)) {
+                        continue;
+                    }
+                    throw $exception;
+                }
+            }
+
+            $query = $this->applyListFilters($resource, $query, $rows);
+            $result = ($this->queryAdapter ?? new CommonListQueryAdapter())->paginate(
+                $query,
+                $this->allowlist($resource),
+                new AuthorizedArrayListSource($rows),
+            );
+
+            if ($resource === 'policy' || $includeActions) {
+                /** @var list<array<string, mixed>> $pageRows */
+                $pageRows = iterator_to_array($result->data, false);
+                $result = new CommonListResult(
+                    $resource === 'policy'
+                        ? $this->attachPolicyActions($pageRows)
+                        : $this->attachResourceActions($pageRows),
+                    $result->query,
+                    $result->total,
+                );
+            }
+
+            return $result;
+        });
+    }
+
+    /**
+     * Compile a request-local effective allowlist of (Organization, State)
+     * tuples from real persisted Policy rows. There is no global decision cache:
+     * another request always re-evaluates changes to permissions and policies.
+     * If there are too many tuples or unsafe filters, fall back to legacy flow.
+     *
+     * @param array<string,mixed> $query
+     */
+    private function tryPolicySqlList(array $query, OperationContext $operation): ?CommonListResult
+    {
+        $adapter = $this->queryAdapter ?? new CommonListQueryAdapter();
+        $parsed = $adapter->parse($query, $this->allowlist('policy'));
+        $repository = $this->policyRepository();
+        if (! $repository->supportsSqlPolicyList($parsed)) {
+            return null;
+        }
+        $buckets = $repository->findPolicyVisibilityBuckets();
+        if ($buckets === null) {
+            return null;
+        }
+        $allowed = [];
+        foreach ($buckets as $bucket) {
+            try {
+                $this->authorize('policy', 'view', [
+                    'id' => $bucket['id'],
+                    'organization_id' => $bucket['organization_id'],
+                    'status' => $bucket['status'],
+                ], [], $operation);
+                $allowed[] = $bucket;
+            } catch (DomainException $exception) {
+                if (! $this->isVisibilityDenial($exception)) {
+                    throw $exception;
+                }
             }
         }
-
-        $query = $this->applyListFilters($resource, $query, $rows);
-        $result = ($this->queryAdapter ?? new CommonListQueryAdapter())->paginate(
-            $query,
-            $this->allowlist($resource),
-            new AuthorizedArrayListSource($rows),
+        $page = $repository->findAuthorizedPolicyPage($parsed, $allowed);
+        return new CommonListResult(
+            $this->attachPolicyActions($page['rows']),
+            $parsed,
+            (string) $page['total'],
         );
-
-        if ($resource === 'policy' || $includeActions) {
-            /** @var list<array<string, mixed>> $pageRows */
-            $pageRows = iterator_to_array($result->data, false);
-            $result = new CommonListResult(
-                $resource === 'policy'
-                    ? $this->attachPolicyActions($pageRows)
-                    : $this->attachResourceActions($pageRows),
-                $result->query,
-                $result->total,
-            );
-        }
-
-        return $result;
     }
 
     /** @param array<string, mixed> $query */
     public function securityUsers(array $query): CommonListResult
     {
         $operation = $this->operation();
-        $rows = [];
-        foreach ($this->securityUserRepository()->findAll() as $row) {
-            try {
-                $this->authorize('user', 'view', $row, [], $operation);
-                $rows[] = $row;
-            } catch (DomainException $exception) {
-                if ($this->isVisibilityDenial($exception)) {
-                    continue;
+        return $this->auth()->withReadOnlyBatch($operation, function () use ($query, $operation) {
+            $rows = [];
+            foreach ($this->securityUserRepository()->findAll() as $row) {
+                try {
+                    $this->authorize('user', 'view', $row, [], $operation);
+                    $rows[] = $row;
+                } catch (DomainException $exception) {
+                    if ($this->isVisibilityDenial($exception)) {
+                        continue;
+                    }
+                    throw $exception;
                 }
-                throw $exception;
             }
-        }
 
-        return ($this->queryAdapter ?? new CommonListQueryAdapter())->paginate(
-            $query,
-            $this->allowlist('security_user'),
-            new AuthorizedArrayListSource($rows),
-        );
+            return ($this->queryAdapter ?? new CommonListQueryAdapter())->paginate(
+                $query,
+                $this->allowlist('security_user'),
+                new AuthorizedArrayListSource($rows),
+            );
+        });
     }
 
     /** @return array<string, mixed> */

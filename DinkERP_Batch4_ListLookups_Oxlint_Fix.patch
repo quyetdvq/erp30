@@ -1,0 +1,8 @@
+--- a/frontend/src/services/listLookups.ts
++++ b/frontend/src/services/listLookups.ts
+@@ -58,4 +58,3 @@
+ 
+-  const pages: T[][] = new Array(pageCount)
+-  pages[0] = firstPage
++  const pages: T[][] = [firstPage]
+   let nextPage = 2

@@ -49,6 +49,7 @@ final class AuthorizationService implements LifecycleAuthorizationPort, Numberin
     private OrganizationService $organizations;
     private ShieldIdentityAdapter $identities;
     private ResourceWorkflowStateResolver $workflowStates;
+    private ?ReadOnlyAuthorizationContext $readOnlyContext = null;
 
     /** @param ConnectionInterface<mixed, mixed>|null $db */
     public function __construct(
@@ -80,6 +81,40 @@ final class AuthorizationService implements LifecycleAuthorizationPort, Numberin
         );
     }
 
+    /**
+     * Evaluate multiple read-only records against one short-lived snapshot of
+     * IAM/assignment/policy lookups. Intended ONLY for list/read operations
+     * that perform no authorization-affecting writes inside $read. Never use
+     * for create/edit/setstate/delete or for a transaction that mutates rights.
+     * An exception cannot leak the snapshot into the next request or action.
+     *
+     * @template T
+     * @param callable(): T $read
+     * @return T
+     */
+    public function withReadOnlyBatch(OperationContext $operation, callable $read): mixed
+    {
+        if ($this->readOnlyContext !== null) {
+            throw new \LogicException('Nested authorization read batches are not supported.');
+        }
+        $this->readOnlyContext = new ReadOnlyAuthorizationContext($operation);
+        try {
+            return $read();
+        } finally {
+            $this->readOnlyContext = null;
+        }
+    }
+
+    /**
+     * @template T
+     * @param callable(): T $loader
+     * @return T
+     */
+    private function readThrough(?ReadOnlyAuthorizationContext $context, string $bucket, string $key, callable $loader): mixed
+    {
+        return $context === null ? $loader() : $context->remember($bucket, $key, $loader);
+    }
+
     public function authorize(
         OperationContext $operation,
         string $resourceType,
@@ -93,11 +128,22 @@ final class AuthorizationService implements LifecycleAuthorizationPort, Numberin
         $userId = PositiveId::normalize($operation->actorUserId, 'user_id', self::REASON_CONTEXT_REQUIRED);
         $resource = $this->token($resourceType, 'resource', self::ERROR_RESOURCE_INVALID);
         $resourceAction = $this->token($action, 'action', self::ERROR_ACTION_INVALID);
+        // A mutation authorization must invalidate any accidental list
+        // snapshot, even if a caller incorrectly mixes reads and writes.
+        if ($resourceAction !== 'view') {
+            $this->readOnlyContext = null;
+        }
         $suppliedState = $stateId === null
             ? null
             : PositiveId::normalize($stateId, 'state_id', self::ERROR_ACTION_INVALID);
 
-        $resourceRow = $this->catalog->findResourceByType($resource);
+        // No implicit process-wide or service-wide cache: opt-in only for
+        // repeated VIEW decisions inside the same explicit read-only batch.
+        $batch = $resourceAction === 'view' && $this->readOnlyContext?->matches($operation)
+            ? $this->readOnlyContext
+            : null;
+        $resourceRow = $this->readThrough($batch, 'resources', $resource,
+            fn (): ?array => $this->catalog->findResourceByType($resource));
         if ($resourceRow === null) {
             throw new DomainException(self::ERROR_RESOURCE_INVALID, ['resource' => $resource]);
         }
@@ -127,7 +173,8 @@ final class AuthorizationService implements LifecycleAuthorizationPort, Numberin
             );
         }
 
-        $profile = $this->profiles->resolve($operation);
+        $profile = $this->readThrough($batch, 'profile', 'actor',
+            fn (): EffectiveProfile => $this->profiles->resolve($operation));
         $permission = null;
         foreach ($profile->permissions as $candidate) {
             if ($candidate->resourceType === $resource && $candidate->action === $resourceAction) {
@@ -152,11 +199,13 @@ final class AuthorizationService implements LifecycleAuthorizationPort, Numberin
         }
 
         $resourceId = PositiveId::normalize($resourceRow['id'] ?? null, 'resource_id', self::ERROR_RESOURCE_INVALID);
-        if (! $this->catalog->resourceActionBelongsToResource($permission->resourceActionId, $resourceId)) {
+        if (! $this->readThrough($batch, 'resource-actions', $resourceId . ':' . $permission->resourceActionId,
+            fn (): bool => $this->catalog->resourceActionBelongsToResource($permission->resourceActionId, $resourceId))) {
             throw new DomainException(self::ERROR_ACTION_INVALID, ['action' => $resourceAction]);
         }
 
-        $scopePath = $this->organizations->resolveAncestorChain($context->organizationId);
+        $scopePath = $this->readThrough($batch, 'ancestors', (string) $context->organizationId,
+            fn (): array => $this->organizations->resolveAncestorChain($context->organizationId));
         $scopeIds = array_map(
             static fn (array $row): int => PositiveId::normalize($row['id'] ?? null, 'organization_id', self::REASON_CONTEXT_REQUIRED),
             $scopePath,
@@ -164,7 +213,8 @@ final class AuthorizationService implements LifecycleAuthorizationPort, Numberin
         // Mandatory employment eligibility precedes all PBAC policy lanes.
         // SYSTEM / MASTER are shared across the group: any effective assignment
         // is sufficient, even when that assignment belongs to a lower level.
-        $employee = $this->employees->findByUserId($userId);
+        $employee = $this->readThrough($batch, 'employee', (string) $userId,
+            fn (): ?array => $this->employees->findByUserId($userId));
         if ($employee === null || ($employee['status'] ?? null) !== 'ACTIVE') {
             return $this->decision(
                 self::DECISION_DENY,
@@ -180,7 +230,8 @@ final class AuthorizationService implements LifecycleAuthorizationPort, Numberin
         }
 
         $employeeId = PositiveId::normalize($employee['id'] ?? null, 'employee_id', self::REASON_CONTEXT_REQUIRED);
-        $effectiveAssignments = $this->assignments->findEffective($employeeId, $operation->evaluationTime);
+        $effectiveAssignments = $this->readThrough($batch, 'assignments', (string) $employeeId,
+            fn (): array => $this->assignments->findEffective($employeeId, $operation->evaluationTime));
         if ($effectiveAssignments === []) {
             return $this->decision(
                 self::DECISION_DENY,
@@ -220,11 +271,16 @@ final class AuthorizationService implements LifecycleAuthorizationPort, Numberin
             );
         }
 
-        $policyRows = $this->loadPolicies($resourceId, $scopeIds, $permission->resourceActionId, $normalizedState);
+        $policyKey = $resourceId . ':' . $permission->resourceActionId . ':'
+            . ($normalizedState === null ? 'all' : (string) $normalizedState)
+            . ':' . implode(',', $scopeIds);
+        $policyRows = $this->readThrough($batch, 'policies', $policyKey,
+            fn (): array => $this->loadPolicies($resourceId, $scopeIds, $permission->resourceActionId, $normalizedState));
 
-        $groups = $this->identities->resolveActiveAuthorizationGroups(
-            $this->identities->resolveIdentity($operation),
-        );
+        $groups = $this->readThrough($batch, 'groups', (string) $userId,
+            fn (): array => $this->identities->resolveActiveAuthorizationGroups(
+                $this->identities->resolveIdentity($operation),
+            ));
         $actorParticipants = [['USER', $userId]];
         foreach ($groups as $group) {
             $actorParticipants[] = ['GROUP', $group->groupId];
@@ -292,46 +348,20 @@ final class AuthorizationService implements LifecycleAuthorizationPort, Numberin
      */
     private function loadPolicies(int $resourceId, array $scopeIds, int $resourceActionId, ?int $stateId): array
     {
-        // Preserve policy selection (resource, ancestor scope, state) and its
-        // deterministic order before loading actions in batches.
-        $eligiblePolicies = [];
-        foreach ($this->policies->findAll(['resource_id' => $resourceId]) as $policy) {
-            // Inactive PBAC policies NEVER participate, including their
-            // previously configured ABSOLUTE_DENY effects.
-            if (($policy['status'] ?? 'ACTIVE') !== 'ACTIVE') {
-                continue;
+        $rows = $this->policies->findApplicablePolicyRows(
+            $resourceId,
+            $scopeIds,
+            $resourceActionId,
+            $stateId,
+        );
+        foreach ($rows as &$row) {
+            $effect = strtoupper(trim((string) $row['effect']));
+            if (! in_array($effect, ['ALLOW', 'DENY', 'ABSOLUTE_DENY'], true)) {
+                throw new DomainException(self::ERROR_POLICY_INVALID, ['policy_id' => $row['policy']['id']]);
             }
-            $organizationId = PositiveId::normalize($policy['organization_id'] ?? null, 'organization_id', self::ERROR_POLICY_INVALID);
-            if (! in_array($organizationId, $scopeIds, true)) {
-                continue;
-            }
-            $policyState = $policy['state_id'] ?? null;
-            if ($policyState !== null && ($stateId === null || PositiveId::normalize($policyState, 'state_id', self::ERROR_POLICY_INVALID) !== $stateId)) {
-                continue;
-            }
-            $eligiblePolicies[] = $policy;
+            $row['effect'] = $effect;
         }
-
-        if ($eligiblePolicies === []) {
-            return [];
-        }
-
-        $policyIds = array_map(static fn (array $policy): int => (int) $policy['id'], $eligiblePolicies);
-        $actionsByPolicy = [];
-        foreach ($this->policies->findPolicyActionsForPolicies($policyIds, $resourceActionId) as $action) {
-            $actionsByPolicy[(int) $action['policy_id']][] = $action;
-        }
-
-        $rows = [];
-        foreach ($eligiblePolicies as $policy) {
-            foreach ($actionsByPolicy[(int) $policy['id']] ?? [] as $action) {
-                $effect = strtoupper(trim((string) ($action['effect'] ?? '')));
-                if (! in_array($effect, ['ALLOW', 'DENY', 'ABSOLUTE_DENY'], true)) {
-                    throw new DomainException(self::ERROR_POLICY_INVALID, ['policy_id' => $policy['id']]);
-                }
-                $rows[] = ['policy' => $policy, 'effect' => $effect];
-            }
-        }
+        unset($row);
 
         return $rows;
     }

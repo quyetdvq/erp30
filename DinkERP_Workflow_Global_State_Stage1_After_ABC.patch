@@ -1,0 +1,619 @@
+diff --git a/backend/app/Authorization/AuthorizationService.php b/backend/app/Authorization/AuthorizationService.php
+index e9db6e3..79d4908 100644
+--- a/backend/app/Authorization/AuthorizationService.php
++++ b/backend/app/Authorization/AuthorizationService.php
+@@ -15,6 +15,7 @@ use App\Services\EmployeeAssignmentService;
+ use App\Services\LifecycleAuthorizationPort;
+ use App\Services\NumberingAuthorizationPort;
+ use App\Services\OrganizationService;
++use App\Services\ResourceWorkflowStateResolver;
+ use CodeIgniter\Database\ConnectionInterface;
+ 
+ /**
+@@ -46,6 +47,7 @@ final class AuthorizationService implements LifecycleAuthorizationPort, Numberin
+     private EmployeeAssignmentService $assignments;
+     private OrganizationService $organizations;
+     private ShieldIdentityAdapter $identities;
++    private ResourceWorkflowStateResolver $workflowStates;
+ 
+     /** @param ConnectionInterface<mixed, mixed>|null $db */
+     public function __construct(
+@@ -58,11 +60,13 @@ final class AuthorizationService implements LifecycleAuthorizationPort, Numberin
+         ?ShieldIdentityAdapter $identities = null,
+         ?ConnectionInterface $db = null,
+         ?ResourceCatalogRepository $catalog = null,
++        ?ResourceWorkflowStateResolver $workflowStates = null,
+     ) {
+         $connection = $db ?? db_connect();
+         $this->profiles = $profiles ?? new EffectiveProfileResolver($connection);
+         $this->policies = $policies ?? new PolicyRepository($connection);
+         $this->catalog = $catalog ?? new ResourceCatalogRepository($connection);
++        $this->workflowStates = $workflowStates ?? new ResourceWorkflowStateResolver($connection);
+         $this->employees = $employees ?? new EmployeeRepository($connection);
+         $this->assignments = $assignments ?? new EmployeeAssignmentService(null, $connection);
+         $this->organizations = $organizations ?? new OrganizationService(null, $connection);
+@@ -88,7 +92,7 @@ final class AuthorizationService implements LifecycleAuthorizationPort, Numberin
+         $userId = PositiveId::normalize($operation->actorUserId, 'user_id', self::REASON_CONTEXT_REQUIRED);
+         $resource = $this->token($resourceType, 'resource', self::ERROR_RESOURCE_INVALID);
+         $resourceAction = $this->token($action, 'action', self::ERROR_ACTION_INVALID);
+-        $normalizedState = $stateId === null
++        $suppliedState = $stateId === null
+             ? null
+             : PositiveId::normalize($stateId, 'state_id', self::ERROR_ACTION_INVALID);
+ 
+@@ -96,6 +100,18 @@ final class AuthorizationService implements LifecycleAuthorizationPort, Numberin
+         if ($resourceRow === null) {
+             throw new DomainException(self::ERROR_RESOURCE_INVALID, ['resource' => $resource]);
+         }
++        // State-aware PBAC is a generic authorization invariant. For any
++        // lifecycle-configured resource and persisted target, read the state
++        // from the trusted target, never from input['state_id'] or a caller
++        // hint. For transitions, verify the provided From-State matches it.
++        $normalizedState = $this->workflowStates->stateForAuthorization(
++            $resource,
++            $contextRequest->persistedTarget,
++            $suppliedState,
++            $resourceRow,
++            $resourceAction,
++            $contextRequest->input,
++        );
+         $context = $this->contexts->resolveResource($resource, $resourceAction, $resourceRow, $contextRequest);
+ 
+         $profile = $this->profiles->resolve($operation);
+diff --git a/backend/app/Services/Api030AuthorizationWorkflowService.php b/backend/app/Services/Api030AuthorizationWorkflowService.php
+index 4e8c479..07979e7 100644
+--- a/backend/app/Services/Api030AuthorizationWorkflowService.php
++++ b/backend/app/Services/Api030AuthorizationWorkflowService.php
+@@ -411,8 +411,11 @@ final class Api030AuthorizationWorkflowService
+             persistedTarget: $target === [] ? null : $target,
+             input: $input,
+         );
+-        $stateId = $target['state_id'] ?? null;
+-        $decision = $this->auth()->authorize($operation, $resource, $action, $request, $stateId);
++        // A policy row's state_id describes the *target resource* to which
++        // that policy applies. It is not the workflow state of the policy
++        // object being authorized. Let the shared evaluator derive the
++        // actual current state from the persisted target's status.
++        $decision = $this->auth()->authorize($operation, $resource, $action, $request);
+         if (! $decision->isAllowed()) {
+             throw new DomainException(AuthorizationService::REASON_POLICY_DENIED, ['action' => $action]);
+         }
+@@ -422,6 +425,9 @@ final class Api030AuthorizationWorkflowService
+     private function createResource(array $payload, OperationContext $operation): int
+     {
+         $type = $this->token($payload['type'] ?? null, 'type');
++        if ($type === 'lifecycle' && ($payload['lifecycle_id'] ?? null) !== null) {
++            throw new DomainException(ResourceWorkflowStateResolver::ERROR_LIFECYCLE_SELF_REFERENCE);
++        }
+         $domain = strtoupper(trim((string) ($payload['domain'] ?? '')));
+         if ($domain === '' || $domain === 'COMPANY' || ! in_array($domain, array_map(static fn (ResourceDomain $d): string => $d->value, ResourceDomain::cases()), true)) {
+             throw new DomainException('RESOURCE_DOMAIN_INVALID', ['field' => 'domain']);
+@@ -439,6 +445,12 @@ final class Api030AuthorizationWorkflowService
+     /** @param array<string, mixed> $payload */
+     private function updateResource(int $id, array $payload, OperationContext $operation): bool
+     {
++        if (array_key_exists('lifecycle_id', $payload) && $payload['lifecycle_id'] !== null) {
++            $current = $this->resourceRepository()->findResource($id);
++            if (($current['type'] ?? null) === 'lifecycle') {
++                throw new DomainException(ResourceWorkflowStateResolver::ERROR_LIFECYCLE_SELF_REFERENCE);
++            }
++        }
+         if (array_key_exists('domain', $payload)) {
+             throw new DomainException('RESOURCE_DOMAIN_IMMUTABLE', ['field' => 'domain']);
+         }
+diff --git a/backend/app/Services/Api050ProductCatalogService.php b/backend/app/Services/Api050ProductCatalogService.php
+index 20e3db1..8d2c973 100644
+--- a/backend/app/Services/Api050ProductCatalogService.php
++++ b/backend/app/Services/Api050ProductCatalogService.php
+@@ -28,6 +28,9 @@ use CodeIgniter\Shield\Entities\User;
+ /** Application boundary for the 26 CONTRACT_READY P1-API-050 operations. */
+ final class Api050ProductCatalogService
+ {
++    private ?AuthorizationService $runtimeAuthorization = null;
++    private ?ResourceWorkflowStateResolver $runtimeWorkflowStates = null;
++
+     public function __construct(
+         /** @var ConnectionInterface<mixed, mixed>|null */
+         private readonly ?ConnectionInterface $db = null,
+@@ -50,9 +53,15 @@ final class Api050ProductCatalogService
+      */
+     public function listGroups(array $query = []): array
+     {
+-        $this->authorize('product_group', 'view');
++        $rows = $this->groups()->listAll();
++        if ($this->hasLifecycle('product_group')) {
++            // State-scoped policies are evaluated before pagination/total.
++            $rows = array_values(array_filter($rows, fn (array $row): bool => $this->decision('product_group', 'view', $row)->isAllowed()));
++        } else {
++            $this->authorize('product_group', 'view');
++        }
+         return $this->paginate(
+-            $this->groups()->listAll(),
++            $rows,
+             $query,
+             new CommonListQueryAllowlist(
+                 search: ['code', 'name'],
+@@ -100,9 +109,14 @@ final class Api050ProductCatalogService
+      */
+     public function listUoms(array $query = []): array
+     {
+-        $this->authorize('product_uom', 'view');
++        $rows = $this->uoms()->listAll();
++        if ($this->hasLifecycle('product_uom')) {
++            $rows = array_values(array_filter($rows, fn (array $row): bool => $this->decision('product_uom', 'view', $row)->isAllowed()));
++        } else {
++            $this->authorize('product_uom', 'view');
++        }
+         return $this->paginate(
+-            $this->uoms()->listAll(),
++            $rows,
+             $query,
+             new CommonListQueryAllowlist(
+                 search: ['code', 'name'],
+@@ -150,7 +164,6 @@ final class Api050ProductCatalogService
+      */
+     public function listProducts(array $query = []): array
+     {
+-        $this->authorize('product', 'view');
+         $allowlist = new CommonListQueryAllowlist(
+             search: ['product_code', 'sku', 'barcode', 'product_name', 'product_child_name'],
+             filters: ['base_uom_id', 'parent_product_id', 'product_group_id', 'product_type', 'status'],
+@@ -158,6 +171,18 @@ final class Api050ProductCatalogService
+         );
+         $adapter = $this->queryAdapter ?? new CommonListQueryAdapter();
+         $repository = $this->productRepository ?? new ProductRepository($this->connection());
++        if ($this->hasLifecycle('product')) {
++            // SQL LIMIT/OFFSET must NOT precede per-record state-aware PBAC:
++            // it would leak an incorrect total and underfill result pages.
++            // Retain the full compatibility path until a secure SQL predicate
++            // can express the complete actor/assignment/policy lane decision.
++            $rows = array_values(array_filter(
++                $this->roles()->describeList($this->products()->listAll()),
++                fn (array $row): bool => $this->decision('product', 'view', $row)->isAllowed(),
++            ));
++            return $this->paginate(array_map(fn (array $row): array => $this->productCodeForApi($row), $rows), $query, $allowlist);
++        }
++        $this->authorize('product', 'view');
+         // Only page after the MASTER-level product.view gate. Product List has
+         // no per-row PBAC predicate, unlike Price List. The repository
+         // applies SQL only when exact filters are equivalent. For Unicode
+@@ -434,7 +459,13 @@ final class Api050ProductCatalogService
+ 
+     private function authorization(): AuthorizationService
+     {
+-        return $this->authorization ?? new AuthorizationService(db: $this->connection());
++        return $this->authorization ?? ($this->runtimeAuthorization ??= new AuthorizationService(db: $this->connection()));
++    }
++
++    private function hasLifecycle(string $resource): bool
++    {
++        $this->runtimeWorkflowStates ??= new ResourceWorkflowStateResolver($this->connection());
++        return $this->runtimeWorkflowStates->lifecycleId($resource) !== null;
+     }
+ 
+     private function groups(): ProductGroupService
+diff --git a/backend/app/Services/Api060ProductImportService.php b/backend/app/Services/Api060ProductImportService.php
+index cf02396..b0a61b1 100644
+--- a/backend/app/Services/Api060ProductImportService.php
++++ b/backend/app/Services/Api060ProductImportService.php
+@@ -29,6 +29,9 @@ final class Api060ProductImportService
+     public const ERROR_FILE_INVALID = 'IMPORT_FILE_INVALID';
+     public const ERROR_FILE_TOO_LARGE = 'IMPORT_FILE_TOO_LARGE';
+ 
++    private ?AuthorizationService $runtimeAuthorization = null;
++    private ?ResourceWorkflowStateResolver $runtimeWorkflowStates = null;
++
+     /** @param ConnectionInterface<mixed, mixed>|null $db */
+     public function __construct(
+         private readonly ?ConnectionInterface $db = null,
+@@ -74,7 +77,10 @@ final class Api060ProductImportService
+      */
+     public function list(array $query = []): array
+     {
+-        $this->authorizeView(['entity_type' => ProductImportJobService::ENTITY_PRODUCT]);
++        $stateAware = $this->hasImportJobLifecycle();
++        if (! $stateAware) {
++            $this->authorizeView(['entity_type' => ProductImportJobService::ENTITY_PRODUCT]);
++        }
+         [$query, $dateFilters] = $this->normalizeJobQuery($query);
+         $this->validateFilterEnum($query, 'mode', [
+             ProductImportJobService::MODE_CREATE_ONLY,
+@@ -88,11 +94,19 @@ final class Api060ProductImportService
+             ProductImportJobService::STATUS_COMPLETED_WITH_ERRORS,
+             ProductImportJobService::STATUS_FAILED,
+         ]);
++        // Use a single actor/evaluation instant across all rows in this list.
++        $operation = $stateAware ? $this->operation() : null;
+         $rows = array_map(
+             fn (array $row): array => $this->jobOutput($row),
+             array_values(array_filter(
+                 $this->jobs()->findAll(),
+-                fn (array $row): bool => $this->isVisibleJob($row, $dateFilters),
++                fn (array $row): bool => $this->isVisibleJob($row, $dateFilters)
++                    && (! $stateAware || $this->authorization()->authorize(
++                        $operation,
++                        'import_job',
++                        'view',
++                        new EvaluationOrganizationRequest(persistedTarget: $row),
++                    )->isAllowed()),
+             )),
+         );
+ 
+@@ -324,7 +338,13 @@ final class Api060ProductImportService
+ 
+     private function authorization(): AuthorizationService
+     {
+-        return $this->authorization ?? new AuthorizationService(db: $this->connection());
++        return $this->authorization ?? ($this->runtimeAuthorization ??= new AuthorizationService(db: $this->connection()));
++    }
++
++    private function hasImportJobLifecycle(): bool
++    {
++        $this->runtimeWorkflowStates ??= new ResourceWorkflowStateResolver($this->connection());
++        return $this->runtimeWorkflowStates->lifecycleId('import_job') !== null;
+     }
+ 
+     private function imports(): ProductImportAuthorizationService
+diff --git a/backend/app/Services/ResourceWorkflowStateResolver.php b/backend/app/Services/ResourceWorkflowStateResolver.php
+index b6e7e77..b531cb0 100644
+--- a/backend/app/Services/ResourceWorkflowStateResolver.php
++++ b/backend/app/Services/ResourceWorkflowStateResolver.php
+@@ -23,6 +23,10 @@ final class ResourceWorkflowStateResolver
+     public const ERROR_RESOURCE_LIFECYCLE_INVALID = 'WF_RESOURCE_LIFECYCLE_INVALID';
+     public const ERROR_INITIAL_STATE_INVALID = 'WF_INITIAL_STATE_INVALID';
+     public const ERROR_POLICY_STATE_INVALID = 'POLICY_STATE_NOT_IN_RESOURCE_LIFECYCLE';
++    public const ERROR_STATE_CONTEXT_MISMATCH = 'WF_AUTHORIZATION_STATE_MISMATCH';
++    public const ERROR_LIFECYCLE_SELF_REFERENCE = 'WF_LIFECYCLE_SELF_REFERENCE';
++    public const ERROR_INITIAL_STATE_REQUIRED = 'WF_INITIAL_STATE_REQUIRED';
++    public const ERROR_TRANSITION_REQUIRED = 'WF_TRANSITION_REQUIRED';
+ 
+     private ResourceCatalogRepository $resources;
+     private LifecycleRepository $lifecycles;
+@@ -62,6 +66,14 @@ final class ResourceWorkflowStateResolver
+     {
+         $resource = $this->resource($type);
+         $value = $resource['lifecycle_id'] ?? null;
++        // The lifecycle catalog governs other resources. It cannot govern
++        // its own configuration/status without creating a bootstrap cycle.
++        if ($type === 'lifecycle') {
++            if ($value !== null) {
++                throw new DomainException(self::ERROR_LIFECYCLE_SELF_REFERENCE);
++            }
++            return null;
++        }
+         if ($value === null) {
+             return null;
+         }
+@@ -75,6 +87,17 @@ final class ResourceWorkflowStateResolver
+     /** @param array<string,mixed> $row */
+     public function persistedStateId(string $type, array $row): ?int
+     {
++        if ($type === 'lifecycle') {
++            // Lifecycle status is its independent administrative state, not
++            // membership in any lifecycle. Global Workflow State IDs are
++            // optional for state-specific policies on this catalog resource.
++            $code = strtoupper(trim((string) ($row['status'] ?? '')));
++            if (! in_array($code, ['ACTIVE', 'INACTIVE'], true)) {
++                throw new DomainException(self::ERROR_STATE_NOT_MAPPED, ['resource' => $type]);
++            }
++            $state = $this->lifecycles->findActiveWorkflowStateByCode($code);
++            return $state === null ? null : PositiveId::normalize($state['id'] ?? null, 'state_id', self::ERROR_STATE_NOT_MAPPED);
++        }
+         if ($this->lifecycleId($type) === null) {
+             return null;
+         }
+@@ -144,12 +167,103 @@ final class ResourceWorkflowStateResolver
+             throw new DomainException(self::ERROR_POLICY_STATE_INVALID, ['resource_id' => $resourceId]);
+         }
+         $type = $resource['type'];
++        if ($type === 'lifecycle') {
++            // Exception: Lifecycle has only the independently managed
++            // administrative statuses ACTIVE/INACTIVE, not lifecycle members.
++            $state = $this->lifecycles->findActiveWorkflowState($stateId);
++            if ($state === null || ! in_array(strtoupper((string) ($state['code'] ?? '')), ['ACTIVE', 'INACTIVE'], true)) {
++                throw new DomainException(self::ERROR_POLICY_STATE_INVALID, ['resource_id' => $resourceId, 'state_id' => $stateId]);
++            }
++            $this->lifecycleId($type); // Guard against self-reference.
++            return;
++        }
+         $lifecycleId = $this->lifecycleId($type);
+         if ($lifecycleId === null || ! isset($this->members($lifecycleId)[$stateId])) {
+             throw new DomainException(self::ERROR_POLICY_STATE_INVALID, ['resource_id' => $resourceId, 'state_id' => $stateId]);
+         }
+     }
+ 
++    /**
++     * Derive the evaluation state from a persisted target for *any* resource
++     * with a configured lifecycle, not merely API-010. A caller-supplied ID
++     * must not override the persisted current state. In a transition the
++     * trusted adapter also supplies the From-State ID for cross-checking.
++     *
++     * A resource without lifecycle configuration keeps its legacy path until
++     * the lifecycle/data rollout is completed; such resources cannot create
++     * new state-scoped policies (assertPolicyState rejects them).
++     *
++     * @param array<string,mixed>|null $persistedTarget
++     * @param array<string,mixed> $input
++     */
++    public function stateForAuthorization(
++        string $type,
++        ?array $persistedTarget,
++        ?int $explicitStateId,
++        ?array $trustedCatalogRow = null,
++        string $action = '',
++        array $input = [],
++    ): ?int
++    {
++        // AuthorizationService already loaded the canonical Resource row.
++        // Reuse it; otherwise per-row List checks would requery resources.
++        if ($trustedCatalogRow !== null) {
++            $this->resourceCache[$type] = $trustedCatalogRow;
++        }
++        if ($type === 'lifecycle') {
++            $this->lifecycleId($type);
++            if ($persistedTarget === null) {
++                return null;
++            }
++            $canonical = $this->persistedStateId($type, $persistedTarget);
++            if ($explicitStateId !== null && $explicitStateId !== $canonical) {
++                throw new DomainException(self::ERROR_STATE_CONTEXT_MISMATCH, ['resource' => $type]);
++            }
++            return $canonical;
++        }
++
++        if ($this->lifecycleId($type) === null) {
++            return $explicitStateId;
++        }
++
++        // Shared lifecycle rules: creation must use the configured Initial
++        // State; ordinary edits must not become an alternative setstate API.
++        // Existing master services without a lifecycle remain on the legacy
++        // path until their data has been migrated and validated.
++        if ($persistedTarget === null && $action === 'create') {
++            $initial = $this->initialCode($type);
++            $requested = $input['status'] ?? null;
++            if (! is_string($requested) || strtoupper(trim($requested)) !== $initial) {
++                throw new DomainException(self::ERROR_INITIAL_STATE_REQUIRED, ['resource' => $type, 'initial' => $initial]);
++            }
++        }
++        if ($persistedTarget !== null) {
++            $canonical = $this->persistedStateId($type, $persistedTarget);
++            if ($explicitStateId !== null && $canonical !== $explicitStateId) {
++                throw new DomainException(self::ERROR_STATE_CONTEXT_MISMATCH, ['resource' => $type]);
++            }
++            if ($action === 'edit' && array_key_exists('status', $input)) {
++                throw new DomainException(self::ERROR_TRANSITION_REQUIRED, ['resource' => $type]);
++            }
++            if ($action === 'setstate') {
++                // Only the LifecycleService path provides an authoritative
++                // From-State ID. Standalone legacy setState methods must
++                // acquire a dedicated adapter before lifecycle activation.
++                if ($explicitStateId === null) {
++                    throw new DomainException(self::ERROR_TRANSITION_REQUIRED, ['resource' => $type]);
++                }
++                if (array_key_exists('status', $input)) {
++                    $this->stateIdForCode($type, $input['status']);
++                }
++            }
++            return $canonical;
++        }
++        if ($explicitStateId !== null) {
++            $this->codeForStateId($type, $explicitStateId);
++        }
++        return $explicitStateId;
++    }
++
+     /** @return array<int,string> state ID -> active Workflow State code */
+     private function members(int $lifecycleId): array
+     {
+diff --git a/backend/tests/unit/P1Wf006StateAwarePbacAndLocationTransitionsTest.php b/backend/tests/unit/P1Wf006StateAwarePbacAndLocationTransitionsTest.php
+index 00d644a..4ce8a8b 100644
+--- a/backend/tests/unit/P1Wf006StateAwarePbacAndLocationTransitionsTest.php
++++ b/backend/tests/unit/P1Wf006StateAwarePbacAndLocationTransitionsTest.php
+@@ -11,6 +11,7 @@ use App\Exceptions\DomainException;
+ use App\Infrastructure\Api\AuthorizedArrayListSource;
+ use App\Infrastructure\Api\CommonListQueryAdapter;
+ use App\Infrastructure\Api\CommonListQueryAllowlist;
++use App\Infrastructure\Mutation\MutationContext;
+ use App\Infrastructure\Mutation\OperationContext;
+ use App\Infrastructure\Time\EvaluationTime;
+ use App\Repositories\FoundationLocationRepository;
+@@ -18,6 +19,7 @@ use App\Repositories\LifecycleRepository;
+ use App\Repositories\PolicyRepository;
+ use App\Repositories\ResourceCatalogRepository;
+ use App\Services\Api010FoundationOrganizationContactService;
++use App\Services\Api050ProductCatalogService;
+ use App\Services\FoundationLocationLifecycleAdapter;
+ use App\Services\FoundationLocationService;
+ use App\Services\LifecycleService;
+@@ -254,7 +256,180 @@ final class P1Wf006StateAwarePbacAndLocationTransitionsTest extends CIUnitTestCa
+         $this->assertSame('INACTIVE', $this->location('ward', $id)['status']);
+     }
+ 
+-    /** @return array{user:int,group:int,company:int,states:array<string,int>} */
++    public function testCoreAuthorizationUsesPersistedOrganizationStateWithoutCallerHint(): void
++    {
++        $f = $this->fixture();
++        $this->linkLifecycle('organization');
++        $this->policy('organization', $f['group'], $f['user'], $f['states']['INACTIVE'], 'view', 'ABSOLUTE_DENY');
++        $active = $this->db->table('organizations')->where('id', $f['company'])->get()->getRowArray();
++        $this->assertNotNull($active);
++        $this->db->table('organizations')->insert([
++            'type' => 'BRANCH', 'parent_id' => $f['company'], 'code' => 'WF006-B-' . uniqid(),
++            'name' => 'Inactive Branch', 'status' => 'INACTIVE', 'created_at' => '2026-10-06 00:00:00',
++        ]);
++        $inactive = $this->db->table('organizations')->where('id', (int) $this->db->insertID())->get()->getRowArray();
++        $this->assertNotNull($inactive);
++
++        $auth = new AuthorizationService(db: $this->db);
++        $allow = $auth->authorize($this->operation($f['user']), 'organization', 'view', new EvaluationOrganizationRequest(persistedTarget: $active));
++        $deny = $auth->authorize($this->operation($f['user']), 'organization', 'view', new EvaluationOrganizationRequest(persistedTarget: $inactive));
++        $this->assertSame('ALLOW', $allow->decision);
++        $this->assertSame($f['states']['ACTIVE'], $allow->stateId);
++        $this->assertSame('DENY', $deny->decision);
++        $this->assertSame(AuthorizationService::REASON_ABSOLUTE_DENY, $deny->reasonCode);
++        $this->assertSame($f['states']['INACTIVE'], $deny->stateId);
++    }
++
++    public function testForgedExplicitStateCannotOverridePersistedState(): void
++    {
++        $f = $this->fixture();
++        $this->linkLifecycle('organization');
++        $target = $this->db->table('organizations')->where('id', $f['company'])->get()->getRowArray();
++        $this->assertNotNull($target);
++        try {
++            (new AuthorizationService(db: $this->db))->authorize(
++                $this->operation($f['user']), 'organization', 'view',
++                new EvaluationOrganizationRequest(persistedTarget: $target), $f['states']['INACTIVE'],
++            );
++            $this->fail('A supplied state may not override persisted ACTIVE.');
++        } catch (DomainException $exception) {
++            $this->assertSame(ResourceWorkflowStateResolver::ERROR_STATE_CONTEXT_MISMATCH, $exception->getErrorCode());
++        }
++    }
++
++    public function testStateOutsideAssignedLifecycleFailsClosedForOtherResources(): void
++    {
++        $f = $this->fixture();
++        $this->linkLifecycle('organization');
++        $this->db->table('organizations')->where('id', $f['company'])->update(['status' => 'UNMAPPED']);
++        $target = $this->db->table('organizations')->where('id', $f['company'])->get()->getRowArray();
++        $this->assertNotNull($target);
++        try {
++            (new AuthorizationService(db: $this->db))->authorize(
++                $this->operation($f['user']), 'organization', 'view',
++                new EvaluationOrganizationRequest(persistedTarget: $target),
++            );
++            $this->fail('An invalid persisted State must fail closed for any resource.');
++        } catch (DomainException $exception) {
++            $this->assertSame(ResourceWorkflowStateResolver::ERROR_STATE_NOT_MAPPED, $exception->getErrorCode());
++        }
++    }
++
++    public function testInitialAndEditStateContractIsNotSpecificToProvince(): void
++    {
++        $f = $this->fixture();
++        $this->linkLifecycle('organization');
++        $auth = new AuthorizationService(db: $this->db);
++        try {
++            $auth->authorize(
++                $this->operation($f['user']), 'organization', 'create',
++                new EvaluationOrganizationRequest(input: ['status' => 'INACTIVE', 'parent_id' => $f['company']]),
++            );
++            $this->fail('Creation must use the configured initial State.');
++        } catch (DomainException $exception) {
++            $this->assertSame(ResourceWorkflowStateResolver::ERROR_INITIAL_STATE_REQUIRED, $exception->getErrorCode());
++        }
++        $target = $this->db->table('organizations')->where('id', $f['company'])->get()->getRowArray();
++        $this->assertNotNull($target);
++        try {
++            $auth->authorize(
++                $this->operation($f['user']), 'organization', 'edit',
++                new EvaluationOrganizationRequest(persistedTarget: $target, input: ['status' => 'INACTIVE']),
++            );
++            $this->fail('An ordinary edit must not smuggle a State change.');
++        } catch (DomainException $exception) {
++            $this->assertSame(ResourceWorkflowStateResolver::ERROR_TRANSITION_REQUIRED, $exception->getErrorCode());
++        }
++        try {
++            $auth->authorize(
++                $this->operation($f['user']), 'organization', 'setstate',
++                new EvaluationOrganizationRequest(persistedTarget: $target, input: ['status' => 'INACTIVE']),
++            );
++            $this->fail('A legacy setState call cannot bypass the canonical LifecycleService.');
++        } catch (DomainException $exception) {
++            $this->assertSame(ResourceWorkflowStateResolver::ERROR_TRANSITION_REQUIRED, $exception->getErrorCode());
++        }
++    }
++
++    public function testProductGroupListFiltersStatePoliciesBeforePaginationAndTotal(): void
++    {
++        $f = $this->fixture();
++        $this->linkLifecycle('product_group');
++        $this->db->table('group_permissions')->insert([
++            'group_id' => $f['auth_group'],
++            'resource_action_id' => $this->actionId('product_group', 'view'),
++            'created_at' => '2026-10-06 00:00:00',
++        ]);
++        foreach (['ACTIVE', 'INACTIVE'] as $status) {
++            $this->db->table('product_groups')->insert([
++                'code' => 'WF006-PG-' . $status . '-' . uniqid(),
++                'name' => $status . ' group', 'status' => $status,
++                'created_at' => '2026-10-06 00:00:00',
++            ]);
++        }
++        $this->policy('product_group', $f['group'], $f['user'], $f['states']['INACTIVE'], 'view', 'ABSOLUTE_DENY');
++        $api = new Api050ProductCatalogService(
++            db: $this->db,
++            authorization: new AuthorizationService(db: $this->db),
++            mutationContext: new MutationContext(service('clock'), $f['user'], 'wf006-product-group-list', false),
++        );
++        $page = $api->listGroups(['page' => '1', 'page_size' => '1', 'sort' => 'code']);
++        $this->assertSame(1, (int) $page['total']);
++        $this->assertCount(1, $page['items']);
++        $this->assertSame('ACTIVE', $page['items'][0]['status']);
++    }
++
++    public function testProductSqlPaginationFallsBackToAuthorizationBeforeCounting(): void
++    {
++        $f = $this->fixture();
++        $this->linkLifecycle('product');
++        $this->db->table('group_permissions')->insert([
++            'group_id' => $f['auth_group'],
++            'resource_action_id' => $this->actionId('product', 'view'),
++            'created_at' => '2026-10-06 00:00:00',
++        ]);
++        foreach (['ACTIVE', 'INACTIVE'] as $status) {
++            $this->assertTrue($this->db->table('products')->insert([
++                'code' => 'WF006-PR-' . $status . '-' . uniqid(),
++                'product_type' => 'STANDARD', 'product_name' => $status . ' product',
++                'status' => $status, 'created_at' => '2026-10-06 00:00:00',
++            ]));
++        }
++        $this->policy('product', $f['group'], $f['user'], $f['states']['INACTIVE'], 'view', 'ABSOLUTE_DENY');
++        $api = new Api050ProductCatalogService(
++            db: $this->db,
++            authorization: new AuthorizationService(db: $this->db),
++            mutationContext: new MutationContext(service('clock'), $f['user'], 'wf006-product-list', false),
++        );
++        $result = $api->listProducts(['page' => '1', 'page_size' => '1', 'sort' => 'id']);
++        $this->assertSame(1, (int) $result['total']);
++        $this->assertCount(1, $result['items']);
++        $this->assertSame('ACTIVE', $result['items'][0]['status']);
++    }
++
++    public function testLifecycleCatalogManagesItsOwnStateWithoutSelfReference(): void
++    {
++        $f = $this->fixture();
++        $states = new ResourceWorkflowStateResolver($this->db);
++        $this->assertNull($states->lifecycleId('lifecycle'));
++        $this->assertSame($f['states']['ACTIVE'], $states->persistedStateId('lifecycle', ['status' => 'ACTIVE']));
++        $states->assertPolicyState($this->resourceId('lifecycle'), $f['states']['INACTIVE']);
++        try {
++            $states->assertPolicyState($this->resourceId('lifecycle'), $f['states']['CLOSED']);
++            $this->fail('Lifecycle policies may only address the independent administrative statuses.');
++        } catch (DomainException $exception) {
++            $this->assertSame(ResourceWorkflowStateResolver::ERROR_POLICY_STATE_INVALID, $exception->getErrorCode());
++        }
++    }
++
++    private function linkLifecycle(string $type): void
++    {
++        $province = $this->db->table('resources')->where('type', 'province')->get()->getRowArray();
++        $this->assertNotNull($province);
++        $this->assertTrue($this->db->table('resources')->where('type', $type)->update(['lifecycle_id' => $province['lifecycle_id']]));
++    }
++
++    /** @return array{user:int,group:int,company:int,auth_group:int,states:array<string,int>} */
+     private function fixture(bool $withAssignment = true): array
+     {
+         (new ResourceActionSeeder(new Config\Database()))->run();
+@@ -318,7 +493,7 @@ final class P1Wf006StateAwarePbacAndLocationTransitionsTest extends CIUnitTestCa
+             $this->db->table('resources')->where('type', $type)->update(['lifecycle_id' => $lifecycle]);
+         }
+ 
+-        return ['user' => $user, 'group' => $group, 'company' => $company, 'states' => $states];
++        return ['user' => $user, 'group' => $group, 'company' => $company, 'auth_group' => $authorizationGroup, 'states' => $states];
+     }
+ 
+     private function workflowState(string $code): int

@@ -1,0 +1,1323 @@
+diff --git a/backend/app/Authorization/AuthorizationService.php b/backend/app/Authorization/AuthorizationService.php
+index 01415be..0b8ee8a 100644
+--- a/backend/app/Authorization/AuthorizationService.php
++++ b/backend/app/Authorization/AuthorizationService.php
+@@ -15,6 +15,7 @@ use App\Services\EmployeeAssignmentService;
+ use App\Services\LifecycleAuthorizationPort;
+ use App\Services\NumberingAuthorizationPort;
+ use App\Services\OrganizationService;
++use App\Services\ResourceWorkflowStateResolver;
+ use CodeIgniter\Database\ConnectionInterface;
+ 
+ /**
+@@ -33,6 +34,7 @@ final class AuthorizationService implements LifecycleAuthorizationPort, Numberin
+     public const REASON_ABSOLUTE_DENY = 'AUTH_ABSOLUTE_DENY';
+     public const REASON_NO_MATCH = 'AUTH_NO_MATCH_ALLOW';
+     public const REASON_POLICY_ALLOWED = 'AUTH_POLICY_ALLOWED';
++    public const REASON_RESOURCE_INACTIVE = 'AUTH_RESOURCE_INACTIVE';
+     public const REASON_CONTEXT_REQUIRED = 'AUTH_CONTEXT_REQUIRED';
+     public const ERROR_RESOURCE_INVALID = 'AUTH_RESOURCE_INVALID';
+     public const ERROR_ACTION_INVALID = 'AUTH_ACTION_INVALID';
+@@ -46,6 +48,7 @@ final class AuthorizationService implements LifecycleAuthorizationPort, Numberin
+     private EmployeeAssignmentService $assignments;
+     private OrganizationService $organizations;
+     private ShieldIdentityAdapter $identities;
++    private ResourceWorkflowStateResolver $resourceStates;
+ 
+     /** @param ConnectionInterface<mixed, mixed>|null $db */
+     public function __construct(
+@@ -58,6 +61,7 @@ final class AuthorizationService implements LifecycleAuthorizationPort, Numberin
+         ?ShieldIdentityAdapter $identities = null,
+         ?ConnectionInterface $db = null,
+         ?ResourceCatalogRepository $catalog = null,
++        ?ResourceWorkflowStateResolver $resourceStates = null,
+     ) {
+         $connection = $db ?? db_connect();
+         $this->profiles = $profiles ?? new EffectiveProfileResolver($connection);
+@@ -67,6 +71,7 @@ final class AuthorizationService implements LifecycleAuthorizationPort, Numberin
+         $this->assignments = $assignments ?? new EmployeeAssignmentService(null, $connection);
+         $this->organizations = $organizations ?? new OrganizationService(null, $connection);
+         $this->identities = $identities ?? new ShieldIdentityAdapter($connection);
++        $this->resourceStates = $resourceStates ?? new ResourceWorkflowStateResolver($connection);
+         $this->contexts = $contexts ?? new EvaluationOrganizationResolver(
+             new OrganizationRepository($connection),
+             $this->employees,
+@@ -91,6 +96,16 @@ final class AuthorizationService implements LifecycleAuthorizationPort, Numberin
+         $normalizedState = $stateId === null
+             ? null
+             : PositiveId::normalize($stateId, 'state_id', self::ERROR_ACTION_INVALID);
++        // The persisted target is the authoritative source of business State.
++        // Caller-supplied state may confirm it but must not override it.
++        $target = $contextRequest->persistedTarget;
++        if ($target !== null && array_key_exists('status', $target)) {
++            $trustedState = $this->resourceStates->persistedStateId($resource, $target);
++            if ($normalizedState !== null && $normalizedState !== $trustedState) {
++                throw new DomainException('AUTH_STATE_MISMATCH', ['resource' => $resource]);
++            }
++            $normalizedState = $trustedState;
++        }
+ 
+         $resourceRow = $this->catalog->findResourceByType($resource);
+         if ($resourceRow === null) {
+@@ -98,6 +113,22 @@ final class AuthorizationService implements LifecycleAuthorizationPort, Numberin
+         }
+         $context = $this->contexts->resolveResource($resource, $resourceAction, $resourceRow, $contextRequest);
+ 
++        // A disabled Resource Type cannot silently fall through to NO_MATCH => ALLOW.
++        // Its own resource administration remains available via resource.edit.
++        if (strtoupper((string) ($resourceRow['status'] ?? 'ACTIVE')) !== 'ACTIVE') {
++            return $this->decision(
++                self::DECISION_DENY,
++                self::REASON_RESOURCE_INACTIVE,
++                $userId,
++                $resource,
++                $resourceAction,
++                $context->organizationId,
++                $normalizedState,
++                $operation,
++                [],
++            );
++        }
++
+         $profile = $this->profiles->resolve($operation);
+         $permission = null;
+         foreach ($profile->permissions as $candidate) {
+@@ -267,6 +298,9 @@ final class AuthorizationService implements LifecycleAuthorizationPort, Numberin
+         // deterministic order before loading actions in batches.
+         $eligiblePolicies = [];
+         foreach ($this->policies->findAll(['resource_id' => $resourceId]) as $policy) {
++            if (strtoupper((string) ($policy['status'] ?? 'ACTIVE')) !== 'ACTIVE') {
++                continue;
++            }
+             $organizationId = PositiveId::normalize($policy['organization_id'] ?? null, 'organization_id', self::ERROR_POLICY_INVALID);
+             if (! in_array($organizationId, $scopeIds, true)) {
+                 continue;
+diff --git a/backend/app/Authorization/PolicyValidator.php b/backend/app/Authorization/PolicyValidator.php
+index b59a723..26f6987 100644
+--- a/backend/app/Authorization/PolicyValidator.php
++++ b/backend/app/Authorization/PolicyValidator.php
+@@ -51,6 +51,11 @@ final class PolicyValidator
+             );
+         }
+ 
++        $result['status'] = strtoupper(trim((string) ($result['status'] ?? 'ACTIVE')));
++        if (! in_array($result['status'], ['ACTIVE', 'INACTIVE'], true)) {
++            throw new DomainException('POLICY_STATUS_INVALID', ['field' => 'status']);
++        }
++
+         return $result;
+     }
+ 
+diff --git a/backend/app/Config/Routes.php b/backend/app/Config/Routes.php
+index 98fda42..5e50ca7 100644
+--- a/backend/app/Config/Routes.php
++++ b/backend/app/Config/Routes.php
+@@ -79,6 +79,7 @@ $routes->group('api/v1', ['filter' => 'cors'], static function (RouteCollection
+     $routes->put('authorization-groups/(:num)/members', 'Api\\AuthorizationWorkflow::replaceMembers/$1');
+     $routes->get('authorization-groups/(:num)/permissions', 'Api\\AuthorizationWorkflow::permissions/$1');
+     $routes->put('authorization-groups/(:num)/permissions', 'Api\\AuthorizationWorkflow::replacePermissions/$1');
++    $routes->get('resources/(:num)/available-states', 'Api\\AuthorizationWorkflow::availableStates/$1');
+     $routes->get('resources/(:num)/actions', 'Api\\AuthorizationWorkflow::actions/$1');
+     $routes->post('resources/(:num)/actions', 'Api\\AuthorizationWorkflow::createAction/$1');
+     $routes->patch('resources/(:num)/actions/(:num)', 'Api\\AuthorizationWorkflow::updateAction/$1/$2');
+diff --git a/backend/app/Controllers/Api/AuthorizationWorkflow.php b/backend/app/Controllers/Api/AuthorizationWorkflow.php
+index 6b2748e..2a20919 100644
+--- a/backend/app/Controllers/Api/AuthorizationWorkflow.php
++++ b/backend/app/Controllers/Api/AuthorizationWorkflow.php
+@@ -110,6 +110,11 @@ final class AuthorizationWorkflow extends ApiController
+         return $this->respondData($this->service()->replacePermissions($id, $this->jsonPayload()));
+     }
+ 
++    public function availableStates(int $id): ResponseInterface
++    {
++        return $this->respondData($this->service()->resourceAvailableStates($id));
++    }
++
+     public function actions(int $id): ResponseInterface
+     {
+         return $this->respondData($this->service()->resourceActions($id));
+diff --git a/backend/app/Database/Migrations/2026-10-11-000014_OptInLifecycleNativeState.php b/backend/app/Database/Migrations/2026-10-11-000014_OptInLifecycleNativeState.php
+new file mode 100644
+index 0000000..2f8a493
+--- /dev/null
++++ b/backend/app/Database/Migrations/2026-10-11-000014_OptInLifecycleNativeState.php
+@@ -0,0 +1,82 @@
++<?php
++
++declare(strict_types=1);
++
++namespace App\Database\Migrations;
++
++use App\Services\ResourceNativeStateRegistry;
++use CodeIgniter\Database\Migration;
++
++/** Forward-only native status migration; historical policies remain ACTIVE. */
++final class OptInLifecycleNativeState extends Migration
++{
++    public function up(): void
++    {
++        // Preflight before any DDL: never silently detach a Lifecycle or
++        // rewrite Policy scope/State when a native-only Resource is linked.
++        $nativeOnlyTypes = ResourceNativeStateRegistry::nativeOnlyTypes();
++        if ($nativeOnlyTypes !== []) {
++            $linked = $this->db->table('resources')
++                ->select('type')
++                ->whereIn('type', $nativeOnlyTypes)
++                ->where('lifecycle_id IS NOT NULL', null, false)
++                ->get();
++            if ($linked === false) {
++                throw new \RuntimeException('Cannot inspect forbidden Resource Lifecycle links.');
++            }
++            if ($linked->getRowArray() !== null) {
++                throw new \RuntimeException('Native-only Resource has a Lifecycle link; reconcile before migrating.');
++            }
++        }
++        // An inactive existing catalog State must not be silently made active.
++        foreach (ResourceNativeStateRegistry::allCodes() as $code) {
++            $existing = $this->db->table('workflow_states')->where('code', $code)->get();
++            if ($existing === false) {
++                throw new \RuntimeException('Cannot inspect workflow state catalog.');
++            }
++            $row = $existing->getRowArray();
++            if ($row !== null && strtoupper((string) ($row['status'] ?? '')) !== 'ACTIVE') {
++                throw new \RuntimeException('Native State catalog code is not ACTIVE: ' . $code);
++            }
++        }
++        if (! $this->db->fieldExists('status', 'resources')) {
++            $this->forge->addColumn('resources', [
++                'status' => ['type' => 'VARCHAR', 'constraint' => 20, 'null' => false, 'default' => 'ACTIVE'],
++            ]);
++        }
++        if (! $this->db->fieldExists('status', 'policies')) {
++            $this->forge->addColumn('policies', [
++                'status' => ['type' => 'VARCHAR', 'constraint' => 20, 'null' => false, 'default' => 'ACTIVE'],
++            ]);
++        }
++
++        // A Policy's target state remains the existing workflow_states BIGINT FK.
++        // Idempotently populate missing native codes without replacing IDs or
++        // changing existing lifecycle membership/transition rows.
++        foreach (ResourceNativeStateRegistry::allCodes() as $code) {
++            $existing = $this->db->table('workflow_states')->where('code', $code)->get();
++            if ($existing === false) {
++                throw new \RuntimeException('Cannot inspect workflow state catalog.');
++            }
++            if ($existing->getRowArray() !== null) {
++                continue;
++            }
++            if (! $this->db->table('workflow_states')->insert([
++                'code' => $code,
++                'name' => $code,
++                'status' => 'ACTIVE',
++                'created_at' => gmdate('Y-m-d H:i:s'),
++            ])) {
++                throw new \RuntimeException('Cannot seed native workflow state: ' . $code);
++            }
++        }
++    }
++
++    public function down(): void
++    {
++        // Forward-only: policy/resource Status and workflow IDs may already
++        // be referenced by business data or authorization audit. A downgrade
++        // needs an explicit data reconciliation and a separate approved change.
++        throw new \RuntimeException('Opt-in Lifecycle Native State migration is forward-only.');
++    }
++}
+diff --git a/backend/app/Repositories/PolicyRepository.php b/backend/app/Repositories/PolicyRepository.php
+index 1abd71a..318a33e 100644
+--- a/backend/app/Repositories/PolicyRepository.php
++++ b/backend/app/Repositories/PolicyRepository.php
+@@ -32,11 +32,11 @@ final class PolicyRepository
+     /** @var list<string> */
+     private const POLICY_FIELDS = [
+         'organization_id', 'resource_id', 'state_id', 'participant_type',
+-        'participant_ref_id', 'created_by', 'updated_by', 'created_at', 'updated_at',
++        'participant_ref_id', 'status', 'created_by', 'updated_by', 'created_at', 'updated_at',
+     ];
+ 
+     /** Keep generated database-only scope columns out of policy rows returned to callers. */
+-    private const POLICY_SELECT = 'id, organization_id, resource_id, state_id, participant_type, participant_ref_id, created_by, updated_by, created_at, updated_at';
++    private const POLICY_SELECT = 'id, organization_id, resource_id, state_id, participant_type, participant_ref_id, status, created_by, updated_by, created_at, updated_at';
+ 
+     /** @var list<string> */
+     private const ACTION_FIELDS = [
+@@ -115,7 +115,7 @@ final class PolicyRepository
+             $builder = $this->db->table('policies')
+                 ->select(self::POLICY_SELECT)
+                 ->orderBy('id', 'ASC');
+-            foreach (['organization_id', 'resource_id', 'participant_type', 'participant_ref_id'] as $field) {
++            foreach (['organization_id', 'resource_id', 'participant_type', 'participant_ref_id', 'status'] as $field) {
+                 if (array_key_exists($field, $filters)) {
+                     $builder->where($field, $filters[$field]);
+                 }
+@@ -259,6 +259,7 @@ final class PolicyRepository
+     {
+         $this->assertScopeAvailable($data);
+         $payload = $this->policyPayload($data, ['organization_id', 'resource_id', 'participant_type', 'participant_ref_id']);
++        $payload['status'] ??= 'ACTIVE';
+         $payload = array_merge($payload, $this->trustedCreateAudit($operation));
+ 
+         try {
+diff --git a/backend/app/Services/Api030AuthorizationWorkflowService.php b/backend/app/Services/Api030AuthorizationWorkflowService.php
+index 4e8c479..9c732b3 100644
+--- a/backend/app/Services/Api030AuthorizationWorkflowService.php
++++ b/backend/app/Services/Api030AuthorizationWorkflowService.php
+@@ -21,6 +21,7 @@ use App\Repositories\LifecycleRepository;
+ use App\Repositories\PolicyRepository;
+ use App\Repositories\ResourceCatalogRepository;
+ use App\Repositories\ShieldSecurityUserRepository;
++use App\Services\ResourceNativeStateRegistry;
+ use CodeIgniter\Database\ConnectionInterface;
+ use CodeIgniter\Exceptions\PageNotFoundException;
+ use CodeIgniter\HTTP\Exceptions\BadRequestException;
+@@ -35,6 +36,9 @@ final class Api030AuthorizationWorkflowService
+     /** @var ConnectionInterface<mixed, mixed> */
+     private ConnectionInterface $connection;
+ 
++    /** Reuse the request-local authorization graph for list row evaluations. */
++    private ?AuthorizationService $activeAuthorization = null;
++
+     /** @param ConnectionInterface<mixed, mixed>|null $db */
+     public function __construct(
+         private readonly ?CommonListQueryAdapter $queryAdapter = null,
+@@ -166,6 +170,9 @@ final class Api030AuthorizationWorkflowService
+         $current = $this->find($resource, $id);
+         $operation = $this->operation();
+         $this->authorize($resource, 'edit', $current, $payload, $operation);
++        if ($resource === 'workflow_state') {
++            $this->assertNativeStateCatalogMutationSafe($current, $payload);
++        }
+         match ($resource) {
+             'authorization_group' => $this->groupService($operation)->update($id, $payload, $operation),
+             'policy' => $this->policyService($operation)->update($id, $this->policyPayload($payload, $current), array_key_exists('actions', $payload) ? $this->actions($payload) : null, $operation),
+@@ -189,6 +196,9 @@ final class Api030AuthorizationWorkflowService
+         if (! in_array($status, ['ACTIVE', 'INACTIVE'], true)) {
+             throw new DomainException('VALIDATION_ERROR', ['field' => 'status']);
+         }
++        if ($resource === 'workflow_state') {
++            $this->assertNativeStateCatalogMutationSafe($current, ['status' => $status]);
++        }
+         match ($resource) {
+             'authorization_group' => $this->groupService($operation)->update($id, ['status' => $status], $operation),
+             'workflow_state' => $this->lifecycleRepository()->updateWorkflowState($id, ['status' => $status], $operation),
+@@ -263,7 +273,16 @@ final class Api030AuthorizationWorkflowService
+         return $this->groupRepository()->findPermissions($groupId);
+     }
+ 
+-    /** @return list<array<string, mixed>> */
++    /** @return array{mode:string,states:list<array{id:string,code:string,name:string}>} */
++    public function resourceAvailableStates(int $resourceId): array
++    {
++        $resource = $this->find('resource', $resourceId);
++        $operation = $this->operation();
++        $this->authorize('resource', 'view', $resource, [], $operation);
++
++        return $this->workflowStateResolver()->options((string) $resource['type']);
++    }
++
+     public function resourceActions(int $resourceId): array
+     {
+         $resource = $this->find('resource', $resourceId);
+@@ -411,8 +430,9 @@ final class Api030AuthorizationWorkflowService
+             persistedTarget: $target === [] ? null : $target,
+             input: $input,
+         );
+-        $stateId = $target['state_id'] ?? null;
+-        $decision = $this->auth()->authorize($operation, $resource, $action, $request, $stateId);
++        // Policy.state_id describes the target of the Policy, never its own state.
++        // AuthorizationService derives status from the persisted target above.
++        $decision = $this->auth()->authorize($operation, $resource, $action, $request);
+         if (! $decision->isAllowed()) {
+             throw new DomainException(AuthorizationService::REASON_POLICY_DENIED, ['action' => $action]);
+         }
+@@ -426,11 +446,13 @@ final class Api030AuthorizationWorkflowService
+         if ($domain === '' || $domain === 'COMPANY' || ! in_array($domain, array_map(static fn (ResourceDomain $d): string => $d->value, ResourceDomain::cases()), true)) {
+             throw new DomainException('RESOURCE_DOMAIN_INVALID', ['field' => 'domain']);
+         }
++        $lifecycleId = $this->validatedLifecycle($type, $payload['lifecycle_id'] ?? null);
+         $row = [
+             'type' => $type,
+             'name' => $this->token($payload['name'] ?? null, 'name'),
+             'domain' => $domain,
+-            'lifecycle_id' => $payload['lifecycle_id'] ?? null,
++            'lifecycle_id' => $lifecycleId,
++            'status' => $this->validatedNativeStatus($payload['status'] ?? 'ACTIVE'),
+             ...$operation->createdAudit(),
+         ];
+         return $this->resourceRepository()->insertResource($row);
+@@ -443,21 +465,110 @@ final class Api030AuthorizationWorkflowService
+             throw new DomainException('RESOURCE_DOMAIN_IMMUTABLE', ['field' => 'domain']);
+         }
+         $changes = [];
+-        foreach (['type', 'name', 'lifecycle_id'] as $field) {
++        foreach (['type', 'name', 'lifecycle_id', 'status'] as $field) {
+             if (array_key_exists($field, $payload)) {
+                 if ($field === 'type') {
+                     throw new DomainException('RESOURCE_TYPE_IMMUTABLE', ['field' => 'type']);
+                 }
+-                $changes[$field] = $field === 'name' ? $this->token($payload[$field], $field) : $payload[$field];
++                $changes[$field] = match ($field) {
++                    'name' => $this->token($payload[$field], $field),
++                    'status' => $this->validatedNativeStatus($payload[$field]),
++                    'lifecycle_id' => $this->validatedLifecycle((string) $this->resourceRepository()->findResource($id)['type'], $payload[$field], $id),
++                    default => $payload[$field],
++                };
+             }
+         }
+         if ($changes === []) {
+             throw new DomainException('VALIDATION_ERROR');
+         }
++        if (($changes['status'] ?? 'ACTIVE') === 'INACTIVE'
++            && ($this->resourceRepository()->findResource($id)['type'] ?? null) === 'resource') {
++            throw new DomainException('RESOURCE_SELF_DEACTIVATION_FORBIDDEN');
++        }
+ 
+         return $this->resourceRepository()->updateResource($id, [...$changes, ...$operation->updatedAudit()]);
+     }
+ 
++    /**
++     * Native PBAC State IDs reference the shared workflow_states catalog.
++     * Removing or disabling a canonical code would make otherwise-valid
++     * business rows unresolvable. Reject ordinary API mutation instead.
++     *
++     * @param array<string, mixed> $current
++     * @param array<string, mixed> $payload
++     */
++    private function assertNativeStateCatalogMutationSafe(array $current, array $payload): void
++    {
++        $code = strtoupper((string) ($current['code'] ?? ''));
++        if (! in_array($code, ResourceNativeStateRegistry::allCodes(), true)) {
++            return;
++        }
++        if (array_key_exists('code', $payload) && strtoupper((string) $payload['code']) !== $code) {
++            throw new DomainException('WF_NATIVE_STATE_CATALOG_IMMUTABLE', ['code' => $code]);
++        }
++        if (array_key_exists('status', $payload) && strtoupper((string) $payload['status']) !== 'ACTIVE') {
++            throw new DomainException('WF_NATIVE_STATE_CATALOG_IMMUTABLE', ['code' => $code]);
++        }
++    }
++
++    private function validatedNativeStatus(mixed $status): string
++    {
++        if (! is_string($status) || ! in_array(strtoupper(trim($status)), ['ACTIVE', 'INACTIVE'], true)) {
++            throw new DomainException('RESOURCE_STATUS_INVALID', ['field' => 'status']);
++        }
++        return strtoupper(trim($status));
++    }
++
++    /**
++     * Only real opt-in Resources may be assigned a Lifecycle. Removing or
++     * changing an assigned Lifecycle requires reconciliation of State policies.
++     */
++    private function validatedLifecycle(string $type, mixed $value, ?int $resourceId = null): ?int
++    {
++        $lifecycleId = ($value === null || $value === '') ? null : filter_var($value, FILTER_VALIDATE_INT, ['options' => ['min_range' => 1]]);
++        if ($lifecycleId === false) {
++            throw new DomainException('WF_RESOURCE_LIFECYCLE_INVALID', ['field' => 'lifecycle_id']);
++        }
++        if ($lifecycleId !== null && ResourceNativeStateRegistry::forbidsLifecycle($type)) {
++            throw new DomainException('WF_RESOURCE_LIFECYCLE_FORBIDDEN', ['resource' => $type]);
++        }
++        if ($resourceId !== null) {
++            $current = $this->resourceRepository()->findResource($resourceId);
++            if ($current === null) {
++                throw new DomainException('RESOURCE_NOT_FOUND');
++            }
++            $previous = $current['lifecycle_id'] === null ? null : (int) $current['lifecycle_id'];
++            if ($previous !== $lifecycleId) {
++                foreach ($this->policyRepository()->findAll(['resource_id' => $resourceId]) as $policy) {
++                    if ($policy['state_id'] === null) {
++                        continue;
++                    }
++                    if ($lifecycleId === null) {
++                        throw new DomainException('WF_RESOURCE_STATE_POLICIES_EXIST', ['resource_id' => $resourceId]);
++                    }
++                    $members = $this->lifecycleRepository()->findLifecycleStates($lifecycleId);
++                    $ids = array_map(static fn (array $row): int => (int) $row['state_id'], $members);
++                    if (! in_array((int) $policy['state_id'], $ids, true)) {
++                        throw new DomainException('WF_RESOURCE_STATE_POLICIES_EXIST', ['resource_id' => $resourceId]);
++                    }
++                }
++            }
++        }
++        if ($lifecycleId !== null) {
++            $this->lifecycleService($this->operation())->validateConfiguration($lifecycleId);
++            $lifecycle = $this->lifecycleRepository()->findLifecycle($lifecycleId);
++            if ($lifecycle === null || strtoupper((string) ($lifecycle['status'] ?? '')) !== 'ACTIVE') {
++                throw new DomainException('WF_RESOURCE_LIFECYCLE_INVALID', ['lifecycle_id' => $lifecycleId]);
++            }
++        }
++        return $lifecycleId === null ? null : (int) $lifecycleId;
++    }
++
++    private function workflowStateResolver(): ResourceWorkflowStateResolver
++    {
++        return new ResourceWorkflowStateResolver($this->connection);
++    }
++
+     /**
+      * @param array<string, mixed> $payload
+      * @param array<string, mixed>|null $current
+@@ -465,7 +576,7 @@ final class Api030AuthorizationWorkflowService
+      */
+     private function policyPayload(array $payload, ?array $current = null): array
+     {
+-        $allowed = ['organization_id', 'resource_id', 'state_id', 'participant_type', 'participant_ref_id'];
++        $allowed = ['organization_id', 'resource_id', 'state_id', 'participant_type', 'participant_ref_id', 'status'];
+         $result = $current === null ? [] : array_intersect_key($current, array_flip($allowed));
+         foreach ($allowed as $field) {
+             if (array_key_exists($field, $payload)) {
+@@ -712,7 +823,7 @@ final class Api030AuthorizationWorkflowService
+ 
+     private function auth(): AuthorizationService
+     {
+-        return $this->authorization ?? new AuthorizationService(db: $this->connection);
++        return $this->activeAuthorization ??= ($this->authorization ?? new AuthorizationService(db: $this->connection));
+     }
+ 
+     private function groupRepository(): AuthorizationGroupRepository
+diff --git a/backend/app/Services/PolicyAdministrationService.php b/backend/app/Services/PolicyAdministrationService.php
+index d00a44d..cd503b6 100644
+--- a/backend/app/Services/PolicyAdministrationService.php
++++ b/backend/app/Services/PolicyAdministrationService.php
+@@ -99,7 +99,7 @@ final class PolicyAdministrationService
+             persistedTarget: $target,
+             input: $policy,
+         );
+-        $decision = $this->auth()->authorize($operation, 'policy', $action, $request, $policy['state_id'] ?? null);
++        $decision = $this->auth()->authorize($operation, 'policy', $action, $request);
+         if (! $decision->isAllowed()) {
+             throw new DomainException(self::ERROR_DENIED, ['action' => $action]);
+         }
+diff --git a/backend/app/Services/ResourceNativeStateRegistry.php b/backend/app/Services/ResourceNativeStateRegistry.php
+new file mode 100644
+index 0000000..310b668
+--- /dev/null
++++ b/backend/app/Services/ResourceNativeStateRegistry.php
+@@ -0,0 +1,76 @@
++<?php
++
++declare(strict_types=1);
++
++namespace App\Services;
++
++/**
++ * Canonical status vocabularies for Resources without an assigned Lifecycle.
++ * State is a business property; a Lifecycle only opts in to transition control.
++ * These types are permanently native/All-States and cannot opt in.
++ */
++final class ResourceNativeStateRegistry
++{
++    /** @var array<string, list<string>> */
++    private const NATIVE_ONLY = [
++        'authorization_group' => ['ACTIVE', 'INACTIVE'],
++        'authorization_log' => [],
++        'display_setting' => [],
++        'employee_assignment' => ['ACTIVE', 'INACTIVE'],
++        'import_job' => ['PENDING', 'PROCESSING', 'COMPLETED', 'COMPLETED_WITH_ERRORS', 'FAILED'],
++        'lifecycle' => ['ACTIVE', 'INACTIVE'],
++        'policy' => ['ACTIVE', 'INACTIVE'],
++        'user' => ['ACTIVE', 'INACTIVE', 'LOCKED', 'SUSPENDED', 'BANNED', 'DISABLED'],
++        'workflow_state' => ['ACTIVE', 'INACTIVE'],
++        'resource' => ['ACTIVE', 'INACTIVE'],
++    ];
++
++    /** @var array<string, list<string>> */
++    private const OPT_IN_NATIVE = [
++        'province' => ['ACTIVE', 'INACTIVE', 'CLOSED'],
++        'ward' => ['ACTIVE', 'INACTIVE', 'CLOSED'],
++        'organization' => ['ACTIVE', 'INACTIVE', 'CLOSED'],
++        'contact' => ['ACTIVE', 'INACTIVE', 'CLOSED'],
++        'department' => ['ACTIVE', 'INACTIVE', 'CLOSED'],
++        'position' => ['ACTIVE', 'INACTIVE', 'CLOSED'],
++        'employee' => ['ACTIVE', 'INACTIVE'],
++        'product_group' => ['ACTIVE', 'INACTIVE'],
++        'product_uom' => ['ACTIVE', 'INACTIVE'],
++        'product' => ['ACTIVE', 'INACTIVE'],
++        'price_list' => ['ACTIVE', 'INACTIVE'],
++    ];
++
++    /** @return list<string> */
++    public static function nativeOnlyTypes(): array
++    {
++        return array_keys(self::NATIVE_ONLY);
++    }
++
++    public static function forbidsLifecycle(string $type): bool
++    {
++        return array_key_exists(strtolower(trim($type)), self::NATIVE_ONLY);
++    }
++
++    /** @return list<string> */
++    public static function codes(string $type): array
++    {
++        $type = strtolower(trim($type));
++
++        return self::NATIVE_ONLY[$type] ?? self::OPT_IN_NATIVE[$type] ?? [];
++    }
++
++    /** @return list<string> */
++    public static function allCodes(): array
++    {
++        $codes = [];
++        foreach (self::NATIVE_ONLY + self::OPT_IN_NATIVE as $allowed) {
++            foreach ($allowed as $code) {
++                $codes[$code] = true;
++            }
++        }
++        $result = array_keys($codes);
++        sort($result);
++
++        return $result;
++    }
++}
+diff --git a/backend/app/Services/ResourceWorkflowStateResolver.php b/backend/app/Services/ResourceWorkflowStateResolver.php
+index 92a2b15..23f1613 100644
+--- a/backend/app/Services/ResourceWorkflowStateResolver.php
++++ b/backend/app/Services/ResourceWorkflowStateResolver.php
+@@ -10,19 +10,14 @@ use App\Repositories\LifecycleRepository;
+ use App\Repositories\ResourceCatalogRepository;
+ use CodeIgniter\Database\ConnectionInterface;
+ 
+-/**
+- * Converts a resource's persisted status code into its canonical workflow ID.
+- * Client state_id and to-state hints are never authoritative inputs.
+- *
+- * The catalog and membership caches are request-local, not cross-request caches:
+- * a later HTTP request must observe administrative lifecycle changes.
+- */
++/** State resolution from authoritative persisted status; never from client hints. */
+ final class ResourceWorkflowStateResolver
+ {
+     public const ERROR_STATE_NOT_MAPPED = 'WF_RESOURCE_STATE_NOT_MAPPED';
+     public const ERROR_RESOURCE_LIFECYCLE_INVALID = 'WF_RESOURCE_LIFECYCLE_INVALID';
+     public const ERROR_INITIAL_STATE_INVALID = 'WF_INITIAL_STATE_INVALID';
+     public const ERROR_POLICY_STATE_INVALID = 'POLICY_STATE_NOT_IN_RESOURCE_LIFECYCLE';
++    public const ERROR_LIFECYCLE_FORBIDDEN = 'WF_RESOURCE_LIFECYCLE_FORBIDDEN';
+ 
+     private ResourceCatalogRepository $resources;
+     private LifecycleRepository $lifecycles;
+@@ -33,6 +28,9 @@ final class ResourceWorkflowStateResolver
+     /** @var array<int, array<int, string>> */
+     private array $memberCodes = [];
+ 
++    /** @var array<string, array<int, string>> */
++    private array $nativeCodes = [];
++
+     /** @param ConnectionInterface<mixed,mixed>|null $db */
+     public function __construct(
+         ?ConnectionInterface $db = null,
+@@ -65,35 +63,36 @@ final class ResourceWorkflowStateResolver
+         if ($value === null) {
+             return null;
+         }
+-
++        if (ResourceNativeStateRegistry::forbidsLifecycle($type)) {
++            throw new DomainException(self::ERROR_LIFECYCLE_FORBIDDEN, ['resource' => $type]);
++        }
+         $id = PositiveId::normalize($value, 'lifecycle_id', self::ERROR_RESOURCE_LIFECYCLE_INVALID);
+         $this->members($id);
+ 
+         return $id;
+     }
+ 
+-    /** @param array<string,mixed> $row */
++    /**
++     * Return the canonical ID of an object's persisted State, or null for stateless Resources.
++     * @param array<string,mixed> $row
++     */
+     public function persistedStateId(string $type, array $row): ?int
+     {
+-        if ($this->lifecycleId($type) === null) {
+-            return null;
+-        }
+-        // Only a status actually loaded from persistence is accepted here.
+         return $this->stateIdForCode($type, $row['status'] ?? null);
+     }
+ 
+     public function stateIdForCode(string $type, mixed $code): ?int
+     {
+-        $lifecycleId = $this->lifecycleId($type);
+-        if ($lifecycleId === null) {
++        $codes = $this->availableCodes($type);
++        if ($codes === []) {
+             return null;
+         }
+         if (! is_string($code) || trim($code) === '') {
+             throw new DomainException(self::ERROR_STATE_NOT_MAPPED, ['resource' => $type]);
+         }
+         $normalized = strtoupper(trim($code));
+-        foreach ($this->members($lifecycleId) as $stateId => $memberCode) {
+-            if ($memberCode === $normalized) {
++        foreach ($codes as $stateId => $stateCode) {
++            if ($stateCode === $normalized) {
+                 return $stateId;
+             }
+         }
+@@ -102,15 +101,10 @@ final class ResourceWorkflowStateResolver
+ 
+     public function codeForStateId(string $type, int $stateId): string
+     {
+-        $lifecycleId = $this->lifecycleId($type);
+-        if ($lifecycleId === null) {
+-            throw new DomainException(self::ERROR_RESOURCE_LIFECYCLE_INVALID, ['resource' => $type]);
+-        }
+-        $codes = $this->members($lifecycleId);
++        $codes = $this->availableCodes($type);
+         if (! isset($codes[$stateId])) {
+             throw new DomainException(self::ERROR_STATE_NOT_MAPPED, ['resource' => $type, 'state_id' => $stateId]);
+         }
+-
+         return $codes[$stateId];
+     }
+ 
+@@ -132,25 +126,60 @@ final class ResourceWorkflowStateResolver
+         if (count($initials) !== 1) {
+             throw new DomainException(self::ERROR_INITIAL_STATE_INVALID, ['resource' => $type]);
+         }
+-
+         return $initials[0];
+     }
+ 
+-    /** Reject policy state IDs outside the configured active lifecycle. */
++    /** @return array{mode:string,states:list<array{id:string,code:string,name:string}>} */
++    public function options(string $type): array
++    {
++        $lifecycle = $this->lifecycleId($type);
++        $rows = [];
++        foreach ($this->availableCodes($type) as $id => $code) {
++            $state = $this->lifecycles->findActiveWorkflowState($id);
++            if ($state === null) {
++                throw new DomainException(self::ERROR_STATE_NOT_MAPPED, ['resource' => $type, 'state_id' => $id]);
++            }
++            $rows[] = ['id' => (string) $id, 'code' => $code, 'name' => (string) ($state['name'] ?? $code)];
++        }
++        return ['mode' => $lifecycle !== null ? 'LIFECYCLE' : ($rows === [] ? 'STATELESS' : 'NATIVE'), 'states' => $rows];
++    }
++
++    /** Validate a Policy's state_id regardless of Lifecycle opt-in. */
+     public function assertPolicyState(int $resourceId, int $stateId): void
+     {
+         $resource = $this->resources->findResource($resourceId);
+         if ($resource === null || ! is_string($resource['type'] ?? null)) {
+             throw new DomainException(self::ERROR_POLICY_STATE_INVALID, ['resource_id' => $resourceId]);
+         }
+-        $type = $resource['type'];
+-        $lifecycleId = $this->lifecycleId($type);
+-        if ($lifecycleId === null || ! isset($this->members($lifecycleId)[$stateId])) {
++        if (! isset($this->availableCodes($resource['type'])[$stateId])) {
+             throw new DomainException(self::ERROR_POLICY_STATE_INVALID, ['resource_id' => $resourceId, 'state_id' => $stateId]);
+         }
+     }
+ 
+-    /** @return array<int,string> state ID -> active Workflow State code */
++    /** @return array<int,string> state ID => canonical code */
++    private function availableCodes(string $type): array
++    {
++        $lifecycle = $this->lifecycleId($type);
++        if ($lifecycle !== null) {
++            return $this->members($lifecycle);
++        }
++        $type = strtolower(trim($type));
++        if (isset($this->nativeCodes[$type])) {
++            return $this->nativeCodes[$type];
++        }
++        $result = [];
++        foreach (ResourceNativeStateRegistry::codes($type) as $code) {
++            $state = $this->lifecycles->findActiveWorkflowStateByCode($code);
++            if ($state === null) {
++                throw new DomainException(self::ERROR_STATE_NOT_MAPPED, ['resource' => $type, 'status' => $code]);
++            }
++            $id = PositiveId::normalize($state['id'] ?? null, 'state_id', self::ERROR_STATE_NOT_MAPPED);
++            $result[$id] = $code;
++        }
++        return $this->nativeCodes[$type] = $result;
++    }
++
++    /** @return array<int,string> */
+     private function members(int $lifecycleId): array
+     {
+         if (isset($this->memberCodes[$lifecycleId])) {
+@@ -165,13 +194,11 @@ final class ResourceWorkflowStateResolver
+             $id = PositiveId::normalize($member['state_id'] ?? null, 'state_id', self::ERROR_RESOURCE_LIFECYCLE_INVALID);
+             $state = $this->lifecycles->findActiveWorkflowState($id);
+             if ($state === null) {
+-                // An invalid/inactive member must not silently match a policy.
+                 throw new DomainException(self::ERROR_RESOURCE_LIFECYCLE_INVALID, ['state_id' => $id]);
+             }
+             $members[$id] = strtoupper((string) ($state['code'] ?? ''));
+         }
+         $this->memberCodes[$lifecycleId] = $members;
+-
+         return $members;
+     }
+ }
+diff --git a/backend/tests/unit/P1OptInLifecycleNativeStateRegistryTest.php b/backend/tests/unit/P1OptInLifecycleNativeStateRegistryTest.php
+new file mode 100644
+index 0000000..084c837
+--- /dev/null
++++ b/backend/tests/unit/P1OptInLifecycleNativeStateRegistryTest.php
+@@ -0,0 +1,46 @@
++<?php
++
++declare(strict_types=1);
++
++use App\Services\ResourceNativeStateRegistry;
++use PHPUnit\Framework\TestCase;
++
++/** @internal */
++final class P1OptInLifecycleNativeStateRegistryTest extends TestCase
++{
++    public function testNativeOnlyResourcesCannotBeAttachedToLifecycle(): void
++    {
++        foreach ([
++            'authorization_group', 'authorization_log', 'display_setting',
++            'employee_assignment', 'import_job', 'lifecycle', 'policy',
++            'user', 'workflow_state', 'resource',
++        ] as $type) {
++            self::assertTrue(ResourceNativeStateRegistry::forbidsLifecycle($type), $type);
++        }
++        self::assertCount(10, ResourceNativeStateRegistry::nativeOnlyTypes());
++        self::assertFalse(ResourceNativeStateRegistry::forbidsLifecycle('province'));
++        self::assertFalse(ResourceNativeStateRegistry::forbidsLifecycle('product'));
++    }
++
++    public function testNativeAndStatelessCatalogPreservesPolicyStateSemantics(): void
++    {
++        self::assertSame([], ResourceNativeStateRegistry::codes('authorization_log'));
++        self::assertSame([], ResourceNativeStateRegistry::codes('display_setting'));
++        self::assertSame(['ACTIVE', 'INACTIVE'], ResourceNativeStateRegistry::codes('policy'));
++        self::assertSame(['ACTIVE', 'INACTIVE'], ResourceNativeStateRegistry::codes('resource'));
++        self::assertSame(['ACTIVE', 'INACTIVE', 'CLOSED'], ResourceNativeStateRegistry::codes('province'));
++        self::assertContains('COMPLETED_WITH_ERRORS', ResourceNativeStateRegistry::codes('import_job'));
++    }
++
++    public function testNativeCatalogCoversEveryDeclaredCodeWithoutDuplicates(): void
++    {
++        $codes = ResourceNativeStateRegistry::allCodes();
++        self::assertContains('ACTIVE', $codes);
++        self::assertContains('INACTIVE', $codes);
++        self::assertContains('CLOSED', $codes);
++        self::assertSame(count($codes), count(array_unique($codes)));
++        $sorted = $codes;
++        sort($sorted);
++        self::assertSame($sorted, $codes);
++    }
++}
+diff --git a/backend/tests/unit/P1Wf006StateAwarePbacAndLocationTransitionsTest.php b/backend/tests/unit/P1Wf006StateAwarePbacAndLocationTransitionsTest.php
+index a2b060a..0ef86fb 100644
+--- a/backend/tests/unit/P1Wf006StateAwarePbacAndLocationTransitionsTest.php
++++ b/backend/tests/unit/P1Wf006StateAwarePbacAndLocationTransitionsTest.php
+@@ -60,6 +60,72 @@ final class P1Wf006StateAwarePbacAndLocationTransitionsTest extends CIUnitTestCa
+         }
+     }
+ 
++    public function testWithoutLifecycleNativeStateStillResolvesAbsoluteDeny(): void
++    {
++        $f = $this->fixture();
++        $this->db->table('resources')->where('type', 'province')->update(['lifecycle_id' => null]);
++        $active = $this->province('STAGE1-NATIVE-A', 'ACTIVE');
++        $this->province('STAGE1-NATIVE-I', 'INACTIVE');
++        $this->policy('province', $f['group'], $f['user'], $f['states']['INACTIVE'], 'view', 'ABSOLUTE_DENY');
++        $rows = $this->authorizedRows($this->api(), 'province', $f['user']);
++        $this->assertSame([$active], array_map(static fn (array $row): int => (int) $row['id'], $rows));
++        $options = (new ResourceWorkflowStateResolver($this->db))->options('province');
++        $this->assertSame('NATIVE', $options['mode']);
++        $this->assertContains((string) $f['states']['INACTIVE'], array_column($options['states'], 'id'));
++    }
++
++    public function testInactivePolicyStopsItsAbsoluteDenyWithoutChangingTargetScope(): void
++    {
++        $f = $this->fixture();
++        $target = $this->province('STAGE1-POLICY-I', 'INACTIVE');
++        $policyId = $this->policy('province', $f['group'], $f['user'], $f['states']['INACTIVE'], 'view', 'ABSOLUTE_DENY');
++        $this->assertSame([], $this->authorizedRows($this->api(), 'province', $f['user']));
++        $this->assertTrue($this->db->table('policies')->where('id', $policyId)->update(['status' => 'INACTIVE']));
++        $this->assertSame(
++            [$target],
++            array_map(static fn (array $row): int => (int) $row['id'], $this->authorizedRows($this->api(), 'province', $f['user'])),
++        );
++        $policy = $this->db->table('policies')->where('id', $policyId)->get()->getRowArray();
++        $this->assertSame((string) $f['states']['INACTIVE'], (string) ($policy['state_id'] ?? null));
++    }
++
++    public function testInactiveResourceTypeFailsClosedAndCanBeReactivated(): void
++    {
++        $f = $this->fixture();
++        $id = $this->province('STAGE1-RESOURCE', 'ACTIVE');
++        $resourceId = $this->resourceId('province');
++        $row = $this->location('province', $id);
++        $this->assertTrue($this->db->table('resources')->where('id', $resourceId)->update(['status' => 'INACTIVE']));
++        $denied = (new AuthorizationService(db: $this->db))->authorize(
++            $this->operation($f['user']), 'province', 'view',
++            new EvaluationOrganizationRequest(persistedTarget: $row),
++        );
++        $this->assertSame('DENY', $denied->decision);
++        $this->assertSame(AuthorizationService::REASON_RESOURCE_INACTIVE, $denied->reasonCode);
++        $this->assertTrue($this->db->table('resources')->where('id', $resourceId)->update(['status' => 'ACTIVE']));
++        $restored = (new AuthorizationService(db: $this->db))->authorize(
++            $this->operation($f['user']), 'province', 'view',
++            new EvaluationOrganizationRequest(persistedTarget: $row),
++        );
++        $this->assertSame('ALLOW', $restored->decision);
++    }
++
++    public function testPersistedStateCannotBeOverriddenWithClientStateHint(): void
++    {
++        $f = $this->fixture();
++        $id = $this->province('STAGE1-STATE-AUTH', 'ACTIVE');
++        try {
++            (new AuthorizationService(db: $this->db))->authorize(
++                $this->operation($f['user']), 'province', 'view',
++                new EvaluationOrganizationRequest(persistedTarget: $this->location('province', $id)),
++                $f['states']['INACTIVE'],
++            );
++            $this->fail('A caller must not substitute INACTIVE for the persisted ACTIVE State.');
++        } catch (DomainException $exception) {
++            $this->assertSame('AUTH_STATE_MISMATCH', $exception->getErrorCode());
++        }
++    }
++
+     public function testWardAllStatesDeniesBothActiveAndInactive(): void
+     {
+         $f = $this->fixture();
+diff --git a/contracts/openapi/openapi.yaml b/contracts/openapi/openapi.yaml
+index f0ba39f..c1cf2d8 100644
+--- a/contracts/openapi/openapi.yaml
++++ b/contracts/openapi/openapi.yaml
+@@ -523,6 +523,13 @@ paths:
+       operationId: deleteResource
+       summary: Delete resource
+       responses: {'204': {$ref: '#/components/responses/NoContent'}, '401': {$ref: '#/components/responses/Unauthorized'}, '403': {$ref: '#/components/responses/Forbidden'}, '404': {$ref: '#/components/responses/NotFound'}, '409': {$ref: '#/components/responses/Conflict'}}
++  /api/v1/resources/{id}/available-states:
++    parameters: [{$ref: '#/components/parameters/Id'}]
++    get:
++      operationId: getResourceAvailableStates
++      summary: Resolve canonical Lifecycle/Native State selection for PBAC policies
++      description: State IDs are authoritative workflow_states references; All States is always available as null on Policy DTO.
++      responses: {'200': {$ref: '#/components/responses/ResourceAvailableStatesResponse'}, '401': {$ref: '#/components/responses/Unauthorized'}, '403': {$ref: '#/components/responses/Forbidden'}, '404': {$ref: '#/components/responses/NotFound'}}
+   /api/v1/resources/{id}/actions:
+     parameters: [{$ref: '#/components/parameters/Id'}]
+     get:
+@@ -1077,6 +1084,7 @@ components:
+     UserIdentityResponse: {description: Shield user identity response., content: {application/json: {schema: {$ref: '#/components/schemas/UserIdentityResponse'}}}}
+     UserPermissionsResponse: {description: Direct ALLOW permissions response., content: {application/json: {schema: {$ref: '#/components/schemas/UserPermissionsResponse'}}}}
+     ResourceResponse: {description: Resource response., content: {application/json: {schema: {$ref: '#/components/schemas/ResourceResponse'}}}}
++    ResourceAvailableStatesResponse: {description: Authoritative State choices for one Resource., content: {application/json: {schema: {$ref: '#/components/schemas/ResourceAvailableStatesResponse'}}}}
+     ResourceCollection: {description: Resource collection., content: {application/json: {schema: {$ref: '#/components/schemas/ResourceCollection'}}}}
+     NumberingSeriesResponse: {description: Numbering series response., content: {application/json: {schema: {$ref: '#/components/schemas/NumberingSeriesResponse'}}}}
+     NumberingSeriesCollection: {description: Numbering series collection., content: {application/json: {schema: {$ref: '#/components/schemas/NumberingSeriesCollection'}}}}
+@@ -2096,9 +2104,11 @@ components:
+     AuthorizationGroupPatch: {type: object, properties: {code: {type: string}, name: {type: string}, description: {type: [string, 'null']}, status: {type: string, enum: [ACTIVE, INACTIVE]}}}
+     AuthorizationGroupMembers: {type: object, required: [user_ids], properties: {user_ids: {type: array, items: {$ref: '#/components/schemas/BigInt'}}}}
+     AuthorizationGroupPermissions: {type: object, required: [resource_action_ids], properties: {resource_action_ids: {type: array, items: {$ref: '#/components/schemas/BigInt'}}}}
+-    Resource: {type: object, required: [id, type, name, domain], properties: {id: {$ref: '#/components/schemas/BigInt'}, type: {type: string}, name: {type: string}, domain: {type: string, enum: [SYSTEM, MASTER, ORGANIZATION]}, lifecycle_id: {$ref: '#/components/schemas/BigInt'}, actions: {type: array, items: {$ref: '#/components/schemas/ResourceActionSummary'}}}}
+-    ResourceCreate: {type: object, required: [type, name, domain], properties: {type: {type: string}, name: {type: string}, domain: {type: string, enum: [SYSTEM, MASTER, ORGANIZATION]}, lifecycle_id: {$ref: '#/components/schemas/BigInt'}}}
+-    ResourcePatch: {type: object, properties: {name: {type: string}, lifecycle_id: {$ref: '#/components/schemas/BigInt'}}}
++    Resource: {type: object, required: [id, type, name, domain, status], properties: {id: {$ref: '#/components/schemas/BigInt'}, type: {type: string}, name: {type: string}, domain: {type: string, enum: [SYSTEM, MASTER, ORGANIZATION]}, status: {type: string, enum: [ACTIVE, INACTIVE]}, lifecycle_id: {$ref: '#/components/schemas/NullableBigInt'}, actions: {type: array, items: {$ref: '#/components/schemas/ResourceActionSummary'}}}}
++    ResourceStateOption: {type: object, required: [id, code, name], properties: {id: {$ref: '#/components/schemas/BigInt'}, code: {type: string}, name: {type: string}}}
++    ResourceAvailableStates: {type: object, required: [mode, states], properties: {mode: {type: string, enum: [LIFECYCLE, NATIVE, STATELESS]}, states: {type: array, items: {$ref: '#/components/schemas/ResourceStateOption'}}}}
++    ResourceCreate: {type: object, required: [type, name, domain], properties: {type: {type: string}, name: {type: string}, domain: {type: string, enum: [SYSTEM, MASTER, ORGANIZATION]}, status: {type: string, enum: [ACTIVE, INACTIVE]}, lifecycle_id: {$ref: '#/components/schemas/NullableBigInt'}}}
++    ResourcePatch: {type: object, properties: {name: {type: string}, status: {type: string, enum: [ACTIVE, INACTIVE]}, lifecycle_id: {$ref: '#/components/schemas/NullableBigInt'}}}
+     ResourceActionCreate: {type: object, required: [code], properties: {code: {type: string}, description: {type: string}}}
+     ResourceActionPatch: {type: object, properties: {description: {type: [string, 'null']}}}
+     ResourceAction: {type: object, required: [id, resource_id, code, description], additionalProperties: false, properties: {id: {$ref: '#/components/schemas/BigInt'}, resource_id: {$ref: '#/components/schemas/BigInt'}, code: {type: string}, description: {type: [string, 'null']}}}
+@@ -2109,9 +2119,9 @@ components:
+     NumberingSeriesState: {type: object, required: [status], properties: {status: {type: string, enum: [ACTIVE, INACTIVE]}}}
+     NumberingSeriesValidation: {type: object, required: [valid, normalized_pattern, validation_messages], properties: {valid: {type: boolean}, normalized_pattern: {type: string}, validation_messages: {type: array, items: {type: string}}}}
+     PolicyAction: {type: object, required: [resource_action_id, effect], properties: {resource_action_id: {$ref: '#/components/schemas/BigInt'}, effect: {type: string, enum: [ALLOW, DENY, ABSOLUTE_DENY]}}}
+-    Policy: {type: object, required: [id, organization_id, resource_id, participant_type, participant_ref_id, actions], properties: {id: {$ref: '#/components/schemas/BigInt'}, organization_id: {$ref: '#/components/schemas/BigInt'}, resource_id: {$ref: '#/components/schemas/BigInt'}, state_id: {allOf: [{$ref: '#/components/schemas/NullableBigInt'}], description: "NULL represents the ALL_STATES scope."}, participant_type: {type: string, enum: [USER, GROUP, POSITION, DEPARTMENT, ORGANIZATION]}, participant_ref_id: {$ref: '#/components/schemas/BigInt'}, actions: {type: array, items: {$ref: '#/components/schemas/PolicyAction'}}}}
+-    PolicyCreate: {type: object, required: [organization_id, resource_id, participant_type, participant_ref_id, actions], properties: {organization_id: {$ref: '#/components/schemas/BigInt'}, resource_id: {$ref: '#/components/schemas/BigInt'}, state_id: {allOf: [{$ref: '#/components/schemas/NullableBigInt'}], description: "NULL represents the ALL_STATES scope."}, participant_type: {type: string, enum: [USER, GROUP, POSITION, DEPARTMENT, ORGANIZATION]}, participant_ref_id: {$ref: '#/components/schemas/BigInt'}, actions: {type: array, items: {$ref: '#/components/schemas/PolicyAction'}}}}
+-    PolicyPatch: {type: object, properties: {organization_id: {$ref: '#/components/schemas/BigInt'}, resource_id: {$ref: '#/components/schemas/BigInt'}, state_id: {allOf: [{$ref: '#/components/schemas/NullableBigInt'}], description: "NULL represents the ALL_STATES scope."}, participant_type: {type: string, enum: [USER, GROUP, POSITION, DEPARTMENT, ORGANIZATION]}, participant_ref_id: {$ref: '#/components/schemas/BigInt'}, actions: {type: array, items: {$ref: '#/components/schemas/PolicyAction'}}}}
++    Policy: {type: object, required: [id, status, organization_id, resource_id, participant_type, participant_ref_id, actions], properties: {id: {$ref: '#/components/schemas/BigInt'}, status: {type: string, enum: [ACTIVE, INACTIVE]}, organization_id: {$ref: '#/components/schemas/BigInt'}, resource_id: {$ref: '#/components/schemas/BigInt'}, state_id: {allOf: [{$ref: '#/components/schemas/NullableBigInt'}], description: "NULL represents the ALL_STATES scope."}, participant_type: {type: string, enum: [USER, GROUP, POSITION, DEPARTMENT, ORGANIZATION]}, participant_ref_id: {$ref: '#/components/schemas/BigInt'}, actions: {type: array, items: {$ref: '#/components/schemas/PolicyAction'}}}}
++    PolicyCreate: {type: object, required: [organization_id, resource_id, participant_type, participant_ref_id, actions], properties: {status: {type: string, enum: [ACTIVE, INACTIVE]}, organization_id: {$ref: '#/components/schemas/BigInt'}, resource_id: {$ref: '#/components/schemas/BigInt'}, state_id: {allOf: [{$ref: '#/components/schemas/NullableBigInt'}], description: "NULL represents the ALL_STATES scope."}, participant_type: {type: string, enum: [USER, GROUP, POSITION, DEPARTMENT, ORGANIZATION]}, participant_ref_id: {$ref: '#/components/schemas/BigInt'}, actions: {type: array, items: {$ref: '#/components/schemas/PolicyAction'}}}}
++    PolicyPatch: {type: object, properties: {status: {type: string, enum: [ACTIVE, INACTIVE]}, organization_id: {$ref: '#/components/schemas/BigInt'}, resource_id: {$ref: '#/components/schemas/BigInt'}, state_id: {allOf: [{$ref: '#/components/schemas/NullableBigInt'}], description: "NULL represents the ALL_STATES scope."}, participant_type: {type: string, enum: [USER, GROUP, POSITION, DEPARTMENT, ORGANIZATION]}, participant_ref_id: {$ref: '#/components/schemas/BigInt'}, actions: {type: array, items: {$ref: '#/components/schemas/PolicyAction'}}}}
+     AuthorizationLog: {type: object, required: [id, user_id, resource_id, action, decision, created_at], properties: {id: {$ref: '#/components/schemas/BigInt'}, user_id: {$ref: '#/components/schemas/BigInt'}, organization_id: {$ref: '#/components/schemas/BigInt'}, resource_id: {$ref: '#/components/schemas/BigInt'}, action: {type: string}, state_id: {$ref: '#/components/schemas/BigInt'}, decision: {type: string, enum: [ALLOW, DENY]}, matched_policy_id: {$ref: '#/components/schemas/BigInt'}, reason: {type: [string, 'null']}, request_id: {type: [string, 'null']}, created_at: {type: string, format: date-time}}}
+     WorkflowState: {type: object, required: [id, code, name, status], properties: {id: {$ref: '#/components/schemas/BigInt'}, code: {type: string}, name: {type: string}, description: {type: [string, 'null']}, status: {type: string, enum: [ACTIVE, INACTIVE]}}}
+     WorkflowStateCreate: {type: object, required: [code, name], properties: {code: {type: string}, name: {type: string}, description: {type: string}, status: {type: string, enum: [ACTIVE, INACTIVE]}}}
+@@ -2123,6 +2133,7 @@ components:
+     AuthorizationGroupResponse: {allOf: [{$ref: '#/components/schemas/SuccessResponse'}], properties: {data: {$ref: '#/components/schemas/AuthorizationGroup'}}}
+     AuthorizationGroupCollection: {allOf: [{$ref: '#/components/schemas/CollectionResponse'}], properties: {data: {type: array, items: {$ref: '#/components/schemas/AuthorizationGroup'}}}}
+     ResourceResponse: {allOf: [{$ref: '#/components/schemas/SuccessResponse'}], properties: {data: {$ref: '#/components/schemas/Resource'}}}
++    ResourceAvailableStatesResponse: {allOf: [{$ref: '#/components/schemas/SuccessResponse'}], properties: {data: {$ref: '#/components/schemas/ResourceAvailableStates'}}}
+     ResourceCollection: {allOf: [{$ref: '#/components/schemas/CollectionResponse'}], properties: {data: {type: array, items: {$ref: '#/components/schemas/Resource'}}}}
+     NumberingSeriesResponse: {allOf: [{$ref: '#/components/schemas/SuccessResponse'}], properties: {data: {$ref: '#/components/schemas/NumberingSeries'}}}
+     NumberingSeriesCollection: {allOf: [{$ref: '#/components/schemas/CollectionResponse'}], properties: {data: {type: array, items: {$ref: '#/components/schemas/NumberingSeries'}}}}
+diff --git a/frontend/src/api/generated/types.gen.ts b/frontend/src/api/generated/types.gen.ts
+index 0611ca5..0196a39 100644
+--- a/frontend/src/api/generated/types.gen.ts
++++ b/frontend/src/api/generated/types.gen.ts
+@@ -907,7 +907,8 @@ export type Resource = {
+     type: string;
+     name: string;
+     domain: 'SYSTEM' | 'MASTER' | 'ORGANIZATION';
+-    lifecycle_id?: BigInt;
++    lifecycle_id?: NullableBigInt;
++    status: 'ACTIVE' | 'INACTIVE';
+     actions?: Array<ResourceActionSummary>;
+ };
+ 
+@@ -915,12 +916,14 @@ export type ResourceCreate = {
+     type: string;
+     name: string;
+     domain: 'SYSTEM' | 'MASTER' | 'ORGANIZATION';
+-    lifecycle_id?: BigInt;
++    status?: 'ACTIVE' | 'INACTIVE';
++    lifecycle_id?: NullableBigInt;
+ };
+ 
+ export type ResourcePatch = {
+     name?: string;
+-    lifecycle_id?: BigInt;
++    status?: 'ACTIVE' | 'INACTIVE';
++    lifecycle_id?: NullableBigInt;
+ };
+ 
+ export type ResourceActionCreate = {
+@@ -1004,6 +1007,7 @@ export type PolicyAction = {
+ 
+ export type Policy = {
+     id: BigInt;
++    status: 'ACTIVE' | 'INACTIVE';
+     organization_id: BigInt;
+     resource_id: BigInt;
+     /**
+@@ -1016,6 +1020,7 @@ export type Policy = {
+ };
+ 
+ export type PolicyCreate = {
++    status?: 'ACTIVE' | 'INACTIVE';
+     organization_id: BigInt;
+     resource_id: BigInt;
+     /**
+@@ -1028,6 +1033,7 @@ export type PolicyCreate = {
+ };
+ 
+ export type PolicyPatch = {
++    status?: 'ACTIVE' | 'INACTIVE';
+     organization_id?: BigInt;
+     resource_id?: BigInt;
+     /**
+diff --git a/frontend/src/services/security.ts b/frontend/src/services/security.ts
+index a292657..99c1d41 100644
+--- a/frontend/src/services/security.ts
++++ b/frontend/src/services/security.ts
+@@ -48,6 +48,8 @@ import type {
+   PolicyPatch,
+   Position,
+   Resource,
++  ResourceCreate,
++  ResourcePatch,
+   ResourceActionCreate,
+   ResourceActionPatch,
+   SecurityUser,
+@@ -58,6 +60,7 @@ import type {
+   WorkflowState,
+ } from '@/api/generated/types.gen'
+ import { withTypedClient } from '@/api/client'
++import { apiClient } from '@/services/api'
+ import { i18n } from '@/i18n'
+ import type { ListQuery, ListResponse } from '@/components/lists/listTypes'
+ import { getCurrentUser, type AuthUser } from '@/services/auth'
+@@ -106,6 +109,33 @@ export type SecurityPermission = {
+ 
+ export type UserState = 'ACTIVE' | 'INACTIVE' | 'LOCKED' | 'SUSPENDED' | 'BANNED' | 'DISABLED'
+ 
++export type ResourceStateOption = { id: string; code: string; name: string }
++export type ResourceAvailableStates = {
++  mode: 'LIFECYCLE' | 'NATIVE' | 'STATELESS'
++  states: ResourceStateOption[]
++}
++
++export async function getResourceAvailableStates(id: string): Promise<ResourceAvailableStates> {
++  const response = await apiClient.get<{ data: ResourceAvailableStates }>(
++    `/api/v1/resources/${encodeURIComponent(id)}/available-states`,
++  )
++  const snapshot = response.data.data
++  if (
++    !snapshot ||
++    !['LIFECYCLE', 'NATIVE', 'STATELESS'].includes(snapshot.mode) ||
++    !Array.isArray(snapshot.states) ||
++    !snapshot.states.every(
++      (item) =>
++        typeof item.id === 'string' &&
++        typeof item.code === 'string' &&
++        typeof item.name === 'string',
++    )
++  ) {
++    throw new Error('Invalid Resource state catalog response.')
++  }
++  return snapshot
++}
++
+ function headers() {
+   return { 'Accept-Language': i18n.global.locale.value as 'vi' | 'en' }
+ }
+@@ -332,9 +362,7 @@ export function listResourcePage(
+ }
+ 
+ export async function saveResource(
+-  payload:
+-    | { type: string; name: string; domain: Resource['domain'] }
+-    | { name?: string; lifecycle_id?: string },
++  payload: ResourceCreate | ResourcePatch,
+   id?: string,
+ ): Promise<Resource> {
+   return resource(
+diff --git a/frontend/src/views/SecurityPoliciesView.vue b/frontend/src/views/SecurityPoliciesView.vue
+index f60b3c5..f5815f1 100644
+--- a/frontend/src/views/SecurityPoliciesView.vue
++++ b/frontend/src/views/SecurityPoliciesView.vue
+@@ -22,6 +22,8 @@ import {
+   listResourcePage,
+   listSecurityUserPage,
+   savePolicy,
++  getResourceAvailableStates,
++  type ResourceStateOption,
+   type ManagedUser,
+   type SecurityAction,
+ } from '@/services/security'
+@@ -42,7 +44,6 @@ import type {
+ import { i18n } from '@/i18n'
+ import { normalizeApiError, reportApiError } from '@/services/errorBoundary'
+ import { useBasePermission } from '@/composables/useBasePermission'
+-import { getLifecycleStates, type LifecycleStateMembership } from '@/services/workflow'
+ 
+ type ParticipantType = Policy['participant_type']
+ type PolicyDraftAction = { resource_action_id: string; effect: PolicyAction['effect'] }
+@@ -75,9 +76,9 @@ const actions = ref<SecurityAction[]>([])
+ const actionCatalog = ref<SecurityAction[]>([])
+ const participantOptions = ref<ParticipantOption[]>([])
+ const participantLoading = ref(false)
+-const lifecycleStateMemberships = ref<LifecycleStateMembership[]>([])
++const resourceStateOptions = ref<ResourceStateOption[]>([])
+ const workflowStatesLoading = ref(false)
+-const lifecycleStatesById = new Map<string, LifecycleStateMembership[]>()
++const workflowStatesUnavailable = ref(false)
+ let participantRequestId = 0
+ let workflowStateRequestId = 0
+ let participantSearchTimer: ReturnType<typeof setTimeout> | undefined
+@@ -85,6 +86,7 @@ const form = ref({
+   organization_id: '',
+   resource_id: '',
+   state_id: '',
++  status: 'ACTIVE' as 'ACTIVE' | 'INACTIVE',
+   participant_type: 'USER' as ParticipantType,
+   participant_ref_id: '',
+   actions: [] as PolicyDraftAction[],
+@@ -110,12 +112,7 @@ const actionOptions = computed(() =>
+   actionCatalog.value.filter((action) => String(action.resource_id) === form.value.resource_id),
+ )
+ const workflowStateOptions = computed(() =>
+-  lifecycleStateMemberships.value
+-    .map((membership) =>
+-      workflowStates.value.find((state) => String(state.id) === String(membership.state_id)),
+-    )
+-    .filter((state): state is WorkflowState => state !== undefined)
+-    .map((state) => ({ id: String(state.id), label: `${state.code} · ${state.name}` })),
++  resourceStateOptions.value.map((item) => ({ id: item.id, label: `${item.code} · ${item.name}` })),
+ )
+ const participantSelectOptions = computed(() =>
+   participantOptions.value.map((option) => ({ value: option.id, label: option.label })),
+@@ -400,34 +397,25 @@ function searchParticipants(query: string): void {
+   }, 250)
+ }
+ async function loadWorkflowStates(resourceId: string): Promise<void> {
+-  const resource = resources.value.find((item) => String(item.id) === resourceId)
+-  const lifecycleId = resource?.lifecycle_id ? String(resource.lifecycle_id) : ''
+   const requestId = ++workflowStateRequestId
++  resourceStateOptions.value = []
++  workflowStatesUnavailable.value = false
+   workflowStatesLoading.value = true
+   try {
+-    if (!lifecycleId) {
+-      lifecycleStateMemberships.value = []
+-    } else {
+-      let memberships = lifecycleStatesById.get(lifecycleId)
+-      if (!memberships) {
+-        memberships = await getLifecycleStates(lifecycleId)
+-        lifecycleStatesById.set(lifecycleId, memberships)
+-      }
+-      if (requestId !== workflowStateRequestId) return
+-      lifecycleStateMemberships.value = memberships
+-    }
+-    if (
+-      form.value.state_id &&
+-      !lifecycleStateMemberships.value.some(
+-        (membership) => String(membership.state_id) === form.value.state_id,
+-      )
+-    ) {
+-      form.value.state_id = ''
++    const result = resourceId
++      ? await getResourceAvailableStates(resourceId)
++      : { mode: 'STATELESS' as const, states: [] }
++    if (requestId !== workflowStateRequestId) return
++    resourceStateOptions.value = result.states
++    if (form.value.state_id && !result.states.some((item) => item.id === form.value.state_id)) {
++      // Preserve an invalid existing selection as a visible validation problem;
++      // never silently broaden a state-specific Policy to All States on load.
++      workflowStatesUnavailable.value = true
+     }
+   } catch (caught: unknown) {
+     if (requestId === workflowStateRequestId) {
+-      lifecycleStateMemberships.value = []
+-      form.value.state_id = ''
++      resourceStateOptions.value = []
++      workflowStatesUnavailable.value = true
+       error.value = caught
+       reportApiError(caught)
+     }
+@@ -437,6 +425,7 @@ async function loadWorkflowStates(resourceId: string): Promise<void> {
+ }
+ function onResourceChange(resourceId: string): void {
+   form.value.state_id = ''
++  form.value.actions = []
+   void Promise.all([loadActions(resourceId), loadWorkflowStates(resourceId)])
+ }
+ function openCreate(): void {
+@@ -445,6 +434,7 @@ function openCreate(): void {
+     organization_id: organizations.value[0] ? String(organizations.value[0].id) : '',
+     resource_id: resources.value[0] ? String(resources.value[0].id) : '',
+     state_id: '',
++    status: 'ACTIVE',
+     participant_type: 'USER',
+     participant_ref_id: '',
+     actions: [],
+@@ -479,6 +469,7 @@ function openEdit(policy: Policy): void {
+     organization_id: String(policy.organization_id),
+     resource_id: String(policy.resource_id),
+     state_id: policy.state_id ? String(policy.state_id) : '',
++    status: policy.status,
+     participant_type: policy.participant_type,
+     participant_ref_id: String(policy.participant_ref_id),
+     actions: policy.actions.map((action) => ({
+@@ -508,10 +499,13 @@ async function save(): Promise<void> {
+   error.value = null
+   duplicateScopeConflict.value = false
+   try {
++    if (workflowStatesLoading.value || workflowStatesUnavailable.value) return
+     const payload = {
+       organization_id: form.value.organization_id,
+       resource_id: form.value.resource_id,
+-      ...(form.value.state_id ? { state_id: form.value.state_id } : {}),
++      // Explicit null clears a State when editing; omission would retain the old scope.
++      state_id: form.value.state_id || null,
++      status: form.value.status,
+       participant_type: form.value.participant_type,
+       participant_ref_id: form.value.participant_ref_id,
+       actions: form.value.actions,
+@@ -678,12 +672,18 @@ onBeforeUnmount(() => {
+               {{ item.type }} · {{ item.name }}
+             </option>
+           </select></label
++        ><label
++          ><span>{{ t('security.status') }}</span
++          ><select v-model="form.status" class="field-select">
++            <option value="ACTIVE">{{ t('status.active') }}</option>
++            <option value="INACTIVE">{{ t('status.inactive') }}</option>
++          </select></label
+         ><label
+           ><span>{{ t('security.workflowState') }}</span
+           ><select
+             v-model="form.state_id"
+             class="field-select"
+-            :disabled="workflowStatesLoading || !form.resource_id"
++            :disabled="workflowStatesLoading || workflowStatesUnavailable || !form.resource_id"
+           >
+             <option value="">{{ t('security.allStates') }}</option>
+             <option v-for="item in workflowStateOptions" :key="item.id" :value="item.id">
+@@ -691,6 +691,9 @@ onBeforeUnmount(() => {
+             </option>
+           </select></label
+         >
++        <p v-if="workflowStatesUnavailable" class="inline-error" role="alert">
++          {{ t('security.requestError') }}
++        </p>
+         <div class="form-grid">
+           <label
+             ><span>{{ t('security.participantType') }}</span
+@@ -772,6 +775,8 @@ onBeforeUnmount(() => {
+             class="primary-button"
+             :disabled="
+               busy ||
++              workflowStatesLoading ||
++              workflowStatesUnavailable ||
+               form.actions.length === 0 ||
+               !form.participant_ref_id ||
+               !hasBasePermission(editingId ? 'policy' : 'policy', editingId ? 'edit' : 'create')
+diff --git a/frontend/src/views/SecurityResourcesView.vue b/frontend/src/views/SecurityResourcesView.vue
+index 553d209..4b299ac 100644
+--- a/frontend/src/views/SecurityResourcesView.vue
++++ b/frontend/src/views/SecurityResourcesView.vue
+@@ -40,7 +40,13 @@ const editingActionId = ref<string | undefined>()
+ const busy = ref(false)
+ const error = ref<unknown | null>(null)
+ const lifecycles = ref<Lifecycle[]>([])
+-const form = ref({ type: '', name: '', domain: 'SYSTEM' as Resource['domain'], lifecycle_id: '' })
++const form = ref({
++  type: '',
++  name: '',
++  domain: 'SYSTEM' as Resource['domain'],
++  lifecycle_id: '',
++  status: 'ACTIVE' as 'ACTIVE' | 'INACTIVE',
++})
+ const actionForm = ref({ code: '', description: '' })
+ const columns: readonly ListColumn<Resource>[] = [
+   { key: 'type', labelKey: 'security.type', sortable: true },
+@@ -101,7 +107,13 @@ function openActionsTab(): void {
+ }
+ function openCreate(): void {
+   editingId.value = undefined
+-  form.value = { type: '', name: '', domain: 'SYSTEM', lifecycle_id: '' }
++  form.value = {
++    type: '',
++    name: '',
++    domain: 'SYSTEM',
++    lifecycle_id: '',
++    status: 'ACTIVE',
++  }
+   modalOpen.value = true
+ }
+ function openEdit(row: Resource): void {
+@@ -111,6 +123,7 @@ function openEdit(row: Resource): void {
+     name: row.name,
+     domain: row.domain,
+     lifecycle_id: row.lifecycle_id ? String(row.lifecycle_id) : '',
++    status: row.status,
+   }
+   modalOpen.value = true
+ }
+@@ -122,7 +135,8 @@ async function save(): Promise<void> {
+       ? await saveResource(
+           {
+             name: form.value.name,
+-            ...(form.value.lifecycle_id ? { lifecycle_id: form.value.lifecycle_id } : {}),
++            status: form.value.status,
++            lifecycle_id: form.value.lifecycle_id || null,
+           },
+           editingId.value,
+         )
+@@ -130,7 +144,8 @@ async function save(): Promise<void> {
+           type: form.value.type,
+           name: form.value.name,
+           domain: form.value.domain,
+-          ...(form.value.lifecycle_id ? { lifecycle_id: form.value.lifecycle_id } : {}),
++          status: form.value.status,
++          lifecycle_id: form.value.lifecycle_id || null,
+         })
+     modalOpen.value = false
+     selectedId.value = String(saved.id)
+@@ -446,6 +461,12 @@ onMounted(() => {
+           ><small class="security-note">{{
+             editingId ? t('security.domainImmutable') : t('security.domainCreateNote')
+           }}</small></label
++        ><label
++          ><span>{{ t('security.status') }}</span
++          ><select v-model="form.status" class="field-select">
++            <option value="ACTIVE">{{ t('status.active') }}</option>
++            <option value="INACTIVE">{{ t('status.inactive') }}</option>
++          </select></label
+         ><label
+           ><span>{{ t('security.lifecycle') }}</span
+           ><select v-model="form.lifecycle_id" class="field-select">

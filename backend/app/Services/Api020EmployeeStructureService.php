@@ -5,12 +5,14 @@ declare(strict_types=1);
 namespace App\Services;
 
 use App\Authorization\AuthorizationService;
+use App\Authorization\EffectiveListBucketCompiler;
 use App\Authorization\EvaluationOrganizationRequest;
 use App\Exceptions\DomainException;
 use App\Infrastructure\Api\AuthorizedArrayListSource;
 use App\Infrastructure\Api\CommonListQueryAllowlist;
 use App\Infrastructure\Api\CommonListQueryAdapter;
 use App\Infrastructure\Api\CommonListResult;
+use App\Infrastructure\Api\SqlAuthorizedBucketListSource;
 use App\Infrastructure\Mutation\MutationContext;
 use App\Infrastructure\Mutation\OperationContext;
 use App\Infrastructure\RequestContext;
@@ -26,6 +28,8 @@ use DateTimeImmutable;
 /** Application boundary for the CONTRACT_READY P1-API-020 resources. */
 final class Api020EmployeeStructureService
 {
+    private ?AuthorizationService $runtimeAuthorization = null;
+
     /** @var list<string> */
     private const RESOURCES = ['department', 'position', 'employee', 'employee_assignment'];
 
@@ -51,23 +55,31 @@ final class Api020EmployeeStructureService
     {
         $this->assertResource($resource);
         $operation = $this->operation();
-        $rows = $this->authorizedRows($resource, $operation);
-        $query = $this->applyDataFilters($resource, $query, $rows, $operation);
-
-        $result = ($this->queryAdapter ?? new CommonListQueryAdapter())->paginate(
-            $query,
-            $this->allowlist($resource),
-            new AuthorizedArrayListSource($rows),
-        );
-
-        $data = [];
-        foreach ($result->data as $row) {
-            if (is_array($row)) {
-                $data[] = $this->outputRow($resource, $row);
+        return $this->auth()->withReadOnlyBatch($operation, function () use ($resource, $query, $operation) {
+            // Compile only row-equivalent State/Scope buckets. This is SQL
+            // authorization-before-pagination, never LIMIT-before-PBAC.
+            $sql = $this->authorizedSqlPage($resource, $query, $operation);
+            if ($sql !== null) {
+                return $sql;
             }
-        }
+            $rows = $this->authorizedRows($resource, $operation);
+            $query = $this->applyDataFilters($resource, $query, $rows, $operation);
 
-        return new CommonListResult($data, $result->query, $result->total);
+            $result = ($this->queryAdapter ?? new CommonListQueryAdapter())->paginate(
+                $query,
+                $this->allowlist($resource),
+                new AuthorizedArrayListSource($rows),
+            );
+
+            $data = [];
+            foreach ($result->data as $row) {
+                if (is_array($row)) {
+                    $data[] = $this->outputRow($resource, $row);
+                }
+            }
+
+            return new CommonListResult($data, $result->query, $result->total);
+        });
     }
 
     /** @return array<string, mixed> */
@@ -140,6 +152,64 @@ final class Api020EmployeeStructureService
         };
 
         return $this->get($resource, $id);
+    }
+
+    /**
+     * An exact SQL fast-path for native/Lifecycle State buckets. Department,
+     * Position and Employee are MASTER (group scope). Employee Assignment's
+     * only per-target PBAC inputs are authoritative organization_id + status.
+     * All other filters/sorts, including effective_at, retain the old path.
+     *
+     * @param array<string,mixed> $query
+     */
+    private function authorizedSqlPage(string $resource, array $query, OperationContext $operation): ?CommonListResult
+    {
+        // The employee's assignment-derived data filters require different
+        // assignments to match different fields: leave them on the legacy path.
+        if ($resource === 'employee' && isset($query['filter']) && is_array($query['filter'])
+            && array_intersect(['organization_id', 'department_id', 'position_id'], array_keys($query['filter'])) !== []) {
+            return null;
+        }
+        if ($resource === 'employee_assignment' && isset($query['filter']) && is_array($query['filter'])
+            && array_key_exists('effective_at', $query['filter'])) {
+            return null;
+        }
+        // Preserve legacy authorization-before-validation error precedence on
+        // unsupported client queries rather than parsing them before the scan.
+        if (array_key_exists('q', $query) || (isset($query['sort']) && ! in_array($query['sort'], ['id', '-id'], true))) {
+            return null;
+        }
+        $adapter = $this->queryAdapter ?? new CommonListQueryAdapter();
+        $normalized = $query;
+        if ($resource === 'employee_assignment' && isset($query['filter']) && is_array($query['filter'])
+            && array_key_exists('is_primary', $query['filter'])) {
+            $dummy = [];
+            $normalized = $this->applyDataFilters($resource, $query, $dummy, $operation);
+        }
+        $parsed = $adapter->parse($normalized, $this->allowlist($resource));
+        if (! SqlAuthorizedBucketListSource::supports($resource, $parsed)) {
+            return null;
+        }
+
+        $db = $this->db ?? db_connect();
+        $buckets = (new EffectiveListBucketCompiler($db, $this->auth()))->compile(
+            $resource, $operation, fn (DomainException $exception): bool => $this->isListDenied($exception),
+        );
+        if ($buckets === null) {
+            return null; // too many buckets, unknown domain, or concurrent row move
+        }
+        $result = $adapter->paginate($normalized, $this->allowlist($resource),
+            new SqlAuthorizedBucketListSource($db, $resource, $buckets));
+        $data = [];
+        foreach ($result->data as $row) {
+            if (is_array($row)) {
+                // Fail closed if Scope/State/Policy changed between compiling
+                // the bucket and fetching the page (not a cache of decisions).
+                $this->authorizeAction($resource, 'view', $row, [], $operation);
+                $data[] = $this->outputRow($resource, $row);
+            }
+        }
+        return new CommonListResult($data, $result->query, $result->total);
     }
 
     /** @return list<array<string, mixed>> */
@@ -394,7 +464,7 @@ final class Api020EmployeeStructureService
 
     private function auth(): AuthorizationService
     {
-        return $this->authorization ?? new AuthorizationService();
+        return $this->authorization ?? ($this->runtimeAuthorization ??= new AuthorizationService(db: $this->db));
     }
 
     private function departmentRepo(): DepartmentRepository

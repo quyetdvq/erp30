@@ -1,0 +1,248 @@
+diff --git a/backend/app/Modules/Product/Product/ProductRoleService.php b/backend/app/Modules/Product/Product/ProductRoleService.php
+index 4027ae1..6bdefce 100644
+--- a/backend/app/Modules/Product/Product/ProductRoleService.php
++++ b/backend/app/Modules/Product/Product/ProductRoleService.php
+@@ -35,6 +35,48 @@ final class ProductRoleService
+         return $this->resolve($product)['role'];
+     }
+ 
++    /**
++     * Derive list-only Product fields from a complete Product snapshot.
++     *
++     * Reuses the same role validation as single-record reads while avoiding
++     * per-Product parent/child SQL queries. Call with the unpaginated list:
++     * structural checks require parents and descendants outside the page.
++     *
++     * @param list<array<string, mixed>> $rows
++     * @return list<array<string, mixed>>
++     */
++    public function describeList(array $rows): array
++    {
++        $byId = [];
++        $childrenByParent = [];
++        foreach ($rows as $row) {
++            if (isset($row['id'])) {
++                $byId[(int) $row['id']] = $row;
++            }
++            if (($row['parent_product_id'] ?? null) !== null) {
++                $childrenByParent[(int) $row['parent_product_id']][] = $row;
++            }
++        }
++        foreach ($childrenByParent as $parentId => $children) {
++            usort($children, static fn (array $a, array $b): int => (int) ($a['id'] ?? 0) <=> (int) ($b['id'] ?? 0));
++            $childrenByParent[$parentId] = $children;
++        }
++
++        $result = [];
++        foreach ($rows as $row) {
++            $resolved = $this->resolve($row, $byId, $childrenByParent);
++            $role = $resolved['role'];
++            $row['role'] = $role;
++            $row['full_name'] = $this->fullName($resolved);
++            $row['selectable'] = strtoupper((string) ($row['status'] ?? '')) === 'ACTIVE'
++                && in_array($role, [self::ROLE_SIMPLE, self::ROLE_CHILD, self::ROLE_COMBO], true);
++            $row['leaf_transactionable'] = in_array($role, [self::ROLE_SIMPLE, self::ROLE_CHILD], true);
++            $result[] = $row;
++        }
++
++        return $result;
++    }
++
+     /** @return array<string, mixed>|null */
+     public function findById(mixed $productId): ?array
+     {
+@@ -83,7 +125,12 @@ final class ProductRoleService
+ 
+     public function getFullName(mixed $product): string
+     {
+-        $resolved = $this->resolve($product);
++        return $this->fullName($this->resolve($product));
++    }
++
++    /** @param array{row:array<string,mixed>,role:string,parent?:array<string,mixed>} $resolved */
++    private function fullName(array $resolved): string
++    {
+         $row = $resolved['row'];
+         if ($resolved['role'] !== self::ROLE_CHILD) {
+             return $this->requiredName($row['product_name'] ?? null, 'product_name');
+@@ -99,10 +146,16 @@ final class ProductRoleService
+         return $this->requiredName($parent['product_name'] ?? null, 'parent.product_name') . ' - ' . $childName;
+     }
+ 
+-    /** @return array{row:array<string,mixed>,role:string,parent?:array<string,mixed>} */
+-    private function resolve(mixed $product): array
++    /**
++     * @param array<int, array<string,mixed>>|null $byId
++     * @param array<int, list<array<string,mixed>>>|null $childrenByParent
++     * @return array{row:array<string,mixed>,role:string,parent?:array<string,mixed>}
++     */
++    private function resolve(mixed $product, ?array $byId = null, ?array $childrenByParent = null): array
+     {
+-        $row = is_array($product) ? $product : $this->repo()->findById($product);
++        $row = is_array($product)
++            ? $product
++            : ($byId !== null ? ($byId[(int) $product] ?? null) : $this->repo()->findById($product));
+         if ($row === null) {
+             throw new DomainException(self::ERROR_NOT_FOUND, ['product_id' => $product]);
+         }
+@@ -113,7 +166,7 @@ final class ProductRoleService
+         $type = strtoupper((string) ($row['product_type'] ?? ''));
+         $parentId = $row['parent_product_id'] ?? null;
+         if ($type === self::ROLE_COMBO) {
+-            if ($parentId !== null || $this->repo()->hasChildren($row['id'])) {
++            if ($parentId !== null || $this->hasChildren($row['id'], $childrenByParent)) {
+                 throw new DomainException(self::ERROR_INVALID_ROLE, ['reason' => 'combo_structure', 'product_id' => $row['id']]);
+             }
+             return ['row' => $row, 'role' => self::ROLE_COMBO];
+@@ -126,23 +179,25 @@ final class ProductRoleService
+             if ((int) $row['id'] === $parentId) {
+                 throw new DomainException(self::ERROR_INVALID_ROLE, ['reason' => 'self_parent', 'product_id' => $row['id']]);
+             }
+-            $parent = $this->repo()->findById($parentId);
++            $parent = $byId !== null ? ($byId[$parentId] ?? null) : $this->repo()->findById($parentId);
+             if ($parent === null) {
+                 throw new DomainException(self::ERROR_INVALID_ROLE, ['reason' => 'parent_not_found', 'product_id' => $row['id']]);
+             }
+             $this->assertRootStandard($parent, 'parent');
+-            if ($this->repo()->hasChildren($row['id'])) {
++            if ($this->hasChildren($row['id'], $childrenByParent)) {
+                 throw new DomainException(self::ERROR_INVALID_ROLE, ['reason' => 'child_has_children', 'product_id' => $row['id']]);
+             }
+             return ['row' => $row, 'role' => self::ROLE_CHILD, 'parent' => $parent];
+         }
+ 
+-        $children = $this->repo()->listChildren($row['id']);
++        $children = $childrenByParent !== null
++            ? ($childrenByParent[(int) $row['id']] ?? [])
++            : $this->repo()->listChildren($row['id']);
+         foreach ($children as $child) {
+             if (strtoupper((string) ($child['product_type'] ?? '')) !== 'STANDARD'
+                 || ($child['parent_product_id'] ?? null) === null
+                 || (int) $child['parent_product_id'] !== (int) $row['id']
+-                || $this->repo()->hasChildren($child['id'])) {
++                || $this->hasChildren($child['id'], $childrenByParent)) {
+                 throw new DomainException(self::ERROR_INVALID_ROLE, ['reason' => 'child_structure', 'product_id' => $row['id']]);
+             }
+         }
+@@ -150,6 +205,16 @@ final class ProductRoleService
+         return ['row' => $row, 'role' => $children === [] ? self::ROLE_SIMPLE : self::ROLE_PARENT];
+     }
+ 
++    /** @param array<int, list<array<string,mixed>>>|null $childrenByParent */
++    private function hasChildren(mixed $id, ?array $childrenByParent): bool
++    {
++        if ($childrenByParent !== null) {
++            return ($childrenByParent[(int) $id] ?? []) !== [];
++        }
++
++        return $this->repo()->hasChildren($id);
++    }
++
+     /** @param array<string,mixed> $parent */
+     private function assertRootStandard(array $parent, string $field): void
+     {
+diff --git a/backend/app/Services/Api050ProductCatalogService.php b/backend/app/Services/Api050ProductCatalogService.php
+index bd6d6d0..369dca5 100644
+--- a/backend/app/Services/Api050ProductCatalogService.php
++++ b/backend/app/Services/Api050ProductCatalogService.php
+@@ -148,7 +148,12 @@ final class Api050ProductCatalogService
+     public function listProducts(array $query = []): array
+     {
+         $this->authorize('product', 'view');
+-        $rows = array_map(fn (array $row): array => $this->decorateProduct($row), $this->products()->listAll());
++        // Derive relationship-dependent fields in one in-memory pass. Per-row
++        // role resolution would otherwise issue SQL for each Product.
++        $rows = array_map(
++            fn (array $row): array => $this->productCodeForApi($row),
++            $this->roles()->describeList($this->products()->listAll()),
++        );
+         return $this->paginate(
+             $rows,
+             $query,
+@@ -306,6 +311,14 @@ final class Api050ProductCatalogService
+         $row['full_name'] = $this->roles()->getFullName($row);
+         $row['selectable'] = $this->roles()->isSelectable($row);
+         $row['leaf_transactionable'] = $this->roles()->isLeafTransactionable($row);
++        return $this->productCodeForApi($row);
++    }
++
++    /** @param array<string, mixed> $row
++     *  @return array<string, mixed>
++     */
++    private function productCodeForApi(array $row): array
++    {
+         if (array_key_exists('code', $row)) {
+             $row['product_code'] = $row['code'];
+             unset($row['code']);
+diff --git a/backend/tests/Modules/Product/Product/P1Prd004ProductRoleServiceTest.php b/backend/tests/Modules/Product/Product/P1Prd004ProductRoleServiceTest.php
+index e50a70e..0978576 100644
+--- a/backend/tests/Modules/Product/Product/P1Prd004ProductRoleServiceTest.php
++++ b/backend/tests/Modules/Product/Product/P1Prd004ProductRoleServiceTest.php
+@@ -87,6 +87,67 @@ final class P1Prd004ProductRoleServiceTest extends CIUnitTestCase
+         $this->assertDomainCode(fn () => $role->getFullName(987654321), ProductRoleService::ERROR_NOT_FOUND);
+     }
+ 
++    public function testDescribeListMatchesCanonicalSingleProductFields(): void
++    {
++        $role = new ProductRoleService(db: $this->db);
++        $base = ['product_type' => 'STANDARD', 'status' => 'ACTIVE', 'created_at' => '2026-10-06 00:00:00'];
++        $this->db->table('products')->insert(array_merge($base, ['code' => 'ROLE-LIST-PARENT', 'product_name' => 'T-Shirt']));
++        $parentId = (int) $this->db->insertID();
++        $this->db->table('products')->insert(array_merge($base, ['code' => 'ROLE-LIST-CHILD', 'parent_product_id' => $parentId, 'product_child_name' => 'Red']));
++        $this->db->table('products')->insert(array_merge($base, ['code' => 'ROLE-LIST-SIMPLE', 'product_name' => 'Simple']));
++        $this->db->table('products')->insert(array_merge($base, ['code' => 'ROLE-LIST-INACTIVE', 'status' => 'INACTIVE', 'product_name' => 'Inactive']));
++        $this->db->table('products')->insert(array_merge($base, ['code' => 'ROLE-LIST-COMBO', 'product_type' => 'COMBO', 'product_name' => 'Combo']));
++
++        $codes = ['ROLE-LIST-PARENT', 'ROLE-LIST-CHILD', 'ROLE-LIST-SIMPLE', 'ROLE-LIST-INACTIVE', 'ROLE-LIST-COMBO'];
++        $query = $this->db->table('products')->whereIn('code', $codes)->orderBy('id', 'ASC')->get();
++        $this->assertNotFalse($query);
++        $rows = array_values($query->getResultArray());
++        $this->assertCount(5, $rows);
++
++        $described = $role->describeList($rows);
++        $this->assertCount(5, $described);
++        foreach ($rows as $index => $row) {
++            $this->assertSame($role->getRole($row), $described[$index]['role']);
++            $this->assertSame($role->getFullName($row), $described[$index]['full_name']);
++            $this->assertSame($role->isSelectable($row), $described[$index]['selectable']);
++            $this->assertSame($role->isLeafTransactionable($row), $described[$index]['leaf_transactionable']);
++            $this->assertSame($row['code'], $described[$index]['code']);
++        }
++    }
++
++    public function testDescribeListRejectsIncompleteAndInvalidProductGraphs(): void
++    {
++        $role = new ProductRoleService(db: $this->db);
++        $child = [
++            'id' => 90002, 'parent_product_id' => 90001, 'product_type' => 'STANDARD',
++            'product_child_name' => 'Red', 'status' => 'ACTIVE',
++        ];
++        $this->assertDomainCode(fn () => $role->describeList([$child]), ProductRoleService::ERROR_INVALID_ROLE);
++
++        $combo = ['id' => 90003, 'product_type' => 'COMBO', 'product_name' => 'Combo', 'status' => 'ACTIVE'];
++        $this->assertDomainCode(
++            fn () => $role->describeList([$combo, ['id' => 90004, 'parent_product_id' => 90003, 'product_type' => 'STANDARD', 'product_child_name' => 'Child']]),
++            ProductRoleService::ERROR_INVALID_ROLE,
++        );
++    }
++
++    public function testDescribeListRequiresNoDatabaseQueryForCompleteSnapshot(): void
++    {
++        // No constructor => no initialized connection. Any repository access
++        // from describeList would fail this regression test immediately.
++        $role = (new \ReflectionClass(ProductRoleService::class))->newInstanceWithoutConstructor();
++        $rows = [
++            ['id' => 50002, 'parent_product_id' => 50001, 'product_type' => 'STANDARD', 'product_child_name' => 'Blue', 'status' => 'ACTIVE'],
++            ['id' => 50001, 'parent_product_id' => null, 'product_type' => 'STANDARD', 'product_name' => 'Jacket', 'status' => 'ACTIVE'],
++        ];
++        $result = $role->describeList($rows);
++        $this->assertSame(ProductRoleService::ROLE_CHILD, $result[0]['role']);
++        $this->assertSame('Jacket - Blue', $result[0]['full_name']);
++        $this->assertTrue($result[0]['selectable']);
++        $this->assertSame(ProductRoleService::ROLE_PARENT, $result[1]['role']);
++        $this->assertFalse($result[1]['selectable']);
++    }
++
+     private function assertDomainCode(callable $callback, string $code): void
+     {
+         try {

@@ -1,0 +1,124 @@
+diff --git a/backend/tests/database/P1Db040WorkflowLifecycleTest.php b/backend/tests/database/P1Db040WorkflowLifecycleTest.php
+index 168b61a..ad48a9e 100644
+--- a/backend/tests/database/P1Db040WorkflowLifecycleTest.php
++++ b/backend/tests/database/P1Db040WorkflowLifecycleTest.php
+@@ -105,13 +105,16 @@ final class P1Db040WorkflowLifecycleTest extends CIUnitTestCase
+     public function testLifecycleAndWorkflowCodesAndRelationshipKeysAreUnique(): void
+     {
+         $this->db->table('lifecycles')->insert($this->lifecycle('LIFE-UNIQUE'));
++        // Capture each successful insert ID immediately: the following duplicate
++        // inserts intentionally fail and can reset the connection's last insert ID.
++        $lifecycleId = (int) $this->db->insertID();
++        $this->assertGreaterThan(0, $lifecycleId);
+         $this->assertInsertRejected('lifecycles', $this->lifecycle('LIFE-UNIQUE'));
+ 
+         $this->db->table('workflow_states')->insert($this->state('STATE-UNIQUE'));
++        $stateId = (int) $this->db->insertID();
++        $this->assertGreaterThan(0, $stateId);
+         $this->assertInsertRejected('workflow_states', $this->state('STATE-UNIQUE'));
+-
+-        $lifecycleId = $this->db->insertID();
+-        $stateId = $this->db->table('workflow_states')->where('code', 'STATE-UNIQUE')->get()->getFirstRow()->id;
+         $this->db->table('lifecycle_states')->insert($this->lifecycleState((int) $lifecycleId, (int) $stateId));
+         $this->assertInsertRejected('lifecycle_states', $this->lifecycleState((int) $lifecycleId, (int) $stateId));
+ 
+diff --git a/backend/tests/database/P1Seed003PrivilegedAuthorizationGroupTest.php b/backend/tests/database/P1Seed003PrivilegedAuthorizationGroupTest.php
+index 7eb092b..b890965 100644
+--- a/backend/tests/database/P1Seed003PrivilegedAuthorizationGroupTest.php
++++ b/backend/tests/database/P1Seed003PrivilegedAuthorizationGroupTest.php
+@@ -23,14 +23,24 @@ final class P1Seed003PrivilegedAuthorizationGroupTest extends CIUnitTestCase
+         $this->seedPrivilegedGroup();
+         $second = $this->permissionSnapshot();
+ 
+-        $this->assertSame(93, PrivilegedAuthorizationGroupSeeder::approvedActionCount());
++        // Stage 1 explicitly adds policy.setstate and resource.setstate to
++        // the approved SYSTEM_ADMIN matrix; unrelated future actions stay out.
++        $this->assertSame(95, PrivilegedAuthorizationGroupSeeder::approvedActionCount());
+         $this->assertSame($first, $second);
++        $approved = array_map(
++            static fn (array $action): string => $action['resource_type'] . '.' . $action['action'],
++            PrivilegedAuthorizationGroupSeeder::approvedActions(),
++        );
++        sort($approved, SORT_STRING);
++        $this->assertSame($approved, $first);
++        $this->assertContains('policy.setstate', $first);
++        $this->assertContains('resource.setstate', $first);
+         $this->assertCount(1, $this->db->table('groups')->where('code', 'SYSTEM_ADMIN')->get()->getResultArray());
+         $group = $this->db->table('groups')->where('code', 'SYSTEM_ADMIN')->get()->getRowArray();
+         $this->assertSame('System Admin', $group['name']);
+         $this->assertNull($group['description']);
+         $this->assertSame('ACTIVE', $group['status']);
+-        $this->assertSame(93, count($first));
++        $this->assertSame(95, count($first));
+         $this->assertSame([
+             'policies' => 0,
+             'auto_numbering_series' => 0,
+@@ -59,7 +69,7 @@ final class P1Seed003PrivilegedAuthorizationGroupTest extends CIUnitTestCase
+         $this->assertSame(1, $this->db->table('group_permissions')->where([
+             'group_id' => $groupId, 'resource_action_id' => $futureActionId,
+         ])->countAllResults());
+-        $this->assertSame(94, $this->db->table('group_permissions')->where('group_id', $groupId)->countAllResults());
++        $this->assertSame(96, $this->db->table('group_permissions')->where('group_id', $groupId)->countAllResults());
+     }
+ 
+     public function testMissingApprovedActionRollsBackTheWholeBootstrap(): void
+@@ -104,7 +114,10 @@ final class P1Seed003PrivilegedAuthorizationGroupTest extends CIUnitTestCase
+         $groups = $adapter->resolveActiveAuthorizationGroups($identity);
+         $permissions = $adapter->resolveGroupBasePermissions($groups);
+         $this->assertContains('SYSTEM_ADMIN', array_map(static fn ($group): string => $group->code, $groups));
+-        $this->assertCount(93, $permissions);
++        $this->assertCount(95, $permissions);
++        $keys = array_map(static fn ($permission): string => $permission->key(), $permissions);
++        $this->assertContains('policy.setstate', $keys);
++        $this->assertContains('resource.setstate', $keys);
+     }
+ 
+     private function seedCatalog(): void
+diff --git a/backend/tests/unit/P1Iam001ShieldIdentityAdapterTest.php b/backend/tests/unit/P1Iam001ShieldIdentityAdapterTest.php
+index bd40329..42bc018 100644
+--- a/backend/tests/unit/P1Iam001ShieldIdentityAdapterTest.php
++++ b/backend/tests/unit/P1Iam001ShieldIdentityAdapterTest.php
+@@ -132,7 +132,9 @@ final class P1Iam001ShieldIdentityAdapterTest extends CIUnitTestCase
+         $identity = $adapter->resolveIdentity($this->shieldUser($user));
+         $keys = array_map(static fn (BasePermission $permission): string => $permission->key(), $adapter->resolveGroupBasePermissions($adapter->resolveGroups($identity)));
+ 
+-        $this->assertCount(93, $keys);
++        $this->assertCount(95, $keys);
++        $this->assertContains('policy.setstate', $keys);
++        $this->assertContains('resource.setstate', $keys);
+         $this->assertNotContains('product.future_action', $keys);
+     }
+ 
+diff --git a/backend/tests/unit/P1Iam002EffectiveProfileResolverTest.php b/backend/tests/unit/P1Iam002EffectiveProfileResolverTest.php
+index 9805cfe..99fed67 100644
+--- a/backend/tests/unit/P1Iam002EffectiveProfileResolverTest.php
++++ b/backend/tests/unit/P1Iam002EffectiveProfileResolverTest.php
+@@ -111,7 +111,9 @@ final class P1Iam002EffectiveProfileResolverTest extends CIUnitTestCase
+ 
+         $profile = $this->resolve($userId);
+ 
+-        $this->assertCount(93, $profile->permissions);
++        $this->assertCount(95, $profile->permissions);
++        $this->assertContains('policy.setstate', $profile->keys());
++        $this->assertContains('resource.setstate', $profile->keys());
+         $this->assertNotContains('product.future_action', $profile->keys());
+     }
+ 
+diff --git a/backend/tests/unit/P1Sys007ProductionDecisionTest.php b/backend/tests/unit/P1Sys007ProductionDecisionTest.php
+index d69ff24..6c1af2c 100644
+--- a/backend/tests/unit/P1Sys007ProductionDecisionTest.php
++++ b/backend/tests/unit/P1Sys007ProductionDecisionTest.php
+@@ -48,9 +48,11 @@ final class P1Sys007ProductionDecisionTest extends CIUnitTestCase
+         self::assertSame('Asia/Ho_Chi_Minh', $timezone->getName());
+     }
+ 
+-    public function testPrivilegedMatrixRemainsExactApprovedNinetyThreeActions(): void
++    public function testPrivilegedMatrixRemainsExactApprovedNinetyFiveActions(): void
+     {
+-        self::assertSame(93, PrivilegedAuthorizationGroupSeeder::approvedActionCount());
++        self::assertSame(95, PrivilegedAuthorizationGroupSeeder::approvedActionCount());
++        self::assertContains(['resource_type' => 'policy', 'action' => 'setstate'], PrivilegedAuthorizationGroupSeeder::approvedActions());
++        self::assertContains(['resource_type' => 'resource', 'action' => 'setstate'], PrivilegedAuthorizationGroupSeeder::approvedActions());
+         self::assertContains(['resource_type' => 'user', 'action' => 'reset_password'], PrivilegedAuthorizationGroupSeeder::approvedActions());
+         self::assertNotContains(['resource_type' => 'display_setting', 'action' => 'view'], PrivilegedAuthorizationGroupSeeder::approvedActions());
+         self::assertNotContains(['resource_type' => 'display_setting', 'action' => 'edit'], PrivilegedAuthorizationGroupSeeder::approvedActions());
