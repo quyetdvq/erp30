@@ -35,7 +35,9 @@ final class ResourceNativeStateCatalog
         'province' => ['ACTIVE', 'INACTIVE', 'CLOSED'],
         'ward' => ['ACTIVE', 'INACTIVE', 'CLOSED'],
         'organization' => ['ACTIVE', 'INACTIVE', 'CLOSED'],
-        'contact' => ['ACTIVE', 'INACTIVE', 'CLOSED'],
+        'contact' => ['ACTIVE', 'INACTIVE', 'CLOSED'], // retired; new API never authorizes it
+        'organization_contact' => ['ACTIVE', 'INACTIVE', 'CLOSED'],
+        'employee_contact' => ['ACTIVE', 'INACTIVE', 'CLOSED'],
         'department' => ['ACTIVE', 'INACTIVE'],
         'position' => ['ACTIVE', 'INACTIVE'],
         'employee' => ['ACTIVE', 'INACTIVE'],

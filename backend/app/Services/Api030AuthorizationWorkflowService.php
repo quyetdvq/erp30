@@ -247,6 +247,9 @@ final class Api030AuthorizationWorkflowService
     {
         $this->assertResource($resource);
         $current = $this->find($resource, $id);
+        if ($resource === 'resource' && ($current['type'] ?? null) === 'contact' && strtoupper(trim($status)) === 'ACTIVE') {
+            throw new DomainException('CONTACT_LEGACY_RESOURCE_RETIRED');
+        }
         $operation = $this->operation();
         $this->authorize($resource, 'setstate', $current, ['status' => $status], $operation);
         $status = strtoupper(trim($status));

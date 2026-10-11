@@ -15,7 +15,7 @@ final class PrivilegedAuthorizationGroupSeeder extends Seeder
     private const MATRIX = [
         'province' => ['view', 'create', 'edit', 'setstate', 'export'],
         'ward' => ['view', 'create', 'edit', 'setstate', 'export'],
-        'contact' => ['view', 'create', 'edit', 'setstate', 'export'],
+        // contact.* is retired; new contact types require explicit reviewed grants.
         'organization' => ['view', 'create', 'edit', 'setstate', 'export'],
         'department' => ['view', 'create', 'edit', 'setstate', 'export'],
         'position' => ['view', 'create', 'edit', 'setstate', 'export'],

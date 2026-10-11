@@ -5,6 +5,9 @@ declare(strict_types=1);
 namespace App\Services;
 
 use App\Authorization\AuthorizationService;
+use App\Authorization\ContactAuthorizationRegistry;
+use App\Authorization\EmployeeContactScopeResolver;
+use App\Authorization\EvaluationOrganizationResolver;
 use App\Authorization\EffectiveListBucketCompiler;
 use App\Authorization\EvaluationOrganizationRequest;
 use App\Exceptions\DomainException;
@@ -97,8 +100,11 @@ final class Api010FoundationOrganizationContactService
         $this->authorizeVisible($resource, $row, $operation);
         // State changes must go through a validated Transition rather than
         // smuggling a status field through an ordinary edit operation.
-        if (array_key_exists('status', $payload) && $this->stateResolver()->lifecycleId($resource) !== null) {
+        if (array_key_exists('status', $payload) && $this->stateResolver()->lifecycleId($this->authorizationResource($resource, $row, [])) !== null) {
             throw new DomainException(self::ERROR_TRANSITION_REQUIRED, ['resource' => $resource]);
+        }
+        if ($resource === 'contact' && array_key_exists('status', $payload)) {
+            throw new DomainException('CONTACT_STATE_REQUIRES_SETSTATE');
         }
         $this->authorizeAction($resource, 'edit', $row, $payload, $operation);
 
@@ -119,12 +125,13 @@ final class Api010FoundationOrganizationContactService
         $operation = $this->operation();
         $row = $this->row($resource, $id);
         $this->authorizeVisible($resource, $row, $operation);
-        if ($this->stateResolver()->lifecycleId($resource) !== null) {
-            if (! in_array($resource, ['province', 'ward'], true)) {
-                throw new DomainException(LifecycleService::ERROR_TARGET_ADAPTER_UNAVAILABLE, ['resource' => $resource]);
+        $authorizationResource = $this->authorizationResource($resource, $row, []);
+        if ($this->stateResolver()->lifecycleId($authorizationResource) !== null) {
+            if (! in_array($authorizationResource, ['province', 'ward', 'organization_contact', 'employee_contact'], true)) {
+                throw new DomainException(LifecycleService::ERROR_TARGET_ADAPTER_UNAVAILABLE, ['resource' => $authorizationResource]);
             }
-            $destinationStateId = $this->stateResolver()->stateIdForCode($resource, $status);
-            $this->lifecycle()->execute($resource, $id, 'setstate', $operation, $destinationStateId);
+            $destinationStateId = $this->stateResolver()->stateIdForCode($authorizationResource, $status);
+            $this->lifecycle()->execute($authorizationResource, $id, 'setstate', $operation, $destinationStateId);
 
             return $this->get($resource, $id);
         }
@@ -226,6 +233,9 @@ final class Api010FoundationOrganizationContactService
                 if (! in_array($exception->getErrorCode(), [
                     AuthorizationService::REASON_POLICY_DENIED,
                     AuthorizationService::REASON_NO_BASE_PERMISSION,
+                    ContactAuthorizationRegistry::ERROR_TYPE_UNSUPPORTED,
+                    EmployeeContactScopeResolver::ERROR_PRIMARY_SCOPE_UNAVAILABLE,
+                    EvaluationOrganizationResolver::ERROR_CONTEXT_NOT_FOUND,
                 ], true)) {
                     throw $exception;
                 }
@@ -260,6 +270,9 @@ final class Api010FoundationOrganizationContactService
         } catch (DomainException $exception) {
             if ($exception->getErrorCode() === AuthorizationService::REASON_POLICY_DENIED
                 || $exception->getErrorCode() === AuthorizationService::REASON_NO_BASE_PERMISSION
+                || $exception->getErrorCode() === ContactAuthorizationRegistry::ERROR_TYPE_UNSUPPORTED
+                || $exception->getErrorCode() === EmployeeContactScopeResolver::ERROR_PRIMARY_SCOPE_UNAVAILABLE
+                || $exception->getErrorCode() === EvaluationOrganizationResolver::ERROR_CONTEXT_NOT_FOUND
             ) {
                 throw new PageNotFoundException('API-010 target is not visible.');
             }
@@ -277,20 +290,35 @@ final class Api010FoundationOrganizationContactService
     }
 
     /**
+     * Route by trusted persisted owner for reads/mutations, and by validated
+     * input only for create. Never accept a client-supplied resource hint.
+     *
+     * @param array<string,mixed> $target
+     * @param array<string,mixed> $input
+     */
+    private function authorizationResource(string $resource, array $target, array $input): string
+    {
+        return $resource === 'contact'
+            ? ContactAuthorizationRegistry::resourceFor($target !== [] ? $target : $input)
+            : $resource;
+    }
+
+    /**
      * @param array<string, mixed> $target
      * @param array<string, mixed> $input
      */
     private function authorize(OperationContext $operation, string $resource, string $action, array $target, array $input): void
     {
+        $authorizationResource = $this->authorizationResource($resource, $target, $input);
         $decision = $this->auth()->authorize(
             $operation,
-            $resource,
+            $authorizationResource,
             $action,
             new EvaluationOrganizationRequest(
                 persistedTarget: $target === [] ? null : $target,
                 input: $input,
             ),
-            $target === [] ? null : $this->stateResolver()->persistedStateId($resource, $target),
+            $target === [] ? null : $this->stateResolver()->persistedStateId($authorizationResource, $target),
         );
         if (! $decision->isAllowed()) {
             throw new DomainException(AuthorizationService::REASON_POLICY_DENIED);
@@ -327,7 +355,18 @@ final class Api010FoundationOrganizationContactService
     /** @param array<string, mixed> $payload */
     private function createContact(array $payload, OperationContext $operation): int
     {
-        $this->assertInitialStatus('contact', $payload);
+        $resource = $this->authorizationResource('contact', [], $payload);
+        // The server selects the initial State. A client hint may corroborate
+        // it for legacy clients, but must never override the configured State.
+        $initial = $this->stateResolver()->initialCode($resource) ?? 'ACTIVE';
+        if (array_key_exists('status', $payload)
+            && (! is_string($payload['status']) || strtoupper(trim($payload['status'])) !== $initial)) {
+            throw new DomainException(ResourceWorkflowStateResolver::ERROR_INITIAL_STATE_INVALID, [
+                'resource' => $resource, 'initial_status' => $initial,
+            ]);
+        }
+        $payload['status'] = $initial;
+        $this->assertInitialStatus($resource, $payload);
         $this->authorize($operation, 'contact', 'create', [], $payload);
 
         return $this->contactService($operation)->create($payload);
@@ -368,8 +407,12 @@ final class Api010FoundationOrganizationContactService
         }
         $adapterProvince = new FoundationLocationLifecycleAdapter('province');
         $adapterWard = new FoundationLocationLifecycleAdapter('ward');
+        $organizationContact = new ContactLifecycleAdapter('organization_contact');
+        $employeeContact = new ContactLifecycleAdapter('employee_contact');
 
-        return new LifecycleService(adapters: [$adapterProvince, $adapterWard]);
+        return new LifecycleService(adapters: [
+            $adapterProvince, $adapterWard, $organizationContact, $employeeContact,
+        ]);
     }
 
     private function organizationService(OperationContext $operation): OrganizationService

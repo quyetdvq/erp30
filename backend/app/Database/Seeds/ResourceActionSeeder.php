@@ -16,6 +16,7 @@ final class ResourceActionSeeder extends Seeder
         'user' => 'SYSTEM', 'authorization_group' => 'SYSTEM', 'resource' => 'SYSTEM',
         'workflow_state' => 'SYSTEM', 'lifecycle' => 'SYSTEM',
         'organization' => 'ORGANIZATION', 'contact' => 'ORGANIZATION',
+        'organization_contact' => 'ORGANIZATION', 'employee_contact' => 'ORGANIZATION',
         'employee_assignment' => 'ORGANIZATION', 'policy' => 'ORGANIZATION',
         'authorization_log' => 'ORGANIZATION', 'price_list' => 'ORGANIZATION',
         'import_job' => 'ORGANIZATION', 'display_setting' => 'ORGANIZATION',
@@ -25,7 +26,9 @@ final class ResourceActionSeeder extends Seeder
     private const MATRIX = [
         'province' => ['view', 'create', 'edit', 'setstate', 'export'],
         'ward' => ['view', 'create', 'edit', 'setstate', 'export'],
-        'contact' => ['view', 'create', 'edit', 'setstate', 'export'],
+        'contact' => ['view', 'create', 'edit', 'setstate', 'export'], // retired; retained for audit references
+        'organization_contact' => ['view', 'create', 'edit', 'setstate', 'export'],
+        'employee_contact' => ['view', 'create', 'edit', 'setstate', 'export'],
         'organization' => ['view', 'create', 'edit', 'setstate', 'export'],
         'department' => ['view', 'create', 'edit', 'setstate', 'export'],
         'position' => ['view', 'create', 'edit', 'setstate', 'export'],
@@ -62,11 +65,14 @@ final class ResourceActionSeeder extends Seeder
                     'name'       => $type,
                     'domain'     => self::DOMAINS[$type],
                     'created_at' => date('Y-m-d H:i:s'),
+                    'status' => $type === 'contact' ? 'INACTIVE' : 'ACTIVE',
                 ]);
                 $resourceId = (int) $this->db->insertID();
             } else {
                 $resourceId = (int) $resource['id'];
-                $this->db->table('resources')->where('id', $resourceId)->update(['domain' => self::DOMAINS[$type]]);
+                $this->db->table('resources')->where('id', $resourceId)->update($type === 'contact'
+                    ? ['domain' => self::DOMAINS[$type], 'status' => 'INACTIVE']
+                    : ['domain' => self::DOMAINS[$type]]);
             }
 
             foreach ($actions as $code) {

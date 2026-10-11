@@ -132,7 +132,7 @@ final class P1Iam001ShieldIdentityAdapterTest extends CIUnitTestCase
         $identity = $adapter->resolveIdentity($this->shieldUser($user));
         $keys = array_map(static fn (BasePermission $permission): string => $permission->key(), $adapter->resolveGroupBasePermissions($adapter->resolveGroups($identity)));
 
-        $this->assertCount(95, $keys);
+        $this->assertCount(90, $keys);
         $this->assertContains('policy.setstate', $keys);
         $this->assertContains('resource.setstate', $keys);
         $this->assertNotContains('product.future_action', $keys);

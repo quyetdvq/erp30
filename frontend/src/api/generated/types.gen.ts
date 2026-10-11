@@ -575,11 +575,13 @@ export type Contact = {
     ward_name?: string | null;
 };
 
+/**
+ * Owner type selects organization_contact or employee_contact. Backend derives initial status from the configured Lifecycle (DRAFT for BASIC); without a Lifecycle, defaults to native ACTIVE. Other owner kinds are denied.
+ */
 export type ContactCreate = {
     contact_type: 'EMPLOYEE' | 'ORGANIZATION';
     contact_ref_id: BigInt;
     description?: string;
-    status: string;
     name?: string;
     email?: string;
     phone?: string;
@@ -591,7 +593,21 @@ export type ContactCreate = {
     ward_name?: string;
 };
 
-export type ContactPatch = ContactCreate;
+/**
+ * Contact ownership and status are immutable through PATCH. Use the set-state action for status changes.
+ */
+export type ContactPatch = {
+    description?: string;
+    name?: string;
+    email?: string;
+    phone?: string;
+    mobile?: string;
+    address?: string;
+    province_id?: BigInt;
+    ward_id?: BigInt;
+    province_name?: string;
+    ward_name?: string;
+};
 
 export type Department = {
     id: BigInt;
@@ -909,6 +925,9 @@ export type Resource = {
     domain: 'SYSTEM' | 'MASTER' | 'ORGANIZATION';
     status: 'ACTIVE' | 'INACTIVE';
     lifecycle_id?: BigInt;
+    /**
+     * Allowed PBAC State codes computed by server for the selected Resource.
+     */
     policy_state_codes?: Array<string>;
     actions?: Array<ResourceActionSummary>;
 };
@@ -4322,6 +4341,45 @@ export type UpdateResourceResponses = {
 
 export type UpdateResourceResponse = UpdateResourceResponses[keyof UpdateResourceResponses];
 
+export type SetResourceStateData = {
+    body: Api030State2;
+    path: {
+        id: BigInt;
+    };
+    query?: never;
+    url: '/api/v1/resources/{id}/actions/set-state';
+};
+
+export type SetResourceStateErrors = {
+    /**
+     * Unauthenticated or invalid authentication.
+     */
+    401: ErrorResponse;
+    /**
+     * Visible target but action denied.
+     */
+    403: ErrorResponse;
+    /**
+     * Target not found or not visible.
+     */
+    404: ErrorResponse;
+    /**
+     * Semantically invalid request.
+     */
+    422: ErrorResponse;
+};
+
+export type SetResourceStateError = SetResourceStateErrors[keyof SetResourceStateErrors];
+
+export type SetResourceStateResponses = {
+    /**
+     * Successful API response.
+     */
+    200: SuccessResponse;
+};
+
+export type SetResourceStateResponse = SetResourceStateResponses[keyof SetResourceStateResponses];
+
 export type ListResourceActionsData = {
     body?: never;
     path: {
@@ -4906,6 +4964,45 @@ export type UpdatePolicyResponses = {
 };
 
 export type UpdatePolicyResponse = UpdatePolicyResponses[keyof UpdatePolicyResponses];
+
+export type SetPolicyStateData = {
+    body: Api030State2;
+    path: {
+        id: BigInt;
+    };
+    query?: never;
+    url: '/api/v1/policies/{id}/actions/set-state';
+};
+
+export type SetPolicyStateErrors = {
+    /**
+     * Unauthenticated or invalid authentication.
+     */
+    401: ErrorResponse;
+    /**
+     * Visible target but action denied.
+     */
+    403: ErrorResponse;
+    /**
+     * Target not found or not visible.
+     */
+    404: ErrorResponse;
+    /**
+     * Semantically invalid request.
+     */
+    422: ErrorResponse;
+};
+
+export type SetPolicyStateError = SetPolicyStateErrors[keyof SetPolicyStateErrors];
+
+export type SetPolicyStateResponses = {
+    /**
+     * Successful API response.
+     */
+    200: SuccessResponse;
+};
+
+export type SetPolicyStateResponse = SetPolicyStateResponses[keyof SetPolicyStateResponses];
 
 export type ListAuthorizationLogsData = {
     body?: never;

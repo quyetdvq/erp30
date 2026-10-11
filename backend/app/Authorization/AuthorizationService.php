@@ -142,6 +142,11 @@ final class AuthorizationService implements LifecycleAuthorizationPort, Numberin
         $batch = $resourceAction === 'view' && $this->readOnlyContext?->matches($operation)
             ? $this->readOnlyContext
             : null;
+        // The old generic Contact Resource is retired. No caller (including an
+        // administrative reactivation) may use contact.* as a backdoor.
+        if ($resource === 'contact') {
+            throw new DomainException('CONTACT_LEGACY_RESOURCE_RETIRED');
+        }
         $resourceRow = $this->readThrough($batch, 'resources', $resource,
             fn (): ?array => $this->catalog->findResourceByType($resource));
         if ($resourceRow === null) {
@@ -159,7 +164,17 @@ final class AuthorizationService implements LifecycleAuthorizationPort, Numberin
             $resourceAction,
             $contextRequest->input,
         );
-        $context = $this->contexts->resolveResource($resource, $resourceAction, $resourceRow, $contextRequest);
+        $context = $this->contexts->resolveResource(
+            $resource,
+            $resourceAction,
+            $resourceRow,
+            new EvaluationOrganizationRequest(
+                persistedTarget: $contextRequest->persistedTarget,
+                input: $contextRequest->input,
+                clientEvaluationOrganizationId: $contextRequest->clientEvaluationOrganizationId,
+                evaluationTime: $operation->evaluationTime,
+            ),
+        );
 
         // Disabling a Resource Type denies its normal business actions,
         // even when Base Permission exists. The sole recovery endpoint is

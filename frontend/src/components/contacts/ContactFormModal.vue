@@ -36,7 +36,6 @@ const draft = ref({
   description: '',
   province_id: '',
   ward_id: '',
-  status: 'ACTIVE' as 'ACTIVE' | 'INACTIVE' | 'CLOSED',
 })
 
 const { markClean, confirmDiscard } = useUnsavedChanges(
@@ -77,7 +76,6 @@ watch(
       description: contact?.description ?? '',
       province_id: contact?.province_id ?? '',
       ward_id: contact?.ward_id ?? '',
-      status: (contact?.status as 'ACTIVE' | 'INACTIVE' | 'CLOSED' | undefined) ?? 'ACTIVE',
     }
     markClean()
   },
@@ -92,7 +90,6 @@ function onProvinceChange(value: string): void {
 
 function save(): void {
   const editablePayload: ContactUpdate = {
-    status: draft.value.status,
     ...(draft.value.name ? { name: draft.value.name } : {}),
     ...(draft.value.email ? { email: draft.value.email } : {}),
     ...(draft.value.phone ? { phone: draft.value.phone } : {}),
@@ -183,14 +180,6 @@ function save(): void {
         <label
           ><span>{{ t('contact.description') }}</span
           ><textarea v-model="draft.description" rows="3" />
-        </label>
-        <label
-          ><span>{{ t('contact.status') }}</span>
-          <select v-model="draft.status">
-            <option value="ACTIVE">{{ t('status.active') }}</option>
-            <option value="INACTIVE">{{ t('status.inactive') }}</option>
-            <option value="CLOSED">{{ t('status.closed') }}</option>
-          </select>
         </label>
         <footer class="modal-card__footer">
           <button type="button" class="secondary-button" @click="requestClose">

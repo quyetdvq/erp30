@@ -38,7 +38,7 @@ import { i18n } from '@/i18n'
 import type { ListQuery, ListResponse } from '@/components/lists/listTypes'
 
 /** Contact ownership is immutable after creation; PATCH only carries editable fields. */
-export type ContactUpdate = Omit<ContactCreate, 'contact_type' | 'contact_ref_id'>
+export type ContactUpdate = Omit<ContactCreate, 'contact_type' | 'contact_ref_id' | 'status'>
 
 function headers() {
   return { 'Accept-Language': i18n.global.locale.value as 'vi' | 'en' }

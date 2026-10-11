@@ -7,6 +7,7 @@ namespace App\Authorization;
 use App\Exceptions\DomainException;
 use App\Infrastructure\Id\PositiveId;
 use App\Repositories\EmployeeRepository;
+use App\Repositories\EmployeeAssignmentRepository;
 use App\Repositories\OrganizationRepository;
 use CodeIgniter\Database\ConnectionInterface;
 
@@ -35,7 +36,7 @@ final class EvaluationOrganizationResolver
         $organizations ??= new OrganizationRepository($connection);
         $employees ??= new EmployeeRepository($connection);
         $this->organizations = $organizations;
-        $this->registry = $registry ?? $this->defaultRegistry($organizations, $employees);
+        $this->registry = $registry ?? $this->defaultRegistry($organizations, $employees, $connection);
     }
 
     /** @param array<string, mixed> $resource */
@@ -71,13 +72,14 @@ final class EvaluationOrganizationResolver
         return $this->validatedContext($resolution->organizationId, $resolution->source);
     }
 
-    private function defaultRegistry(OrganizationRepository $organizations, EmployeeRepository $employees): OrganizationScopeResolverRegistry
+    private function defaultRegistry(OrganizationRepository $organizations, EmployeeRepository $employees, ConnectionInterface $db): OrganizationScopeResolverRegistry
     {
         $groupResolver = fn (): int => $this->groupId();
 
         return new OrganizationScopeResolverRegistry([
             'organization' => new OrganizationResourceScopeResolver(),
-            'contact' => new ContactResourceScopeResolver($organizations, $employees, $groupResolver),
+            'organization_contact' => new ContactResourceScopeResolver($organizations),
+            'employee_contact' => new EmployeeContactScopeResolver($employees, new EmployeeAssignmentRepository($db)),
             'employee_assignment' => new OrganizationIdResourceScopeResolver(),
             'policy' => new OrganizationIdResourceScopeResolver(),
             'price_list' => new OrganizationIdResourceScopeResolver(),

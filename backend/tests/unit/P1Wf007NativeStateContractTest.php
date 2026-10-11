@@ -67,6 +67,8 @@ final class P1Wf007NativeStateContractTest extends CIUnitTestCase
         $this->assertTrue($this->db->tableExists($this->db->prefixTable('policies'), false));
         $this->assertTrue($this->db->tableExists($this->db->prefixTable('resources'), false));
         $this->assertCount(10, ResourceNativeStateCatalog::INDEPENDENT_RESOURCES);
+        $this->assertFalse(ResourceNativeStateCatalog::isIndependent('organization_contact'));
+        $this->assertFalse(ResourceNativeStateCatalog::isIndependent('employee_contact'));
         $this->assertSame(['ACTIVE', 'INACTIVE'], ResourceNativeStateCatalog::codes('policy'));
         $this->assertSame(['ACTIVE', 'INACTIVE'], ResourceNativeStateCatalog::codes('resource'));
         $this->assertSame([], ResourceNativeStateCatalog::codes('authorization_log'));

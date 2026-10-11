@@ -59,18 +59,18 @@ final class P1Ctx001EvaluationOrganizationResolverTest extends CIUnitTestCase
         ))->organizationType);
     }
 
-    public function testEmployeeContactScopeIsGroupRegardlessOfPrimaryAssignment(): void
+    public function testEmployeeContactScopeUsesUniqueEffectivePrimaryAssignment(): void
     {
         [$groupId, $companyId] = $this->organizationTree();
         $employeeId = $this->insertEmployee(77);
         $this->insertAssignment($employeeId, $companyId);
         $resolver = new EvaluationOrganizationResolver(null, null, null, $this->db);
 
-        $context = $resolver->resolveResource('contact', 'create', $this->resource('contact', 'ORGANIZATION'), new EvaluationOrganizationRequest(
+        $context = $resolver->resolveResource('employee_contact', 'create', $this->resource('employee_contact', 'ORGANIZATION'), new EvaluationOrganizationRequest(
             input: ['contact_type' => 'EMPLOYEE', 'contact_ref_id' => $employeeId],
         ));
-        $this->assertSame($groupId, $context->organizationId);
-        $this->assertSame('EMPLOYEE_OWNER_GROUP', $context->source);
+        $this->assertSame($companyId, $context->organizationId);
+        $this->assertSame('EMPLOYEE_PRIMARY_ASSIGNMENT', $context->source);
     }
 
     public function testMissingOrganizationContextCannotFallBackToPrimaryAssignment(): void

@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace App\Authorization;
 
+use App\Infrastructure\Time\EvaluationTime;
+
 final readonly class EvaluationOrganizationRequest
 {
     /**
@@ -14,6 +16,7 @@ final readonly class EvaluationOrganizationRequest
         public ?array $persistedTarget = null,
         public array $input = [],
         public mixed $clientEvaluationOrganizationId = null,
+        public ?EvaluationTime $evaluationTime = null,
     ) {
     }
 }

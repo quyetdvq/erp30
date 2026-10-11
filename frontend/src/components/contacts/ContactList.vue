@@ -35,7 +35,19 @@ const props = withDefaults(
 
 const { t } = useI18n()
 const { hasBasePermission } = useBasePermission()
-const mode = ref<'active' | 'history'>('active')
+// Permission boundaries follow the persisted Contact owner kind; legacy
+// contact.* is never a fallback for an unregistered/future owner.
+const ownerResource = computed(() =>
+  props.ownerType === 'ORGANIZATION' ? 'organization_contact' : 'employee_contact',
+)
+function rowPermissionResource(contact: Contact): string {
+  return contact.contact_type === 'ORGANIZATION'
+    ? 'organization_contact'
+    : contact.contact_type === 'EMPLOYEE'
+      ? 'employee_contact'
+      : ''
+}
+const mode = ref<'active' | 'draft' | 'history'>('active')
 const modalOpen = ref(false)
 const detailOpen = ref(false)
 const detailContact = ref<Contact | null>(null)
@@ -55,7 +67,12 @@ const state = useListState<Contact>(
         ...ownerFilters,
         contact_type: props.ownerType,
         contact_ref_id: props.ownerId,
-        status: mode.value === 'active' ? 'ACTIVE' : ['INACTIVE', 'CLOSED'],
+        status:
+          mode.value === 'active'
+            ? 'ACTIVE'
+            : mode.value === 'draft'
+              ? 'DRAFT'
+              : ['INACTIVE', 'CLOSED'],
       },
     })
   },
@@ -72,7 +89,11 @@ const columns: readonly ListColumn<Contact>[] = [
 ]
 
 const statusLabel = computed(() =>
-  mode.value === 'active' ? t('contact.activeView') : t('contact.historyView'),
+  mode.value === 'active'
+    ? t('contact.activeView')
+    : mode.value === 'draft'
+      ? t('contact.draftView')
+      : t('contact.historyView'),
 )
 const detailFields = computed<readonly TableDetailField[]>(() => {
   const contact = detailContact.value
@@ -155,8 +176,11 @@ async function save(payload: Parameters<typeof saveContact>[0]): Promise<void> {
   mutationBusy.value = true
   error.value = null
   try {
-    await saveContact(payload, editing.value?.id)
+    const saved = await saveContact(payload, editing.value?.id)
     modalOpen.value = false
+    if (!editing.value) {
+      mode.value = saved.status === 'DRAFT' ? 'draft' : 'active'
+    }
     await load()
   } catch (caught: unknown) {
     error.value = caught
@@ -170,10 +194,9 @@ async function toggleState(contact: Contact): Promise<void> {
   mutationBusy.value = true
   error.value = null
   try {
-    await changeContactState(
-      String(contact.id),
-      contact.status === 'ACTIVE' ? 'INACTIVE' : 'ACTIVE',
-    )
+    const nextStatus = contact.status === 'ACTIVE' ? 'INACTIVE' : 'ACTIVE'
+    await changeContactState(String(contact.id), nextStatus)
+    mode.value = nextStatus === 'ACTIVE' ? 'active' : 'history'
     await load()
   } catch (caught: unknown) {
     error.value = caught
@@ -202,7 +225,7 @@ watch(mode, () => {
 })
 
 watch(
-  () => props.ownerId,
+  () => [props.ownerId, props.ownerType] as const,
   () => {
     state.reset()
     void load()
@@ -226,6 +249,9 @@ onMounted(async () => {
         >
           {{ t('contact.activeView') }}
         </button>
+        <button type="button" role="tab" :aria-selected="mode === 'draft'" @click="mode = 'draft'">
+          {{ t('contact.draftView') }}
+        </button>
         <button
           type="button"
           role="tab"
@@ -236,7 +262,7 @@ onMounted(async () => {
         </button>
       </div>
       <button
-        v-if="hasBasePermission('contact', 'create')"
+        v-if="hasBasePermission(ownerResource, 'create')"
         type="button"
         class="primary-button"
         @click="openCreate"
@@ -276,10 +302,10 @@ onMounted(async () => {
             :busy="mutationBusy"
             :show-view="true"
             :show-edit="true"
-            :show-toggle="true"
-            view-permission="contact.view"
-            edit-permission="contact.edit"
-            toggle-permission="contact.setstate"
+            :show-toggle="row.status !== 'CLOSED'"
+            :view-permission="`${rowPermissionResource(row)}.view`"
+            :edit-permission="`${rowPermissionResource(row)}.edit`"
+            :toggle-permission="`${rowPermissionResource(row)}.setstate`"
             :edit-label="t('contact.edit')"
             :activate-label="t('contact.activate')"
             :deactivate-label="t('contact.deactivate')"

@@ -40,7 +40,7 @@ final class ChangeAuthDomain001AuthorizationTest extends CIUnitTestCase
 
         $cases = [
             ['organization', 'create', ['parent_id' => $companyId]],
-            ['contact', 'create', ['contact_type' => 'ORGANIZATION', 'contact_ref_id' => $companyId]],
+            ['organization_contact', 'create', ['contact_type' => 'ORGANIZATION', 'contact_ref_id' => $companyId]],
             ['employee_assignment', 'create', ['organization_id' => $companyId]],
             ['policy', 'create', ['organization_id' => $companyId]],
             ['price_list', 'create', ['organization_id' => $companyId]],
@@ -50,10 +50,16 @@ final class ChangeAuthDomain001AuthorizationTest extends CIUnitTestCase
             $this->assertSame($companyId, $context->organizationId, $resource);
         }
 
-        $employeeContext = $resolver->resolveResource('contact', 'create', $this->resource('contact'), new EvaluationOrganizationRequest(
-            input: ['contact_type' => 'EMPLOYEE', 'contact_ref_id' => $employeeId],
-        ));
-        $this->assertSame($groupId, $employeeContext->organizationId);
+        // An employee without an effective primary assignment MUST NOT be
+        // silently evaluated at GROUP or any unrelated Organization.
+        try {
+            $resolver->resolveResource('employee_contact', 'create', $this->resource('employee_contact'), new EvaluationOrganizationRequest(
+                input: ['contact_type' => 'EMPLOYEE', 'contact_ref_id' => $employeeId],
+            ));
+            $this->fail('Expected missing primary assignment to fail closed.');
+        } catch (DomainException $exception) {
+            $this->assertSame('CONTACT_EMPLOYEE_PRIMARY_SCOPE_UNAVAILABLE', $exception->getErrorCode());
+        }
 
         $logContext = $resolver->resolveResource('authorization_log', 'view', $this->resource('authorization_log'), new EvaluationOrganizationRequest(
             persistedTarget: ['organization_id' => null],

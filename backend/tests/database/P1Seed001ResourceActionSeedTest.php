@@ -18,6 +18,8 @@ final class P1Seed001ResourceActionSeedTest extends CIUnitTestCase
         'province' => ['view', 'create', 'edit', 'setstate', 'export'],
         'ward' => ['view', 'create', 'edit', 'setstate', 'export'],
         'contact' => ['view', 'create', 'edit', 'setstate', 'export'],
+        'organization_contact' => ['view', 'create', 'edit', 'setstate', 'export'],
+        'employee_contact' => ['view', 'create', 'edit', 'setstate', 'export'],
         'organization' => ['view', 'create', 'edit', 'setstate', 'export'],
         'department' => ['view', 'create', 'edit', 'setstate', 'export'],
         'position' => ['view', 'create', 'edit', 'setstate', 'export'],
@@ -45,6 +47,7 @@ final class P1Seed001ResourceActionSeedTest extends CIUnitTestCase
         'product_uom' => 'MASTER', 'product' => 'MASTER', 'user' => 'SYSTEM',
         'authorization_group' => 'SYSTEM', 'resource' => 'SYSTEM', 'workflow_state' => 'SYSTEM',
         'lifecycle' => 'SYSTEM', 'organization' => 'ORGANIZATION', 'contact' => 'ORGANIZATION',
+        'organization_contact' => 'ORGANIZATION', 'employee_contact' => 'ORGANIZATION',
         'employee_assignment' => 'ORGANIZATION', 'policy' => 'ORGANIZATION',
         'authorization_log' => 'ORGANIZATION', 'price_list' => 'ORGANIZATION', 'import_job' => 'ORGANIZATION',
         'display_setting' => 'ORGANIZATION',
@@ -62,11 +65,15 @@ final class P1Seed001ResourceActionSeedTest extends CIUnitTestCase
         $this->assertSame($first, $second);
         $this->assertSame($this->normalizedMatrix(), $second);
         $this->assertSame($beforeSideEffects, $this->sideEffectCounts());
-        $this->assertSame(21, count($second));
-        $this->assertSame(97, array_sum(array_map('count', $second)));
+        $this->assertSame(23, count($second));
+        $this->assertSame(107, array_sum(array_map('count', $second)));
         $expectedDomains = self::DOMAINS;
         ksort($expectedDomains);
         $this->assertSame($expectedDomains, $this->domainSnapshot());
+        $this->assertSame('INACTIVE', $this->db->table('resources')
+            ->where('type', 'contact')->get()->getRow('status'));
+        $this->assertSame('ACTIVE', $this->db->table('resources')
+            ->where('type', 'organization_contact')->get()->getRow('status'));
     }
 
     public function testImportAndNumberingActionsAreScopedExactly(): void

@@ -636,11 +636,13 @@ export const zContact = z.object({
     ward_name: z.string().nullish()
 });
 
+/**
+ * Owner type selects organization_contact or employee_contact. Backend derives initial status from the configured Lifecycle (DRAFT for BASIC); without a Lifecycle, defaults to native ACTIVE. Other owner kinds are denied.
+ */
 export const zContactCreate = z.object({
     contact_type: z.enum(['EMPLOYEE', 'ORGANIZATION']),
     contact_ref_id: zBigInt,
     description: z.string().optional(),
-    status: z.string(),
     name: z.string().optional(),
     email: z.string().optional(),
     phone: z.string().optional(),
@@ -652,7 +654,21 @@ export const zContactCreate = z.object({
     ward_name: z.string().optional()
 });
 
-export const zContactPatch = zContactCreate;
+/**
+ * Contact ownership and status are immutable through PATCH. Use the set-state action for status changes.
+ */
+export const zContactPatch = z.object({
+    description: z.string().optional(),
+    name: z.string().optional(),
+    email: z.string().optional(),
+    phone: z.string().optional(),
+    mobile: z.string().optional(),
+    address: z.string().optional(),
+    province_id: zBigInt.optional(),
+    ward_id: zBigInt.optional(),
+    province_name: z.string().optional(),
+    ward_name: z.string().optional()
+});
 
 export const zDepartment = z.object({
     id: zBigInt,
@@ -1045,7 +1061,7 @@ export const zResourceCreate = z.object({
 
 export const zResourcePatch = z.object({
     name: z.string().optional(),
-    lifecycle_id: zBigInt.optional()
+    lifecycle_id: zBigInt.nullish()
 });
 
 export const zResourceActionCreate = z.object({
@@ -1079,7 +1095,9 @@ export const zResource = z.object({
         'MASTER',
         'ORGANIZATION'
     ]),
+    status: z.enum(['ACTIVE', 'INACTIVE']),
     lifecycle_id: zBigInt.optional(),
+    policy_state_codes: z.array(z.string()).optional(),
     actions: z.array(zResourceActionSummary).optional()
 });
 
@@ -1175,6 +1193,7 @@ export const zPolicy = z.object({
     id: zBigInt,
     organization_id: zBigInt,
     resource_id: zBigInt,
+    status: z.enum(['ACTIVE', 'INACTIVE']),
     state_id: zNullableBigInt.optional(),
     participant_type: z.enum([
         'USER',
@@ -2373,6 +2392,17 @@ export const zUpdateResourcePath = z.object({
  */
 export const zUpdateResourceResponse = zResourceResponse;
 
+export const zSetResourceStateBody = zApi030State2;
+
+export const zSetResourceStatePath = z.object({
+    id: zBigInt
+});
+
+/**
+ * Successful API response.
+ */
+export const zSetResourceStateResponse = zSuccessResponse;
+
 export const zListResourceActionsPath = z.object({
     id: zBigInt
 });
@@ -2541,6 +2571,17 @@ export const zUpdatePolicyPath = z.object({
  * Policy response.
  */
 export const zUpdatePolicyResponse = zPolicyResponse;
+
+export const zSetPolicyStateBody = zApi030State2;
+
+export const zSetPolicyStatePath = z.object({
+    id: zBigInt
+});
+
+/**
+ * Successful API response.
+ */
+export const zSetPolicyStateResponse = zSuccessResponse;
 
 export const zListAuthorizationLogsHeaders = z.object({
     'Accept-Language': z.enum(['vi', 'en']).optional().default('vi'),
