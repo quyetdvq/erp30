@@ -7,15 +7,18 @@ namespace App\Services;
 use App\Authorization\AuthorizationService;
 use App\Authorization\EffectiveListBucketCompiler;
 use App\Authorization\EvaluationOrganizationRequest;
+use App\Authorization\PriceListAuthorizedBucketCompiler;
 use App\Exceptions\DomainException;
 use App\Infrastructure\Api\AuthorizedArrayListSource;
 use App\Infrastructure\Api\CommonListQueryAdapter;
 use App\Infrastructure\Api\CommonListQueryAllowlist;
 use App\Infrastructure\Api\SqlProductListSource;
+use App\Infrastructure\Api\SqlPriceListListSource;
 use App\Infrastructure\Mutation\MutationContext;
 use App\Infrastructure\Mutation\OperationContext;
 use App\Infrastructure\RequestContext;
 use App\Modules\Pricing\PriceList\PriceListService;
+use App\Modules\Pricing\PriceList\PriceListRepository;
 use App\Modules\Product\Combo\ComboCompositionService;
 use App\Modules\Product\Product\ProductMasterService;
 use App\Modules\Product\Product\ProductRepository;
@@ -24,6 +27,7 @@ use App\Modules\Product\Product\ProductRoleService;
 use App\Modules\Product\ProductGroup\ProductGroupService;
 use App\Modules\Product\Uom\ProductUomMasterService;
 use App\Modules\Product\Uom\ProductUomService;
+use CodeIgniter\Database\BaseConnection;
 use CodeIgniter\Database\ConnectionInterface;
 use CodeIgniter\Shield\Entities\User;
 
@@ -312,6 +316,62 @@ final class Api050ProductCatalogService
      */
     public function listPriceLists(array $query = []): array
     {
+        $allowlist = new CommonListQueryAllowlist(
+            search: ['code', 'name'],
+            filters: ['code', 'name', 'organization_id', 'status'],
+            sort: ['id', 'code', 'effective_from', 'name', 'organization_id', 'priority', 'status'],
+        );
+        $adapter = $this->queryAdapter ?? new CommonListQueryAdapter();
+        $parsed = $adapter->parse($query, $allowlist);
+        $db = $this->connection();
+        if (SqlPriceListListSource::supports($parsed)
+            && $db instanceof BaseConnection && $db->transDepth === 0) {
+            $repository = new PriceListRepository($db);
+            $operation = $this->operation();
+            $optimized = $repository->withConsistentListSnapshot(function () use ($db, $operation, $adapter, $query, $parsed, $allowlist): ?array {
+                return $this->authorization()->withReadOnlyBatch($operation, function () use ($db, $operation, $adapter, $query, $parsed, $allowlist): ?array {
+                    // First rule out legacy-sort mismatches. The existing PHP
+                    // numeric comparator does not match SQL for negative priority.
+                    $probe = new SqlPriceListListSource($db, []);
+                    if (! $probe->canServe($parsed)) {
+                        return null;
+                    }
+                    $buckets = (new PriceListAuthorizedBucketCompiler($db, $this->authorization()))
+                        ->compile($operation);
+                    if ($buckets === null) {
+                        return null;
+                    }
+                    $result = $adapter->paginate($query, $allowlist,
+                        new SqlPriceListListSource($db, $buckets));
+                    $items = [];
+                    foreach ($result->data as $row) {
+                        if (! is_array($row)) {
+                            return null;
+                        }
+                        try {
+                            $decision = $this->authorization()->authorize(
+                                $operation, 'price_list', 'view',
+                                new EvaluationOrganizationRequest(persistedTarget: $row),
+                            );
+                        } catch (DomainException $_) {
+                            return null; // Uncertain snapshot/owner: use original path.
+                        }
+                        if (! $decision->isAllowed()) {
+                            return null;
+                        }
+                        $items[] = $row;
+                    }
+                    return ['items' => $items, 'page' => $result->query->page,
+                        'page_size' => $result->query->pageSize, 'total' => $result->total];
+                });
+            });
+            if ($optimized !== null) {
+                return $optimized;
+            }
+        }
+
+        // Search, Unicode/text sort, noncanonical owner filters, excessive
+        // buckets and ambiguous State/Scope all retain the original behavior.
         $visible = [];
         foreach ($this->priceLists()->listAll() as $row) {
             $decision = $this->decision('price_list', 'view', $row);
@@ -319,15 +379,7 @@ final class Api050ProductCatalogService
                 $visible[] = $row;
             }
         }
-        return $this->paginate(
-            $visible,
-            $query,
-            new CommonListQueryAllowlist(
-                search: ['code', 'name'],
-                filters: ['code', 'name', 'organization_id', 'status'],
-                sort: ['id', 'code', 'effective_from', 'name', 'organization_id', 'priority', 'status'],
-            ),
-        );
+        return $this->paginate($visible, $query, $allowlist);
     }
 
     /** @return array<string,mixed> */

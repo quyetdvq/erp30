@@ -96,6 +96,48 @@ final class PriceListRepository
         return array_values($result->getResultArray());
     }
 
+    /**
+     * Protect the authorization bucket scan, COUNT, page and PBAC recheck
+     * with one MariaDB/InnoDB REPEATABLE READ snapshot. Do not allow nested
+     * transactions: their isolation level cannot be safely upgraded.
+     *
+     * @template T
+     * @param callable():T $read
+     * @return T
+     */
+    public function withConsistentListSnapshot(callable $read): mixed
+    {
+        if (! $this->db instanceof BaseConnection) {
+            throw new PersistenceException(self::ERROR_PERSISTENCE_FAILED, 'beginPriceListSnapshot');
+        }
+        if ($this->db->transDepth !== 0) {
+            throw new PersistenceException(self::ERROR_PERSISTENCE_FAILED, 'nestedPriceListSnapshot');
+        }
+        try {
+            if ($this->db->query('SET TRANSACTION ISOLATION LEVEL REPEATABLE READ') !== true) {
+                throw new PersistenceException(self::ERROR_PERSISTENCE_FAILED, 'setPriceListIsolation');
+            }
+        } catch (PersistenceException $exception) {
+            throw $exception;
+        } catch (\Throwable $exception) {
+            throw new PersistenceException(self::ERROR_PERSISTENCE_FAILED, 'setPriceListIsolation', $exception);
+        }
+
+        if (! $this->db->transBegin()) {
+            throw new PersistenceException(self::ERROR_PERSISTENCE_FAILED, 'beginPriceListSnapshot');
+        }
+        try {
+            $result = $read();
+            if (! $this->db->transStatus() || ! $this->db->transCommit()) {
+                throw new PersistenceException(self::ERROR_PERSISTENCE_FAILED, 'commitPriceListSnapshot');
+            }
+            return $result;
+        } catch (\Throwable $exception) {
+            $this->db->transRollback();
+            throw $exception;
+        }
+    }
+
     /** @return list<array<string, mixed>> */
     public function listAll(): array
     {
