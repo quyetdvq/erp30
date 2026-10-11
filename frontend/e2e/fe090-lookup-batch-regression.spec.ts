@@ -212,7 +212,11 @@ test.describe('E2E-LOOKUP-BATCH (browser contract, mocked API)', () => {
       await oldRequestStarted
       await search.fill('fast')
       await page.getByRole('search').getByRole('button', { name: 'Áp dụng' }).click()
-      await expect(page.getByRole('cell', { name: 'FAST-RESULT', exact: true })).toBeVisible()
+      const fastRow = page.getByRole('row').filter({
+        has: page.getByRole('cell', { name: 'FAST-RESULT', exact: true }),
+      })
+      await expect(fastRow).toHaveCount(1)
+      await expect(fastRow.getByRole('cell', { name: 'FAST-RESULT', exact: true })).toHaveCount(2)
     } finally {
       const lateResponse = page.waitForResponse(
         (response) => new URL(response.url()).searchParams.get('q') === 'slow',
@@ -221,7 +225,13 @@ test.describe('E2E-LOOKUP-BATCH (browser contract, mocked API)', () => {
       await lateResponse
     }
     await expect(page.getByRole('cell', { name: 'SLOW-RESULT', exact: true })).toHaveCount(0)
-    await expect(page.getByRole('cell', { name: 'FAST-RESULT', exact: true })).toBeVisible()
+    const survivingFastRow = page.getByRole('row').filter({
+      has: page.getByRole('cell', { name: 'FAST-RESULT', exact: true }),
+    })
+    await expect(survivingFastRow).toHaveCount(1)
+    await expect(
+      survivingFastRow.getByRole('cell', { name: 'FAST-RESULT', exact: true }),
+    ).toHaveCount(2)
     expect(api.unexpected).toEqual([])
   })
 

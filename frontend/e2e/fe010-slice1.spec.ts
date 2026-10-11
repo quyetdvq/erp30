@@ -33,10 +33,10 @@ async function mockSession(page: Page): Promise<void> {
               'organization.create',
               'organization.edit',
               'organization.setstate',
-              'contact.view',
-              'contact.create',
-              'contact.edit',
-              'contact.setstate',
+              'organization_contact.view',
+              'organization_contact.create',
+              'organization_contact.edit',
+              'organization_contact.setstate',
               'province.view',
               'province.create',
               'province.edit',
@@ -128,7 +128,7 @@ async function mockOrganizationApi(
           data: {
             id: '7001',
             contact_type: 'ORGANIZATION',
-            contact_ref_id: companyId,
+            contact_ref_id: warehouseId,
             name: 'Alice Updated',
             email: 'alice@test',
             phone: '0900',
@@ -146,7 +146,7 @@ async function mockOrganizationApi(
         {
           id: '7001',
           contact_type: 'ORGANIZATION',
-          contact_ref_id: companyId,
+          contact_ref_id: warehouseId,
           name: 'Alice',
           email: 'alice@test',
           phone: '0900',
@@ -208,7 +208,9 @@ test('Organization tree, parent matrix, contacts history, and accessibility', as
   await expect.poll(() => contactUpdateBody.value).not.toBeNull()
   expect(contactUpdateBody.value).not.toHaveProperty('contact_type')
   expect(contactUpdateBody.value).not.toHaveProperty('contact_ref_id')
-  expect(contactUpdateBody.value).toMatchObject({ name: 'Alice Updated', status: 'ACTIVE' })
+  // Contact PATCH cannot change status; state mutations use set-state.
+  expect(contactUpdateBody.value).not.toHaveProperty('status')
+  expect(contactUpdateBody.value).toMatchObject({ name: 'Alice Updated' })
   await contactRegion
     .getByRole('tab', { name: 'Lịch sử' })
     .evaluate((element) => (element as HTMLElement).click())

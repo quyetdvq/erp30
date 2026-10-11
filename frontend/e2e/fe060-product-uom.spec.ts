@@ -291,11 +291,13 @@ test.describe('P1-FE-060 Product/UOM UI', () => {
     await expect(page.getByRole('cell', { name: '140,000', exact: true })).toBeVisible()
     await page.goto('/products/new')
     await expect(page.getByRole('heading', { name: 'Tạo sản phẩm' })).toBeVisible()
+    // A new Product no longer preloads every Product sorted by product_name.
+    // Existing list traffic is allowed, but not the deprecated full catalog lookup.
     expect(
       requests.productListUrls.some(
         (url) => new URL(url).searchParams.get('sort') === 'product_name',
       ),
-    ).toBe(true)
+    ).toBe(false)
     await page.getByRole('combobox', { name: 'Loại' }).selectOption('COMBO')
     await expect(page.getByRole('heading', { name: 'Quy đổi UOM' })).toHaveCount(0)
     await expect(page.getByText('Sản phẩm cha')).toHaveCount(0)
@@ -305,6 +307,16 @@ test.describe('P1-FE-060 Product/UOM UI', () => {
       .getByRole('button', { name: 'Thêm thành phần' })
       .evaluate((element) => (element as HTMLButtonElement).click())
     await expect(page.getByRole('textbox', { name: 'Số lượng' })).toBeVisible()
+    // Component choices now use the purpose-scoped, paginated Product options API.
+    const optionRequest = page.waitForRequest((request) => {
+      const url = new URL(request.url())
+      return (
+        url.pathname === '/api/v1/products/options' &&
+        url.searchParams.get('purpose') === 'combo_component'
+      )
+    })
+    await page.locator('.remote-searchable-select').last().click()
+    await optionRequest
     await expect(page.getByText('COMBO luôn tắt quản lý Serial.')).toBeVisible()
   })
 

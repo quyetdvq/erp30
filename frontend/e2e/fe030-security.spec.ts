@@ -159,6 +159,7 @@ test.describe('P1-FE-030 security surfaces', () => {
               type: 'policy',
               name: 'Policy',
               domain: 'ORGANIZATION',
+              status: 'ACTIVE',
               lifecycle_id: '50',
               ...(includeActions
                 ? { actions: [{ id: '20', code: 'view', description: null }] }
@@ -169,6 +170,26 @@ test.describe('P1-FE-030 security surfaces', () => {
         }),
       })
     })
+    // The Policy editor fetches resource detail to resolve the authoritative
+    // PBAC State allowlist, not the whole Workflow State catalog.
+    await page.route('**/api/v1/resources/2', async (route) =>
+      route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({
+          data: {
+            id: '2',
+            type: 'policy',
+            name: 'Policy',
+            domain: 'ORGANIZATION',
+            status: 'ACTIVE',
+            lifecycle_id: '50',
+            policy_state_codes: ['DRAFT'],
+          },
+          meta: { request_id: 'test-resource-detail' },
+        }),
+      }),
+    )
     await page.route('**/api/v1/resources/2/actions', async (route) =>
       route.fulfill({
         status: 200,
@@ -227,7 +248,7 @@ test.describe('P1-FE-030 security surfaces', () => {
                 status: 'ACTIVE',
               },
             ],
-            meta: { page: 1, page_size: 25, total: 1, request_id: 'test-lifecycle' },
+            meta: mockPagination(route, 1, 'test-lifecycle'),
           }),
         }),
     )
@@ -241,6 +262,7 @@ test.describe('P1-FE-030 security surfaces', () => {
               id: '3',
               organization_id: '10',
               resource_id: '2',
+              status: 'ACTIVE',
               participant_type: 'GROUP',
               participant_ref_id: '1',
               actions: [{ resource_action_id: '20', effect: 'ABSOLUTE_DENY' }],
@@ -466,9 +488,16 @@ test.describe('P1-FE-030 security surfaces', () => {
     page.on('request', (request) => {
       if (request.url().includes('/api/v1/security/users')) policyUserRequests += 1
     })
+    // Both collections load independently. Wait for the actual Lifecycle response
+    // before asserting the resource's resolved lifecycle label.
+    const lifecycleResponse = page.waitForResponse(
+      (response) =>
+        new URL(response.url()).pathname === '/api/v1/lifecycles' && response.status() === 200,
+    )
     await page.goto('/security/resources')
     await expect(page.getByRole('heading', { name: 'Resource và Action' })).toBeVisible()
-    await expect(page.getByRole('cell', { name: 'Product flow' })).toBeVisible()
+    await lifecycleResponse
+    await expect(page.getByRole('cell', { name: 'Product flow', exact: true })).toBeVisible()
     await expect(page.getByRole('navigation', { name: 'Phân trang danh sách' })).toHaveCount(1)
     await page.getByRole('button', { name: 'Xem chi tiết' }).click()
     const resourceDialog = page.getByRole('dialog', { name: /Resource:/ })
