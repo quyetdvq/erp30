@@ -1,7 +1,7 @@
 import { expect, test, type Page, type Route } from '@playwright/test'
 import { mockLookupBatch, child, combo, parent, simple } from './support/lookupBatchMock'
 
-type Preview = { product_id: string; total: number; products: typeof simple[] }
+type Preview = { product_id: string; total: number; products: (typeof simple)[] }
 
 function cors(route: Route) {
   return {
@@ -50,9 +50,10 @@ for (const count of [0, 1, 2, 4]) {
       await expect(summary).toContainText(`${count} mục`)
       await expect(summary.locator('.relation-product')).toHaveCount(Math.min(count, 2))
       await expect(summary.getByRole('button', { name: 'Xem thêm' })).toHaveCount(count > 2 ? 1 : 0)
-      if (count > 2) {
-        await expect(summary).toContainText(`+${count - 2} mục khác`)
-      }
+      await expect(summary.locator('.relation-overflow')).toHaveCount(count > 2 ? 1 : 0)
+      await expect(summary.locator('.relation-overflow')).toHaveText(
+        count > 2 ? [`+${count - 2} mục khác`] : [],
+      )
     }
     await expect(page.locator('.expanded-row')).toHaveCount(0)
     expect(api.calls.filter((call) => call.path.includes('/combo-items'))).toHaveLength(0)
@@ -61,7 +62,9 @@ for (const count of [0, 1, 2, 4]) {
   })
 }
 
-test('Parent with 4 children opens a readable, on-demand list including DRAFT children', async ({ page }) => {
+test('Parent with 4 children opens a readable, on-demand list including DRAFT children', async ({
+  page,
+}) => {
   const api = await mockLookupBatch(page)
   await installPreviews(page, 4, 0)
   const children = [
@@ -108,7 +111,9 @@ test('Parent with 4 children opens a readable, on-demand list including DRAFT ch
   expect(api.unexpected).toEqual([])
 })
 
-test('COMBO components expand into a full table with quantities and only one batched detail request', async ({ page }) => {
+test('COMBO components expand into a full table with quantities and only one batched detail request', async ({
+  page,
+}) => {
   const api = await mockLookupBatch(page)
   await installPreviews(page, 0, 4)
   const components = [
@@ -122,18 +127,24 @@ test('COMBO components expand into a full table with quantities and only one bat
   await page.route('**/api/v1/products/32/combo-items', async (route) => {
     if (route.request().method() === 'OPTIONS') return route.fallback()
     comboCalls += 1
-    await fulfill(route, components.map((component, index) => ({
-      id: String(91 + index),
-      combo_product_id: combo.id,
-      component_product_id: component.id,
-      quantity: `${index + 1}.500000`,
-    })))
+    await fulfill(
+      route,
+      components.map((component, index) => ({
+        id: String(91 + index),
+        combo_product_id: combo.id,
+        component_product_id: component.id,
+        quantity: `${index + 1}.500000`,
+      })),
+    )
   })
   await page.route('**/api/v1/products/details/resolve', async (route) => {
     if (route.request().method() === 'OPTIONS') return route.fallback()
     resolveCalls += 1
     const { product_ids: ids } = route.request().postDataJSON() as { product_ids: string[] }
-    await fulfill(route, components.filter((component) => ids.includes(component.id)))
+    await fulfill(
+      route,
+      components.filter((component) => ids.includes(component.id)),
+    )
   })
   await page.goto('/products')
   const row = productRow(page, combo.product_code)

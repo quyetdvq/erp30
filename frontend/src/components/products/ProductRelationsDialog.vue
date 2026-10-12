@@ -42,9 +42,7 @@ const pages = computed(() => Math.max(1, Math.ceil(props.products.length / pageS
 const currentPage = computed(() => Math.min(page.value, pages.value))
 const from = computed(() => (props.products.length ? (currentPage.value - 1) * pageSize + 1 : 0))
 const to = computed(() => Math.min(currentPage.value * pageSize, props.products.length))
-const pageProducts = computed(() =>
-  props.products.slice(from.value ? from.value - 1 : 0, to.value),
-)
+const pageProducts = computed(() => props.products.slice(from.value ? from.value - 1 : 0, to.value))
 function productName(product: Product): string {
   return (
     product.full_name || product.product_name || product.product_child_name || t('list.noValue')
@@ -156,19 +154,11 @@ watch(
             {{ t('product.relationPageInfo', { from, to, total: products.length }) }}
           </span>
           <div v-if="!loading && pages > 1" class="relation-pagination">
-            <button
-              type="button"
-              :disabled="currentPage <= 1"
-              @click="page = currentPage - 1"
-            >
+            <button type="button" :disabled="currentPage <= 1" @click="page = currentPage - 1">
               {{ t('list.previous') }}
             </button>
             <span>{{ currentPage }}/{{ pages }}</span>
-            <button
-              type="button"
-              :disabled="currentPage >= pages"
-              @click="page = currentPage + 1"
-            >
+            <button type="button" :disabled="currentPage >= pages" @click="page = currentPage + 1">
               {{ t('list.next') }}
             </button>
           </div>
