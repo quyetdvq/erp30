@@ -17,9 +17,9 @@ import DecimalInput from '@/components/forms/DecimalInput.vue'
 import SearchableSelect from '@/components/forms/SearchableSelect.vue'
 import RemoteSearchableSelect from '@/components/forms/RemoteSearchableSelect.vue'
 import { useBasePermission } from '@/composables/useBasePermission'
+import { useBusinessWorkflowStates } from '@/composables/useBusinessWorkflowStates'
 import { useFormatters } from '@/composables/useFormatters'
 import {
-  changeProductState,
   getProductById,
   listProductComboItems,
   listProductConversions,
@@ -31,6 +31,7 @@ import {
   saveProduct,
 } from '@/services/productCatalog'
 import { reportApiError } from '@/services/errorBoundary'
+import BusinessWorkflowAction from '@/components/lists/BusinessWorkflowAction.vue'
 import { useUnsavedChanges } from '@/composables/useUnsavedChanges'
 import { loadLookupPages } from '@/services/listLookups'
 import {
@@ -56,6 +57,7 @@ const { t } = useI18n()
 const route = useRoute()
 const router = useRouter()
 const { hasBasePermission } = useBasePermission()
+const workflowStates = useBusinessWorkflowStates('product')
 const formatters = useFormatters()
 const id = computed(() => (typeof route.params.id === 'string' ? route.params.id : undefined))
 const editing = computed(() => Boolean(id.value))
@@ -411,21 +413,10 @@ async function save(): Promise<void> {
     busy.value = false
   }
 }
-async function toggleState(): Promise<void> {
+async function afterWorkflowChange(): Promise<void> {
   if (!product.value) return
-  busy.value = true
-  try {
-    product.value = await changeProductState(
-      String(product.value.id),
-      product.value.status === 'ACTIVE' ? 'INACTIVE' : 'ACTIVE',
-    )
-    resetFromRow(product.value)
-  } catch (caught: unknown) {
-    error.value = caught
-    reportApiError(caught)
-  } finally {
-    busy.value = false
-  }
+  product.value = await getProductById(String(product.value.id))
+  resetFromRow(product.value)
 }
 function openConversion(index?: number): void {
   conversionEditorIndex.value = index === undefined ? null : index
@@ -665,6 +656,7 @@ watch(
         <div class="form-grid">
           <p v-if="!editing" class="workflow-initial-note" role="note">
             {{ t('workflow.initialManaged') }}
+            <strong v-if="workflowStates.initial.value">{{ workflowStates.initial.value }}</strong>
           </p>
           <label v-if="!isParentRole" class="checkbox-field"
             ><input
@@ -688,15 +680,14 @@ watch(
           {{ t('common.cancel') }}</button
         ><button type="submit" class="primary-button" :disabled="busy || !canEdit || !lookupsReady">
           {{ busy ? t('common.saving') : t('common.save') }}</button
-        ><button
+        ><BusinessWorkflowAction
           v-if="editing && product && hasBasePermission('product', 'setstate')"
-          type="button"
-          class="secondary-button"
-          :disabled="busy"
-          @click="toggleState"
-        >
-          {{ product.status === 'ACTIVE' ? t('common.deactivate') : t('common.activate') }}
-        </button>
+          resource="product"
+          :target-id="String(product.id)"
+          :busy="busy"
+          variant="button"
+          @changed="afterWorkflowChange"
+        />
       </footer>
     </form>
     <section

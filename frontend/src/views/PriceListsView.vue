@@ -29,6 +29,7 @@ import { toApiDateTime, toDateTimeLocal } from '@/modules/priceListDateTime'
 import { listOrganizationPage } from '@/services/foundation'
 import { reportApiError } from '@/services/errorBoundary'
 import { useUnsavedChanges } from '@/composables/useUnsavedChanges'
+import { useBusinessWorkflowStates } from '@/composables/useBusinessWorkflowStates'
 import { loadLookupPages } from '@/services/listLookups'
 import { useAuthStore } from '@/stores/auth'
 import {
@@ -44,7 +45,6 @@ import {
   type UomLabel,
 } from '@/services/productLookups'
 import {
-  changePriceListState,
   listPriceListItemRows,
   listPriceListPage,
   replacePriceListItemRows,
@@ -55,6 +55,7 @@ type ItemDraft = { product_id: string; uom_id: string; price: string }
 
 const { t } = useI18n()
 const { hasBasePermission } = useBasePermission()
+const workflowStates = useBusinessWorkflowStates('price_list')
 const auth = useAuthStore()
 const formatters = useFormatters()
 const state = useListState<PriceList>((query) => listPriceListPage(query), { sort: 'priority' })
@@ -102,6 +103,15 @@ function closeForm(): void {
 }
 
 const listBusy = computed(() => state.isInitialLoading.value || state.isBackgroundRefreshing.value)
+
+const statusFilters = computed(() => [
+  {
+    key: 'status',
+    labelKey: 'pricing.status',
+    type: 'select' as const,
+    options: workflowStates.options.value,
+  },
+])
 
 const columns: readonly ListColumn<PriceList>[] = [
   { key: 'code', labelKey: 'pricing.code', sortable: true },
@@ -329,18 +339,8 @@ async function save(): Promise<void> {
     busy.value = false
   }
 }
-async function toggle(row: PriceList): Promise<void> {
-  busy.value = true
-  error.value = null
-  try {
-    await changePriceListState(String(row.id), row.status === 'ACTIVE' ? 'INACTIVE' : 'ACTIVE')
-    await load()
-  } catch (caught: unknown) {
-    error.value = caught
-    reportApiError(caught)
-  } finally {
-    busy.value = false
-  }
+async function afterWorkflowChange(): Promise<void> {
+  await load()
 }
 async function openDetail(row: PriceList): Promise<void> {
   const epoch = ++detailEpoch
@@ -451,17 +451,7 @@ onMounted(() => void load())
       <ListQueryControls
         :model-value="state.query"
         :show-page-size="false"
-        :filters="[
-          {
-            key: 'status',
-            labelKey: 'pricing.status',
-            type: 'select',
-            options: [
-              { value: 'ACTIVE', labelKey: 'status.active' },
-              { value: 'INACTIVE', labelKey: 'status.inactive' },
-            ],
-          },
-        ]"
+        :filters="statusFilters"
         @apply="applyQuery"
         @reset="resetQuery"
       />
@@ -518,6 +508,7 @@ onMounted(() => void load())
         <template #cell-actions="{ row }">
           <TableRowActions
             :active="row.status === 'ACTIVE'"
+            :state-target-id="String(row.id)"
             :busy="busy"
             :show-view="hasBasePermission('price_list', 'view')"
             :show-edit="hasBasePermission('price_list', 'edit')"
@@ -531,7 +522,7 @@ onMounted(() => void load())
             :deactivate-label="t('common.deactivate')"
             @view="openDetail(row)"
             @edit="openEdit(row)"
-            @toggle="toggle(row)"
+            @state-changed="afterWorkflowChange"
           />
         </template>
       </ListTable>
@@ -606,6 +597,7 @@ onMounted(() => void load())
         /></label>
         <p v-if="!editingId" class="workflow-initial-note" role="note">
           {{ t('workflow.initialManaged') }}
+          <strong v-if="workflowStates.initial.value">{{ workflowStates.initial.value }}</strong>
         </p>
         <label
           ><span>{{ t('pricing.descriptionField') }}</span

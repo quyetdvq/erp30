@@ -44,7 +44,8 @@ final class FoundationLocationService
     /** @param array<string, mixed> $data */
     public function createProvince(array $data): int
     {
-        $payload = $this->locationPayload($data, ['code', 'name', 'status']);
+        $data = BusinessWorkflowWriteBoundary::create('province', $data, $this->db);
+        $payload = $this->locationPayload('province', $data, ['code', 'name', 'status']);
         $this->assertInitialState('province', (string) $payload['status']);
         $this->assertCodeAvailable('provinces', (string) $payload['code']);
 
@@ -55,7 +56,7 @@ final class FoundationLocationService
     public function updateProvince(int $id, array $data): bool
     {
         $current = $this->province($id);
-        $payload = $this->locationPayload($data, []);
+        $payload = $this->locationPayload('province', $data, []);
         $candidate = array_merge($current, $payload);
         $this->assertStateMutationAllowed('province', $current, $payload);
         $this->assertCodeAvailable('provinces', (string) $candidate['code'], $id);
@@ -66,7 +67,8 @@ final class FoundationLocationService
     /** @param array<string, mixed> $data */
     public function createWard(array $data): int
     {
-        $payload = $this->locationPayload($data, ['province_id', 'code', 'name', 'status']);
+        $data = BusinessWorkflowWriteBoundary::create('ward', $data, $this->db);
+        $payload = $this->locationPayload('ward', $data, ['province_id', 'code', 'name', 'status']);
         $this->assertInitialState('ward', (string) $payload['status']);
         $payload['province_id'] = PositiveId::normalize($payload['province_id'], 'province_id', self::ERROR_PROVINCE_REFERENCE_INVALID);
         $this->assertActiveProvince($payload['province_id']);
@@ -79,7 +81,7 @@ final class FoundationLocationService
     public function updateWard(int $id, array $data): bool
     {
         $current = $this->ward($id);
-        $payload = $this->locationPayload($data, []);
+        $payload = $this->locationPayload('ward', $data, []);
         $candidate = array_merge($current, $payload);
         $this->assertStateMutationAllowed('ward', $current, $payload);
         $candidate['province_id'] = PositiveId::normalize($candidate['province_id'], 'province_id', self::ERROR_PROVINCE_REFERENCE_INVALID);
@@ -174,7 +176,7 @@ final class FoundationLocationService
      * @param list<string> $required
      * @return array<string, mixed>
      */
-    private function locationPayload(array $data, array $required): array
+    private function locationPayload(string $resource, array $data, array $required): array
     {
         unset($data['created_by'], $data['updated_by'], $data['created_at'], $data['updated_at']);
         if (array_key_exists('status', $data)) {
@@ -182,9 +184,9 @@ final class FoundationLocationService
                 throw new DomainException(self::ERROR_STATUS_INVALID, ['field' => 'status']);
             }
             $data['status'] = strtoupper(trim($data['status']));
-            if (! in_array($data['status'], self::STATUSES, true)) {
-                throw new DomainException(self::ERROR_STATUS_INVALID, ['field' => 'status']);
-            }
+            $data['status'] = WorkflowBusinessStatus::normalize(
+                $resource, $data['status'], self::STATUSES, self::ERROR_STATUS_INVALID, $this->db,
+            );
         }
         foreach ($required as $field) {
             if (! array_key_exists($field, $data)) {

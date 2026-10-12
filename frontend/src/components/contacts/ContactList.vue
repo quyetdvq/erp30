@@ -3,13 +3,7 @@ import { computed, onMounted, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 
 import type { Contact, Province, Ward } from '@/api/generated/types.gen'
-import {
-  changeContactState,
-  listContactPage,
-  listProvincePage,
-  listWardPage,
-  saveContact,
-} from '@/services/foundation'
+import { listContactPage, listProvincePage, listWardPage, saveContact } from '@/services/foundation'
 import {
   ListPagination,
   ListQueryControls,
@@ -23,6 +17,7 @@ import type { TableDetailField } from '@/components/lists/TableDetailModal.vue'
 import { useListState } from '@/composables/useListState'
 import { useBasePermission } from '@/composables/useBasePermission'
 import { reportApiError } from '@/services/errorBoundary'
+import { useBusinessWorkflowStates } from '@/composables/useBusinessWorkflowStates'
 import ContactFormModal from './ContactFormModal.vue'
 
 const props = withDefaults(
@@ -39,6 +34,22 @@ const { hasBasePermission } = useBasePermission()
 // contact.* is never a fallback for an unregistered/future owner.
 const ownerResource = computed(() =>
   props.ownerType === 'ORGANIZATION' ? 'organization_contact' : 'employee_contact',
+)
+const workflowStates = useBusinessWorkflowStates(ownerResource, [
+  'ACTIVE',
+  'DRAFT',
+  'INACTIVE',
+  'CLOSED',
+])
+const initialState = computed(
+  () =>
+    workflowStates.initial.value ??
+    (workflowStates.codes.value.includes('DRAFT')
+      ? 'DRAFT'
+      : (workflowStates.codes.value[0] ?? 'ACTIVE')),
+)
+const historyStates = computed(() =>
+  workflowStates.codes.value.filter((code) => code !== 'ACTIVE' && code !== initialState.value),
 )
 function rowPermissionResource(contact: Contact): string {
   return contact.contact_type === 'ORGANIZATION'
@@ -61,6 +72,12 @@ const state = useListState<Contact>(
   (query) => {
     const ownerFilters = { ...query.filter }
     delete ownerFilters.status
+    if (mode.value === 'history' && historyStates.value.length === 0) {
+      return Promise.resolve({
+        data: [],
+        meta: { page: query.page, page_size: query.page_size, total: 0 },
+      })
+    }
     return listContactPage({
       ...query,
       filter: {
@@ -71,8 +88,8 @@ const state = useListState<Contact>(
           mode.value === 'active'
             ? 'ACTIVE'
             : mode.value === 'draft'
-              ? 'DRAFT'
-              : ['INACTIVE', 'CLOSED'],
+              ? initialState.value
+              : historyStates.value,
       },
     })
   },
@@ -179,7 +196,12 @@ async function save(payload: Parameters<typeof saveContact>[0]): Promise<void> {
     const saved = await saveContact(payload, editing.value?.id)
     modalOpen.value = false
     if (!editing.value) {
-      mode.value = saved.status === 'DRAFT' ? 'draft' : 'active'
+      mode.value =
+        saved.status === 'ACTIVE'
+          ? 'active'
+          : saved.status === initialState.value
+            ? 'draft'
+            : 'history'
     }
     await load()
   } catch (caught: unknown) {
@@ -190,20 +212,9 @@ async function save(payload: Parameters<typeof saveContact>[0]): Promise<void> {
   }
 }
 
-async function toggleState(contact: Contact): Promise<void> {
-  mutationBusy.value = true
-  error.value = null
-  try {
-    const nextStatus = contact.status === 'ACTIVE' ? 'INACTIVE' : 'ACTIVE'
-    await changeContactState(String(contact.id), nextStatus)
-    mode.value = nextStatus === 'ACTIVE' ? 'active' : 'history'
-    await load()
-  } catch (caught: unknown) {
-    error.value = caught
-    reportApiError(caught)
-  } finally {
-    mutationBusy.value = false
-  }
+async function afterWorkflowChange(status: string): Promise<void> {
+  mode.value = status === 'ACTIVE' ? 'active' : status === initialState.value ? 'draft' : 'history'
+  await load()
 }
 
 function applyQuery(query: ListQuery): void {
@@ -218,6 +229,10 @@ function resetQuery(): void {
   state.reset()
   void load()
 }
+
+watch(historyStates, () => {
+  if (mode.value === 'history') void load()
+})
 
 watch(mode, () => {
   state.setPage(1)
@@ -249,8 +264,14 @@ onMounted(async () => {
         >
           {{ t('contact.activeView') }}
         </button>
-        <button type="button" role="tab" :aria-selected="mode === 'draft'" @click="mode = 'draft'">
-          {{ t('contact.draftView') }}
+        <button
+          v-if="initialState !== 'ACTIVE'"
+          type="button"
+          role="tab"
+          :aria-selected="mode === 'draft'"
+          @click="mode = 'draft'"
+        >
+          {{ t('contact.draftView') }} ({{ initialState }})
         </button>
         <button
           type="button"
@@ -299,10 +320,11 @@ onMounted(async () => {
         <template #cell-actions="{ row }">
           <TableRowActions
             :active="row.status === 'ACTIVE'"
+            :state-target-id="String(row.id)"
             :busy="mutationBusy"
             :show-view="true"
             :show-edit="true"
-            :show-toggle="row.status !== 'CLOSED'"
+            :show-toggle="true"
             :view-permission="`${rowPermissionResource(row)}.view`"
             :edit-permission="`${rowPermissionResource(row)}.edit`"
             :toggle-permission="`${rowPermissionResource(row)}.setstate`"
@@ -312,7 +334,7 @@ onMounted(async () => {
             :view-label="t('common.view')"
             @view="openView(row)"
             @edit="openEdit(row)"
-            @toggle="toggleState(row)"
+            @state-changed="afterWorkflowChange"
           />
         </template>
       </ListTable>

@@ -150,6 +150,15 @@ export async function mockLookupBatch(
           base_permissions: permissions,
         },
       })
+    } else if (
+      /^\/api\/v1\/business-workflow\/(?:product|price_list)\/states$/.test(path) &&
+      method === 'GET'
+    ) {
+      await respond({
+        mode: 'LIFECYCLE',
+        initial: 'DRAFT',
+        states: ['DRAFT', 'ACTIVE', 'INACTIVE', 'CLOSED'],
+      })
     } else if (path === '/api/v1/products' && method === 'GET') {
       await list([parent, combo, simple], 15)
     } else if (path === '/api/v1/product-groups' && method === 'GET') {

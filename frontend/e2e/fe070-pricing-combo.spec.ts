@@ -1,5 +1,10 @@
 import AxeBuilder from '@axe-core/playwright'
 import { expect, test, type Page } from '@playwright/test'
+import { fulfillWorkflowMock, mockBusinessWorkflowStates } from './support/mockBusinessWorkflow'
+
+test.beforeEach(async ({ page }) => {
+  await mockBusinessWorkflowStates(page)
+})
 
 const organization = {
   id: '1',
@@ -90,12 +95,13 @@ async function mockSession(
 async function mockCatalog(page: Page): Promise<{
   createBody: Record<string, unknown> | null
   patchBody: Record<string, unknown> | null
-  stateBody: Record<string, unknown> | null
+  stateAction: { method: string; body: Record<string, unknown> } | null
   itemBody: unknown
 }> {
   let createBody: Record<string, unknown> | null = null
   let patchBody: Record<string, unknown> | null = null
-  let stateBody: Record<string, unknown> | null = null
+  let stateAction: { method: string; body: Record<string, unknown> } | null = null
+  let currentPriceListStatus = 'ACTIVE'
   let itemBody: unknown = null
   let priceListItems = [
     { id: '71', price_list_id: '70', product_id: '30', uom_id: '20', price: '125000.00' },
@@ -192,6 +198,27 @@ async function mockCatalog(page: Page): Promise<{
   await page.route('**/api/v1/product-uoms/labels/resolve', (route) =>
     lookupResponse(route, [baseUom, alternateUom]),
   )
+  await page.route('**/api/v1/business-workflow/price_list/70/options', (route) =>
+    fulfillWorkflowMock(route, {
+      data: {
+        mode: 'LIFECYCLE',
+        current: currentPriceListStatus,
+        options:
+          currentPriceListStatus === 'ACTIVE'
+            ? [{ action_code: 'deactivate', status: 'INACTIVE' }]
+            : [],
+      },
+    }),
+  )
+  await page.route('**/api/v1/business-workflow/price_list/70/actions/deactivate', (route) => {
+    if (route.request().method() === 'OPTIONS') return fulfillWorkflowMock(route, {})
+    stateAction = {
+      method: route.request().method(),
+      body: route.request().postDataJSON() as Record<string, unknown>,
+    }
+    currentPriceListStatus = 'INACTIVE'
+    return fulfillWorkflowMock(route, { data: { action_code: 'deactivate', status: 'INACTIVE' } })
+  })
   await page.route(/\/api\/v1\/price-lists(?:\/|\?|$)/, async (route) => {
     const request = route.request()
     const url = request.url()
@@ -237,14 +264,6 @@ async function mockCatalog(page: Page): Promise<{
         body: JSON.stringify({ data: [] }),
       })
     }
-    if (url.includes('/actions/set-state')) {
-      stateBody = request.postDataJSON() as Record<string, unknown>
-      return route.fulfill({
-        status: 200,
-        contentType: 'application/json',
-        body: JSON.stringify({ data: { ...priceList, status: 'INACTIVE' } }),
-      })
-    }
     if (request.method() === 'PATCH') {
       patchBody = request.postDataJSON() as Record<string, unknown>
       return route.fulfill({
@@ -258,13 +277,16 @@ async function mockCatalog(page: Page): Promise<{
       return route.fulfill({
         status: 201,
         contentType: 'application/json',
-        body: JSON.stringify({ data: priceList }),
+        body: JSON.stringify({ data: { ...priceList, ...createBody, id: '71', status: 'DRAFT' } }),
       })
     }
     return route.fulfill({
       status: 200,
       contentType: 'application/json',
-      body: JSON.stringify({ data: [priceList], meta: { page: 1, page_size: 50, total: 1 } }),
+      body: JSON.stringify({
+        data: [{ ...priceList, status: currentPriceListStatus }],
+        meta: { page: 1, page_size: 50, total: 1 },
+      }),
     })
   })
   return {
@@ -274,8 +296,8 @@ async function mockCatalog(page: Page): Promise<{
     get patchBody() {
       return patchBody
     },
-    get stateBody() {
-      return stateBody
+    get stateAction() {
+      return stateAction
     },
     get itemBody() {
       return itemBody
@@ -325,8 +347,8 @@ test.describe('P1-FE-070 Pricing/COMBO UI', () => {
       name: 'Wholesale prices',
       organization_id: '1',
       priority: 20,
-      status: 'ACTIVE',
     })
+    expect(requests.createBody).not.toHaveProperty('status')
   })
 
   test('keeps the Price List modal open for backdrop clicks and Escape', async ({ page }) => {
@@ -346,7 +368,7 @@ test.describe('P1-FE-070 Pricing/COMBO UI', () => {
     await expect(dialog).toBeHidden()
   })
 
-  test('uses PATCH for editable fields, set-state action for status, and preserves item decimals', async ({
+  test('uses PATCH for editable fields, Lifecycle Transition for status, and preserves item decimals', async ({
     page,
   }) => {
     await mockSession(page)
@@ -358,8 +380,17 @@ test.describe('P1-FE-070 Pricing/COMBO UI', () => {
     await page.getByRole('dialog').getByRole('button', { name: 'Lưu' }).click()
     await expect.poll(() => requests.patchBody).not.toBeNull()
     expect(requests.patchBody).not.toHaveProperty('status')
-    await row.getByRole('button', { name: 'Ngừng hoạt động' }).click()
-    await expect.poll(() => requests.stateBody).toEqual({ status: 'INACTIVE' })
+    await row.getByRole('button', { name: 'Chuyển trạng thái' }).click()
+    const transitionDialog = page.getByRole('dialog', { name: 'Chuyển trạng thái' })
+    const transitionSelect = transitionDialog.getByRole('combobox', {
+      name: 'Transition được phép',
+    })
+    await expect(
+      transitionSelect.getByRole('option', { name: 'INACTIVE (deactivate)' }),
+    ).toHaveCount(1)
+    await transitionSelect.selectOption({ label: 'INACTIVE (deactivate)' })
+    await transitionDialog.getByRole('button', { name: 'Lưu' }).click()
+    await expect.poll(() => requests.stateAction).toEqual({ method: 'POST', body: {} })
     await page
       .getByRole('row')
       .filter({ hasText: 'RETAIL' })
@@ -401,6 +432,6 @@ test.describe('P1-FE-070 Pricing/COMBO UI', () => {
     const row = page.getByRole('row').filter({ hasText: 'RETAIL' })
     await expect(row.getByRole('button', { name: 'Xem chi tiết' })).toBeVisible()
     await expect(row.getByRole('button', { name: 'Sửa' })).toHaveCount(0)
-    await expect(row.getByRole('button', { name: 'Ngừng hoạt động' })).toHaveCount(0)
+    await expect(row.getByRole('button', { name: 'Chuyển trạng thái' })).toHaveCount(0)
   })
 })

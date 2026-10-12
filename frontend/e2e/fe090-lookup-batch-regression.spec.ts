@@ -244,7 +244,7 @@ test.describe('E2E-LOOKUP-BATCH (browser contract, mocked API)', () => {
     const row = page.getByRole('row').filter({ hasText: 'E2E-RETAIL' })
     await expect(row.getByRole('button', { name: 'Xem chi tiết' })).toBeVisible()
     await expect(row.getByRole('button', { name: 'Sửa' })).toHaveCount(0)
-    await expect(row.getByRole('button', { name: 'Ngừng hoạt động' })).toHaveCount(0)
+    await expect(row.getByRole('button', { name: 'Chuyển trạng thái' })).toHaveCount(0)
     await expect(page.getByRole('button', { name: 'Tạo' })).toHaveCount(0)
     expect(api.unexpected).toEqual([])
   })

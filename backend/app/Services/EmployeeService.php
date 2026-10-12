@@ -45,6 +45,7 @@ final class EmployeeService
     public function create(array $data): int
     {
         $operation = $this->operation();
+        $data = BusinessWorkflowWriteBoundary::create('employee', $data, $this->db);
         $payload = array_merge($this->withoutAuditFields($data), $operation->createdAudit());
         $payload = $this->prepare($payload, true);
         $this->assertUnique($payload);
@@ -69,6 +70,7 @@ final class EmployeeService
             throw new DomainException(self::ERROR_MANAGER_REFERENCE_INVALID, ['employee_id' => $id]);
         }
 
+        BusinessWorkflowWriteBoundary::assertNoDirectStateMutation('employee', $current, $data, $this->db);
         $payload = array_merge($this->withoutAuditFields($data), $operation->updatedAudit());
         $payload = $this->prepare($payload, false);
         $this->assertUnique($payload, $id);
@@ -162,9 +164,9 @@ final class EmployeeService
                 throw new DomainException(self::ERROR_STATUS_INVALID, ['status' => '']);
             }
             $data['status'] = strtoupper(trim($data['status']));
-            if (! in_array($data['status'], ['ACTIVE', 'INACTIVE'], true)) {
-                throw new DomainException(self::ERROR_STATUS_INVALID, ['status' => $data['status']]);
-            }
+            $data['status'] = WorkflowBusinessStatus::normalize(
+                'employee', $data['status'], ['ACTIVE', 'INACTIVE'], self::ERROR_STATUS_INVALID, $this->db,
+            );
         } elseif ($creating) {
             $data['status'] = 'ACTIVE';
         }

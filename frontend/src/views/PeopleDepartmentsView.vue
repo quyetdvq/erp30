@@ -16,16 +16,14 @@ import SearchableSelect from '@/components/forms/SearchableSelect.vue'
 import type { ListQuery } from '@/components/lists/listTypes'
 import { useListState } from '@/composables/useListState'
 import { useUnsavedChanges } from '@/composables/useUnsavedChanges'
-import {
-  changeDepartmentState,
-  listDepartmentPage,
-  saveDepartment,
-} from '@/services/employeeStructure'
+import { listDepartmentPage, saveDepartment } from '@/services/employeeStructure'
 import { reportApiError } from '@/services/errorBoundary'
 import { useBasePermission } from '@/composables/useBasePermission'
+import { useBusinessWorkflowStates } from '@/composables/useBusinessWorkflowStates'
 
 const { t } = useI18n()
 const { hasBasePermission } = useBasePermission()
+const workflowStates = useBusinessWorkflowStates('department')
 const state = useListState<Department>((query) => listDepartmentPage(query), { sort: 'name' })
 const selectedId = ref<string | null>(null)
 const modalOpen = ref(false)
@@ -185,18 +183,8 @@ async function save(): Promise<void> {
     busy.value = false
   }
 }
-async function toggle(row: Department): Promise<void> {
-  busy.value = true
-  error.value = null
-  try {
-    await changeDepartmentState(String(row.id), row.status === 'ACTIVE' ? 'INACTIVE' : 'ACTIVE')
-    await load()
-  } catch (caught: unknown) {
-    error.value = caught
-    reportApiError(caught)
-  } finally {
-    busy.value = false
-  }
+async function afterWorkflowChange(): Promise<void> {
+  await load()
 }
 onMounted(() => void load())
 </script>
@@ -257,6 +245,7 @@ onMounted(() => void load())
         <template #cell-actions="{ row }">
           <TableRowActions
             :active="row.status === 'ACTIVE'"
+            :state-target-id="String(row.id)"
             :busy="busy"
             :show-view="true"
             :show-edit="true"
@@ -270,7 +259,7 @@ onMounted(() => void load())
             :view-label="t('common.view')"
             @view="openView(row)"
             @edit="openEdit(row)"
-            @toggle="toggle(row)"
+            @state-changed="afterWorkflowChange"
           />
         </template>
       </ListTable>
@@ -349,6 +338,7 @@ onMounted(() => void load())
         </label>
         <p v-else class="workflow-initial-note" role="note">
           {{ t('workflow.initialManaged') }}
+          <strong v-if="workflowStates.initial.value">{{ workflowStates.initial.value }}</strong>
         </p>
         <footer class="modal-card__footer">
           <button type="button" class="secondary-button" @click="closeForm">

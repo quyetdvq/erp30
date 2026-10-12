@@ -57,6 +57,7 @@ final class OrganizationService
     public function create(array $data): int
     {
         $operation = $this->operation();
+        $data = BusinessWorkflowWriteBoundary::create('organization', $data, $this->db);
         $payload = $this->prepareCreate($data, $operation);
 
         return $this->withTreeLock(function () use ($payload): int {
@@ -78,6 +79,7 @@ final class OrganizationService
         }
 
         $payload = $this->withoutAuditFields($data);
+        BusinessWorkflowWriteBoundary::assertNoDirectStateMutation('organization', $current, $payload, $this->db);
         if (array_key_exists('type', $payload)) {
             $payload['type'] = $this->normalizeType($payload['type']);
         }

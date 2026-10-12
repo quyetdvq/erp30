@@ -5,6 +5,45 @@ export type ClientOptions = {
 };
 
 /**
+ * Lifecycle member code when bound; otherwise a permitted fallback native code.
+ */
+export type BusinessWorkflowStatus = string;
+
+export type BusinessWorkflowStates = {
+    mode: 'NATIVE' | 'LIFECYCLE';
+    initial: BusinessWorkflowStatus | null;
+    states: Array<BusinessWorkflowStatus>;
+};
+
+export type BusinessWorkflowOption = {
+    action_code: string;
+    status: BusinessWorkflowStatus;
+};
+
+export type BusinessWorkflowOptions = {
+    mode: 'NATIVE' | 'LIFECYCLE';
+    current: BusinessWorkflowStatus;
+    options: Array<BusinessWorkflowOption>;
+};
+
+export type BusinessWorkflowMutation = {
+    status: BusinessWorkflowStatus;
+    action_code: string;
+};
+
+export type BusinessWorkflowStatesResponse = SuccessResponse & {
+    data?: BusinessWorkflowStates;
+};
+
+export type BusinessWorkflowOptionsResponse = SuccessResponse & {
+    data?: BusinessWorkflowOptions;
+};
+
+export type BusinessWorkflowMutationResponse = SuccessResponse & {
+    data?: BusinessWorkflowMutation;
+};
+
+/**
  * Request correlation identifier echoed in the response header and meta.request_id.
  */
 export type RequestId = string;
@@ -193,7 +232,7 @@ export type ProductGroup = {
     code: string;
     name: string;
     description?: string | null;
-    status: 'ACTIVE' | 'INACTIVE';
+    status: BusinessWorkflowStatus;
 };
 
 export type ProductGroupCreate = {
@@ -201,7 +240,7 @@ export type ProductGroupCreate = {
     code: string;
     name: string;
     description?: string | null;
-    status?: 'ACTIVE' | 'INACTIVE';
+    status?: BusinessWorkflowStatus;
 };
 
 export type ProductGroupPatch = {
@@ -216,14 +255,14 @@ export type ProductUom = {
     code: string;
     name: string;
     description?: string | null;
-    status: 'ACTIVE' | 'INACTIVE';
+    status: BusinessWorkflowStatus;
 };
 
 export type ProductUomCreate = {
     code: string;
     name: string;
     description?: string | null;
-    status?: 'ACTIVE' | 'INACTIVE';
+    status?: BusinessWorkflowStatus;
 };
 
 export type ProductUomPatch = {
@@ -252,7 +291,7 @@ export type Product = {
     description?: string | null;
     manual_standard_cost?: Decimal | null;
     serial_management_enabled?: boolean;
-    status: 'ACTIVE' | 'INACTIVE';
+    status: BusinessWorkflowStatus;
     role: 'SIMPLE' | 'PARENT' | 'CHILD' | 'COMBO';
     full_name: string;
     selectable: boolean;
@@ -264,7 +303,7 @@ export type ProductLookupOption = {
     product_code: string | null;
     full_name: string;
     role: 'SIMPLE' | 'PARENT' | 'CHILD' | 'COMBO';
-    status: 'ACTIVE' | 'INACTIVE';
+    status: BusinessWorkflowStatus;
     base_uom_id: BigInt | null;
     selectable: boolean;
 };
@@ -305,7 +344,7 @@ export type ProductUomLabelResolveRequest = {
 export type ProductUomLabel = {
     id: BigInt;
     code: string;
-    status: 'ACTIVE' | 'INACTIVE';
+    status: BusinessWorkflowStatus;
 };
 
 export type OrganizationLabelResolveRequest = {
@@ -366,7 +405,7 @@ export type ProductCreate = {
     description?: string;
     manual_standard_cost?: Decimal;
     serial_management_enabled?: boolean;
-    status?: 'ACTIVE' | 'INACTIVE';
+    status?: BusinessWorkflowStatus;
 };
 
 export type ProductPatch = {
@@ -398,7 +437,7 @@ export type PriceList = {
     effective_from: string;
     effective_to?: string | null;
     priority: number;
-    status: 'ACTIVE' | 'INACTIVE';
+    status: BusinessWorkflowStatus;
     description?: string | null;
 };
 
@@ -409,7 +448,7 @@ export type PriceListCreate = {
     effective_from: string;
     effective_to?: string | null;
     priority?: number;
-    status?: 'ACTIVE' | 'INACTIVE';
+    status?: BusinessWorkflowStatus;
     description?: string | null;
 };
 
@@ -581,16 +620,22 @@ export type Province = {
     id: BigInt;
     code: string;
     name: string;
-    status: 'ACTIVE' | 'INACTIVE' | 'CLOSED';
+    status: BusinessWorkflowStatus;
 };
 
 export type ProvinceCreate = {
     code: string;
     name: string;
-    status: 'ACTIVE' | 'INACTIVE' | 'CLOSED';
+    status?: BusinessWorkflowStatus;
 };
 
-export type ProvincePatch = ProvinceCreate;
+/**
+ * Status must be changed only with /actions/set-state.
+ */
+export type ProvincePatch = {
+    code?: string;
+    name?: string;
+};
 
 export type Ward = {
     id: BigInt;
@@ -598,7 +643,7 @@ export type Ward = {
     code: string;
     name: string;
     name_full?: string | null;
-    status: 'ACTIVE' | 'INACTIVE' | 'CLOSED';
+    status: BusinessWorkflowStatus;
 };
 
 export type WardCreate = {
@@ -606,10 +651,18 @@ export type WardCreate = {
     code: string;
     name: string;
     name_full?: string | null;
-    status: 'ACTIVE' | 'INACTIVE' | 'CLOSED';
+    status?: BusinessWorkflowStatus;
 };
 
-export type WardPatch = WardCreate;
+/**
+ * Status must be changed only with /actions/set-state.
+ */
+export type WardPatch = {
+    province_id?: BigInt;
+    code?: string;
+    name?: string;
+    name_full?: string | null;
+};
 
 export type Organization = {
     id: BigInt;
@@ -623,7 +676,7 @@ export type Organization = {
     province_id?: BigInt;
     ward_id?: BigInt;
     description?: string | null;
-    status: string;
+    status: BusinessWorkflowStatus;
     active_from?: string | null;
     active_to?: string | null;
 };
@@ -639,19 +692,35 @@ export type OrganizationCreate = {
     province_id?: BigInt;
     ward_id?: BigInt;
     description?: string;
-    status: string;
+    status?: BusinessWorkflowStatus;
     active_from?: string;
     active_to?: string;
 };
 
-export type OrganizationPatch = OrganizationCreate;
+/**
+ * Status must be changed only with /actions/set-state.
+ */
+export type OrganizationPatch = {
+    parent_id?: BigInt;
+    type?: string;
+    code?: string;
+    name?: string;
+    legal_name?: string;
+    tax_code?: string;
+    address?: string;
+    province_id?: BigInt;
+    ward_id?: BigInt;
+    description?: string;
+    active_from?: string;
+    active_to?: string;
+};
 
 export type Contact = {
     id: BigInt;
     contact_type: 'EMPLOYEE' | 'ORGANIZATION';
     contact_ref_id: BigInt;
     description?: string | null;
-    status: string;
+    status: BusinessWorkflowStatus;
     name?: string | null;
     email?: string | null;
     phone?: string | null;
@@ -703,7 +772,7 @@ export type Department = {
     code: string;
     name: string;
     description?: string | null;
-    status: 'ACTIVE' | 'INACTIVE' | 'CLOSED';
+    status: BusinessWorkflowStatus;
 };
 
 export type DepartmentCreate = {
@@ -711,7 +780,7 @@ export type DepartmentCreate = {
     code: string;
     name: string;
     description?: string;
-    status?: 'ACTIVE' | 'INACTIVE' | 'CLOSED';
+    status?: BusinessWorkflowStatus;
 };
 
 export type DepartmentPatch = {
@@ -719,11 +788,10 @@ export type DepartmentPatch = {
     code?: string;
     name?: string;
     description?: string | null;
-    status?: 'ACTIVE' | 'INACTIVE' | 'CLOSED';
 };
 
 export type DepartmentState = {
-    status: 'ACTIVE' | 'INACTIVE' | 'CLOSED';
+    status: BusinessWorkflowStatus;
 };
 
 export type Position = {
@@ -732,7 +800,7 @@ export type Position = {
     name: string;
     level?: number | null;
     description?: string | null;
-    status: 'ACTIVE' | 'INACTIVE' | 'CLOSED';
+    status: BusinessWorkflowStatus;
 };
 
 export type PositionCreate = {
@@ -740,7 +808,7 @@ export type PositionCreate = {
     name: string;
     level?: number | null;
     description?: string;
-    status?: 'ACTIVE' | 'INACTIVE' | 'CLOSED';
+    status?: BusinessWorkflowStatus;
 };
 
 export type PositionPatch = {
@@ -748,11 +816,10 @@ export type PositionPatch = {
     name?: string;
     level?: number | null;
     description?: string | null;
-    status?: 'ACTIVE' | 'INACTIVE' | 'CLOSED';
 };
 
 export type PositionState = {
-    status: 'ACTIVE' | 'INACTIVE' | 'CLOSED';
+    status: BusinessWorkflowStatus;
 };
 
 export type Employee = {
@@ -766,7 +833,7 @@ export type Employee = {
     hire_date?: string | null;
     manager_employee_id?: BigInt;
     description?: string | null;
-    status: 'ACTIVE' | 'INACTIVE';
+    status: BusinessWorkflowStatus;
 };
 
 export type EmployeeCreate = {
@@ -779,7 +846,7 @@ export type EmployeeCreate = {
     hire_date?: string | null;
     manager_employee_id?: BigInt;
     description?: string | null;
-    status?: 'ACTIVE' | 'INACTIVE';
+    status?: BusinessWorkflowStatus;
 };
 
 export type EmployeePatch = {
@@ -792,11 +859,10 @@ export type EmployeePatch = {
     hire_date?: string | null;
     manager_employee_id?: BigInt;
     description?: string | null;
-    status?: 'ACTIVE' | 'INACTIVE';
 };
 
 export type EmployeeState = {
-    status: 'ACTIVE' | 'INACTIVE';
+    status: BusinessWorkflowStatus;
 };
 
 export type EmployeeAssignment = {
@@ -832,7 +898,6 @@ export type EmployeeAssignmentPatch = {
     effective_from?: string;
     effective_to?: string | null;
     description?: string | null;
-    status?: 'ACTIVE' | 'INACTIVE';
 };
 
 export type EmployeeAssignmentState = {
@@ -840,7 +905,7 @@ export type EmployeeAssignmentState = {
 };
 
 export type State = {
-    status: 'ACTIVE' | 'INACTIVE' | 'CLOSED';
+    status: BusinessWorkflowStatus;
 };
 
 export type ProvinceResponse = SuccessResponse & {
@@ -1299,6 +1364,10 @@ export type AcceptLanguage = 'vi' | 'en';
  * Client request correlation identifier; invalid or missing values are replaced by a generated UUID.
  */
 export type RequestId2 = RequestId;
+
+export type BusinessWorkflowResource = 'province' | 'ward' | 'organization' | 'department' | 'position' | 'employee' | 'product_group' | 'product_uom' | 'product' | 'price_list' | 'organization_contact' | 'employee_contact';
+
+export type BusinessWorkflowActionCode = string;
 
 export type Id = BigInt;
 
@@ -7188,3 +7257,123 @@ export type ReplacePriceListItemsResponses = {
 };
 
 export type ReplacePriceListItemsResponse = ReplacePriceListItemsResponses[keyof ReplacePriceListItemsResponses];
+
+export type GetBusinessWorkflowStatesData = {
+    body?: never;
+    path: {
+        resource: 'province' | 'ward' | 'organization' | 'department' | 'position' | 'employee' | 'product_group' | 'product_uom' | 'product' | 'price_list' | 'organization_contact' | 'employee_contact';
+    };
+    query?: never;
+    url: '/api/v1/business-workflow/{resource}/states';
+};
+
+export type GetBusinessWorkflowStatesErrors = {
+    /**
+     * Unauthenticated or invalid authentication.
+     */
+    401: ErrorResponse;
+    /**
+     * Visible target but action denied.
+     */
+    403: ErrorResponse;
+    /**
+     * Semantically invalid request.
+     */
+    422: ErrorResponse;
+};
+
+export type GetBusinessWorkflowStatesError = GetBusinessWorkflowStatesErrors[keyof GetBusinessWorkflowStatesErrors];
+
+export type GetBusinessWorkflowStatesResponses = {
+    /**
+     * Resource Workflow State metadata.
+     */
+    200: BusinessWorkflowStatesResponse;
+};
+
+export type GetBusinessWorkflowStatesResponse = GetBusinessWorkflowStatesResponses[keyof GetBusinessWorkflowStatesResponses];
+
+export type GetBusinessWorkflowOptionsData = {
+    body?: never;
+    path: {
+        resource: 'province' | 'ward' | 'organization' | 'department' | 'position' | 'employee' | 'product_group' | 'product_uom' | 'product' | 'price_list' | 'organization_contact' | 'employee_contact';
+        id: BigInt;
+    };
+    query?: never;
+    url: '/api/v1/business-workflow/{resource}/{id}/options';
+};
+
+export type GetBusinessWorkflowOptionsErrors = {
+    /**
+     * Unauthenticated or invalid authentication.
+     */
+    401: ErrorResponse;
+    /**
+     * Visible target but action denied.
+     */
+    403: ErrorResponse;
+    /**
+     * Target not found or not visible.
+     */
+    404: ErrorResponse;
+    /**
+     * Semantically invalid request.
+     */
+    422: ErrorResponse;
+};
+
+export type GetBusinessWorkflowOptionsError = GetBusinessWorkflowOptionsErrors[keyof GetBusinessWorkflowOptionsErrors];
+
+export type GetBusinessWorkflowOptionsResponses = {
+    /**
+     * Authorized transitions for this record.
+     */
+    200: BusinessWorkflowOptionsResponse;
+};
+
+export type GetBusinessWorkflowOptionsResponse = GetBusinessWorkflowOptionsResponses[keyof GetBusinessWorkflowOptionsResponses];
+
+export type ExecuteBusinessWorkflowActionData = {
+    body?: never;
+    path: {
+        resource: 'province' | 'ward' | 'organization' | 'department' | 'position' | 'employee' | 'product_group' | 'product_uom' | 'product' | 'price_list' | 'organization_contact' | 'employee_contact';
+        id: BigInt;
+        action_code: string;
+    };
+    query?: never;
+    url: '/api/v1/business-workflow/{resource}/{id}/actions/{action_code}';
+};
+
+export type ExecuteBusinessWorkflowActionErrors = {
+    /**
+     * Unauthenticated or invalid authentication.
+     */
+    401: ErrorResponse;
+    /**
+     * Visible target but action denied.
+     */
+    403: ErrorResponse;
+    /**
+     * Target not found or not visible.
+     */
+    404: ErrorResponse;
+    /**
+     * Conflict, concurrency, uniqueness, or current-state failure.
+     */
+    409: ErrorResponse;
+    /**
+     * Semantically invalid request.
+     */
+    422: ErrorResponse;
+};
+
+export type ExecuteBusinessWorkflowActionError = ExecuteBusinessWorkflowActionErrors[keyof ExecuteBusinessWorkflowActionErrors];
+
+export type ExecuteBusinessWorkflowActionResponses = {
+    /**
+     * State changed via a configured transition.
+     */
+    200: BusinessWorkflowMutationResponse;
+};
+
+export type ExecuteBusinessWorkflowActionResponse = ExecuteBusinessWorkflowActionResponses[keyof ExecuteBusinessWorkflowActionResponses];

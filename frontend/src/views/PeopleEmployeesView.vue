@@ -30,7 +30,6 @@ import { useUnsavedChanges } from '@/composables/useUnsavedChanges'
 import { listOrganizationPage } from '@/services/foundation'
 import {
   changeAssignmentState,
-  changeEmployeeState,
   listAssignmentPage,
   listDepartmentPage,
   listEmployeePage,
@@ -42,11 +41,13 @@ import { reportApiError } from '@/services/errorBoundary'
 import { loadLookupPages } from '@/services/listLookups'
 import { hasPrimaryOverlap, wouldCreateManagerCycle } from '@/modules/employeeRules'
 import { useBasePermission } from '@/composables/useBasePermission'
+import { useBusinessWorkflowStates } from '@/composables/useBusinessWorkflowStates'
 
 type Gender = 'MALE' | 'FEMALE' | 'OTHER' | null
 type Tab = 'overview' | 'assignments' | 'contacts' | 'audit'
 const { t, locale } = useI18n()
 const { hasBasePermission } = useBasePermission()
+const workflowStates = useBusinessWorkflowStates('employee')
 const today = () => new Date().toISOString().slice(0, 10)
 
 const state = useListState<Employee>((query) => listEmployeePage(query), { sort: 'employee_name' })
@@ -75,7 +76,7 @@ const employeeForm = ref({
   place_of_origin: '',
   hire_date: '',
   manager_employee_id: '',
-  status: 'ACTIVE' as 'ACTIVE' | 'INACTIVE',
+  status: 'ACTIVE' as Employee['status'],
   description: '',
 })
 const assignmentForm = ref({
@@ -415,22 +416,8 @@ async function saveEmployeeForm(): Promise<void> {
     busy.value = false
   }
 }
-async function toggleEmployee(row: Employee): Promise<void> {
-  busy.value = true
-  error.value = null
-  try {
-    const updated = await changeEmployeeState(
-      String(row.id),
-      row.status === 'ACTIVE' ? 'INACTIVE' : 'ACTIVE',
-    )
-    upsertEmployeeLookup(updated)
-    await load()
-  } catch (caught: unknown) {
-    error.value = caught
-    reportApiError(caught)
-  } finally {
-    busy.value = false
-  }
+async function afterWorkflowChange(): Promise<void> {
+  await load()
 }
 function openAssignmentCreate(): void {
   editingAssignmentId.value = undefined
@@ -603,6 +590,7 @@ onMounted(async () => {
         <template #cell-actions="{ row }">
           <TableRowActions
             :active="row.status === 'ACTIVE'"
+            :state-target-id="String(row.id)"
             :busy="busy"
             :show-view="true"
             :show-edit="true"
@@ -616,7 +604,7 @@ onMounted(async () => {
             :deactivate-label="t('common.deactivate')"
             @view="openEmployeeDetail(row)"
             @edit="openEdit(row)"
-            @toggle="toggleEmployee(row)"
+            @state-changed="afterWorkflowChange"
           />
         </template>
       </ListTable>
@@ -891,6 +879,7 @@ onMounted(async () => {
         </label>
         <p v-else class="workflow-initial-note" role="note">
           {{ t('workflow.initialManaged') }}
+          <strong v-if="workflowStates.initial.value">{{ workflowStates.initial.value }}</strong>
         </p>
         <label
           ><span>{{ t('people.description') }}</span

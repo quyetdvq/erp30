@@ -1,6 +1,11 @@
 import AxeBuilder from '@axe-core/playwright'
 import { expect, test, type Page } from '@playwright/test'
 import { mockPagination } from './support/mockPagination'
+import { mockBusinessWorkflowStates } from './support/mockBusinessWorkflow'
+
+test.beforeEach(async ({ page }) => {
+  await mockBusinessWorkflowStates(page)
+})
 
 const group = {
   id: '10',
@@ -107,7 +112,14 @@ async function mockCatalog(page: Page): Promise<{
         status: 201,
         contentType: 'application/json',
         body: JSON.stringify({
-          data: { ...group, id: '11', parent_id: '10', code: 'TSH', name: 'T-Shirts' },
+          data: {
+            ...group,
+            id: '11',
+            parent_id: '10',
+            code: 'TSH',
+            name: 'T-Shirts',
+            status: 'DRAFT',
+          },
         }),
       })
     }
@@ -127,7 +139,7 @@ async function mockCatalog(page: Page): Promise<{
       return route.fulfill({
         status: 201,
         contentType: 'application/json',
-        body: JSON.stringify({ data: uom }),
+        body: JSON.stringify({ data: { ...uom, status: 'DRAFT' } }),
       })
     }
     return route.fulfill({
@@ -141,7 +153,7 @@ async function mockCatalog(page: Page): Promise<{
       return route.fulfill({
         status: 201,
         contentType: 'application/json',
-        body: JSON.stringify({ data: simple }),
+        body: JSON.stringify({ data: { ...simple, status: 'DRAFT' } }),
       })
     if (route.request().url().includes('/api/v1/products?'))
       productListUrls.push(route.request().url())
@@ -330,7 +342,7 @@ test.describe('P1-FE-060 Product/UOM UI', () => {
         return route.fulfill({
           status: 201,
           contentType: 'application/json',
-          body: JSON.stringify({ data: simple }),
+          body: JSON.stringify({ data: { ...simple, status: 'DRAFT' } }),
         })
       }
       return route.fallback()

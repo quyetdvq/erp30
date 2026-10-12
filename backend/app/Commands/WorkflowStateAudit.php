@@ -1,0 +1,114 @@
+<?php
+
+declare(strict_types=1);
+
+namespace App\Commands;
+
+use App\Services\ResourceNativeStateCatalog;
+use CodeIgniter\CLI\BaseCommand;
+use CodeIgniter\CLI\CLI;
+
+/** Read-only inventory under the unified ten-exception Lifecycle rule. */
+final class WorkflowStateAudit extends BaseCommand
+{
+    protected $group = 'DinkERP';
+    protected $name = 'erp:workflow-state-audit';
+    protected $description = 'Read-only audit of Lifecycle membership and business record state consistency.';
+
+    /** @var array<string,string> */
+    private const TABLES = [
+        'province' => 'provinces', 'ward' => 'wards', 'organization' => 'organizations',
+        'department' => 'departments', 'position' => 'positions', 'employee' => 'employees',
+        'product_group' => 'product_groups', 'product_uom' => 'product_uoms',
+        'product' => 'products', 'price_list' => 'price_lists',
+        'organization_contact' => 'contacts', 'employee_contact' => 'contacts',
+        'contact' => 'contacts',
+    ];
+
+    public function run(array $params)
+    {
+        $db = db_connect();
+        $resources = $db->table('resources')
+            ->select('id, type, lifecycle_id')
+            ->where('lifecycle_id IS NOT NULL', null, false)
+            ->orderBy('type', 'ASC')->get()->getResultArray();
+        CLI::write('Lifecycle authority audit (READ ONLY)');
+        $failures = 0;
+        foreach ($resources as $resource) {
+            $type = strtolower(trim((string) $resource['type']));
+            $lifecycleId = (int) $resource['lifecycle_id'];
+            $lifecycle = $db->table('lifecycles')->where('id', $lifecycleId)->get()->getRowArray();
+            $members = $db->table('lifecycle_states ls')
+                ->select('ls.is_initial, ws.code, ws.status AS state_status')
+                ->join('workflow_states ws', 'ws.id = ls.state_id', 'left')
+                ->where('ls.lifecycle_id', $lifecycleId)
+                ->orderBy('ls.sequence', 'ASC')->get()->getResultArray();
+            $initials = [];
+            $codes = [];
+            $issues = [];
+            if (ResourceNativeStateCatalog::isIndependent($type)) {
+                $issues[] = 'INDEPENDENT_RESOURCE_HAS_LIFECYCLE';
+            }
+            if ($lifecycle === null || ($lifecycle['status'] ?? null) !== 'ACTIVE') {
+                $issues[] = 'LIFECYCLE_MISSING_OR_INACTIVE';
+            }
+            foreach ($members as $member) {
+                $code = strtoupper((string) ($member['code'] ?? ''));
+                $codes[] = $code;
+                if (in_array($member['is_initial'] ?? null, [true, 1, '1'], true)) {
+                    $initials[] = $code;
+                }
+                if ($code === '' || ($member['state_status'] ?? null) !== 'ACTIVE') {
+                    $issues[] = 'MISSING_OR_INACTIVE_WORKFLOW_STATE';
+                }
+                if (strlen($code) > 50) {
+                    $issues[] = 'STATE_CODE_EXCEEDS_SCHEMA_LIMIT';
+                }
+            }
+            if (count($initials) !== 1) {
+                $issues[] = 'INITIAL_COUNT_NOT_ONE';
+            }
+            // Persisted data in a State absent from the newly bound Lifecycle
+            // becomes invisible to state-scoped authorization. Report it before
+            // anyone changes membership or migrations, never rewrite rows.
+            $outside = [];
+            $table = self::TABLES[$type] ?? null;
+            if ($table !== null && $codes !== []) {
+                $query = $db->table($table)->select('status, COUNT(*) AS row_count')->groupBy('status');
+                if ($type === 'organization_contact') {
+                    $query->where('contact_type', 'ORGANIZATION');
+                } elseif ($type === 'employee_contact') {
+                    $query->where('contact_type', 'EMPLOYEE');
+                } elseif ($type === 'contact') {
+                    // Retired authorization key; only old metadata refers to it.
+                    $query = null;
+                }
+                if ($query !== null) {
+                    foreach ($query->get()->getResultArray() as $row) {
+                        if (! in_array(strtoupper((string) $row['status']), $codes, true)) {
+                            $outside[] = (string) $row['status'] . ':' . (int) $row['row_count'];
+                        }
+                    }
+                }
+            }
+            if ($outside !== []) {
+                $issues[] = 'EXISTING_RECORD_STATE_NOT_IN_LIFECYCLE';
+            }
+            $policies = $db->table('policies')->where('resource_id', $resource['id'])->countAllResults();
+            $status = $issues === [] ? 'OK' : 'BLOCKED';
+            if ($issues !== []) {
+                $failures++;
+            }
+            CLI::write(sprintf(
+                '[%s] %s (resource_id=%d) -> %s (#%d); initial=%s; states=%s; data_outside=%s; policies=%d; issues=%s',
+                $status, $type, (int) $resource['id'],
+                (string) ($lifecycle['code'] ?? '(missing)'), $lifecycleId,
+                implode(',', $initials) ?: '(none)',
+                implode(',', $codes) ?: '(none)',
+                implode(',', $outside) ?: '(none)',
+                $policies, implode(',', array_unique($issues)) ?: '(none)',
+            ), $issues === [] ? 'green' : 'yellow');
+        }
+        CLI::write(sprintf('Audited: %d bound resources; blocked: %d. No database changes.', count($resources), $failures));
+    }
+}

@@ -46,7 +46,9 @@ final class ChangeContactAuth001DraftLifecycleTest extends CIUnitTestCase
             $resource = $this->db->table('resources')->where('type', $type)->get()->getRowArray();
             $this->assertSame($lifecycleId, (int) $resource['lifecycle_id']);
             $this->assertSame('ACTIVE', $resource['status']);
-            $this->assertSame('DRAFT', (new ResourceWorkflowStateResolver($this->db))->initialCode($type));
+            $resolver = new ResourceWorkflowStateResolver($this->db);
+            $this->assertSame('DRAFT', $resolver->initialCode($type));
+            $resolver->assertLifecycleStateCompatibility($type, $lifecycleId);
             $this->assertSame(0, $this->db->table('group_permissions gp')
                 ->join('resource_actions ra', 'ra.id = gp.resource_action_id')
                 ->where('ra.resource_id', $resource['id'])->countAllResults());
@@ -87,6 +89,17 @@ final class ChangeContactAuth001DraftLifecycleTest extends CIUnitTestCase
             $this->assertStringContainsString('DRAFT to ACTIVE transition missing', $exception->getMessage());
         }
         $this->assertSame('ACTIVE', (string) $this->db->table('resources')->where('type', 'contact')->get()->getRow('status'));
+    }
+
+    public function testContactBindingUsesMembersWithoutMandatingAnyParticularTransition(): void
+    {
+        [$lifecycleId] = $this->prepareLifecycle(false);
+        // The historical split migration has its own safety precondition.
+        // New Lifecycle configuration itself is generic for all non-native
+        // Resources and only enforces ACTIVE membership and one initial.
+        (new ResourceWorkflowStateResolver($this->db))
+            ->assertLifecycleStateCompatibility('organization_contact', $lifecycleId);
+        $this->assertSame('DRAFT', (new ResourceWorkflowStateResolver($this->db))->initialCode('contact'));
     }
 
     public function testMigrationRejectsNonCanonicalPersistedContactStatus(): void

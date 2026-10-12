@@ -54,25 +54,48 @@ final class P1WorkflowCreateLifecycleIntegrationTest extends CIUnitTestCase
         }
     }
 
-    public function testUnsupportedWorkflowMemberCannotBeAssignedToNativeMaster(): void
+    public function testArbitraryActiveLifecycleMembersCanBeAssignedToAnyBusinessMaster(): void
     {
         (new ResourceActionSeeder(new \Config\Database()))->run();
         $repo = new LifecycleRepository($this->db);
         $draft = $this->activeWorkflowStateId('DRAFT');
         $lifecycleId = $repo->insertLifecycle([
-            'code' => 'WF-DRAFT-' . uniqid(), 'name' => 'Draft incompatible with Product', 'status' => 'ACTIVE',
+            'code' => 'WF-DRAFT-' . uniqid(), 'name' => 'Draft Product Lifecycle', 'status' => 'ACTIVE',
         ]);
         $repo->insertLifecycleState([
             'lifecycle_id' => $lifecycleId, 'state_id' => $draft,
             'sequence' => 1, 'is_initial' => 1, 'is_final' => 0,
         ]);
 
+        $this->db->table('resources')->where('type', 'product')->update(['lifecycle_id' => $lifecycleId]);
+        $resolver = new ResourceWorkflowStateResolver($this->db);
+        $resolver->assertLifecycleStateCompatibility('product', $lifecycleId);
+        $this->assertSame('DRAFT', $resolver->initialCode('product'));
+        $this->assertSame('DRAFT', (new InitialCreateStateNormalizer($resolver))->normalize('product', [
+            'product_name' => 'Sample',
+        ])['status']);
+        $this->assertSame('DRAFT', \App\Services\WorkflowBusinessStatus::normalize(
+            'product', 'DRAFT', ['ACTIVE', 'INACTIVE'], 'TEST_STATUS_INVALID', $this->db,
+        ));
+        // Non-HTTP callers (e.g. Import jobs) obey the same initial State.
+        $this->assertSame('DRAFT', \App\Services\BusinessWorkflowWriteBoundary::create(
+            'product', ['product_name' => 'Imported'], $this->db,
+        )['status']);
         try {
-            (new ResourceWorkflowStateResolver($this->db))
-                ->assertLifecycleStateCompatibility('product', $lifecycleId);
-            $this->fail('Product currently persists only ACTIVE/INACTIVE.');
+            \App\Services\BusinessWorkflowWriteBoundary::assertNoDirectStateMutation(
+                'product', ['status' => 'DRAFT'], ['status' => 'ACTIVE'], $this->db,
+            );
+            $this->fail('Direct status updates must not bypass a bound Lifecycle.');
         } catch (DomainException $exception) {
-            $this->assertSame(InitialCreateStateNormalizer::ERROR_UNSUPPORTED_INITIAL, $exception->getErrorCode());
+            $this->assertSame(ResourceWorkflowStateResolver::ERROR_TRANSITION_REQUIRED, $exception->getErrorCode());
+        }
+        try {
+            \App\Services\WorkflowBusinessStatus::normalize(
+                'product', 'APPROVED', ['ACTIVE', 'INACTIVE'], 'TEST_STATUS_INVALID', $this->db,
+            );
+            $this->fail('A State absent from the attached Lifecycle must fail closed.');
+        } catch (DomainException $exception) {
+            $this->assertSame('TEST_STATUS_INVALID', $exception->getErrorCode());
         }
     }
 

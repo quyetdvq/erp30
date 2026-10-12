@@ -4,25 +4,24 @@ import { useI18n } from 'vue-i18n'
 
 import type { Organization, OrganizationCreate, State } from '@/api/generated/types.gen'
 import ContactList from '@/components/contacts/ContactList.vue'
+import BusinessWorkflowAction from '@/components/lists/BusinessWorkflowAction.vue'
 import OrganizationTreeSelect from '@/components/organizations/OrganizationTreeSelect.vue'
 import { ListPagination, ListQueryControls, ListShell } from '@/components/lists'
 import { useListState } from '@/composables/useListState'
 import { useUnsavedChanges } from '@/composables/useUnsavedChanges'
 import type { ListQuery } from '@/components/lists/listTypes'
-import {
-  changeOrganizationState,
-  listOrganizationTree,
-  saveOrganization,
-} from '@/services/foundation'
+import { listOrganizationTree, saveOrganization } from '@/services/foundation'
 import { reportApiError } from '@/services/errorBoundary'
 import { allowedOrganizationChildren } from '@/modules/organizationMatrix'
 import { useFormatters } from '@/composables/useFormatters'
 import { useBasePermission } from '@/composables/useBasePermission'
+import { useBusinessWorkflowStates } from '@/composables/useBusinessWorkflowStates'
 
 type OrganizationType = Organization['type']
 
 const { t } = useI18n()
 const { hasBasePermission } = useBasePermission()
+const workflowStates = useBusinessWorkflowStates('organization')
 const formatters = useFormatters()
 const selectedId = ref<string | null>(null)
 const activeTab = ref<'overview' | 'contacts' | 'audit'>('overview')
@@ -216,18 +215,8 @@ async function save(): Promise<void> {
     mutationBusy.value = false
   }
 }
-async function toggleState(item: Organization): Promise<void> {
-  mutationBusy.value = true
-  error.value = null
-  try {
-    await changeOrganizationState(String(item.id), item.status === 'ACTIVE' ? 'INACTIVE' : 'ACTIVE')
-    await load()
-  } catch (caught: unknown) {
-    error.value = caught
-    reportApiError(caught)
-  } finally {
-    mutationBusy.value = false
-  }
+async function afterWorkflowChange(): Promise<void> {
+  await load()
 }
 
 watch(selectedId, () => {
@@ -338,15 +327,14 @@ onMounted(() => void load())
               @click="openEdit(selected)"
             >
               {{ t('common.edit') }}</button
-            ><button
-              type="button"
+            ><BusinessWorkflowAction
               v-if="hasBasePermission('organization', 'setstate')"
-              class="secondary-button"
-              :disabled="mutationBusy"
-              @click="toggleState(selected)"
-            >
-              {{ selected.status === 'ACTIVE' ? t('common.deactivate') : t('common.activate') }}
-            </button>
+              resource="organization"
+              :target-id="String(selected.id)"
+              :busy="mutationBusy"
+              variant="button"
+              @changed="afterWorkflowChange"
+            />
           </div>
         </header>
         <div class="detail-tabs" role="tablist">
@@ -504,6 +492,7 @@ onMounted(() => void load())
         </label>
         <p v-else class="workflow-initial-note" role="note">
           {{ t('workflow.initialManaged') }}
+          <strong v-if="workflowStates.initial.value">{{ workflowStates.initial.value }}</strong>
         </p>
         <p v-if="error" class="inline-error" role="alert">{{ t('organization.error') }}</p>
         <footer>

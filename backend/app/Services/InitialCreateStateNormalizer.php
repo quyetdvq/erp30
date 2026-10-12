@@ -47,9 +47,10 @@ final class InitialCreateStateNormalizer
             }
             return $payload;
         }
-        // Domain validators and operational rules cannot interpret arbitrary
-        // Workflow State codes yet; an incompatible Lifecycle must fail closed.
-        if (! in_array($initial, ResourceNativeStateCatalog::codes($resource), true)) {
+        // Lifecycle membership, not a resource-specific native status list,
+        // is authoritative. The resolver already verifies the active member.
+        // Persisted workflow codes are VARCHAR(50) (widened by migration).
+        if (preg_match('/\A[A-Z][A-Z0-9_:-]{0,49}\z/D', $initial) !== 1) {
             throw new DomainException(self::ERROR_UNSUPPORTED_INITIAL, [
                 'resource' => $resource, 'initial_status' => $initial,
             ]);

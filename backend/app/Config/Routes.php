@@ -119,6 +119,11 @@ $routes->group('api/v1', ['filter' => 'cors'], static function (RouteCollection 
     $routes->put('products/(:num)/combo-items', 'Api\\ProductCatalog::replaceComboItems/$1');
 
     $routes->post('products/import-jobs', 'Api\\ProductImport::start');
+    // Business Lifecycle metadata respects record VIEW and each transition's PBAC action.
+    $routes->get('business-workflow/(:segment)/states', 'Api\\BusinessWorkflow::states/$1');
+    $routes->get('business-workflow/(:segment)/(:num)/options', 'Api\\BusinessWorkflow::options/$1/$2');
+    $routes->post('business-workflow/(:segment)/(:num)/actions/(:segment)', 'Api\\BusinessWorkflow::execute/$1/$2/$3');
+
     $routes->get('import-jobs', 'Api\\ProductImport::list');
     $routes->get('import-jobs/(:num)', 'Api\\ProductImport::show/$1');
     $routes->get('import-jobs/(:num)/rows', 'Api\\ProductImport::rows/$1');

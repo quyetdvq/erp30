@@ -41,6 +41,7 @@ final class DepartmentService
     public function create(array $data): int
     {
         $operation = $this->operation();
+        $data = BusinessWorkflowWriteBoundary::create('department', $data, $this->db);
         $payload = $this->prepare($data, true, $operation);
 
         return $this->withTreeLock(function () use ($payload): int {
@@ -59,6 +60,7 @@ final class DepartmentService
         if ($current === null) {
             throw new DomainException(DepartmentService::ERROR_REFERENCE_INVALID, ['department_id' => $id]);
         }
+        BusinessWorkflowWriteBoundary::assertNoDirectStateMutation('department', $current, $data, $this->db);
         $payload = $this->prepare($data, false, $operation);
         $candidate = array_merge($current, $payload);
 
@@ -112,9 +114,9 @@ final class DepartmentService
                 throw new DomainException(self::ERROR_STATUS_INVALID, ['status' => '']);
             }
             $payload['status'] = strtoupper(trim($payload['status']));
-            if (! in_array($payload['status'], ['ACTIVE', 'INACTIVE', 'CLOSED'], true)) {
-                throw new DomainException(self::ERROR_STATUS_INVALID, ['status' => $payload['status']]);
-            }
+            $payload['status'] = WorkflowBusinessStatus::normalize(
+                'department', $payload['status'], ['ACTIVE', 'INACTIVE', 'CLOSED'], self::ERROR_STATUS_INVALID, $this->db,
+            );
         } elseif ($creating) {
             $payload['status'] = 'ACTIVE';
         }

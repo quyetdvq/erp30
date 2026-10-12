@@ -51,6 +51,9 @@ final class ContactService
         $ownerId = $this->ownerId($payload);
         $payload['contact_type'] = $type;
         $payload['contact_ref_id'] = $ownerId;
+        $payload = BusinessWorkflowWriteBoundary::create(
+            $type === 'ORGANIZATION' ? 'organization_contact' : 'employee_contact', $payload, $this->db,
+        );
         $this->assertOwnerExists($type, $ownerId);
         $this->assertWardBelongsToProvince($payload);
 
@@ -69,6 +72,10 @@ final class ContactService
             throw new DomainException(self::ERROR_NOT_FOUND, ['contact_id' => $id]);
         }
         $payload = $this->withoutAuditFields($data);
+        BusinessWorkflowWriteBoundary::assertNoDirectStateMutation(
+            (string) ($current['contact_type'] ?? '') === 'ORGANIZATION' ? 'organization_contact' : 'employee_contact',
+            $current, $payload, $this->db,
+        );
         $candidate = array_merge($current, $payload);
         $this->assertWardBelongsToProvince($candidate);
 

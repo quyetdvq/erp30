@@ -13,16 +13,14 @@ import {
 import type { ListColumn, ListFilterDefinition, ListQuery } from '@/components/lists/listTypes'
 import { useListState } from '@/composables/useListState'
 import { useBasePermission } from '@/composables/useBasePermission'
-import {
-  changeProductUomState,
-  listProductUomPage,
-  saveProductUom,
-} from '@/services/productCatalog'
+import { listProductUomPage, saveProductUom } from '@/services/productCatalog'
 import { reportApiError } from '@/services/errorBoundary'
 import { useUnsavedChanges } from '@/composables/useUnsavedChanges'
+import { useBusinessWorkflowStates } from '@/composables/useBusinessWorkflowStates'
 
 const { t } = useI18n()
 const { hasBasePermission } = useBasePermission()
+const workflowStates = useBusinessWorkflowStates('product_uom')
 const state = useListState<ProductUom>(listProductUomPage, { sort: 'code' })
 const modalOpen = ref(false)
 const detailOpen = ref(false)
@@ -70,17 +68,14 @@ const columns: readonly ListColumn<ProductUom>[] = [
   { key: 'actions', labelKey: 'product.actions', align: 'end' },
 ]
 
-const statusFilters: readonly ListFilterDefinition[] = [
+const statusFilters = computed<readonly ListFilterDefinition[]>(() => [
   {
     key: 'status',
     labelKey: 'product.status',
     type: 'select',
-    options: [
-      { value: 'ACTIVE', labelKey: 'status.active' },
-      { value: 'INACTIVE', labelKey: 'status.inactive' },
-    ],
+    options: workflowStates.options.value,
   },
-]
+])
 
 // Base Permission is a UI hint; final authorization always happens on the server.
 const permissions = computed(() => ({
@@ -195,18 +190,8 @@ async function save(): Promise<void> {
   }
 }
 
-async function toggle(row: ProductUom): Promise<void> {
-  busy.value = true
-  error.value = null
-  try {
-    await changeProductUomState(String(row.id), row.status === 'ACTIVE' ? 'INACTIVE' : 'ACTIVE')
-    await load()
-  } catch (caught: unknown) {
-    error.value = caught
-    reportApiError(caught)
-  } finally {
-    busy.value = false
-  }
+async function afterWorkflowChange(): Promise<void> {
+  await load()
 }
 
 onMounted(() => void load())
@@ -258,6 +243,7 @@ onMounted(() => void load())
         <template #cell-actions="{ row }">
           <TableRowActions
             :active="row.status === 'ACTIVE'"
+            :state-target-id="String(row.id)"
             :busy="busy"
             :show-view="permissions.view"
             :show-edit="permissions.edit"
@@ -271,7 +257,7 @@ onMounted(() => void load())
             :deactivate-label="t('common.deactivate')"
             @view="openView(row)"
             @edit="openEdit(row)"
-            @toggle="toggle(row)"
+            @state-changed="afterWorkflowChange"
           />
         </template>
       </ListTable>
@@ -319,6 +305,7 @@ onMounted(() => void load())
         </label>
         <p v-if="!editingId" class="workflow-initial-note" role="note">
           {{ t('workflow.initialManaged') }}
+          <strong v-if="workflowStates.initial.value">{{ workflowStates.initial.value }}</strong>
         </p>
         <p v-if="error" class="inline-error" role="alert">{{ t('product.requestError') }}</p>
         <footer class="modal-card__footer">

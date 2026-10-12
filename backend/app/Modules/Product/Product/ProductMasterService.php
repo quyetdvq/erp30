@@ -103,6 +103,11 @@ final class ProductMasterService
     {
         $operation ??= $this->operation();
         $clientHint = $data['evaluation_organization_id'] ?? null;
+        // Also covers Import: it calls the domain service directly instead of
+        // entering through Api050ProductCatalogService's HTTP normalizer.
+        $data = (new \App\Services\InitialCreateStateNormalizer(
+            new \App\Services\ResourceWorkflowStateResolver($this->db),
+        ))->normalize('product', $data);
         $payload = $this->normalizeCreate($data);
         $decision = $this->authorize($operation, 'create', null, $payload, $clientHint);
         $this->validateCreateReferences($payload);
@@ -162,6 +167,11 @@ final class ProductMasterService
     public function setState(int $id, string $status, ?OperationContext $operation = null): bool
     {
         $operation ??= $this->operation();
+        if (\App\Services\BusinessLifecycleTransitions::applyIfBound(
+            'product', $id, $status, $operation, $this->db,
+        )) {
+            return true;
+        }
         $targetId = PositiveId::normalize($id, 'product_id', self::ERROR_NOT_FOUND);
         $current = $this->existing($targetId);
         $normalizedStatus = $this->normalizeStatus($status);
@@ -523,7 +533,7 @@ final class ProductMasterService
             throw new DomainException(self::ERROR_INVALID_FIELD, ['field' => 'description']);
         }
         $payload['serial_management_enabled'] = $this->boolean($payload['serial_management_enabled'] ?? false, 'serial_management_enabled');
-        $payload['status'] = $this->enum($payload['status'] ?? 'ACTIVE', self::STATUSES, self::ERROR_INVALID_STATUS);
+        $payload['status'] = $this->normalizeStatus($payload['status'] ?? 'ACTIVE');
 
         if ($payload['parent_product_id'] === null) {
             $this->assertRootFields($payload, $payload['product_type'] === 'COMBO');
@@ -701,7 +711,9 @@ final class ProductMasterService
 
     private function normalizeStatus(string $status): string
     {
-        return $this->enum($status, self::STATUSES, self::ERROR_INVALID_STATUS);
+        return \App\Services\WorkflowBusinessStatus::normalize(
+            'product', $status, self::STATUSES, self::ERROR_INVALID_STATUS, $this->db,
+        );
     }
 
     private function autoNumber(): AutoNumberService

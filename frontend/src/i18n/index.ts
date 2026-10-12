@@ -606,6 +606,12 @@ export const messages = {
       lifecyclesTitle: 'Lifecycles',
       lifecyclesDescription: 'Quản lý Lifecycle và cấu hình State/Transition theo API backend.',
       state: 'Workflow State',
+      changeState: 'Chuyển trạng thái',
+      currentState: 'Trạng thái hiện tại',
+      availableTransition: 'Transition được phép',
+      selectTransition: 'Chọn Transition',
+      noAvailableTransition: 'Không có Transition được phép tại State này.',
+      transitionRequestFailed: 'Không tải hoặc thực hiện được Transition.',
       initialManaged:
         'Trạng thái ban đầu do Lifecycle/Workflow State trên máy chủ xác định. Có thể chuyển trạng thái sau khi tạo nếu Transition và quyền cho phép.',
       lifecycle: 'Lifecycle',
@@ -1432,6 +1438,12 @@ export const messages = {
       lifecyclesDescription:
         'Manage Lifecycles and their State/Transition configuration through the backend API.',
       state: 'Workflow State',
+      changeState: 'Change state',
+      currentState: 'Current state',
+      availableTransition: 'Available transition',
+      selectTransition: 'Select a transition',
+      noAvailableTransition: 'No authorized transition is available from this state.',
+      transitionRequestFailed: 'Could not load or execute the transition.',
       initialManaged:
         'The server assigns the Lifecycle initial Workflow State. Later changes require an authorized, configured transition.',
       lifecycle: 'Lifecycle',

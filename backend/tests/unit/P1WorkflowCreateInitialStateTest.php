@@ -43,13 +43,22 @@ final class P1WorkflowCreateInitialStateTest extends CIUnitTestCase
         }
     }
 
-    public function testUnimplementedBusinessStateFailsClosed(): void
+    public function testAnyValidLifecycleInitialStateIsAcceptedForBusinessResources(): void
     {
-        try {
-            InitialCreateStateNormalizer::withInitial('product', ['product_name' => 'Sample'], 'DRAFT');
-            $this->fail('A DRAFT Product is outside the approved native Product status domain.');
-        } catch (DomainException $exception) {
-            $this->assertSame(InitialCreateStateNormalizer::ERROR_UNSUPPORTED_INITIAL, $exception->getErrorCode());
+        foreach (['province', 'ward', 'organization', 'department', 'position',
+            'employee', 'product_group', 'product_uom', 'product', 'price_list',
+            'organization_contact', 'employee_contact'] as $resource) {
+            $this->assertSame('DRAFT', InitialCreateStateNormalizer::withInitial(
+                $resource, ['name' => 'Sample'], 'DRAFT',
+            )['status'], $resource);
+        }
+    }
+
+    public function testApprovedContactDraftInitialIsPreserved(): void
+    {
+        foreach (['organization_contact', 'employee_contact'] as $type) {
+            $payload = InitialCreateStateNormalizer::withInitial($type, ['name' => 'New contact'], 'DRAFT');
+            $this->assertSame('DRAFT', $payload['status']);
         }
     }
 

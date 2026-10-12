@@ -1,13 +1,14 @@
 openapi: 3.1.0
 info:
-  title: DinkERP P1 API
+  title: DinkERP API
   version: 1.0.0
   license:
     name: Proprietary
     identifier: LicenseRef-Proprietary
   description: >-
-    Gate 0 contract source. Slice-specific operations are added only when their
-    authority documents and implementation tasks reach CONTRACT_READY.
+    Implementation contract. Lifecycle-bound business resources accept their
+    configured Workflow State codes and authorized transitions; only the ten
+    explicit independent resource types retain native status semantics.
 servers:
   - url: https://api.monmin.net
 security:
@@ -984,6 +985,47 @@ paths:
       summary: Replace price list items
       requestBody: {$ref: '#/components/requestBodies/PriceListItems'}
       responses: {'200': {$ref: '#/components/responses/PriceListItemsResponse'}, '401': {$ref: '#/components/responses/Unauthorized'}, '403': {$ref: '#/components/responses/Forbidden'}, '404': {$ref: '#/components/responses/NotFound'}, '409': {$ref: '#/components/responses/Conflict'}, '422': {$ref: '#/components/responses/UnprocessableEntity'}}
+  /api/v1/business-workflow/{resource}/states:
+    parameters:
+      - $ref: '#/components/parameters/BusinessWorkflowResource'
+    get:
+      operationId: getBusinessWorkflowStates
+      summary: Read configured business Workflow States and initial State
+      description: Returns state metadata for base-authorized users. List and mutation endpoints enforce their own row-level PBAC.
+      responses:
+        '200': {$ref: '#/components/responses/BusinessWorkflowStatesResponse'}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+        '422': {$ref: '#/components/responses/UnprocessableEntity'}
+  /api/v1/business-workflow/{resource}/{id}/options:
+    parameters:
+      - $ref: '#/components/parameters/BusinessWorkflowResource'
+      - $ref: '#/components/parameters/Id'
+    get:
+      operationId: getBusinessWorkflowOptions
+      summary: Return outgoing transitions authorized for this record's persisted State
+      responses:
+        '200': {$ref: '#/components/responses/BusinessWorkflowOptionsResponse'}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+        '404': {$ref: '#/components/responses/NotFound'}
+        '422': {$ref: '#/components/responses/UnprocessableEntity'}
+  /api/v1/business-workflow/{resource}/{id}/actions/{action_code}:
+    parameters:
+      - $ref: '#/components/parameters/BusinessWorkflowResource'
+      - $ref: '#/components/parameters/Id'
+      - $ref: '#/components/parameters/BusinessWorkflowActionCode'
+    post:
+      operationId: executeBusinessWorkflowAction
+      summary: Execute one configured Lifecycle action under current-State PBAC
+      description: The server resolves destination from the configured transition. Client-supplied target State is ignored.
+      responses:
+        '200': {$ref: '#/components/responses/BusinessWorkflowMutationResponse'}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+        '404': {$ref: '#/components/responses/NotFound'}
+        '409': {$ref: '#/components/responses/Conflict'}
+        '422': {$ref: '#/components/responses/UnprocessableEntity'}
 components:
   parameters:
     AcceptLanguage:
@@ -1002,6 +1044,20 @@ components:
       description: Client request correlation identifier; invalid or missing values are replaced by a generated UUID.
       schema:
         $ref: '#/components/schemas/RequestId'
+    BusinessWorkflowResource:
+      name: resource
+      in: path
+      required: true
+      schema:
+        type: string
+        enum: [province, ward, organization, department, position, employee, product_group, product_uom, product, price_list, organization_contact, employee_contact]
+    BusinessWorkflowActionCode:
+      name: action_code
+      in: path
+      required: true
+      schema:
+        type: string
+        pattern: '^[a-z][a-z0-9_:-]*$'
     Id:
       name: id
       in: path
@@ -1169,6 +1225,9 @@ components:
     WorkflowStateCollection: {description: Workflow state collection., content: {application/json: {schema: {$ref: '#/components/schemas/WorkflowStateCollection'}}}}
     LifecycleResponse: {description: Lifecycle response., content: {application/json: {schema: {$ref: '#/components/schemas/LifecycleResponse'}}}}
     LifecycleCollection: {description: Lifecycle collection., content: {application/json: {schema: {$ref: '#/components/schemas/LifecycleCollection'}}}}
+    BusinessWorkflowStatesResponse: {description: Resource Workflow State metadata., content: {application/json: {schema: {$ref: '#/components/schemas/BusinessWorkflowStatesResponse'}}}}
+    BusinessWorkflowOptionsResponse: {description: Authorized transitions for this record., content: {application/json: {schema: {$ref: '#/components/schemas/BusinessWorkflowOptionsResponse'}}}}
+    BusinessWorkflowMutationResponse: {description: State changed via a configured transition., content: {application/json: {schema: {$ref: '#/components/schemas/BusinessWorkflowMutationResponse'}}}}
     ProvinceResponse:
       description: Province resource.
       content: {application/json: {schema: {$ref: '#/components/schemas/ProvinceResponse'}}}
@@ -1325,6 +1384,50 @@ components:
           schema:
             $ref: '#/components/schemas/ErrorResponse'
   schemas:
+    BusinessWorkflowStatus:
+      type: string
+      minLength: 1
+      maxLength: 50
+      pattern: '^[A-Z][A-Z0-9_:-]*$'
+      description: Lifecycle member code when bound; otherwise a permitted fallback native code.
+    BusinessWorkflowStates:
+      type: object
+      required: [mode, initial, states]
+      properties:
+        mode: {type: string, enum: [NATIVE, LIFECYCLE]}
+        initial: {oneOf: [{$ref: '#/components/schemas/BusinessWorkflowStatus'}, {type: 'null'}]}
+        states: {type: array, items: {$ref: '#/components/schemas/BusinessWorkflowStatus'}}
+    BusinessWorkflowOption:
+      type: object
+      required: [action_code, status]
+      properties:
+        action_code: {type: string}
+        status: {$ref: '#/components/schemas/BusinessWorkflowStatus'}
+    BusinessWorkflowOptions:
+      type: object
+      required: [mode, current, options]
+      properties:
+        mode: {type: string, enum: [NATIVE, LIFECYCLE]}
+        current: {$ref: '#/components/schemas/BusinessWorkflowStatus'}
+        options: {type: array, items: {$ref: '#/components/schemas/BusinessWorkflowOption'}}
+    BusinessWorkflowMutation:
+      type: object
+      required: [status, action_code]
+      properties:
+        status: {$ref: '#/components/schemas/BusinessWorkflowStatus'}
+        action_code: {type: string}
+    BusinessWorkflowStatesResponse:
+      allOf: [{$ref: '#/components/schemas/SuccessResponse'}]
+      properties:
+        data: {$ref: '#/components/schemas/BusinessWorkflowStates'}
+    BusinessWorkflowOptionsResponse:
+      allOf: [{$ref: '#/components/schemas/SuccessResponse'}]
+      properties:
+        data: {$ref: '#/components/schemas/BusinessWorkflowOptions'}
+    BusinessWorkflowMutationResponse:
+      allOf: [{$ref: '#/components/schemas/SuccessResponse'}]
+      properties:
+        data: {$ref: '#/components/schemas/BusinessWorkflowMutation'}
     RequestId:
       type: string
       minLength: 1
@@ -1596,7 +1699,7 @@ components:
         code: {type: string}
         name: {type: string}
         description: {type: [string, 'null']}
-        status: {type: string, enum: [ACTIVE, INACTIVE]}
+        status: {$ref: '#/components/schemas/BusinessWorkflowStatus'}
     ProductGroupCreate:
       type: object
       required: [code, name]
@@ -1605,7 +1708,7 @@ components:
         code: {type: string}
         name: {type: string}
         description: {type: [string, 'null']}
-        status: {type: string, enum: [ACTIVE, INACTIVE], deprecated: true}
+        status: {$ref: '#/components/schemas/BusinessWorkflowStatus'} # Deprecated; omit for CREATE (server derives initial).
     ProductGroupPatch:
       type: object
       properties:
@@ -1621,7 +1724,7 @@ components:
         code: {type: string}
         name: {type: string}
         description: {type: [string, 'null']}
-        status: {type: string, enum: [ACTIVE, INACTIVE]}
+        status: {$ref: '#/components/schemas/BusinessWorkflowStatus'}
     ProductUomCreate:
       type: object
       required: [code, name]
@@ -1629,7 +1732,7 @@ components:
         code: {type: string}
         name: {type: string}
         description: {type: [string, 'null']}
-        status: {type: string, enum: [ACTIVE, INACTIVE], deprecated: true}
+        status: {$ref: '#/components/schemas/BusinessWorkflowStatus'} # Deprecated; omit for CREATE (server derives initial).
     ProductUomPatch:
       type: object
       properties:
@@ -1659,7 +1762,7 @@ components:
         description: {type: [string, 'null']}
         manual_standard_cost: {oneOf: [{$ref: '#/components/schemas/Decimal'}, {type: 'null'}]}
         serial_management_enabled: {type: boolean}
-        status: {type: string, enum: [ACTIVE, INACTIVE]}
+        status: {$ref: '#/components/schemas/BusinessWorkflowStatus'}
         role: {type: string, enum: [SIMPLE, PARENT, CHILD, COMBO]}
         full_name: {type: string}
         selectable: {type: boolean}
@@ -1672,7 +1775,7 @@ components:
         product_code: {type: [string, 'null']}
         full_name: {type: string}
         role: {type: string, enum: [SIMPLE, PARENT, CHILD, COMBO]}
-        status: {type: string, enum: [ACTIVE, INACTIVE]}
+        status: {$ref: '#/components/schemas/BusinessWorkflowStatus'}
         base_uom_id: {oneOf: [{$ref: '#/components/schemas/BigInt'}, {type: 'null'}]}
         selectable: {type: boolean}
     ProductLookupResolveRequest:
@@ -1720,7 +1823,7 @@ components:
       properties:
         id: {$ref: '#/components/schemas/BigInt'}
         code: {type: string}
-        status: {type: string, enum: [ACTIVE, INACTIVE]}
+        status: {$ref: '#/components/schemas/BusinessWorkflowStatus'}
     OrganizationLabelResolveRequest:
       type: object
       required: [organization_ids]
@@ -1776,7 +1879,7 @@ components:
         description: {type: string}
         manual_standard_cost: {$ref: '#/components/schemas/Decimal'}
         serial_management_enabled: {type: boolean}
-        status: {type: string, enum: [ACTIVE, INACTIVE], deprecated: true}
+        status: {$ref: '#/components/schemas/BusinessWorkflowStatus'} # Deprecated; omit for CREATE (server derives initial).
     ProductPatch:
       type: object
       properties:
@@ -1809,7 +1912,7 @@ components:
         effective_from: {type: string, format: date-time}
         effective_to: {type: [string, 'null'], format: date-time}
         priority: {type: integer}
-        status: {type: string, enum: [ACTIVE, INACTIVE]}
+        status: {$ref: '#/components/schemas/BusinessWorkflowStatus'}
         description: {type: [string, 'null']}
     PriceListCreate:
       type: object
@@ -1821,7 +1924,7 @@ components:
         effective_from: {type: string, format: date-time}
         effective_to: {type: [string, 'null'], format: date-time}
         priority: {type: integer}
-        status: {type: string, enum: [ACTIVE, INACTIVE], deprecated: true}
+        status: {$ref: '#/components/schemas/BusinessWorkflowStatus'} # Deprecated; omit for CREATE (server derives initial).
         description: {type: [string, 'null']}
     PriceListPatch:
       type: object
@@ -1973,14 +2076,14 @@ components:
         id: {$ref: '#/components/schemas/BigInt'}
         code: {type: string}
         name: {type: string}
-        status: {type: string, enum: [ACTIVE, INACTIVE, CLOSED]}
+        status: {$ref: '#/components/schemas/BusinessWorkflowStatus'}
     ProvinceCreate:
       type: object
       required: [code, name]
       properties:
         code: {type: string}
         name: {type: string}
-        status: {type: string, enum: [ACTIVE, INACTIVE, CLOSED], deprecated: true}
+        status: {$ref: '#/components/schemas/BusinessWorkflowStatus'} # Deprecated; omit for CREATE (server derives initial).
     ProvincePatch:
       type: object
       description: "Status must be changed only with /actions/set-state."
@@ -1996,7 +2099,7 @@ components:
         code: {type: string}
         name: {type: string}
         name_full: {type: [string, 'null']}
-        status: {type: string, enum: [ACTIVE, INACTIVE, CLOSED]}
+        status: {$ref: '#/components/schemas/BusinessWorkflowStatus'}
     WardCreate:
       type: object
       required: [province_id, code, name]
@@ -2005,7 +2108,7 @@ components:
         code: {type: string}
         name: {type: string}
         name_full: {type: [string, 'null']}
-        status: {type: string, enum: [ACTIVE, INACTIVE, CLOSED], deprecated: true}
+        status: {$ref: '#/components/schemas/BusinessWorkflowStatus'} # Deprecated; omit for CREATE (server derives initial).
     WardPatch:
       type: object
       description: "Status must be changed only with /actions/set-state."
@@ -2029,7 +2132,7 @@ components:
         province_id: {$ref: '#/components/schemas/BigInt'}
         ward_id: {$ref: '#/components/schemas/BigInt'}
         description: {type: [string, 'null']}
-        status: {type: string}
+        status: {$ref: '#/components/schemas/BusinessWorkflowStatus'}
         active_from: {type: [string, 'null'], format: date}
         active_to: {type: [string, 'null'], format: date}
     OrganizationCreate:
@@ -2046,7 +2149,7 @@ components:
         province_id: {$ref: '#/components/schemas/BigInt'}
         ward_id: {$ref: '#/components/schemas/BigInt'}
         description: {type: string}
-        status: {type: string, deprecated: true, description: "Omit; server derives the initial State from Resource Lifecycle."}
+        status: {$ref: '#/components/schemas/BusinessWorkflowStatus'} # Deprecated; omit for CREATE (server derives initial).
         active_from: {type: string, format: date}
         active_to: {type: string, format: date}
     OrganizationPatch:
@@ -2073,7 +2176,7 @@ components:
         contact_type: {type: string, enum: [EMPLOYEE, ORGANIZATION]}
         contact_ref_id: {$ref: '#/components/schemas/BigInt'}
         description: {type: [string, 'null']}
-        status: {type: string}
+        status: {$ref: '#/components/schemas/BusinessWorkflowStatus'}
         name: {type: [string, 'null']}
         email: {type: [string, 'null']}
         phone: {type: [string, 'null']}
@@ -2123,7 +2226,7 @@ components:
         code: {type: string}
         name: {type: string}
         description: {type: [string, 'null']}
-        status: {type: string, enum: [ACTIVE, INACTIVE, CLOSED]}
+        status: {$ref: '#/components/schemas/BusinessWorkflowStatus'}
     DepartmentCreate:
       type: object
       required: [code, name]
@@ -2132,7 +2235,7 @@ components:
         code: {type: string}
         name: {type: string}
         description: {type: string}
-        status: {type: string, enum: [ACTIVE, INACTIVE, CLOSED], deprecated: true}
+        status: {$ref: '#/components/schemas/BusinessWorkflowStatus'} # Deprecated; omit for CREATE (server derives initial).
     DepartmentPatch:
       type: object
       properties:
@@ -2144,7 +2247,7 @@ components:
       type: object
       required: [status]
       properties:
-        status: {type: string, enum: [ACTIVE, INACTIVE, CLOSED]}
+        status: {$ref: '#/components/schemas/BusinessWorkflowStatus'}
     Position:
       type: object
       required: [id, code, name, status]
@@ -2154,7 +2257,7 @@ components:
         name: {type: string}
         level: {type: [integer, 'null']}
         description: {type: [string, 'null']}
-        status: {type: string, enum: [ACTIVE, INACTIVE, CLOSED]}
+        status: {$ref: '#/components/schemas/BusinessWorkflowStatus'}
     PositionCreate:
       type: object
       required: [code, name]
@@ -2163,7 +2266,7 @@ components:
         name: {type: string}
         level: {type: [integer, 'null']}
         description: {type: string}
-        status: {type: string, enum: [ACTIVE, INACTIVE, CLOSED], deprecated: true}
+        status: {$ref: '#/components/schemas/BusinessWorkflowStatus'} # Deprecated; omit for CREATE (server derives initial).
     PositionPatch:
       type: object
       properties:
@@ -2175,7 +2278,7 @@ components:
       type: object
       required: [status]
       properties:
-        status: {type: string, enum: [ACTIVE, INACTIVE, CLOSED]}
+        status: {$ref: '#/components/schemas/BusinessWorkflowStatus'}
     Employee:
       type: object
       required: [id, employee_code, employee_name, status]
@@ -2190,7 +2293,7 @@ components:
         hire_date: {type: [string, 'null'], format: date}
         manager_employee_id: {$ref: '#/components/schemas/BigInt'}
         description: {type: [string, 'null']}
-        status: {type: string, enum: [ACTIVE, INACTIVE]}
+        status: {$ref: '#/components/schemas/BusinessWorkflowStatus'}
     EmployeeCreate:
       type: object
       required: [employee_code, employee_name]
@@ -2204,7 +2307,7 @@ components:
         hire_date: {type: [string, 'null'], format: date}
         manager_employee_id: {$ref: '#/components/schemas/BigInt'}
         description: {type: [string, 'null']}
-        status: {type: string, enum: [ACTIVE, INACTIVE], deprecated: true}
+        status: {$ref: '#/components/schemas/BusinessWorkflowStatus'} # Deprecated; omit for CREATE (server derives initial).
     EmployeePatch:
       type: object
       properties:
@@ -2221,7 +2324,7 @@ components:
       type: object
       required: [status]
       properties:
-        status: {type: string, enum: [ACTIVE, INACTIVE]}
+        status: {$ref: '#/components/schemas/BusinessWorkflowStatus'}
     EmployeeAssignment:
       type: object
       required: [id, employee_id, organization_id, is_primary, effective_from, status]
@@ -2268,7 +2371,7 @@ components:
       type: object
       required: [status]
       properties:
-        status: {type: string, enum: [ACTIVE, INACTIVE, CLOSED]}
+        status: {$ref: '#/components/schemas/BusinessWorkflowStatus'}
     ProvinceResponse: {allOf: [{$ref: '#/components/schemas/SuccessResponse'}], properties: {data: {$ref: '#/components/schemas/Province'}}}
     WardResponse: {allOf: [{$ref: '#/components/schemas/SuccessResponse'}], properties: {data: {$ref: '#/components/schemas/Ward'}}}
     OrganizationResponse: {allOf: [{$ref: '#/components/schemas/SuccessResponse'}], properties: {data: {$ref: '#/components/schemas/Organization'}}}

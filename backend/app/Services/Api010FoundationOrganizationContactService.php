@@ -184,7 +184,7 @@ final class Api010FoundationOrganizationContactService
         $this->authorizeVisible($resource, $row, $operation);
         $authorizationResource = $this->authorizationResource($resource, $row, []);
         if ($this->stateResolver()->lifecycleId($authorizationResource) !== null) {
-            if (! in_array($authorizationResource, ['province', 'ward', 'organization_contact', 'employee_contact'], true)) {
+            if (! in_array($authorizationResource, ['province', 'ward', 'organization', 'organization_contact', 'employee_contact'], true)) {
                 throw new DomainException(LifecycleService::ERROR_TARGET_ADAPTER_UNAVAILABLE, ['resource' => $authorizationResource]);
             }
             $destinationStateId = $this->stateResolver()->stateIdForCode($authorizationResource, $status);
@@ -532,9 +532,10 @@ final class Api010FoundationOrganizationContactService
         $adapterWard = new FoundationLocationLifecycleAdapter('ward');
         $organizationContact = new ContactLifecycleAdapter('organization_contact');
         $employeeContact = new ContactLifecycleAdapter('employee_contact');
+        $organization = new BusinessLifecycleTargetAdapter('organization');
 
         return new LifecycleService(adapters: [
-            $adapterProvince, $adapterWard, $organizationContact, $employeeContact,
+            $adapterProvince, $adapterWard, $organizationContact, $employeeContact, $organization,
         ]);
     }
 

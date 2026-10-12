@@ -15,14 +15,11 @@ import SearchableSelect from '@/components/forms/SearchableSelect.vue'
 import { useListState } from '@/composables/useListState'
 import { useBasePermission } from '@/composables/useBasePermission'
 import { buildVisibleProductGroupTree, type VisibleProductGroup } from '@/modules/productGroupTree'
-import {
-  changeProductGroupState,
-  listProductGroupPage,
-  saveProductGroup,
-} from '@/services/productCatalog'
+import { listProductGroupPage, saveProductGroup } from '@/services/productCatalog'
 import { reportApiError } from '@/services/errorBoundary'
 import { loadLookupPages } from '@/services/listLookups'
 import { useUnsavedChanges } from '@/composables/useUnsavedChanges'
+import { useBusinessWorkflowStates } from '@/composables/useBusinessWorkflowStates'
 
 type TreeRow = VisibleProductGroup<ProductGroup>
 type ProductGroupForm = Pick<ProductGroup, 'code' | 'name' | 'status'> & {
@@ -32,6 +29,7 @@ type ProductGroupForm = Pick<ProductGroup, 'code' | 'name' | 'status'> & {
 
 const { t } = useI18n()
 const { hasBasePermission } = useBasePermission()
+const workflowStates = useBusinessWorkflowStates('product_group')
 const state = useListState<ProductGroup>(listProductGroupPage, { sort: 'code' })
 
 const expanded = ref(new Set<string>())
@@ -86,17 +84,14 @@ const columns: readonly ListColumn<TreeRow>[] = [
   { key: 'actions', labelKey: 'product.actions', align: 'end' },
 ]
 
-const statusFilters: readonly ListFilterDefinition[] = [
+const statusFilters = computed<readonly ListFilterDefinition[]>(() => [
   {
     key: 'status',
     labelKey: 'product.status',
     type: 'select',
-    options: [
-      { value: 'ACTIVE', labelKey: 'status.active' },
-      { value: 'INACTIVE', labelKey: 'status.inactive' },
-    ],
+    options: workflowStates.options.value,
   },
-]
+])
 
 // Base Permission only controls UI visibility; backend authorization remains authoritative.
 const permissions = computed(() => ({
@@ -305,18 +300,8 @@ async function save(): Promise<void> {
   }
 }
 
-async function toggle(row: ProductGroup): Promise<void> {
-  busy.value = true
-  error.value = null
-  try {
-    await changeProductGroupState(String(row.id), row.status === 'ACTIVE' ? 'INACTIVE' : 'ACTIVE')
-    await Promise.all([load(), loadParentLookup()])
-  } catch (caught: unknown) {
-    error.value = caught
-    reportApiError(caught)
-  } finally {
-    busy.value = false
-  }
+async function afterWorkflowChange(): Promise<void> {
+  await Promise.all([load(), loadParentLookup()])
 }
 
 onMounted(() => void load())
@@ -391,6 +376,7 @@ onMounted(() => void load())
           <span class="tree-row-actions">
             <TableRowActions
               :active="row.status === 'ACTIVE'"
+              :state-target-id="String(row.id)"
               :busy="busy"
               :show-view="permissions.view"
               :show-edit="permissions.edit"
@@ -404,7 +390,7 @@ onMounted(() => void load())
               :deactivate-label="t('common.deactivate')"
               @view="openView(row)"
               @edit="openEdit(row)"
-              @toggle="toggle(row)"
+              @state-changed="afterWorkflowChange"
             />
             <button
               v-if="permissions.create"
@@ -481,6 +467,7 @@ onMounted(() => void load())
         </label>
         <p v-if="!editingId" class="workflow-initial-note" role="note">
           {{ t('workflow.initialManaged') }}
+          <strong v-if="workflowStates.initial.value">{{ workflowStates.initial.value }}</strong>
         </p>
         <p v-if="error" class="inline-error" role="alert">{{ t('product.requestError') }}</p>
         <footer class="modal-card__footer">

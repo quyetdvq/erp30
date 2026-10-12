@@ -1,7 +1,11 @@
 import { expect, test, type Page } from '@playwright/test'
-
 import { messages } from '../src/i18n'
 import { mockPagination } from './support/mockPagination'
+import { mockBusinessWorkflowStates } from './support/mockBusinessWorkflow'
+
+test.beforeEach(async ({ page }) => {
+  await mockBusinessWorkflowStates(page)
+})
 
 const { vi, en } = messages
 

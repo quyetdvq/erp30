@@ -149,6 +149,13 @@ final class Api020EmployeeStructureService
         $operation = $this->operation();
         $row = $this->row($resource, $id);
         $this->authorizeVisible($resource, $row, $operation);
+        // Employee Assignment is one of the ten Lifecycle-independent types.
+        // Other business Resources always use the configured Transition/PBAC.
+        if ($resource !== 'employee_assignment' && BusinessLifecycleTransitions::applyIfBound(
+            $resource, $id, $status, $operation, $this->db,
+        )) {
+            return $this->get($resource, $id);
+        }
         $this->authorizeAction($resource, 'setstate', $row, ['status' => $status], $operation);
         match ($resource) {
             'department' => $this->departmentService($operation)->update($id, ['status' => $status]),

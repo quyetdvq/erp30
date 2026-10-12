@@ -1,6 +1,11 @@
 import AxeBuilder from '@axe-core/playwright'
 import { expect, test, type Page } from '@playwright/test'
 import { mockPagination } from './support/mockPagination'
+import { fulfillWorkflowMock, mockBusinessWorkflowStates } from './support/mockBusinessWorkflow'
+
+test.beforeEach(async ({ page }) => {
+  await mockBusinessWorkflowStates(page)
+})
 
 const groupId = '9007199254740993'
 const companyId = '9007199254740994'
@@ -372,7 +377,7 @@ test('Province create lets the server assign the initial Workflow State', async 
         status: 201,
         contentType: 'application/json',
         body: JSON.stringify({
-          data: { id: '51', code: 'PV51', name: 'New Province', status: 'INACTIVE' },
+          data: { id: '51', code: 'PV51', name: 'New Province', status: 'DRAFT' },
           meta: { request_id: 'fe010-workflow-create' },
         }),
       })
@@ -415,4 +420,86 @@ test('403 and 404 list responses remain visible as common error states', async (
   await mockOrganizationApi(page, { treeStatus: 404 })
   await page.goto('/organizations')
   await expect(page.locator('.list-shell__state[role="alert"]')).toBeVisible()
+})
+
+test('Lifecycle-bound Province CREATE and authorized Transition use configured States', async ({
+  page,
+}) => {
+  await mockSession(page)
+  const rows = [{ id: '51', code: 'PV51', name: 'Draft Province', status: 'DRAFT' }]
+  const posted: { value: Record<string, unknown> | null } = { value: null }
+  const actions: string[] = []
+  await page.route('**/api/v1/business-workflow/province/states', (route) =>
+    route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify({
+        data: { mode: 'LIFECYCLE', initial: 'DRAFT', states: ['DRAFT', 'APPROVED', 'CLOSED'] },
+        meta: { request_id: 'workflow-states' },
+      }),
+    }),
+  )
+  await page.route('**/api/v1/business-workflow/province/51/options', (route) =>
+    route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify({
+        data: {
+          mode: 'LIFECYCLE',
+          current: rows[0]!.status,
+          options:
+            rows[0]!.status === 'DRAFT' ? [{ action_code: 'approve', status: 'APPROVED' }] : [],
+        },
+        meta: { request_id: 'workflow-options' },
+      }),
+    }),
+  )
+  await page.route('**/api/v1/business-workflow/province/51/actions/approve', (route) => {
+    if (route.request().method() === 'OPTIONS') return fulfillWorkflowMock(route, {})
+    actions.push(route.request().method())
+    rows[0]!.status = 'APPROVED'
+    return route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify({ data: { status: 'APPROVED', action_code: 'approve' } }),
+    })
+  })
+  await page.route('**/api/v1/provinces**', (route) => {
+    if (route.request().method() === 'POST') {
+      posted.value = route.request().postDataJSON() as Record<string, unknown>
+      return route.fulfill({
+        status: 201,
+        contentType: 'application/json',
+        body: JSON.stringify({ data: rows[0] }),
+      })
+    }
+    return route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify({ data: rows, meta: mockPagination(route, 1) }),
+    })
+  })
+  await page.goto('/settings/locations/provinces')
+  await expect(page.getByRole('cell', { name: 'Draft Province' })).toBeVisible()
+  await expect(
+    page.getByRole('combobox', { name: 'Trạng thái' }).getByRole('option', { name: 'DRAFT' }),
+  ).toHaveCount(1)
+  await page.getByRole('button', { name: /Tạo/ }).click()
+  const createDialog = page.getByRole('dialog', { name: 'Biểu mẫu' })
+  await createDialog.getByRole('textbox', { name: 'Mã' }).fill('PV51')
+  await createDialog.getByRole('textbox', { name: 'Tên' }).fill('Draft Province')
+  await createDialog.getByRole('button', { name: 'Lưu' }).click()
+  await expect.poll(() => posted.value).not.toBeNull()
+  expect(posted.value).not.toHaveProperty('status')
+  const row = page
+    .getByRole('row')
+    .filter({ has: page.getByRole('cell', { name: 'Draft Province' }) })
+  await row.getByRole('button', { name: 'Chuyển trạng thái' }).click()
+  const actionDialog = page.getByRole('dialog', { name: 'Chuyển trạng thái' })
+  await expect(actionDialog.getByRole('option', { name: 'APPROVED (approve)' })).toHaveCount(1)
+  await actionDialog
+    .getByRole('combobox', { name: 'Transition được phép' })
+    .selectOption({ label: 'APPROVED (approve)' })
+  await actionDialog.getByRole('button', { name: 'Lưu' }).click()
+  await expect.poll(() => actions).toEqual(['POST'])
 })

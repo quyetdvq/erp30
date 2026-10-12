@@ -34,6 +34,7 @@ final class PositionService
     public function create(array $data): int
     {
         $operation = $this->operation();
+        $data = BusinessWorkflowWriteBoundary::create('position', $data, $this->db);
         $payload = $this->prepare($data, true, $operation);
         $this->assertCodeAvailable((string) $payload['code']);
 
@@ -43,9 +44,11 @@ final class PositionService
     /** @param array<string, mixed> $data */
     public function update(int $id, array $data): bool
     {
-        if ($this->repo()->find($id) === null) {
+        $current = $this->repo()->find($id);
+        if ($current === null) {
             throw new DomainException(self::ERROR_REFERENCE_INVALID, ['position_id' => $id]);
         }
+        BusinessWorkflowWriteBoundary::assertNoDirectStateMutation('position', $current, $data, $this->db);
         $payload = $this->prepare($data, false, $this->operation());
         if (array_key_exists('code', $payload)) {
             $this->assertCodeAvailable((string) $payload['code'], $id);
@@ -94,9 +97,9 @@ final class PositionService
                 throw new DomainException(self::ERROR_STATUS_INVALID, ['status' => '']);
             }
             $data['status'] = strtoupper(trim($data['status']));
-            if (! in_array($data['status'], ['ACTIVE', 'INACTIVE', 'CLOSED'], true)) {
-                throw new DomainException(self::ERROR_STATUS_INVALID, ['status' => $data['status']]);
-            }
+            $data['status'] = WorkflowBusinessStatus::normalize(
+                'position', $data['status'], ['ACTIVE', 'INACTIVE', 'CLOSED'], self::ERROR_STATUS_INVALID, $this->db,
+            );
         } elseif ($creating) {
             $data['status'] = 'ACTIVE';
         }

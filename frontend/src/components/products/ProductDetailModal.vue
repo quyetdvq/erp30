@@ -107,6 +107,12 @@ function emptyConversion(): ConversionForm {
 function text(value: string | number | null | undefined): string {
   return value === null || value === undefined ? '' : String(value)
 }
+function businessStateLabel(code: string | null | undefined): string {
+  if (!code) return t('list.noValue')
+  const key = `status.${code.toLowerCase()}`
+  const translated = t(key)
+  return translated === key ? code : translated
+}
 function displayMoney(value: string | number | null | undefined): string {
   return value === null || value === undefined || value === ''
     ? t('list.noValue')
@@ -530,7 +536,7 @@ watch(
             <dd>{{ baseUomName }}</dd>
             <dt>{{ t('product.status') }}</dt>
             <dd>
-              {{ currentProduct?.status === 'ACTIVE' ? t('status.active') : t('status.inactive') }}
+              {{ businessStateLabel(currentProduct?.status) }}
             </dd>
           </dl>
         </section>
@@ -650,7 +656,7 @@ watch(
                     }}
                   </td>
                   <td>{{ displayMoney(row.price) }}</td>
-                  <td>{{ row.status === 'ACTIVE' ? t('status.active') : t('status.inactive') }}</td>
+                  <td>{{ businessStateLabel(row.status) }}</td>
                   <td>
                     <button
                       v-if="hasBasePermission('product', 'edit')"

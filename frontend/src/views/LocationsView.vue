@@ -18,16 +18,10 @@ import SearchableSelect from '@/components/forms/SearchableSelect.vue'
 import { useListState } from '@/composables/useListState'
 import { useUnsavedChanges } from '@/composables/useUnsavedChanges'
 import { useBasePermission } from '@/composables/useBasePermission'
-import {
-  changeProvinceState,
-  changeWardState,
-  listProvincePage,
-  listWardPage,
-  saveProvince,
-  saveWard,
-} from '@/services/foundation'
+import { listProvincePage, listWardPage, saveProvince, saveWard } from '@/services/foundation'
 import { reportApiError } from '@/services/errorBoundary'
 import { loadLookupPages } from '@/services/listLookups'
+import { useBusinessWorkflowStates } from '@/composables/useBusinessWorkflowStates'
 
 type LocationRow = Province | Ward
 
@@ -35,6 +29,10 @@ const { t } = useI18n()
 const { hasBasePermissionKey } = useBasePermission()
 const route = useRoute()
 const isWards = computed(() => route.path.endsWith('/wards'))
+const workflowStates = useBusinessWorkflowStates(
+  computed(() => (isWards.value ? 'ward' : 'province')),
+  ['ACTIVE', 'INACTIVE', 'CLOSED'],
+)
 const error = ref<unknown | null>(null)
 const modalOpen = ref(false)
 const detailOpen = ref(false)
@@ -64,9 +62,7 @@ function closeForm(): void {
 
 const state = useListState<LocationRow>(
   (query) => (isWards.value ? listWardPage(query) : listProvincePage(query)),
-  {
-    filter: { status: 'ACTIVE' },
-  },
+  {},
 )
 
 const statusFilters = computed(() => [
@@ -74,11 +70,7 @@ const statusFilters = computed(() => [
     key: 'status',
     labelKey: 'locations.status',
     type: 'select' as const,
-    options: [
-      { value: 'ACTIVE', labelKey: 'status.active' },
-      { value: 'INACTIVE', labelKey: 'status.inactive' },
-      { value: 'CLOSED', labelKey: 'status.closed' },
-    ],
+    options: workflowStates.options.value,
   },
 ])
 const wardFilters = computed(() => [
@@ -266,20 +258,8 @@ async function save(): Promise<void> {
   }
 }
 
-async function toggleState(row: LocationRow): Promise<void> {
-  mutationBusy.value = true
-  error.value = null
-  try {
-    const next = row.status === 'ACTIVE' ? 'INACTIVE' : 'ACTIVE'
-    if (isWards.value) await changeWardState(String(row.id), next)
-    else await changeProvinceState(String(row.id), next)
-    await load()
-  } catch (caught: unknown) {
-    error.value = caught
-    reportApiError(caught)
-  } finally {
-    mutationBusy.value = false
-  }
+async function afterWorkflowChange(): Promise<void> {
+  await load()
 }
 
 // The global workspace guard confirms dirty navigation. Do not let an
@@ -369,6 +349,7 @@ onUnmounted(() => {
         <template #cell-actions="{ row }">
           <TableRowActions
             :active="row.status === 'ACTIVE'"
+            :state-target-id="String(row.id)"
             :busy="mutationBusy"
             :show-view="true"
             :show-edit="true"
@@ -382,7 +363,7 @@ onUnmounted(() => {
             :view-label="t('common.view')"
             @view="openView(row)"
             @edit="openEdit(row)"
-            @toggle="toggleState(row)"
+            @state-changed="afterWorkflowChange"
           />
         </template>
       </ListTable>
@@ -459,6 +440,7 @@ onUnmounted(() => {
         >
         <p v-else class="workflow-initial-note" role="note">
           {{ t('workflow.initialManaged') }}
+          <strong v-if="workflowStates.initial.value">{{ workflowStates.initial.value }}</strong>
         </p>
         <footer>
           <button type="button" class="secondary-button" @click="closeForm">

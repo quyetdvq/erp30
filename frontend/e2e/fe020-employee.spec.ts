@@ -1,6 +1,11 @@
 import AxeBuilder from '@axe-core/playwright'
 import { expect, test, type Page, type Route } from '@playwright/test'
 import { mockPagination } from './support/mockPagination'
+import { mockBusinessWorkflowStates } from './support/mockBusinessWorkflow'
+
+test.beforeEach(async ({ page }) => {
+  await mockBusinessWorkflowStates(page)
+})
 
 const collection = (route: Route, data: unknown[], total = data.length) =>
   JSON.stringify({ data, meta: mockPagination(route, total, 'fe020-test') })

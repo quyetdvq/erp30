@@ -17,13 +17,13 @@ import { useBasePermission } from '@/composables/useBasePermission'
 import { useAuthStore } from '@/stores/auth'
 import { useFormatters } from '@/composables/useFormatters'
 import {
-  changeProductState,
   listProductComboItems,
   listProductGroupPage,
   listProductPage,
   listProductUomPage,
 } from '@/services/productCatalog'
 import { reportApiError } from '@/services/errorBoundary'
+import { useBusinessWorkflowStates } from '@/composables/useBusinessWorkflowStates'
 import { loadLookupPages } from '@/services/listLookups'
 import { chunks, previewProductRelations, resolveProductDetails } from '@/services/productLookups'
 
@@ -38,6 +38,7 @@ type RelationState = {
 const { t } = useI18n()
 const router = useRouter()
 const { hasBasePermission } = useBasePermission()
+const workflowStates = useBusinessWorkflowStates('product')
 const auth = useAuthStore()
 const formatters = useFormatters()
 const state = useListState<Product>((query) => listProductPage(query), { sort: 'product_code' })
@@ -67,10 +68,7 @@ const filters = () => [
     key: 'status',
     labelKey: 'product.status',
     type: 'select' as const,
-    options: [
-      { value: 'ACTIVE', labelKey: 'status.active' },
-      { value: 'INACTIVE', labelKey: 'status.inactive' },
-    ],
+    options: workflowStates.options.value,
   },
   {
     key: 'product_type',
@@ -275,17 +273,8 @@ function resetQuery(): void {
   state.reset()
   void load()
 }
-async function toggle(row: Product): Promise<void> {
-  busy.value = true
-  try {
-    await changeProductState(String(row.id), row.status === 'ACTIVE' ? 'INACTIVE' : 'ACTIVE')
-    await load()
-  } catch (caught: unknown) {
-    error.value = caught
-    reportApiError(caught)
-  } finally {
-    busy.value = false
-  }
+async function afterWorkflowChange(): Promise<void> {
+  await load()
 }
 onMounted(async () => {
   await Promise.all([
@@ -434,6 +423,7 @@ onMounted(async () => {
                 <td>
                   <TableRowActions
                     :active="row.status === 'ACTIVE'"
+                    :state-target-id="String(row.id)"
                     :busy="busy"
                     :show-view="hasBasePermission('product', 'view')"
                     :show-edit="hasBasePermission('product', 'edit')"
@@ -447,7 +437,7 @@ onMounted(async () => {
                     :deactivate-label="t('common.deactivate')"
                     @view="openDetail(row)"
                     @edit="router.push(`/products/${row.id}`)"
-                    @toggle="toggle(row)"
+                    @state-changed="afterWorkflowChange"
                   />
                 </td>
               </tr>

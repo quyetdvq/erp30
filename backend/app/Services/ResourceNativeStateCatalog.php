@@ -47,6 +47,17 @@ final class ResourceNativeStateCatalog
         'price_list' => ['ACTIVE', 'INACTIVE'],
     ];
 
+    /**
+     * A Lifecycle-bound business Resource accepts its ACTIVE Lifecycle members,
+     * not its fallback native codes. This helper is retained for consumers of
+     * the catalog; membership validation is enforced by the resolver.
+     */
+    public static function supportsLifecycleState(string $type, string $code): bool
+    {
+        return ! self::isIndependent($type)
+            && preg_match('/\A[A-Z][A-Z0-9_:-]{0,49}\z/D', strtoupper(trim($code))) === 1;
+    }
+
     public static function isIndependent(string $type): bool
     {
         return in_array(strtolower(trim($type)), self::INDEPENDENT_RESOURCES, true);

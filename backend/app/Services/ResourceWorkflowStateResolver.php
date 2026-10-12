@@ -249,23 +249,16 @@ final class ResourceWorkflowStateResolver
     }
 
     /**
-     * Resource configuration must not attach a Lifecycle that the business
-     * status domain cannot represent. Validate before CREATE or PATCH Resource.
+     * Lifecycle-bound business Resources accept every ACTIVE Workflow State
+     * member, independently of their Lifecycle-free native vocabulary. The
+     * ten independent Resources are the only binding exclusions.
      */
     public function assertLifecycleStateCompatibility(string $type, int $lifecycleId): void
     {
         if (ResourceNativeStateCatalog::isIndependent($type)) {
             throw new DomainException(self::ERROR_LIFECYCLE_SELF_REFERENCE, ['resource' => $type]);
         }
-        $native = ResourceNativeStateCatalog::codes($type);
         $members = $this->members($lifecycleId);
-        foreach ($members as $code) {
-            if (! in_array($code, $native, true)) {
-                throw new DomainException(InitialCreateStateNormalizer::ERROR_UNSUPPORTED_INITIAL, [
-                    'resource' => $type, 'unsupported_state' => $code,
-                ]);
-            }
-        }
         $initialCount = 0;
         foreach ($this->lifecycles->findLifecycleStates($lifecycleId) as $member) {
             if (in_array($member['is_initial'] ?? null, [true, 1, '1'], true)) {
@@ -276,6 +269,14 @@ final class ResourceWorkflowStateResolver
             throw new DomainException(self::ERROR_INITIAL_STATE_INVALID, [
                 'resource' => $type, 'lifecycle_id' => $lifecycleId,
             ]);
+        }
+        foreach ($members as $code) {
+            // workflow_states.code and business status columns are VARCHAR(50).
+            if (preg_match('/\A[A-Z][A-Z0-9_:-]{0,49}\z/D', $code) !== 1) {
+                throw new DomainException(self::ERROR_RESOURCE_LIFECYCLE_INVALID, [
+                    'resource' => $type, 'lifecycle_id' => $lifecycleId, 'code' => $code,
+                ]);
+            }
         }
     }
 

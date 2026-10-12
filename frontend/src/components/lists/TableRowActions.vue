@@ -10,6 +10,7 @@ import {
   TrashOutline,
 } from '@vicons/ionicons5'
 import { useBasePermission } from '@/composables/useBasePermission'
+import BusinessWorkflowAction from './BusinessWorkflowAction.vue'
 
 const props = withDefaults(
   defineProps<{
@@ -18,6 +19,7 @@ const props = withDefaults(
     showView?: boolean
     showEdit?: boolean
     showToggle?: boolean
+    stateTargetId?: string
     showDelete?: boolean
     viewPermission?: string
     editPermission?: string
@@ -44,6 +46,7 @@ const emit = defineEmits<{
   edit: []
   toggle: []
   delete: []
+  stateChanged: [status: string]
 }>()
 
 const { t } = useI18n()
@@ -99,8 +102,25 @@ const toggleIcon = computed(() => (props.active === false ? PowerOutline : BanOu
     >
       <NIcon :component="CreateOutline" aria-hidden="true" />
     </button>
+    <BusinessWorkflowAction
+      v-if="
+        props.showToggle &&
+        props.stateTargetId &&
+        props.togglePermission &&
+        can(props.togglePermission)
+      "
+      :resource="props.togglePermission.split('.')[0] || ''"
+      :target-id="props.stateTargetId"
+      :busy="props.busy"
+      @changed="(status) => emit('stateChanged', status)"
+    />
     <button
-      v-if="props.showToggle && props.active !== undefined && can(props.togglePermission)"
+      v-if="
+        props.showToggle &&
+        !props.stateTargetId &&
+        props.active !== undefined &&
+        can(props.togglePermission)
+      "
       type="button"
       class="table-row-action table-row-action--state"
       :disabled="props.busy"

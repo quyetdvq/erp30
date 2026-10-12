@@ -72,6 +72,7 @@ final class PriceListService
     {
         $operation ??= $this->operation();
         $clientHint = $data['evaluation_organization_id'] ?? null;
+        $data = \App\Services\BusinessWorkflowWriteBoundary::create('price_list', $data, $this->db);
         $payload = $this->normalizeCreate($data);
         $this->validateOrganization((int) $payload['organization_id']);
         $this->authorize($operation, 'create', null, $payload, $clientHint);
@@ -112,6 +113,11 @@ final class PriceListService
     public function setState(int $id, string $status, ?OperationContext $operation = null): bool
     {
         $operation ??= $this->operation();
+        if (\App\Services\BusinessLifecycleTransitions::applyIfBound(
+            'price_list', $id, $status, $operation, $this->db,
+        )) {
+            return true;
+        }
         $targetId = PositiveId::normalize($id, 'price_list_id', self::ERROR_NOT_FOUND);
         $current = $this->existing($targetId);
         $normalizedStatus = $this->normalizeStatus($status);
@@ -417,15 +423,9 @@ final class PriceListService
 
     private function normalizeStatus(mixed $value): string
     {
-        if (! is_string($value)) {
-            throw new DomainException(self::ERROR_INVALID_STATUS, ['status' => $value]);
-        }
-        $status = strtoupper(trim($value));
-        if (! in_array($status, self::STATUSES, true)) {
-            throw new DomainException(self::ERROR_INVALID_STATUS, ['status' => $status]);
-        }
-
-        return $status;
+        return \App\Services\WorkflowBusinessStatus::normalize(
+            'price_list', $value, self::STATUSES, self::ERROR_INVALID_STATUS, $this->db,
+        );
     }
 
     /** @param array<mixed> $submittedItems

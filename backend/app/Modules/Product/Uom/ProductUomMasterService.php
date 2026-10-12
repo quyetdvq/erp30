@@ -56,6 +56,7 @@ final class ProductUomMasterService
     {
         $operation ??= $this->operation();
         $clientHint = $data['evaluation_organization_id'] ?? null;
+        $data = \App\Services\BusinessWorkflowWriteBoundary::create('product_uom', $data, $this->db);
         $payload = $this->normalizeCreate($data);
         $this->authorize($operation, 'create', null, $payload, $clientHint);
 
@@ -81,6 +82,11 @@ final class ProductUomMasterService
     public function setState(int $id, string $status, ?OperationContext $operation = null): bool
     {
         $operation ??= $this->operation();
+        if (\App\Services\BusinessLifecycleTransitions::applyIfBound(
+            'product_uom', $id, $status, $operation, $this->db,
+        )) {
+            return true;
+        }
         $targetId = PositiveId::normalize($id, 'product_uom_id', self::ERROR_NOT_FOUND);
         $current = $this->existing($targetId);
         $normalizedStatus = $this->normalizeStatus($status);
@@ -251,15 +257,9 @@ final class ProductUomMasterService
 
     private function normalizeStatus(mixed $value): string
     {
-        if (! is_string($value)) {
-            throw new DomainException(self::ERROR_INVALID_STATUS, ['status' => $value]);
-        }
-        $status = strtoupper(trim($value));
-        if (! in_array($status, self::STATUSES, true)) {
-            throw new DomainException(self::ERROR_INVALID_STATUS, ['status' => $status]);
-        }
-
-        return $status;
+        return \App\Services\WorkflowBusinessStatus::normalize(
+            'product_uom', $value, self::STATUSES, self::ERROR_INVALID_STATUS, $this->db,
+        );
     }
 
     /** @param array<string, mixed>|null $target

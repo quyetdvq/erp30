@@ -3,6 +3,33 @@
 import * as z from 'zod';
 
 /**
+ * Lifecycle member code when bound; otherwise a permitted fallback native code.
+ */
+export const zBusinessWorkflowStatus = z.string().min(1).max(50).regex(/^[A-Z][A-Z0-9_:-]*$/);
+
+export const zBusinessWorkflowStates = z.object({
+    mode: z.enum(['NATIVE', 'LIFECYCLE']),
+    initial: zBusinessWorkflowStatus.nullable(),
+    states: z.array(zBusinessWorkflowStatus)
+});
+
+export const zBusinessWorkflowOption = z.object({
+    action_code: z.string(),
+    status: zBusinessWorkflowStatus
+});
+
+export const zBusinessWorkflowOptions = z.object({
+    mode: z.enum(['NATIVE', 'LIFECYCLE']),
+    current: zBusinessWorkflowStatus,
+    options: z.array(zBusinessWorkflowOption)
+});
+
+export const zBusinessWorkflowMutation = z.object({
+    status: zBusinessWorkflowStatus,
+    action_code: z.string()
+});
+
+/**
  * Request correlation identifier echoed in the response header and meta.request_id.
  */
 export const zRequestId = z.string().min(1).max(128).regex(/^[0-9A-Za-z][0-9A-Za-z._:-]{0,127}$/);
@@ -39,6 +66,18 @@ export const zSuccessResponse = z.object({
     data: z.unknown(),
     meta: zMeta
 });
+
+export const zBusinessWorkflowStatesResponse = zSuccessResponse.and(z.object({
+    data: zBusinessWorkflowStates.optional()
+}));
+
+export const zBusinessWorkflowOptionsResponse = zSuccessResponse.and(z.object({
+    data: zBusinessWorkflowOptions.optional()
+}));
+
+export const zBusinessWorkflowMutationResponse = zSuccessResponse.and(z.object({
+    data: zBusinessWorkflowMutation.optional()
+}));
 
 export const zErrorDetail = z.object({
     field: z.string(),
@@ -192,7 +231,7 @@ export const zProductGroup = z.object({
     code: z.string(),
     name: z.string(),
     description: z.string().nullish(),
-    status: z.enum(['ACTIVE', 'INACTIVE'])
+    status: zBusinessWorkflowStatus
 });
 
 export const zProductGroupCreate = z.object({
@@ -200,7 +239,7 @@ export const zProductGroupCreate = z.object({
     code: z.string(),
     name: z.string(),
     description: z.string().nullish(),
-    status: z.enum(['ACTIVE', 'INACTIVE']).optional()
+    status: zBusinessWorkflowStatus.optional()
 });
 
 export const zProductGroupPatch = z.object({
@@ -215,14 +254,14 @@ export const zProductUom = z.object({
     code: z.string(),
     name: z.string(),
     description: z.string().nullish(),
-    status: z.enum(['ACTIVE', 'INACTIVE'])
+    status: zBusinessWorkflowStatus
 });
 
 export const zProductUomCreate = z.object({
     code: z.string(),
     name: z.string(),
     description: z.string().nullish(),
-    status: z.enum(['ACTIVE', 'INACTIVE']).optional()
+    status: zBusinessWorkflowStatus.optional()
 });
 
 export const zProductUomPatch = z.object({
@@ -251,7 +290,7 @@ export const zProduct = z.object({
     description: z.string().nullish(),
     manual_standard_cost: zDecimal.nullish(),
     serial_management_enabled: z.boolean().optional(),
-    status: z.enum(['ACTIVE', 'INACTIVE']),
+    status: zBusinessWorkflowStatus,
     role: z.enum([
         'SIMPLE',
         'PARENT',
@@ -273,7 +312,7 @@ export const zProductLookupOption = z.object({
         'CHILD',
         'COMBO'
     ]),
-    status: z.enum(['ACTIVE', 'INACTIVE']),
+    status: zBusinessWorkflowStatus,
     base_uom_id: zBigInt.nullable(),
     selectable: z.boolean()
 });
@@ -314,7 +353,7 @@ export const zProductUomLabelResolveRequest = z.object({
 export const zProductUomLabel = z.object({
     id: zBigInt,
     code: z.string(),
-    status: z.enum(['ACTIVE', 'INACTIVE'])
+    status: zBusinessWorkflowStatus
 });
 
 export const zOrganizationLabelResolveRequest = z.object({
@@ -381,7 +420,7 @@ export const zProductCreate = z.object({
     description: z.string().optional(),
     manual_standard_cost: zDecimal.optional(),
     serial_management_enabled: z.boolean().optional(),
-    status: z.enum(['ACTIVE', 'INACTIVE']).optional()
+    status: zBusinessWorkflowStatus.optional()
 });
 
 export const zProductPatch = z.object({
@@ -413,7 +452,7 @@ export const zPriceList = z.object({
     effective_from: z.iso.datetime(),
     effective_to: z.iso.datetime().nullish(),
     priority: z.int(),
-    status: z.enum(['ACTIVE', 'INACTIVE']),
+    status: zBusinessWorkflowStatus,
     description: z.string().nullish()
 });
 
@@ -424,7 +463,7 @@ export const zPriceListCreate = z.object({
     effective_from: z.iso.datetime(),
     effective_to: z.iso.datetime().nullish(),
     priority: z.int().optional(),
-    status: z.enum(['ACTIVE', 'INACTIVE']).optional(),
+    status: zBusinessWorkflowStatus.optional(),
     description: z.string().nullish()
 });
 
@@ -631,24 +670,22 @@ export const zProvince = z.object({
     id: zBigInt,
     code: z.string(),
     name: z.string(),
-    status: z.enum([
-        'ACTIVE',
-        'INACTIVE',
-        'CLOSED'
-    ])
+    status: zBusinessWorkflowStatus
 });
 
 export const zProvinceCreate = z.object({
     code: z.string(),
     name: z.string(),
-    status: z.enum([
-        'ACTIVE',
-        'INACTIVE',
-        'CLOSED'
-    ])
+    status: zBusinessWorkflowStatus.optional()
 });
 
-export const zProvincePatch = zProvinceCreate;
+/**
+ * Status must be changed only with /actions/set-state.
+ */
+export const zProvincePatch = z.object({
+    code: z.string().optional(),
+    name: z.string().optional()
+});
 
 export const zWard = z.object({
     id: zBigInt,
@@ -656,11 +693,7 @@ export const zWard = z.object({
     code: z.string(),
     name: z.string(),
     name_full: z.string().nullish(),
-    status: z.enum([
-        'ACTIVE',
-        'INACTIVE',
-        'CLOSED'
-    ])
+    status: zBusinessWorkflowStatus
 });
 
 export const zWardCreate = z.object({
@@ -668,14 +701,18 @@ export const zWardCreate = z.object({
     code: z.string(),
     name: z.string(),
     name_full: z.string().nullish(),
-    status: z.enum([
-        'ACTIVE',
-        'INACTIVE',
-        'CLOSED'
-    ])
+    status: zBusinessWorkflowStatus.optional()
 });
 
-export const zWardPatch = zWardCreate;
+/**
+ * Status must be changed only with /actions/set-state.
+ */
+export const zWardPatch = z.object({
+    province_id: zBigInt.optional(),
+    code: z.string().optional(),
+    name: z.string().optional(),
+    name_full: z.string().nullish()
+});
 
 export const zOrganization = z.object({
     id: zBigInt,
@@ -695,7 +732,7 @@ export const zOrganization = z.object({
     province_id: zBigInt.optional(),
     ward_id: zBigInt.optional(),
     description: z.string().nullish(),
-    status: z.string(),
+    status: zBusinessWorkflowStatus,
     active_from: z.iso.date().nullish(),
     active_to: z.iso.date().nullish()
 });
@@ -711,19 +748,35 @@ export const zOrganizationCreate = z.object({
     province_id: zBigInt.optional(),
     ward_id: zBigInt.optional(),
     description: z.string().optional(),
-    status: z.string(),
+    status: zBusinessWorkflowStatus.optional(),
     active_from: z.iso.date().optional(),
     active_to: z.iso.date().optional()
 });
 
-export const zOrganizationPatch = zOrganizationCreate;
+/**
+ * Status must be changed only with /actions/set-state.
+ */
+export const zOrganizationPatch = z.object({
+    parent_id: zBigInt.optional(),
+    type: z.string().optional(),
+    code: z.string().optional(),
+    name: z.string().optional(),
+    legal_name: z.string().optional(),
+    tax_code: z.string().optional(),
+    address: z.string().optional(),
+    province_id: zBigInt.optional(),
+    ward_id: zBigInt.optional(),
+    description: z.string().optional(),
+    active_from: z.iso.date().optional(),
+    active_to: z.iso.date().optional()
+});
 
 export const zContact = z.object({
     id: zBigInt,
     contact_type: z.enum(['EMPLOYEE', 'ORGANIZATION']),
     contact_ref_id: zBigInt,
     description: z.string().nullish(),
-    status: z.string(),
+    status: zBusinessWorkflowStatus,
     name: z.string().nullish(),
     email: z.string().nullish(),
     phone: z.string().nullish(),
@@ -775,11 +828,7 @@ export const zDepartment = z.object({
     code: z.string(),
     name: z.string(),
     description: z.string().nullish(),
-    status: z.enum([
-        'ACTIVE',
-        'INACTIVE',
-        'CLOSED'
-    ])
+    status: zBusinessWorkflowStatus
 });
 
 export const zDepartmentCreate = z.object({
@@ -787,31 +836,18 @@ export const zDepartmentCreate = z.object({
     code: z.string(),
     name: z.string(),
     description: z.string().optional(),
-    status: z.enum([
-        'ACTIVE',
-        'INACTIVE',
-        'CLOSED'
-    ]).optional().default('ACTIVE')
+    status: zBusinessWorkflowStatus.optional()
 });
 
 export const zDepartmentPatch = z.object({
     parent_id: zBigInt.optional(),
     code: z.string().optional(),
     name: z.string().optional(),
-    description: z.string().nullish(),
-    status: z.enum([
-        'ACTIVE',
-        'INACTIVE',
-        'CLOSED'
-    ]).optional()
+    description: z.string().nullish()
 });
 
 export const zDepartmentState = z.object({
-    status: z.enum([
-        'ACTIVE',
-        'INACTIVE',
-        'CLOSED'
-    ])
+    status: zBusinessWorkflowStatus
 });
 
 export const zPosition = z.object({
@@ -820,11 +856,7 @@ export const zPosition = z.object({
     name: z.string(),
     level: z.int().nullish(),
     description: z.string().nullish(),
-    status: z.enum([
-        'ACTIVE',
-        'INACTIVE',
-        'CLOSED'
-    ])
+    status: zBusinessWorkflowStatus
 });
 
 export const zPositionCreate = z.object({
@@ -832,31 +864,18 @@ export const zPositionCreate = z.object({
     name: z.string(),
     level: z.int().nullish(),
     description: z.string().optional(),
-    status: z.enum([
-        'ACTIVE',
-        'INACTIVE',
-        'CLOSED'
-    ]).optional().default('ACTIVE')
+    status: zBusinessWorkflowStatus.optional()
 });
 
 export const zPositionPatch = z.object({
     code: z.string().optional(),
     name: z.string().optional(),
     level: z.int().nullish(),
-    description: z.string().nullish(),
-    status: z.enum([
-        'ACTIVE',
-        'INACTIVE',
-        'CLOSED'
-    ]).optional()
+    description: z.string().nullish()
 });
 
 export const zPositionState = z.object({
-    status: z.enum([
-        'ACTIVE',
-        'INACTIVE',
-        'CLOSED'
-    ])
+    status: zBusinessWorkflowStatus
 });
 
 export const zEmployee = z.object({
@@ -874,7 +893,7 @@ export const zEmployee = z.object({
     hire_date: z.iso.date().nullish(),
     manager_employee_id: zBigInt.optional(),
     description: z.string().nullish(),
-    status: z.enum(['ACTIVE', 'INACTIVE'])
+    status: zBusinessWorkflowStatus
 });
 
 export const zEmployeeCreate = z.object({
@@ -891,7 +910,7 @@ export const zEmployeeCreate = z.object({
     hire_date: z.iso.date().nullish(),
     manager_employee_id: zBigInt.optional(),
     description: z.string().nullish(),
-    status: z.enum(['ACTIVE', 'INACTIVE']).optional().default('ACTIVE')
+    status: zBusinessWorkflowStatus.optional()
 });
 
 export const zEmployeePatch = z.object({
@@ -907,12 +926,11 @@ export const zEmployeePatch = z.object({
     place_of_origin: z.string().nullish(),
     hire_date: z.iso.date().nullish(),
     manager_employee_id: zBigInt.optional(),
-    description: z.string().nullish(),
-    status: z.enum(['ACTIVE', 'INACTIVE']).optional()
+    description: z.string().nullish()
 });
 
 export const zEmployeeState = z.object({
-    status: z.enum(['ACTIVE', 'INACTIVE'])
+    status: zBusinessWorkflowStatus
 });
 
 export const zEmployeeAssignment = z.object({
@@ -947,8 +965,7 @@ export const zEmployeeAssignmentPatch = z.object({
     is_primary: z.boolean().optional(),
     effective_from: z.iso.date().optional(),
     effective_to: z.iso.date().nullish(),
-    description: z.string().nullish(),
-    status: z.enum(['ACTIVE', 'INACTIVE']).optional()
+    description: z.string().nullish()
 });
 
 export const zEmployeeAssignmentState = z.object({
@@ -956,11 +973,7 @@ export const zEmployeeAssignmentState = z.object({
 });
 
 export const zState = z.object({
-    status: z.enum([
-        'ACTIVE',
-        'INACTIVE',
-        'CLOSED'
-    ])
+    status: zBusinessWorkflowStatus
 });
 
 export const zProvinceResponse = zSuccessResponse.and(z.object({
@@ -1488,6 +1501,23 @@ export const zAcceptLanguage = z.enum(['vi', 'en']).default('vi');
  * Client request correlation identifier; invalid or missing values are replaced by a generated UUID.
  */
 export const zRequestId2 = zRequestId;
+
+export const zBusinessWorkflowResource = z.enum([
+    'province',
+    'ward',
+    'organization',
+    'department',
+    'position',
+    'employee',
+    'product_group',
+    'product_uom',
+    'product',
+    'price_list',
+    'organization_contact',
+    'employee_contact'
+]);
+
+export const zBusinessWorkflowActionCode = z.string().regex(/^[a-z][a-z0-9_:-]*$/);
 
 export const zId = zBigInt;
 
@@ -3295,3 +3325,72 @@ export const zReplacePriceListItemsPath = z.object({
  * Price list item collection response.
  */
 export const zReplacePriceListItemsResponse = zPriceListItemsResponse;
+
+export const zGetBusinessWorkflowStatesPath = z.object({
+    resource: z.enum([
+        'province',
+        'ward',
+        'organization',
+        'department',
+        'position',
+        'employee',
+        'product_group',
+        'product_uom',
+        'product',
+        'price_list',
+        'organization_contact',
+        'employee_contact'
+    ])
+});
+
+/**
+ * Resource Workflow State metadata.
+ */
+export const zGetBusinessWorkflowStatesResponse = zBusinessWorkflowStatesResponse;
+
+export const zGetBusinessWorkflowOptionsPath = z.object({
+    resource: z.enum([
+        'province',
+        'ward',
+        'organization',
+        'department',
+        'position',
+        'employee',
+        'product_group',
+        'product_uom',
+        'product',
+        'price_list',
+        'organization_contact',
+        'employee_contact'
+    ]),
+    id: zBigInt
+});
+
+/**
+ * Authorized transitions for this record.
+ */
+export const zGetBusinessWorkflowOptionsResponse = zBusinessWorkflowOptionsResponse;
+
+export const zExecuteBusinessWorkflowActionPath = z.object({
+    resource: z.enum([
+        'province',
+        'ward',
+        'organization',
+        'department',
+        'position',
+        'employee',
+        'product_group',
+        'product_uom',
+        'product',
+        'price_list',
+        'organization_contact',
+        'employee_contact'
+    ]),
+    id: zBigInt,
+    action_code: z.string().regex(/^[a-z][a-z0-9_:-]*$/)
+});
+
+/**
+ * State changed via a configured transition.
+ */
+export const zExecuteBusinessWorkflowActionResponse = zBusinessWorkflowMutationResponse;
