@@ -207,3 +207,88 @@ test('collapsed shell keeps only five mode icons and shell actions work', async 
   await expect(page.getByText(vi.shell.commandPalette)).toBeVisible()
   await expect(page.getByPlaceholder(vi.shell.searchCommand)).toBeVisible()
 })
+
+test('collapsed sidebar stacks five modes vertically without overlap and exposes expand action', async ({
+  page,
+}) => {
+  await mockAuthenticatedSession(page)
+  await page.setViewportSize({ width: 1280, height: 720 })
+  await page.goto('/organizations')
+
+  await page.getByRole('button', { name: vi.shell.collapseSidebar }).click()
+  const sider = page.locator('.shell-sider')
+  await expect(sider).toHaveClass(/sider-collapsed/)
+  const buttons = page.locator('.mode-switcher button')
+  await expect(buttons).toHaveCount(5)
+  // Naive UI animates the sider width after the collapsed class is applied.
+  // Wait for the 72px target and measure the sider and buttons in the same frame.
+  await expect
+    .poll(async () => (await sider.boundingBox())?.width ?? Number.POSITIVE_INFINITY)
+    .toBeLessThanOrEqual(73)
+  const geometry = await sider.evaluate((element) => {
+    const rect = element.getBoundingClientRect()
+    const boxes = Array.from(element.querySelectorAll('.mode-switcher button')).map((button) => {
+      const box = button.getBoundingClientRect()
+      return { left: box.left, right: box.right, top: box.top, bottom: box.bottom }
+    })
+    return { left: rect.left, right: rect.right, boxes }
+  })
+  const { boxes } = geometry
+  expect(boxes).toHaveLength(5)
+  expect(
+    boxes.every((box) => box.left >= geometry.left - 1 && box.right <= geometry.right + 1),
+  ).toBe(true)
+  expect(boxes.slice(1).every((box, index) => box.top >= boxes[index]!.bottom)).toBe(true)
+  expect(boxes.every((box) => Math.abs(box.left - boxes[0]!.left) <= 1)).toBe(true)
+
+  const activeColor = await buttons
+    .first()
+    .evaluate((node) => getComputedStyle(node).backgroundColor)
+  const inactiveColor = await buttons
+    .nth(1)
+    .evaluate((node) => getComputedStyle(node).backgroundColor)
+  expect(activeColor).not.toBe(inactiveColor)
+
+  const expand = page.getByRole('button', { name: vi.shell.expandSidebar })
+  await expect(expand).toBeVisible()
+  await expand.click()
+  await expect(sider).not.toHaveClass(/sider-collapsed/)
+  await expect(page.getByPlaceholder(vi.shell.searchMenu)).toBeVisible()
+})
+
+test('sidebar drag resizes smoothly with one persisted width and keyboard resize still works', async ({
+  page,
+}) => {
+  await mockAuthenticatedSession(page)
+  await page.setViewportSize({ width: 1280, height: 720 })
+  await page.goto('/organizations')
+
+  const sider = page.locator('.shell-sider')
+  const handle = page.locator('.sider-resize')
+  await expect(handle).toBeVisible()
+  const initialWidth = (await sider.boundingBox())!.width
+  const handleBox = (await handle.boundingBox())!
+  const x = handleBox.x + handleBox.width / 2
+  const y = handleBox.y + 36
+  await page.mouse.move(x, y)
+  await page.mouse.down()
+  await expect(page.locator('.erp-shell')).toHaveClass(/shell-resizing/)
+  await page.mouse.move(x + 74, y, { steps: 8 })
+  await expect
+    .poll(async () => (await sider.boundingBox())?.width ?? 0)
+    .toBeGreaterThan(initialWidth + 50)
+  await page.mouse.up()
+  await expect(page.locator('.erp-shell')).not.toHaveClass(/shell-resizing/)
+  const resizedWidth = (await sider.boundingBox())!.width
+  expect(resizedWidth).toBeGreaterThan(initialWidth + 50)
+
+  await page.reload()
+  await expect
+    .poll(async () => (await sider.boundingBox())?.width ?? 0)
+    .toBeGreaterThan(initialWidth + 50)
+  await handle.focus()
+  await handle.press('Home')
+  await expect
+    .poll(async () => (await sider.boundingBox())?.width ?? 0)
+    .toBeLessThan(resizedWidth - 20)
+})

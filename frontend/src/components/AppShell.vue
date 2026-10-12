@@ -67,8 +67,13 @@ const commandSearch = ref('')
 const userMenuOpen = ref(false)
 const notificationsOpen = ref(false)
 const notificationsRead = ref(false)
-const sidebarDragWidth = ref<number | null>(null)
+const shellElement = ref<HTMLElement | null>(null)
+const isResizingSidebar = ref(false)
 let resizeFrame: number | null = null
+let resizePointerId: number | null = null
+let resizeStartX = 0
+let resizeStartWidth = 0
+let pendingSidebarWidth = 0
 
 const icon = (component: object) => () => h(NIcon, null, { default: () => h(component) })
 
@@ -260,7 +265,6 @@ const userOptions = computed(() => [
 
 const activeMode = computed(() => workspace.sidebarMode)
 const sidebarWidth = computed(() => (workspace.sidebarCollapsed ? 72 : workspace.sidebarWidth))
-const renderedSidebarWidth = computed(() => sidebarDragWidth.value ?? sidebarWidth.value)
 const currentTabKey = computed(() => String(route.name || route.path))
 const localeLabel = computed(() => (locale.value === 'vi' ? 'Tiếng Việt' : 'English'))
 const themeIcon = computed(() => (workspace.themeMode === 'dark' ? SunnyOutline : MoonOutline))
@@ -366,37 +370,57 @@ function toggleSidebar(): void {
   workspace.setSidebarCollapsed(!workspace.sidebarCollapsed)
 }
 
-let resizeMove: ((event: PointerEvent) => void) | null = null
-let resizeEnd: (() => void) | null = null
+function clampSidebarWidth(width: number): number {
+  return Math.min(workspace.MAX_SIDEBAR_WIDTH, Math.max(workspace.MIN_SIDEBAR_WIDTH, width))
+}
+
+function paintSidebarResize(): void {
+  resizeFrame = null
+  shellElement.value?.style.setProperty('--sidebar-width', `${pendingSidebarWidth}px`)
+}
+
+function handleResizeMove(event: PointerEvent): void {
+  if (event.pointerId !== resizePointerId) return
+  pendingSidebarWidth = clampSidebarWidth(resizeStartWidth + event.clientX - resizeStartX)
+  if (resizeFrame === null) resizeFrame = requestAnimationFrame(paintSidebarResize)
+}
+
+function stopResize(commit: boolean): void {
+  if (resizePointerId === null) return
+  window.removeEventListener('pointermove', handleResizeMove)
+  window.removeEventListener('pointerup', handleResizeUp)
+  window.removeEventListener('pointercancel', handleResizeCancel)
+  window.removeEventListener('blur', handleResizeCancel)
+  if (resizeFrame !== null) cancelAnimationFrame(resizeFrame)
+  resizeFrame = null
+  resizePointerId = null
+  if (commit) workspace.setSidebarWidth(pendingSidebarWidth)
+  else shellElement.value?.style.setProperty('--sidebar-width', `${sidebarWidth.value}px`)
+  isResizingSidebar.value = false
+}
+
+function handleResizeUp(event: PointerEvent): void {
+  if (event.pointerId !== resizePointerId) return
+  handleResizeMove(event)
+  stopResize(true)
+}
+
+function handleResizeCancel(): void {
+  stopResize(false)
+}
 
 function startResize(event: PointerEvent): void {
-  if (workspace.sidebarCollapsed) return
-  const startX = event.clientX
-  const startWidth = workspace.sidebarWidth
-  sidebarDragWidth.value = startWidth
-  resizeMove = (moveEvent) => {
-    const nextWidth = startWidth + moveEvent.clientX - startX
-    if (resizeFrame !== null) cancelAnimationFrame(resizeFrame)
-    resizeFrame = requestAnimationFrame(() => {
-      sidebarDragWidth.value = Math.min(
-        workspace.MAX_SIDEBAR_WIDTH,
-        Math.max(workspace.MIN_SIDEBAR_WIDTH, nextWidth),
-      )
-      resizeFrame = null
-    })
-  }
-  resizeEnd = () => {
-    if (resizeMove) window.removeEventListener('pointermove', resizeMove)
-    if (resizeEnd) window.removeEventListener('pointerup', resizeEnd)
-    if (resizeFrame !== null) cancelAnimationFrame(resizeFrame)
-    if (sidebarDragWidth.value !== null) workspace.setSidebarWidth(sidebarDragWidth.value)
-    sidebarDragWidth.value = null
-    resizeFrame = null
-    resizeMove = null
-    resizeEnd = null
-  }
-  window.addEventListener('pointermove', resizeMove)
-  window.addEventListener('pointerup', resizeEnd)
+  if (workspace.sidebarCollapsed || resizePointerId !== null || event.button !== 0) return
+  event.preventDefault()
+  resizePointerId = event.pointerId
+  resizeStartX = event.clientX
+  resizeStartWidth = workspace.sidebarWidth
+  pendingSidebarWidth = resizeStartWidth
+  isResizingSidebar.value = true
+  window.addEventListener('pointermove', handleResizeMove)
+  window.addEventListener('pointerup', handleResizeUp)
+  window.addEventListener('pointercancel', handleResizeCancel)
+  window.addEventListener('blur', handleResizeCancel)
 }
 
 function handleResizeKey(event: KeyboardEvent): void {
@@ -477,14 +501,15 @@ function dismissError(id: string): void {
   dismissApiError(id)
 }
 
-onBeforeUnmount(() => resizeEnd?.())
+onBeforeUnmount(handleResizeCancel)
 </script>
 
 <template>
   <div
+    ref="shellElement"
     class="erp-shell"
-    :class="{ 'theme-dark': workspace.themeMode === 'dark' }"
-    :style="{ '--sidebar-width': `${renderedSidebarWidth}px` }"
+    :class="{ 'theme-dark': workspace.themeMode === 'dark', 'shell-resizing': isResizingSidebar }"
+    :style="{ '--sidebar-width': `${sidebarWidth}px` }"
   >
     <NLayout class="shell-layout">
       <NLayoutHeader bordered class="shell-header">
@@ -575,12 +600,15 @@ onBeforeUnmount(() => resizeEnd?.())
       <NLayout has-sider class="shell-body">
         <NLayoutSider
           bordered
-          :width="renderedSidebarWidth"
+          :width="workspace.sidebarWidth"
           :collapsed-width="72"
           :collapsed="workspace.sidebarCollapsed"
           collapse-mode="width"
           class="shell-sider"
-          :class="{ 'sider-mobile-open': mobileMenuOpen }"
+          :class="{
+            'sider-mobile-open': mobileMenuOpen,
+            'sider-collapsed': workspace.sidebarCollapsed,
+          }"
         >
           <div class="sider-content">
             <NInput
@@ -599,6 +627,8 @@ onBeforeUnmount(() => resizeEnd?.())
                 :key="mode.key"
                 quaternary
                 :type="activeMode === mode.key ? 'primary' : 'default'"
+                :class="{ 'mode-button--active': activeMode === mode.key }"
+                :aria-pressed="activeMode === mode.key"
                 :aria-label="t(mode.labelKey)"
                 :title="t(mode.labelKey)"
                 @click="selectMode(mode.key)"
@@ -625,10 +655,7 @@ onBeforeUnmount(() => resizeEnd?.())
             </div>
             <button
               class="sider-collapse"
-              :class="{ 'sider-collapse--hidden': workspace.sidebarCollapsed }"
               type="button"
-              :tabindex="workspace.sidebarCollapsed ? -1 : 0"
-              :aria-hidden="workspace.sidebarCollapsed ? 'true' : undefined"
               :aria-label="
                 workspace.sidebarCollapsed ? t('shell.expandSidebar') : t('shell.collapseSidebar')
               "
@@ -850,11 +877,52 @@ onBeforeUnmount(() => resizeEnd?.())
 .mode-switcher {
   display: grid;
   grid-template-columns: repeat(5, minmax(0, 1fr));
-  gap: 2px;
+  gap: 4px;
+}
+.mode-switcher :deep(.n-button) {
+  width: 100%;
+  min-width: 0;
+  height: 40px;
+  padding: 0;
+  border-radius: 10px;
+  color: #273e57;
+}
+.mode-switcher :deep(.n-button:hover) {
+  background: #eaf2f8;
+  color: #114c7c;
+}
+.mode-switcher :deep(.n-button.mode-button--active) {
+  background: #dff3e9;
+  color: #066248;
+  box-shadow: inset 0 0 0 1px #9fd8be;
+}
+.mode-switcher :deep(.n-button:focus-visible),
+.sider-collapse:focus-visible,
+.sider-resize:focus-visible {
+  outline: 2px solid #126bb0;
+  outline-offset: 2px;
+}
+.shell-sider.sider-collapsed .sider-content {
+  box-sizing: border-box;
+  width: 72px;
+  max-width: 100%;
+  align-items: center;
+  padding: 16px 10px 58px;
+}
+.shell-sider.sider-collapsed .mode-switcher {
+  width: 44px;
+  max-width: 100%;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 8px;
+  justify-items: center;
+}
+.shell-sider.sider-collapsed .mode-switcher :deep(.n-button) {
+  width: 44px;
+  height: 44px;
 }
 .sider-heading {
   padding: 0 8px;
-  color: #7b8a9b;
+  color: #53687e;
   font-size: 11px;
   font-weight: 700;
   letter-spacing: 0.06em;
@@ -878,8 +946,13 @@ onBeforeUnmount(() => resizeEnd?.())
 .sider-menu-scroll :deep(.n-menu-item-content-header) {
   min-width: 0;
   overflow: hidden;
+  color: #273e57;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+.sider-menu-scroll :deep(.n-menu-item-content--selected .n-menu-item-content-header) {
+  color: #066248;
+  font-weight: 650;
 }
 .sider-footer {
   display: flex;
@@ -887,37 +960,70 @@ onBeforeUnmount(() => resizeEnd?.())
   gap: 6px;
   padding: 10px 8px;
   border-top: 1px solid #e9eef2;
-  color: #718298;
+  color: #53687e;
   font-size: 11px;
 }
 .sider-collapse {
   position: absolute;
-  top: 86px;
+  top: 128px;
   right: 12px;
   z-index: 5;
   display: grid;
   width: 26px;
   height: 26px;
   place-items: center;
-  border: 1px solid #dbe4eb;
+  border: 1px solid #b9cad8;
   border-radius: 50%;
   background: #fff;
-  color: #55708b;
+  color: #294761;
   cursor: pointer;
   box-shadow: 0 2px 8px rgb(24 47 68 / 8%);
 }
-.sider-collapse--hidden {
-  opacity: 0;
-  pointer-events: none;
+.shell-sider.sider-collapsed .sider-collapse {
+  top: auto;
+  right: calc(50% - 18px);
+  bottom: 16px;
+  width: 36px;
+  height: 36px;
 }
 .sider-resize {
   position: absolute;
   top: 0;
-  right: -3px;
+  right: 0;
   bottom: 0;
   z-index: 3;
-  width: 6px;
+  width: 10px;
   cursor: col-resize;
+  touch-action: none;
+}
+.sider-resize::after {
+  position: absolute;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  width: 2px;
+  background: #1674a6;
+  content: '';
+  opacity: 0;
+}
+.sider-resize:hover::after,
+.sider-resize:focus-visible::after,
+.shell-resizing .sider-resize::after {
+  opacity: 1;
+}
+.shell-resizing .shell-sider {
+  width: var(--sidebar-width) !important;
+  min-width: var(--sidebar-width) !important;
+  max-width: var(--sidebar-width) !important;
+  flex: 0 0 var(--sidebar-width) !important;
+  transition: none !important;
+}
+.shell-resizing .shell-body {
+  cursor: col-resize;
+  user-select: none;
+}
+.shell-resizing .workspace-layout {
+  pointer-events: none;
 }
 .workspace-layout {
   min-height: 100%;
@@ -1126,6 +1232,29 @@ onBeforeUnmount(() => resizeEnd?.())
 .erp-shell.theme-dark .workspace-search {
   border-color: #304454;
   background: #1b2a36;
+}
+.erp-shell.theme-dark .mode-switcher :deep(.n-button) {
+  color: #d9e7f2;
+}
+.erp-shell.theme-dark .mode-switcher :deep(.n-button:hover) {
+  background: #294255;
+  color: #ffffff;
+}
+.erp-shell.theme-dark .mode-switcher :deep(.n-button.mode-button--active) {
+  background: #174b3d;
+  color: #9af0ce;
+  box-shadow: inset 0 0 0 1px #3b9b79;
+}
+.erp-shell.theme-dark .sider-menu-scroll :deep(.n-menu-item-content-header) {
+  color: #d9e7f2;
+}
+.erp-shell.theme-dark
+  .sider-menu-scroll
+  :deep(.n-menu-item-content--selected .n-menu-item-content-header) {
+  color: #9af0ce;
+}
+.erp-shell.theme-dark .sider-resize::after {
+  background: #7dd4ec;
 }
 .erp-shell.theme-dark .sider-footer,
 .erp-shell.theme-dark .workspace-tabs-wrap,
