@@ -38,8 +38,8 @@ final class ResourceNativeStateCatalog
         'contact' => ['ACTIVE', 'INACTIVE', 'CLOSED'], // retired; new API never authorizes it
         'organization_contact' => ['ACTIVE', 'INACTIVE', 'CLOSED'],
         'employee_contact' => ['ACTIVE', 'INACTIVE', 'CLOSED'],
-        'department' => ['ACTIVE', 'INACTIVE'],
-        'position' => ['ACTIVE', 'INACTIVE'],
+        'department' => ['ACTIVE', 'INACTIVE', 'CLOSED'],
+        'position' => ['ACTIVE', 'INACTIVE', 'CLOSED'],
         'employee' => ['ACTIVE', 'INACTIVE'],
         'product_group' => ['ACTIVE', 'INACTIVE'],
         'product_uom' => ['ACTIVE', 'INACTIVE'],

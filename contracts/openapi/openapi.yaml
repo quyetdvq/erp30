@@ -1605,7 +1605,7 @@ components:
         code: {type: string}
         name: {type: string}
         description: {type: [string, 'null']}
-        status: {type: string, enum: [ACTIVE, INACTIVE]}
+        status: {type: string, enum: [ACTIVE, INACTIVE], deprecated: true}
     ProductGroupPatch:
       type: object
       properties:
@@ -1629,7 +1629,7 @@ components:
         code: {type: string}
         name: {type: string}
         description: {type: [string, 'null']}
-        status: {type: string, enum: [ACTIVE, INACTIVE]}
+        status: {type: string, enum: [ACTIVE, INACTIVE], deprecated: true}
     ProductUomPatch:
       type: object
       properties:
@@ -1776,7 +1776,7 @@ components:
         description: {type: string}
         manual_standard_cost: {$ref: '#/components/schemas/Decimal'}
         serial_management_enabled: {type: boolean}
-        status: {type: string, enum: [ACTIVE, INACTIVE]}
+        status: {type: string, enum: [ACTIVE, INACTIVE], deprecated: true}
     ProductPatch:
       type: object
       properties:
@@ -1821,7 +1821,7 @@ components:
         effective_from: {type: string, format: date-time}
         effective_to: {type: [string, 'null'], format: date-time}
         priority: {type: integer}
-        status: {type: string, enum: [ACTIVE, INACTIVE]}
+        status: {type: string, enum: [ACTIVE, INACTIVE], deprecated: true}
         description: {type: [string, 'null']}
     PriceListPatch:
       type: object
@@ -1976,14 +1976,17 @@ components:
         status: {type: string, enum: [ACTIVE, INACTIVE, CLOSED]}
     ProvinceCreate:
       type: object
-      required: [code, name, status]
+      required: [code, name]
       properties:
         code: {type: string}
         name: {type: string}
-        status: {type: string, enum: [ACTIVE, INACTIVE, CLOSED]}
+        status: {type: string, enum: [ACTIVE, INACTIVE, CLOSED], deprecated: true}
     ProvincePatch:
-      allOf: [{$ref: '#/components/schemas/ProvinceCreate'}]
-      required: []
+      type: object
+      description: "Status must be changed only with /actions/set-state."
+      properties:
+        code: {type: string}
+        name: {type: string}
     Ward:
       type: object
       required: [id, province_id, code, name, status]
@@ -1996,16 +1999,21 @@ components:
         status: {type: string, enum: [ACTIVE, INACTIVE, CLOSED]}
     WardCreate:
       type: object
-      required: [province_id, code, name, status]
+      required: [province_id, code, name]
       properties:
         province_id: {$ref: '#/components/schemas/BigInt'}
         code: {type: string}
         name: {type: string}
         name_full: {type: [string, 'null']}
-        status: {type: string, enum: [ACTIVE, INACTIVE, CLOSED]}
+        status: {type: string, enum: [ACTIVE, INACTIVE, CLOSED], deprecated: true}
     WardPatch:
-      allOf: [{$ref: '#/components/schemas/WardCreate'}]
-      required: []
+      type: object
+      description: "Status must be changed only with /actions/set-state."
+      properties:
+        province_id: {$ref: '#/components/schemas/BigInt'}
+        code: {type: string}
+        name: {type: string}
+        name_full: {type: [string, 'null']}
     Organization:
       type: object
       required: [id, type, code, name, status]
@@ -2026,7 +2034,7 @@ components:
         active_to: {type: [string, 'null'], format: date}
     OrganizationCreate:
       type: object
-      required: [type, code, name, status]
+      required: [type, code, name]
       properties:
         parent_id: {$ref: '#/components/schemas/BigInt'}
         type: {type: string}
@@ -2038,12 +2046,25 @@ components:
         province_id: {$ref: '#/components/schemas/BigInt'}
         ward_id: {$ref: '#/components/schemas/BigInt'}
         description: {type: string}
-        status: {type: string}
+        status: {type: string, deprecated: true, description: "Omit; server derives the initial State from Resource Lifecycle."}
         active_from: {type: string, format: date}
         active_to: {type: string, format: date}
     OrganizationPatch:
-      allOf: [{$ref: '#/components/schemas/OrganizationCreate'}]
-      required: []
+      type: object
+      description: "Status must be changed only with /actions/set-state."
+      properties:
+        parent_id: {$ref: '#/components/schemas/BigInt'}
+        type: {type: string}
+        code: {type: string}
+        name: {type: string}
+        legal_name: {type: string}
+        tax_code: {type: string}
+        address: {type: string}
+        province_id: {$ref: '#/components/schemas/BigInt'}
+        ward_id: {$ref: '#/components/schemas/BigInt'}
+        description: {type: string}
+        active_from: {type: string, format: date}
+        active_to: {type: string, format: date}
     Contact:
       type: object
       required: [id, contact_type, contact_ref_id, status]
@@ -2111,7 +2132,7 @@ components:
         code: {type: string}
         name: {type: string}
         description: {type: string}
-        status: {type: string, enum: [ACTIVE, INACTIVE, CLOSED], default: ACTIVE}
+        status: {type: string, enum: [ACTIVE, INACTIVE, CLOSED], deprecated: true}
     DepartmentPatch:
       type: object
       properties:
@@ -2119,7 +2140,6 @@ components:
         code: {type: string}
         name: {type: string}
         description: {type: [string, 'null']}
-        status: {type: string, enum: [ACTIVE, INACTIVE, CLOSED]}
     DepartmentState:
       type: object
       required: [status]
@@ -2143,7 +2163,7 @@ components:
         name: {type: string}
         level: {type: [integer, 'null']}
         description: {type: string}
-        status: {type: string, enum: [ACTIVE, INACTIVE, CLOSED], default: ACTIVE}
+        status: {type: string, enum: [ACTIVE, INACTIVE, CLOSED], deprecated: true}
     PositionPatch:
       type: object
       properties:
@@ -2151,7 +2171,6 @@ components:
         name: {type: string}
         level: {type: [integer, 'null']}
         description: {type: [string, 'null']}
-        status: {type: string, enum: [ACTIVE, INACTIVE, CLOSED]}
     PositionState:
       type: object
       required: [status]
@@ -2185,7 +2204,7 @@ components:
         hire_date: {type: [string, 'null'], format: date}
         manager_employee_id: {$ref: '#/components/schemas/BigInt'}
         description: {type: [string, 'null']}
-        status: {type: string, enum: [ACTIVE, INACTIVE], default: ACTIVE}
+        status: {type: string, enum: [ACTIVE, INACTIVE], deprecated: true}
     EmployeePatch:
       type: object
       properties:
@@ -2198,7 +2217,6 @@ components:
         hire_date: {type: [string, 'null'], format: date}
         manager_employee_id: {$ref: '#/components/schemas/BigInt'}
         description: {type: [string, 'null']}
-        status: {type: string, enum: [ACTIVE, INACTIVE]}
     EmployeeState:
       type: object
       required: [status]
@@ -2241,7 +2259,6 @@ components:
         effective_from: {type: string, format: date}
         effective_to: {type: [string, 'null'], format: date}
         description: {type: [string, 'null']}
-        status: {type: string, enum: [ACTIVE, INACTIVE]}
     EmployeeAssignmentState:
       type: object
       required: [status]

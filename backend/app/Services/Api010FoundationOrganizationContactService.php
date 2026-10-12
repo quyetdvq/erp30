@@ -122,6 +122,9 @@ final class Api010FoundationOrganizationContactService
      */
     public function create(string $resource, array $payload): array
     {
+        if (in_array($resource, ['province', 'ward', 'organization'], true)) {
+            $payload = (new InitialCreateStateNormalizer($this->stateResolver()))->normalize($resource, $payload);
+        }
         $operation = $this->operation();
         $id = match ($resource) {
             'province' => $this->createProvince($payload, $operation),
@@ -143,6 +146,15 @@ final class Api010FoundationOrganizationContactService
         $operation = $this->operation();
         $row = $this->row($resource, $id);
         $this->authorizeVisible($resource, $row, $operation);
+        // State has a dedicated setstate permission/endpoint even if this
+        // Resource does not currently have a Lifecycle. Reject the field,
+        // including a no-op status, on the ordinary edit endpoint.
+        if (in_array($resource, ['province', 'ward', 'organization'], true) && array_key_exists('status', $payload)) {
+            // The caller must still hold edit; a visible but read-only target
+            // must produce 403 rather than revealing validation details.
+            $this->authorizeAction($resource, 'edit', $row, $payload, $operation);
+            throw new DomainException(self::ERROR_TRANSITION_REQUIRED, ['resource' => $resource]);
+        }
         // State changes must go through a validated Transition rather than
         // smuggling a status field through an ordinary edit operation.
         if (array_key_exists('status', $payload) && $this->stateResolver()->lifecycleId($this->authorizationResource($resource, $row, [])) !== null) {
@@ -228,14 +240,15 @@ final class Api010FoundationOrganizationContactService
         if (in_array($resource, ['organization', 'contact'], true)) {
             return $this->ownerAwareSqlPage($resource, $query, $operation);
         }
-        if (! in_array($resource, ['province', 'ward'], true)
-            || array_key_exists('q', $query)
-            || (isset($query['sort']) && ! in_array($query['sort'], ['id', '-id'], true))) {
+        if (! in_array($resource, ['province', 'ward'], true)) {
             return null;
         }
         $adapter = $this->queryAdapter ?? new CommonListQueryAdapter();
         $parsed = $adapter->parse($query, $this->allowlist($resource));
-        if (! SqlAuthorizedBucketListSource::supports($resource, $parsed)) {
+        $directSqlPage = SqlAuthorizedBucketListSource::supports($resource, $parsed);
+        if (! $directSqlPage && $parsed->filters === []) {
+            // A bare free-text query needs canonical Unicode PHP comparison.
+            // Do not replace it with a collation-dependent SQL LIKE/ORDER BY.
             return null;
         }
         $db = db_connect();
@@ -250,8 +263,17 @@ final class Api010FoundationOrganizationContactService
         if ($buckets === null) {
             return null;
         }
-        $result = $adapter->paginate($query, $this->allowlist($resource),
-            new SqlAuthorizedBucketListSource($db, $resource, $buckets));
+        $source = new SqlAuthorizedBucketListSource($db, $resource, $buckets);
+        if ($directSqlPage) {
+            $result = $adapter->paginate($query, $this->allowlist($resource), $source);
+        } else {
+            // Filter the candidate set in SQL first (often by indexed
+            // wards.province_id) without changing the exact PHP q/sort rules.
+            // Each candidate is still independently PBAC-checked below.
+            $candidates = $source->fetchLocationCandidates($parsed);
+            $result = $adapter->paginate($query, $this->allowlist($resource),
+                new AuthorizedArrayListSource($candidates));
+        }
         $data = [];
         foreach ($result->data as $row) {
             if (is_array($row)) {

@@ -39,7 +39,7 @@ final class ResourceWorkflowStateResolver
     /** @var array<int, array<int, string>> */
     private array $memberCodes = [];
 
-    /** @var array<string,int> Native code => active workflow state ID; request local. */
+    /** @var array<string,int> Native code and enabled-catalog mode => workflow state ID; request local. */
     private array $nativeIds = [];
 
     /** @param ConnectionInterface<mixed,mixed>|null $db */
@@ -137,7 +137,11 @@ final class ResourceWorkflowStateResolver
                 }
             }
         }
-        if (! isset($this->nativeIds[$normalized])) {
+        // workflow_state can recover its own disabled catalog definition. An
+        // ID cached for that path must not bypass ACTIVE-only lookup for other
+        // resources sharing this resolver within one request.
+        $cacheKey = ($type === 'workflow_state' ? 'ANY:' : 'ACTIVE:') . $normalized;
+        if (! isset($this->nativeIds[$cacheKey])) {
             // workflow_state manages its own ACTIVE/INACTIVE flag. When the
             // canonical INACTIVE definition itself is disabled, an authorized
             // workflow_state.setstate must still be able to reactivate it.
@@ -150,9 +154,9 @@ final class ResourceWorkflowStateResolver
                 // cannot safely match existing state-scoped policies.
                 throw new DomainException(self::ERROR_STATE_NOT_MAPPED, ['resource' => $type, 'status' => $normalized]);
             }
-            $this->nativeIds[$normalized] = PositiveId::normalize($state['id'] ?? null, 'state_id', self::ERROR_STATE_NOT_MAPPED);
+            $this->nativeIds[$cacheKey] = PositiveId::normalize($state['id'] ?? null, 'state_id', self::ERROR_STATE_NOT_MAPPED);
         }
-        return $this->nativeIds[$normalized];
+        return $this->nativeIds[$cacheKey];
     }
 
     public function codeForStateId(string $type, int $stateId): string
@@ -201,6 +205,7 @@ final class ResourceWorkflowStateResolver
             throw new DomainException(self::ERROR_LIFECYCLE_SELF_REFERENCE, ['resource' => $type]);
         }
         if ($nextLifecycleId !== null) {
+            $this->assertLifecycleStateCompatibility($type, $nextLifecycleId);
             $allowedIds = array_keys($this->members($nextLifecycleId));
         } else {
             $allowedIds = [];
@@ -241,6 +246,37 @@ final class ResourceWorkflowStateResolver
         }
 
         return $initials[0];
+    }
+
+    /**
+     * Resource configuration must not attach a Lifecycle that the business
+     * status domain cannot represent. Validate before CREATE or PATCH Resource.
+     */
+    public function assertLifecycleStateCompatibility(string $type, int $lifecycleId): void
+    {
+        if (ResourceNativeStateCatalog::isIndependent($type)) {
+            throw new DomainException(self::ERROR_LIFECYCLE_SELF_REFERENCE, ['resource' => $type]);
+        }
+        $native = ResourceNativeStateCatalog::codes($type);
+        $members = $this->members($lifecycleId);
+        foreach ($members as $code) {
+            if (! in_array($code, $native, true)) {
+                throw new DomainException(InitialCreateStateNormalizer::ERROR_UNSUPPORTED_INITIAL, [
+                    'resource' => $type, 'unsupported_state' => $code,
+                ]);
+            }
+        }
+        $initialCount = 0;
+        foreach ($this->lifecycles->findLifecycleStates($lifecycleId) as $member) {
+            if (in_array($member['is_initial'] ?? null, [true, 1, '1'], true)) {
+                $initialCount++;
+            }
+        }
+        if ($initialCount !== 1) {
+            throw new DomainException(self::ERROR_INITIAL_STATE_INVALID, [
+                'resource' => $type, 'lifecycle_id' => $lifecycleId,
+            ]);
+        }
     }
 
     /** Reject State that is neither an active Lifecycle member nor a native business code. */

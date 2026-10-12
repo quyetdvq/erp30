@@ -17,7 +17,12 @@ final class WorkflowStateSeeder extends Seeder
         'CANCELLED',
         'CONFIRMED',
         'PROCESSING',
-        'COMPLETED'
+        'COMPLETED',
+        // Canonical State definitions for native master/config resources.
+        // These are Workflow State catalog identities, not enable flags.
+        'ACTIVE',
+        'INACTIVE',
+        'CLOSED',
     ];
 
     public function run(): void

@@ -77,11 +77,17 @@ final class Api050ProductCatalogService
         );
     }
 
+    private function stateResolver(): ResourceWorkflowStateResolver
+    {
+        return $this->runtimeWorkflowStates ??= new ResourceWorkflowStateResolver($this->connection());
+    }
+
     /** @param array<string,mixed> $payload
      *  @return array<string,mixed>
      */
     public function createGroup(array $payload): array
     {
+        $payload = (new InitialCreateStateNormalizer($this->stateResolver()))->normalize('product_group', $payload);
         $id = $this->groups()->create($payload, $this->operation());
         return $this->requireRow($this->groups()->findById($id), ProductGroupService::ERROR_NOT_FOUND);
     }
@@ -137,6 +143,7 @@ final class Api050ProductCatalogService
      */
     public function createUom(array $payload): array
     {
+        $payload = (new InitialCreateStateNormalizer($this->stateResolver()))->normalize('product_uom', $payload);
         $id = $this->uoms()->create($payload, $this->operation());
         return $this->requireRow($this->uoms()->findById($id), ProductUomMasterService::ERROR_NOT_FOUND);
     }
@@ -266,6 +273,7 @@ final class Api050ProductCatalogService
      */
     public function createProduct(array $payload): array
     {
+        $payload = (new InitialCreateStateNormalizer($this->stateResolver()))->normalize('product', $payload);
         $id = $this->products()->create($payload, $this->operation());
         return $this->getProduct($id);
     }
@@ -388,6 +396,7 @@ final class Api050ProductCatalogService
      */
     public function createPriceList(array $payload): array
     {
+        $payload = (new InitialCreateStateNormalizer($this->stateResolver()))->normalize('price_list', $payload);
         $id = $this->priceLists()->create($payload, $this->operation());
         return $this->getPriceList($id);
     }

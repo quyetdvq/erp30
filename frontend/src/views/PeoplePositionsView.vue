@@ -110,7 +110,6 @@ async function save(): Promise<void> {
     const payload: PositionCreate = {
       code: form.value.code,
       name: form.value.name,
-      status: form.value.status,
       ...(form.value.level !== '' ? { level: Number(form.value.level) } : {}),
       ...(form.value.description ? { description: form.value.description } : {}),
     }
@@ -268,14 +267,13 @@ onMounted(() => void load())
         ><label
           ><span>{{ t('people.description') }}</span
           ><textarea v-model="form.description" rows="3" /></label
-        ><label
-          ><span>{{ t('people.status') }}</span
-          ><select v-model="form.status">
-            <option value="ACTIVE">{{ t('status.active') }}</option>
-            <option value="INACTIVE">{{ t('status.inactive') }}</option>
-            <option value="CLOSED">{{ t('status.closed') }}</option>
-          </select></label
-        >
+        ><label v-if="editingId">
+          <span>{{ t('people.status') }}</span>
+          <output>{{ form.status }}</output>
+        </label>
+        <p v-else class="workflow-initial-note" role="note">
+          {{ t('workflow.initialManaged') }}
+        </p>
         <footer class="modal-card__footer">
           <button type="button" class="secondary-button" @click="closeForm">
             {{ t('common.cancel') }}</button

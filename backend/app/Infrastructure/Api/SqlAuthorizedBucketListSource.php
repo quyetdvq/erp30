@@ -103,6 +103,26 @@ final class SqlAuthorizedBucketListSource implements AuthorizedListSource
         return array_values($result->getResultArray());
     }
 
+    /**
+     * Narrow the legacy PHP-search/sort path using SQL-authorized State buckets
+     * and indexed exact filters (not SQL text search/sort). PHP still applies
+     * its canonical mb_strtolower/strcmp/numeric-aware comparison before
+     * count/pagination. Only API-010 Province/Ward may call this method.
+     *
+     * @return list<array<string,mixed>>
+     */
+    public function fetchLocationCandidates(CommonListQuery $query): array
+    {
+        if (! in_array($this->resource, ['province', 'ward'], true) || $query->filters === []) {
+            throw new \InvalidArgumentException('Unsupported location candidate lookup.');
+        }
+        $result = $this->builder($query)->orderBy('id', 'ASC')->get();
+        if ($result === false) {
+            throw new \RuntimeException('Authorized location candidate query failed.');
+        }
+        return array_values($result->getResultArray());
+    }
+
     private function assertSupported(CommonListQuery $query): void
     {
         if (! self::supports($this->resource, $query)) {
@@ -141,6 +161,13 @@ final class SqlAuthorizedBucketListSource implements AuthorizedListSource
                 $hex = array_map(static fn (string $v): string => strtoupper(bin2hex($v)), $values);
                 $quoted = array_map($this->db->escape(...), $hex);
                 $builder->where('HEX(status) IN (' . implode(', ', $quoted) . ')', null, false);
+                continue;
+            }
+            if (in_array($field, ['code', 'name'], true) && in_array($this->resource, ['province', 'ward'], true)) {
+                // Candidate filtering only: MariaDB collation may return a
+                // *superset*, after which PHP applies byte-exact filter values.
+                // Empty text is a legitimate string, not SQL NULL.
+                $builder->whereIn($field, $values);
                 continue;
             }
             $hasNull = in_array('', $values, true);

@@ -509,6 +509,12 @@ final class Api030AuthorizationWorkflowService
         if (array_key_exists('status', $payload) && $payload['status'] !== 'ACTIVE') {
             throw new DomainException('NATIVE_STATE_REQUIRES_SETSTATE', ['resource' => 'resource']);
         }
+        if (isset($payload['lifecycle_id'])) {
+            $lifecycleId = \App\Infrastructure\Id\PositiveId::normalize(
+                $payload['lifecycle_id'], 'lifecycle_id', ResourceWorkflowStateResolver::ERROR_RESOURCE_LIFECYCLE_INVALID,
+            );
+            (new ResourceWorkflowStateResolver($this->connection))->assertLifecycleStateCompatibility($type, $lifecycleId);
+        }
         $row = [
             'status' => 'ACTIVE',
             'type' => $type,

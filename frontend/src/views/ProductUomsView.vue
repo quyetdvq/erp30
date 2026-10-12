@@ -181,7 +181,6 @@ async function save(): Promise<void> {
     const payload: ProductUomCreate | ProductUomPatch = {
       code: form.value.code,
       name: form.value.name,
-      status: form.value.status,
       ...(form.value.description ? { description: form.value.description } : {}),
     }
     await saveProductUom(payload, editingId.value)
@@ -318,13 +317,9 @@ onMounted(() => void load())
           <span>{{ t('product.description') }}</span>
           <textarea v-model="form.description" rows="3" />
         </label>
-        <label v-if="!editingId">
-          <span>{{ t('product.status') }}</span>
-          <select v-model="form.status">
-            <option value="ACTIVE">{{ t('status.active') }}</option>
-            <option value="INACTIVE">{{ t('status.inactive') }}</option>
-          </select>
-        </label>
+        <p v-if="!editingId" class="workflow-initial-note" role="note">
+          {{ t('workflow.initialManaged') }}
+        </p>
         <p v-if="error" class="inline-error" role="alert">{{ t('product.requestError') }}</p>
         <footer class="modal-card__footer">
           <button type="button" class="secondary-button" @click="closeForm">

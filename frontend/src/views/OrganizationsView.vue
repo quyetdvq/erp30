@@ -180,13 +180,12 @@ function openEdit(item: Organization): void {
   modalOpen.value = true
 }
 
-function payload(): OrganizationCreate {
-  const base: OrganizationCreate = {
+function payload(): Omit<OrganizationCreate, 'status'> {
+  const base: Omit<OrganizationCreate, 'status'> = {
     ...(form.value.parent_id ? { parent_id: form.value.parent_id } : {}),
     type: form.value.type,
     code: form.value.code,
     name: form.value.name,
-    status: form.value.status,
     ...(form.value.description ? { description: form.value.description } : {}),
     ...(form.value.active_from ? { active_from: form.value.active_from } : {}),
     ...(form.value.active_to ? { active_to: form.value.active_to } : {}),
@@ -499,14 +498,13 @@ onMounted(() => void load())
             ><input v-model="form.active_to" type="date"
           /></label>
         </div>
-        <label
-          ><span>{{ t('organization.status') }}</span
-          ><select v-model="form.status">
-            <option value="ACTIVE">{{ t('status.active') }}</option>
-            <option value="INACTIVE">{{ t('status.inactive') }}</option>
-            <option value="CLOSED">{{ t('status.closed') }}</option>
-          </select></label
-        >
+        <label v-if="editingId">
+          <span>{{ t('organization.status') }}</span>
+          <output>{{ form.status }}</output>
+        </label>
+        <p v-else class="workflow-initial-note" role="note">
+          {{ t('workflow.initialManaged') }}
+        </p>
         <p v-if="error" class="inline-error" role="alert">{{ t('organization.error') }}</p>
         <footer>
           <button type="button" class="secondary-button" @click="closeForm">

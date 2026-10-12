@@ -111,6 +111,54 @@ final class FoundationLocationRepository
     }
 
     /**
+     * A parent change must not invalidate already persisted address pairs.
+     * Both tables have an index on ward_id; EXISTS-style queries stop at one
+     * conflict instead of materializing all Organization/Contact records.
+     */
+    public function wardHasConflictingAddress(int $wardId, int $newProvinceId): bool
+    {
+        foreach (['organizations', 'contacts'] as $table) {
+            try {
+                $result = $this->db->table($table)
+                    ->select('id')
+                    ->where('ward_id', $wardId)
+                    ->where('province_id IS NOT NULL', null, false)
+                    ->where('province_id !=', $newProvinceId)
+                    ->limit(1)
+                    ->get();
+            } catch (\Throwable $exception) {
+                throw new PersistenceException(self::ERROR_PERSISTENCE_FAILED, 'wardHasConflictingAddress', $exception);
+            }
+            if ($result === false) {
+                throw new PersistenceException(self::ERROR_PERSISTENCE_FAILED, 'wardHasConflictingAddress');
+            }
+            if ($result->getRowArray() !== null) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    /** @return array<string,mixed>|null */
+    public function lockWardForUpdate(int $id): ?array
+    {
+        if (! $this->db instanceof BaseConnection) {
+            throw new PersistenceException(self::ERROR_CONNECTION_INVALID, 'lockWardForUpdate');
+        }
+        $table = $this->db->prefixTable('wards');
+        try {
+            $result = $this->db->query("SELECT * FROM `{$table}` WHERE id = ? FOR UPDATE", [$id]);
+        } catch (\Throwable $exception) {
+            throw new PersistenceException(self::ERROR_PERSISTENCE_FAILED, 'lockWardForUpdate', $exception);
+        }
+        if ($result === false) {
+            throw new PersistenceException(self::ERROR_PERSISTENCE_FAILED, 'lockWardForUpdate');
+        }
+        return $result->getRowArray();
+    }
+
+    /**
      * @param array<string, mixed> $data
      * @param list<string> $required
      */

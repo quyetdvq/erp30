@@ -339,7 +339,6 @@ function payload(): ProductCreate | ProductPatch {
     sku: form.value.sku || null,
     barcode: form.value.barcode || null,
     product_type: form.value.product_type,
-    status: form.value.status,
     ...(form.value.product_group_id ? { product_group_id: form.value.product_group_id } : {}),
     ...(form.value.base_uom_id ? { base_uom_id: form.value.base_uom_id } : {}),
     ...(form.value.parent_product_id ? { parent_product_id: form.value.parent_product_id } : {}),
@@ -664,13 +663,10 @@ watch(
       <fieldset :disabled="!canEdit || busy">
         <legend>{{ t('product.operational') }}</legend>
         <div class="form-grid">
-          <label v-if="!editing"
-            ><span>{{ t('product.status') }}</span
-            ><select v-model="form.status">
-              <option value="ACTIVE">{{ t('status.active') }}</option>
-              <option value="INACTIVE">{{ t('status.inactive') }}</option>
-            </select></label
-          ><label v-if="!isParentRole" class="checkbox-field"
+          <p v-if="!editing" class="workflow-initial-note" role="note">
+            {{ t('workflow.initialManaged') }}
+          </p>
+          <label v-if="!isParentRole" class="checkbox-field"
             ><input
               v-model="form.serial_management_enabled"
               type="checkbox"

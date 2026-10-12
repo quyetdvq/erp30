@@ -386,7 +386,6 @@ async function saveEmployeeForm(): Promise<void> {
       employee_code: employeeForm.value.employee_code,
       employee_name: employeeForm.value.employee_name,
       gender: employeeForm.value.gender,
-      status: employeeForm.value.status,
       ...(employeeForm.value.user_id ? { user_id: employeeForm.value.user_id } : {}),
       ...(employeeForm.value.date_of_birth
         ? { date_of_birth: employeeForm.value.date_of_birth }
@@ -494,14 +493,17 @@ async function saveAssignmentForm(): Promise<void> {
       is_primary: assignmentForm.value.is_primary,
       effective_from: assignmentForm.value.effective_from,
       effective_to: assignmentForm.value.effective_to || null,
-      status: assignmentForm.value.status,
       ...(assignmentForm.value.description
         ? { description: assignmentForm.value.description }
         : { description: null }),
     }
     const payload = editingAssignmentId.value
       ? (base as EmployeeAssignmentPatch)
-      : ({ ...base, employee_id: selectedId.value } as EmployeeAssignmentCreate)
+      : ({
+          ...base,
+          employee_id: selectedId.value,
+          status: assignmentForm.value.status,
+        } as EmployeeAssignmentCreate)
     await saveAssignment(payload, editingAssignmentId.value)
     assignmentDraft.markClean()
     assignmentModal.value = false
@@ -883,13 +885,14 @@ onMounted(async () => {
               (value) => (employeeForm.manager_employee_id = typeof value === 'string' ? value : '')
             "
           /><small v-if="managerError()" class="field-error">{{ managerError() }}</small></label
-        ><label
-          ><span>{{ t('people.status') }}</span
-          ><select v-model="employeeForm.status">
-            <option value="ACTIVE">{{ t('status.active') }}</option>
-            <option value="INACTIVE">{{ t('status.inactive') }}</option>
-          </select></label
-        ><label
+        ><label v-if="editingEmployeeId">
+          <span>{{ t('people.status') }}</span>
+          <output>{{ employeeForm.status }}</output>
+        </label>
+        <p v-else class="workflow-initial-note" role="note">
+          {{ t('workflow.initialManaged') }}
+        </p>
+        <label
           ><span>{{ t('people.description') }}</span
           ><textarea v-model="employeeForm.description" rows="3" />
         </label>
@@ -981,13 +984,18 @@ onMounted(async () => {
           /></label>
         </div>
         <p v-if="assignmentOverlap" class="field-error">{{ t('people.primaryOverlap') }}</p>
-        <label
-          ><span>{{ t('people.status') }}</span
-          ><select v-model="assignmentForm.status">
+        <label v-if="editingAssignmentId">
+          <span>{{ t('people.status') }}</span>
+          <output>{{ assignmentForm.status }}</output>
+        </label>
+        <label v-else>
+          <span>{{ t('people.status') }}</span>
+          <select v-model="assignmentForm.status">
             <option value="ACTIVE">{{ t('status.active') }}</option>
             <option value="INACTIVE">{{ t('status.inactive') }}</option>
-          </select></label
-        ><label
+          </select>
+        </label>
+        <label
           ><span>{{ t('people.description') }}</span
           ><textarea v-model="assignmentForm.description" rows="3" />
         </label>

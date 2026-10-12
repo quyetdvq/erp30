@@ -29,9 +29,11 @@ import type {
   OrganizationCreate,
   Province,
   ProvinceCreate,
+  ProvincePatch,
   State,
   Ward,
   WardCreate,
+  WardPatch,
 } from '@/api/generated/types.gen'
 import { withTypedClient } from '@/api/client'
 import { i18n } from '@/i18n'
@@ -39,6 +41,9 @@ import type { ListQuery, ListResponse } from '@/components/lists/listTypes'
 
 /** Contact ownership is immutable after creation; PATCH only carries editable fields. */
 export type ContactUpdate = Omit<ContactCreate, 'contact_type' | 'contact_ref_id' | 'status'>
+/** PATCH must never carry state; only the set-state endpoint may mutate it. */
+export type ProvinceUpdate = Omit<ProvinceCreate, 'status'>
+export type WardUpdate = Omit<WardCreate, 'status'>
 
 function headers() {
   return { 'Accept-Language': i18n.global.locale.value as 'vi' | 'en' }
@@ -83,17 +88,26 @@ export async function listProvincePage(query: ListQuery): Promise<ListResponse<P
   return collection(response)
 }
 
-export async function saveProvince(payload: ProvinceCreate, id?: string): Promise<Province> {
+export async function saveProvince(
+  payload: ProvinceCreate | ProvinceUpdate,
+  id?: string,
+): Promise<Province> {
   const response = await withTypedClient((client) =>
     id
       ? updateProvince({
           client,
           headers: headers(),
           path: { id },
-          body: payload,
+          // Generated SDK types are from the previous OpenAPI snapshot until regeneration.
+          body: payload as ProvincePatch,
           throwOnError: true,
         })
-      : createProvince({ client, headers: headers(), body: payload, throwOnError: true }),
+      : createProvince({
+          client,
+          headers: headers(),
+          body: payload as ProvinceCreate,
+          throwOnError: true,
+        }),
   )
   return resource(response)
 }
@@ -125,11 +139,22 @@ export async function listWardPage(query: ListQuery): Promise<ListResponse<Ward>
   return collection(response)
 }
 
-export async function saveWard(payload: WardCreate, id?: string): Promise<Ward> {
+export async function saveWard(payload: WardCreate | WardUpdate, id?: string): Promise<Ward> {
   const response = await withTypedClient((client) =>
     id
-      ? updateWard({ client, headers: headers(), path: { id }, body: payload, throwOnError: true })
-      : createWard({ client, headers: headers(), body: payload, throwOnError: true }),
+      ? updateWard({
+          client,
+          headers: headers(),
+          path: { id },
+          body: payload as WardPatch,
+          throwOnError: true,
+        })
+      : createWard({
+          client,
+          headers: headers(),
+          body: payload as WardCreate,
+          throwOnError: true,
+        }),
   )
   return resource(response)
 }
@@ -176,7 +201,7 @@ export async function getOrganizationById(id: string): Promise<Organization> {
 }
 
 export async function saveOrganization(
-  payload: OrganizationCreate,
+  payload: OrganizationCreate | Omit<OrganizationCreate, 'status'>,
   id?: string,
 ): Promise<Organization> {
   const response = await withTypedClient((client) =>
@@ -185,10 +210,15 @@ export async function saveOrganization(
           client,
           headers: headers(),
           path: { id },
-          body: payload,
+          body: payload as OrganizationCreate,
           throwOnError: true,
         })
-      : createOrganization({ client, headers: headers(), body: payload, throwOnError: true }),
+      : createOrganization({
+          client,
+          headers: headers(),
+          body: payload as OrganizationCreate,
+          throwOnError: true,
+        }),
   )
   return resource(response)
 }

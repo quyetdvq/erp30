@@ -510,6 +510,8 @@ export const messages = {
       type: 'Type',
       domain: 'Domain',
       lifecycle: 'Lifecycle',
+      nativeStateNoLifecycle: 'Native State (không dùng Lifecycle)',
+      onlyAllStatesNoLifecycle: 'Chỉ All States (không dùng Lifecycle)',
       status: 'Trạng thái',
       description: 'Mô tả',
       memberCount: 'Số thành viên',
@@ -604,6 +606,8 @@ export const messages = {
       lifecyclesTitle: 'Lifecycles',
       lifecyclesDescription: 'Quản lý Lifecycle và cấu hình State/Transition theo API backend.',
       state: 'Workflow State',
+      initialManaged:
+        'Trạng thái ban đầu do Lifecycle/Workflow State trên máy chủ xác định. Có thể chuyển trạng thái sau khi tạo nếu Transition và quyền cho phép.',
       lifecycle: 'Lifecycle',
       code: 'Mã',
       name: 'Tên',
@@ -1331,6 +1335,8 @@ export const messages = {
       type: 'Type',
       domain: 'Domain',
       lifecycle: 'Lifecycle',
+      nativeStateNoLifecycle: 'Native State (Lifecycle not applicable)',
+      onlyAllStatesNoLifecycle: 'All States only (Lifecycle not applicable)',
       status: 'Status',
       description: 'Description',
       memberCount: 'Member count',
@@ -1426,6 +1432,8 @@ export const messages = {
       lifecyclesDescription:
         'Manage Lifecycles and their State/Transition configuration through the backend API.',
       state: 'Workflow State',
+      initialManaged:
+        'The server assigns the Lifecycle initial Workflow State. Later changes require an authorized, configured transition.',
       lifecycle: 'Lifecycle',
       code: 'Code',
       name: 'Name',

@@ -160,7 +160,7 @@ test.describe('P1-FE-030 security surfaces', () => {
               name: 'Policy',
               domain: 'ORGANIZATION',
               status: 'ACTIVE',
-              lifecycle_id: '50',
+              lifecycle_id: null,
               ...(includeActions
                 ? { actions: [{ id: '20', code: 'view', description: null }] }
                 : {}),
@@ -183,8 +183,8 @@ test.describe('P1-FE-030 security surfaces', () => {
             name: 'Policy',
             domain: 'ORGANIZATION',
             status: 'ACTIVE',
-            lifecycle_id: '50',
-            policy_state_codes: ['DRAFT'],
+            lifecycle_id: null,
+            policy_state_codes: ['ACTIVE', 'INACTIVE'],
           },
           meta: { request_id: 'test-resource-detail' },
         }),
@@ -341,8 +341,10 @@ test.describe('P1-FE-030 security surfaces', () => {
           data: [
             { id: '31', code: 'DRAFT', name: 'Draft', status: 'ACTIVE' },
             { id: '32', code: 'APPROVED', name: 'Approved', status: 'ACTIVE' },
+            { id: '33', code: 'ACTIVE', name: 'ACTIVE', status: 'ACTIVE' },
+            { id: '34', code: 'INACTIVE', name: 'INACTIVE', status: 'ACTIVE' },
           ],
-          meta: { page: 1, page_size: 200, total: 2, request_id: 'test-state' },
+          meta: { page: 1, page_size: 200, total: 4, request_id: 'test-state' },
         }),
       }),
     )
@@ -488,16 +490,11 @@ test.describe('P1-FE-030 security surfaces', () => {
     page.on('request', (request) => {
       if (request.url().includes('/api/v1/security/users')) policyUserRequests += 1
     })
-    // Both collections load independently. Wait for the actual Lifecycle response
-    // before asserting the resource's resolved lifecycle label.
-    const lifecycleResponse = page.waitForResponse(
-      (response) =>
-        new URL(response.url()).pathname === '/api/v1/lifecycles' && response.status() === 200,
-    )
     await page.goto('/security/resources')
     await expect(page.getByRole('heading', { name: 'Resource và Action' })).toBeVisible()
-    await lifecycleResponse
-    await expect(page.getByRole('cell', { name: 'Product flow', exact: true })).toBeVisible()
+    await expect(
+      page.getByRole('cell', { name: 'Native State (không dùng Lifecycle)', exact: true }),
+    ).toBeVisible()
     await expect(page.getByRole('navigation', { name: 'Phân trang danh sách' })).toHaveCount(1)
     await page.getByRole('button', { name: 'Xem chi tiết' }).click()
     const resourceDialog = page.getByRole('dialog', { name: /Resource:/ })
@@ -514,10 +511,10 @@ test.describe('P1-FE-030 security surfaces', () => {
     await expect(resourceEditDialog.locator('.modal-card__header')).toHaveCount(1)
     await expect(resourceEditDialog.locator('.modal-card__body')).toHaveCount(1)
     await expect(resourceEditDialog.locator('.modal-card__footer')).toHaveCount(1)
-    const lifecycleSelect = resourceEditDialog
-      .locator('select')
-      .filter({ has: page.locator('option[value="50"]') })
-    await expect(lifecycleSelect).toHaveValue('50')
+    // The policy Resource itself uses ACTIVE/INACTIVE native State; it must
+    // never expose a Lifecycle picker regardless of available Lifecycles.
+    await expect(resourceEditDialog.getByRole('combobox', { name: 'Lifecycle' })).toHaveCount(0)
+    await expect(resourceEditDialog.getByText('Native State (không dùng Lifecycle)')).toBeVisible()
     await resourceEditDialog
       .locator('.modal-card__footer')
       .getByRole('button', { name: 'Hủy' })
@@ -536,9 +533,14 @@ test.describe('P1-FE-030 security surfaces', () => {
     await expect(page.getByText('ABSOLUTE_DENY:view')).toBeVisible()
     await page.getByRole('button', { name: /Tạo|Create/ }).click()
     await expect(page.locator('#policy-organization-scope')).toBeVisible()
-    await expect(
-      page.locator('select').filter({ has: page.locator('option[value="31"]') }),
-    ).toBeVisible()
+    // Policy is a native Resource: ACTIVE/INACTIVE are valid PBAC State
+    // scopes; DRAFT/APPROVED are unrelated Workflow State catalog entries.
+    const policyStateSelect = page.locator('select').filter({
+      has: page.locator('option[value="33"]'),
+    })
+    await expect(policyStateSelect).toBeVisible()
+    await expect(policyStateSelect.locator('option[value="34"]')).toHaveCount(1)
+    await expect(page.locator('option[value="31"]')).toHaveCount(0)
     await expect(page.locator('option[value="32"]')).toHaveCount(0)
     await expect.poll(() => policyUserRequests).toBe(1)
     await expect(page.locator('option[value="ROLE"]')).toHaveCount(0)
@@ -547,6 +549,80 @@ test.describe('P1-FE-030 security surfaces', () => {
     await expect(page.getByRole('button', { name: /Xóa|Delete/ })).toHaveCount(1)
     const accessibility = await new AxeBuilder({ page }).include('.modal-card').analyze()
     expect(accessibility.violations).toEqual([])
+  })
+
+  test('the exact 10 independent Resource types never offer Lifecycle selection', async ({
+    page,
+  }) => {
+    await page.goto('/security/resources')
+    await expect(page.getByRole('heading', { name: 'Resource và Action' })).toBeVisible()
+    await page.getByRole('button', { name: /Tạo|Create/ }).click()
+    const dialog = page.getByRole('dialog', { name: 'Biểu mẫu Resource' })
+    const resourceType = dialog.getByRole('textbox', { name: 'Type' })
+    const lifecyclePicker = dialog.getByRole('combobox', { name: 'Lifecycle' })
+    const independentTypes = [
+      'authorization_group',
+      'authorization_log',
+      'display_setting',
+      'employee_assignment',
+      'import_job',
+      'lifecycle',
+      'policy',
+      'user',
+      'workflow_state',
+      'resource',
+    ]
+    for (const type of independentTypes) {
+      await resourceType.fill(type)
+      await expect(lifecyclePicker).toHaveCount(0)
+      await expect(
+        dialog.getByText(
+          type === 'authorization_log' || type === 'display_setting'
+            ? 'Chỉ All States (không dùng Lifecycle)'
+            : 'Native State (không dùng Lifecycle)',
+        ),
+      ).toBeVisible()
+    }
+    // An eligible business Resource can select a Lifecycle, but changing to
+    // an independent type must clear that selection, not submit a hidden ID.
+    await resourceType.fill('province')
+    await expect(lifecyclePicker).toBeVisible()
+    await lifecyclePicker.selectOption('50')
+    await resourceType.fill('policy')
+    await expect(lifecyclePicker).toHaveCount(0)
+    await resourceType.fill('province')
+    await expect(lifecyclePicker).toHaveValue('')
+
+    let createPayload: Record<string, unknown> | null = null
+    await page.route('**/api/v1/resources', async (route) => {
+      if (route.request().method() !== 'POST') return route.fallback()
+      createPayload = route.request().postDataJSON() as Record<string, unknown>
+      await route.fulfill({
+        status: 201,
+        contentType: 'application/json',
+        body: JSON.stringify({
+          data: {
+            id: '400',
+            type: 'policy',
+            name: 'Native policy Resource',
+            domain: 'ORGANIZATION',
+            status: 'ACTIVE',
+            lifecycle_id: null,
+          },
+        }),
+      })
+    })
+    await resourceType.fill('policy')
+    await dialog.getByRole('textbox', { name: 'Tên' }).fill('Native policy Resource')
+    await dialog.getByRole('combobox', { name: 'Domain' }).selectOption('ORGANIZATION')
+    await dialog.getByRole('button', { name: 'Lưu' }).click()
+    await expect.poll(() => createPayload).not.toBeNull()
+    expect(createPayload).toMatchObject({
+      type: 'policy',
+      name: 'Native policy Resource',
+      domain: 'ORGANIZATION',
+    })
+    expect(createPayload).not.toHaveProperty('lifecycle_id')
   })
 
   test('authorization logs remain read-only and support Request-ID copy control', async ({

@@ -66,7 +66,11 @@ final class P1Wf007NativeStateContractTest extends CIUnitTestCase
         // table check used by tearDown() before a test creates INACTIVE rows.
         $this->assertTrue($this->db->tableExists($this->db->prefixTable('policies'), false));
         $this->assertTrue($this->db->tableExists($this->db->prefixTable('resources'), false));
-        $this->assertCount(10, ResourceNativeStateCatalog::INDEPENDENT_RESOURCES);
+        $this->assertSame([
+            'authorization_group', 'authorization_log', 'display_setting',
+            'employee_assignment', 'import_job', 'lifecycle', 'policy', 'user',
+            'workflow_state', 'resource',
+        ], ResourceNativeStateCatalog::INDEPENDENT_RESOURCES);
         $this->assertFalse(ResourceNativeStateCatalog::isIndependent('organization_contact'));
         $this->assertFalse(ResourceNativeStateCatalog::isIndependent('employee_contact'));
         $this->assertSame(['ACTIVE', 'INACTIVE'], ResourceNativeStateCatalog::codes('policy'));
@@ -74,6 +78,45 @@ final class P1Wf007NativeStateContractTest extends CIUnitTestCase
         $this->assertSame([], ResourceNativeStateCatalog::codes('authorization_log'));
         $this->assertSame([], ResourceNativeStateCatalog::codes('display_setting'));
         $this->assertSame(['PENDING', 'PROCESSING', 'COMPLETED', 'COMPLETED_WITH_ERRORS', 'FAILED'], ResourceNativeStateCatalog::codes('import_job'));
+    }
+
+    public function testAllTenIndependentResourcesRejectLifecycleAssociation(): void
+    {
+        $this->fixture([]);
+        $resolver = new ResourceWorkflowStateResolver($this->db);
+        foreach (ResourceNativeStateCatalog::INDEPENDENT_RESOURCES as $type) {
+            $this->assertNull($resolver->initialCode($type), $type);
+            $this->assertSame(ResourceNativeStateCatalog::codes($type), $resolver->allowedPolicyStateCodes($type), $type);
+            try {
+                $resolver->assertLifecycleReassignmentSafe($type, 123);
+                $this->fail('Independent Resource must reject Lifecycle: ' . $type);
+            } catch (DomainException $exception) {
+                $this->assertSame(ResourceWorkflowStateResolver::ERROR_LIFECYCLE_SELF_REFERENCE, $exception->getErrorCode(), $type);
+            }
+        }
+    }
+
+    public function testDisabledWorkflowStateCacheCannotBroadenNativeStateAuthorization(): void
+    {
+        $this->fixture([]);
+        $inactive = $this->stateId('INACTIVE');
+        $this->assertTrue($this->db->table('workflow_states')->where('id', $inactive)->update(['status' => 'INACTIVE']));
+        try {
+            $resolver = new ResourceWorkflowStateResolver($this->db);
+            // A disabled Workflow State must be accessible for its own reactivation.
+            $this->assertSame($inactive, $resolver->stateIdForCode('workflow_state', 'INACTIVE'));
+            // But that cached ID must not make Policy or Resource treat it as active.
+            foreach (['policy', 'resource', 'authorization_group'] as $type) {
+                try {
+                    $resolver->stateIdForCode($type, 'INACTIVE');
+                    $this->fail('Inactive catalog entry must not authorize ' . $type);
+                } catch (DomainException $exception) {
+                    $this->assertSame(ResourceWorkflowStateResolver::ERROR_STATE_NOT_MAPPED, $exception->getErrorCode(), $type);
+                }
+            }
+        } finally {
+            $this->assertTrue($this->db->table('workflow_states')->where('id', $inactive)->update(['status' => 'ACTIVE']));
+        }
     }
 
     public function testAdditiveStatusesPreserveLegacyDefaultActiveAndSeparatePolicyStateId(): void

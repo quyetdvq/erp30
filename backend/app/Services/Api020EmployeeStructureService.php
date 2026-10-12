@@ -100,6 +100,9 @@ final class Api020EmployeeStructureService
     public function create(string $resource, array $payload): array
     {
         $this->assertResource($resource);
+        if (in_array($resource, ['department', 'position', 'employee'], true)) {
+            $payload = (new InitialCreateStateNormalizer(new ResourceWorkflowStateResolver($this->db)))->normalize($resource, $payload);
+        }
         $operation = $this->operation();
         $this->authorizeAction($resource, 'create', [], $payload, $operation);
         $id = match ($resource) {
@@ -124,6 +127,10 @@ final class Api020EmployeeStructureService
         $row = $this->row($resource, $id);
         $this->authorizeVisible($resource, $row, $operation);
         $this->authorizeAction($resource, 'edit', $row, $payload, $operation);
+        if (array_key_exists('status', $payload)) {
+            // State writes use the separately protected setstate action.
+            throw new DomainException(ResourceWorkflowStateResolver::ERROR_TRANSITION_REQUIRED, ['resource' => $resource]);
+        }
         match ($resource) {
             'department' => $this->departmentService($operation)->update($id, $payload),
             'position' => $this->positionService($operation)->update($id, $payload),

@@ -317,9 +317,7 @@ async function save(): Promise<void> {
       priority: Number(form.value.priority),
       ...(form.value.description ? { description: form.value.description } : { description: null }),
     }
-    const payload: PriceListCreate | PriceListPatch = editingId.value
-      ? base
-      : { ...base, status: form.value.status }
+    const payload: PriceListCreate | PriceListPatch = base
     await savePriceList(payload, editingId.value)
     unsaved.markClean()
     modalOpen.value = false
@@ -606,13 +604,9 @@ onMounted(() => void load())
           ><span>{{ t('pricing.priority') }}</span
           ><input v-model="form.priority" type="number" min="0" step="1" required
         /></label>
-        <label v-if="!editingId">
-          <span>{{ t('pricing.status') }}</span>
-          <select v-model="form.status">
-            <option value="ACTIVE">{{ t('status.active') }}</option>
-            <option value="INACTIVE">{{ t('status.inactive') }}</option>
-          </select>
-        </label>
+        <p v-if="!editingId" class="workflow-initial-note" role="note">
+          {{ t('workflow.initialManaged') }}
+        </p>
         <label
           ><span>{{ t('pricing.descriptionField') }}</span
           ><textarea v-model="form.description" rows="3" />

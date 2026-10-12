@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, onMounted, ref } from 'vue'
+import { computed, onMounted, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import type { Lifecycle, Resource } from '@/api/generated/types.gen'
 import {
@@ -42,6 +42,27 @@ const editingActionId = ref<string | undefined>()
 const busy = ref(false)
 const error = ref<unknown | null>(null)
 const lifecycles = ref<Lifecycle[]>([])
+
+// UI-only affordance: the Backend ResourceNativeStateCatalog is authoritative.
+// These ten resource types never accept a Lifecycle association.
+const lifecycleIndependentResources = new Set([
+  'authorization_group',
+  'authorization_log',
+  'display_setting',
+  'employee_assignment',
+  'import_job',
+  'lifecycle',
+  'policy',
+  'user',
+  'workflow_state',
+  'resource',
+])
+const allStatesOnlyResources = new Set(['authorization_log', 'display_setting'])
+
+function isLifecycleIndependentResourceType(type: string): boolean {
+  return lifecycleIndependentResources.has(type.trim().toLowerCase())
+}
+
 const form = ref({
   type: '',
   name: '',
@@ -49,6 +70,21 @@ const form = ref({
   lifecycle_id: '',
 })
 const actionForm = ref({ code: '', description: '' })
+const isLifecycleIndependent = computed(() => isLifecycleIndependentResourceType(form.value.type))
+const lifecycleIndependentHint = computed(() =>
+  t(
+    allStatesOnlyResources.has(form.value.type.trim().toLowerCase())
+      ? 'security.onlyAllStatesNoLifecycle'
+      : 'security.nativeStateNoLifecycle',
+  ),
+)
+
+watch(
+  () => form.value.type,
+  (type) => {
+    if (isLifecycleIndependentResourceType(type)) form.value.lifecycle_id = ''
+  },
+)
 const columns: readonly ListColumn<Resource>[] = [
   { key: 'type', labelKey: 'security.type', sortable: true },
   { key: 'name', labelKey: 'security.name', sortable: true },
@@ -62,6 +98,18 @@ function lifecycleLabel(id: unknown): string {
   if (id === null || id === undefined || id === '') return t('list.noValue')
   return lifecycles.value.find((lifecycle) => String(lifecycle.id) === String(id))?.name ?? `#${id}`
 }
+
+function resourceLifecycleLabel(resource: Resource): string {
+  if (isLifecycleIndependentResourceType(resource.type)) {
+    return t(
+      allStatesOnlyResources.has(resource.type.trim().toLowerCase())
+        ? 'security.onlyAllStatesNoLifecycle'
+        : 'security.nativeStateNoLifecycle',
+    )
+  }
+  return lifecycleLabel(resource.lifecycle_id)
+}
+
 function applyQuery(query: ListQuery): void {
   state.setSearch(query.q)
   state.setFilters(query.filter)
@@ -135,7 +183,9 @@ async function save(): Promise<void> {
       ? await saveResource(
           {
             name: form.value.name,
-            lifecycle_id: form.value.lifecycle_id || null,
+            ...(!isLifecycleIndependent.value
+              ? { lifecycle_id: form.value.lifecycle_id || null }
+              : {}),
           },
           editingId.value,
         )
@@ -143,7 +193,9 @@ async function save(): Promise<void> {
           type: form.value.type,
           name: form.value.name,
           domain: form.value.domain,
-          ...(form.value.lifecycle_id ? { lifecycle_id: form.value.lifecycle_id } : {}),
+          ...(!isLifecycleIndependent.value && form.value.lifecycle_id
+            ? { lifecycle_id: form.value.lifecycle_id }
+            : {}),
         })
     modalOpen.value = false
     selectedId.value = String(saved.id)
@@ -297,7 +349,7 @@ onMounted(() => {
         ><template #cell-domain="{ row }"
           ><code>{{ row.domain }}</code></template
         ><template #cell-status="{ row }"><TableStatus :status="row.status" /></template
-        ><template #cell-lifecycle_id="{ row }">{{ lifecycleLabel(row.lifecycle_id) }}</template
+        ><template #cell-lifecycle_id="{ row }">{{ resourceLifecycleLabel(row) }}</template
         ><template #cell-action_count="{ row }">{{ row.actions?.length ?? 0 }}</template
         ><template #cell-actions="{ row }"
           ><TableRowActions
@@ -390,7 +442,7 @@ onMounted(() => {
           </div>
           <div>
             <dt>{{ t('security.lifecycle') }}</dt>
-            <dd>{{ lifecycleLabel(selected.lifecycle_id) }}</dd>
+            <dd>{{ resourceLifecycleLabel(selected) }}</dd>
           </div>
         </dl>
         <p class="security-note">{{ t('security.resourceDomainNote') }}</p>
@@ -487,7 +539,7 @@ onMounted(() => {
           ><small class="security-note">{{
             editingId ? t('security.domainImmutable') : t('security.domainCreateNote')
           }}</small></label
-        ><label
+        ><label v-if="!isLifecycleIndependent"
           ><span>{{ t('security.lifecycle') }}</span
           ><select v-model="form.lifecycle_id" class="field-select">
             <option value="">{{ t('list.noValue') }}</option>
@@ -500,6 +552,7 @@ onMounted(() => {
             </option>
           </select></label
         >
+        <p v-else class="security-note" role="note">{{ lifecycleIndependentHint }}</p>
       </form>
       <footer class="modal-card__footer resource-form-modal__footer">
         <button type="button" class="secondary-button" @click="modalOpen = false">

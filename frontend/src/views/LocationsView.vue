@@ -1,7 +1,7 @@
 <script setup lang="ts">
-import { computed, onMounted, ref, watch } from 'vue'
+import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
-import { useRoute } from 'vue-router'
+import { onBeforeRouteUpdate, useRoute } from 'vue-router'
 
 import type { Province, State, Ward } from '@/api/generated/types.gen'
 import {
@@ -27,6 +27,7 @@ import {
   saveWard,
 } from '@/services/foundation'
 import { reportApiError } from '@/services/errorBoundary'
+import { loadLookupPages } from '@/services/listLookups'
 
 type LocationRow = Province | Ward
 
@@ -41,6 +42,11 @@ const detailRow = ref<LocationRow | null>(null)
 const editingId = ref<string | undefined>()
 const mutationBusy = ref(false)
 const provinces = ref<Province[]>([])
+const provinceById = computed(
+  () => new Map(provinces.value.map((province) => [String(province.id), province])),
+)
+let provinceRequestVersion = 0
+let listRequestVersion = 0
 const form = ref({
   code: '',
   name: '',
@@ -101,12 +107,19 @@ const provinceOptions = computed(() =>
     (province) => province.status === 'ACTIVE' || String(province.id) === form.value.province_id,
   ),
 )
-const provinceSelectOptions = computed(() =>
-  provinceOptions.value.map((province) => ({
+const provinceSelectOptions = computed(() => {
+  const options = provinceOptions.value.map((province) => ({
     value: String(province.id),
     label: `${province.code} - ${province.name}`,
-  })),
-)
+  }))
+  // Preserve an existing historical reference without fabricating its label
+  // when province.view is denied or a lookup is still loading.
+  const currentId = form.value.province_id
+  if (editingId.value && currentId && !provinceById.value.has(currentId)) {
+    options.push({ value: currentId, label: currentId })
+  }
+  return options
+})
 const detailFields = computed<readonly TableDetailField[]>(() => {
   const row = detailRow.value
   if (!row) return []
@@ -151,25 +164,34 @@ const columns = computed<readonly ListColumn<LocationRow>[]>(() =>
 )
 
 function provinceName(id: string): string {
-  const province = provinces.value.find((item) => String(item.id) === id)
+  const province = provinceById.value.get(id)
   return province ? `${province.code} - ${province.name}` : id
 }
 
 async function loadProvinces(): Promise<void> {
+  const version = ++provinceRequestVersion
   try {
-    provinces.value = (
-      await listProvincePage({ q: '', page: 1, page_size: 200, sort: 'name', filter: {} })
-    ).data
+    // Never silently truncate the Province selector at page 1. ID-ordering
+    // keeps this lookup on the authorized SQL pagination path; sorting labels
+    // is cheap on the client for this small master catalog.
+    const rows = await loadLookupPages(listProvincePage, { sort: '', filter: {} }, 2000)
+    if (version !== provinceRequestVersion) return
+    provinces.value = [...rows].sort((a, b) => a.name.localeCompare(b.name))
   } catch (caught: unknown) {
-    reportApiError(caught)
+    if (version === provinceRequestVersion) {
+      provinces.value = []
+      reportApiError(caught)
+    }
   }
 }
 
 async function load(): Promise<void> {
+  const version = ++listRequestVersion
   error.value = null
   try {
     await state.apply()
   } catch (caught: unknown) {
+    if (version !== listRequestVersion) return
     error.value = caught
     reportApiError(caught)
   }
@@ -219,26 +241,23 @@ async function save(): Promise<void> {
   try {
     if (isWards.value) {
       if (!form.value.province_id) throw new Error(t('locations.provinceRequired'))
-      await saveWard(
-        {
-          province_id: form.value.province_id,
-          code: form.value.code,
-          name: form.value.name,
-          name_full: form.value.name_full || null,
-          status: form.value.status,
-        },
-        editingId.value,
-      )
+      const fields = {
+        province_id: form.value.province_id,
+        code: form.value.code,
+        name: form.value.name,
+        name_full: form.value.name_full || null,
+      }
+      if (editingId.value) await saveWard(fields, editingId.value)
+      else await saveWard(fields)
     } else {
-      await saveProvince(
-        { code: form.value.code, name: form.value.name, status: form.value.status },
-        editingId.value,
-      )
+      const fields = { code: form.value.code, name: form.value.name }
+      if (editingId.value) await saveProvince(fields, editingId.value)
+      else await saveProvince(fields)
     }
     markClean()
     modalOpen.value = false
     await load()
-    await loadProvinces()
+    if (isWards.value) await loadProvinces()
   } catch (caught: unknown) {
     error.value = caught
     reportApiError(caught)
@@ -263,13 +282,36 @@ async function toggleState(row: LocationRow): Promise<void> {
   }
 }
 
+// The global workspace guard confirms dirty navigation. Do not let an
+// in-flight mutation switch resource routes while its response is pending.
+onBeforeRouteUpdate(() => {
+  if (mutationBusy.value) return false
+})
+
 watch(isWards, () => {
+  // Vue Router reuses this component for both routes; clear resource-specific
+  // modal/edit/detail state BEFORE the next list result is applied.
+  ++provinceRequestVersion
+  modalOpen.value = false
+  detailOpen.value = false
+  detailRow.value = null
+  editingId.value = undefined
+  form.value = { code: '', name: '', name_full: '', province_id: '', status: 'ACTIVE' }
+  markClean()
+  provinces.value = []
   state.reset()
   void load()
+  if (isWards.value) void loadProvinces()
 })
 
 onMounted(async () => {
-  await Promise.all([load(), loadProvinces()])
+  if (isWards.value) await Promise.all([load(), loadProvinces()])
+  else await load()
+})
+
+onUnmounted(() => {
+  ++provinceRequestVersion
+  ++listRequestVersion
 })
 </script>
 
@@ -409,14 +451,15 @@ onMounted(async () => {
           ><span>{{ t('locations.fullName') }}</span
           ><input v-model="form.name_full"
         /></label>
-        <label
+        <label v-if="editingId"
           ><span>{{ t('locations.status') }}</span
-          ><select v-model="form.status">
-            <option value="ACTIVE">{{ t('status.active') }}</option>
-            <option value="INACTIVE">{{ t('status.inactive') }}</option>
-            <option value="CLOSED">{{ t('status.closed') }}</option>
+          ><select :value="form.status" disabled>
+            <option :value="form.status">{{ form.status }}</option>
           </select></label
         >
+        <p v-else class="workflow-initial-note" role="note">
+          {{ t('workflow.initialManaged') }}
+        </p>
         <footer>
           <button type="button" class="secondary-button" @click="closeForm">
             {{ t('common.cancel') }}</button

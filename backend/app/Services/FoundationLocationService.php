@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Services;
 
 use App\Exceptions\DomainException;
+use App\Exceptions\PersistenceException;
 use App\Infrastructure\Id\PositiveId;
 use App\Infrastructure\Mutation\MutationContext;
 use App\Infrastructure\Time\Clock;
@@ -17,7 +18,9 @@ final class FoundationLocationService
     public const ERROR_PROVINCE_NOT_FOUND = 'PROVINCE_NOT_FOUND';
     public const ERROR_WARD_NOT_FOUND = 'WARD_NOT_FOUND';
     public const ERROR_PROVINCE_REFERENCE_INVALID = 'WARD_PROVINCE_NOT_FOUND';
+    public const ERROR_PROVINCE_INACTIVE = 'WARD_PROVINCE_INACTIVE';
     public const ERROR_WARD_PROVINCE_MISMATCH = 'WARD_PROVINCE_MISMATCH';
+    public const ERROR_WARD_REFERENCED = 'WARD_PROVINCE_REASSIGN_REFERENCED';
     public const ERROR_STATUS_INVALID = 'LOCATION_STATUS_INVALID';
     public const ERROR_CODE_DUPLICATE = 'LOCATION_CODE_DUPLICATE';
 
@@ -66,7 +69,7 @@ final class FoundationLocationService
         $payload = $this->locationPayload($data, ['province_id', 'code', 'name', 'status']);
         $this->assertInitialState('ward', (string) $payload['status']);
         $payload['province_id'] = PositiveId::normalize($payload['province_id'], 'province_id', self::ERROR_PROVINCE_REFERENCE_INVALID);
-        $this->province($payload['province_id']);
+        $this->assertActiveProvince($payload['province_id']);
         $this->assertCodeAvailable('wards', (string) $payload['code']);
 
         return $this->repo()->insert('wards', $payload, ['province_id', 'code', 'name', 'status'], $this->operation());
@@ -80,7 +83,11 @@ final class FoundationLocationService
         $candidate = array_merge($current, $payload);
         $this->assertStateMutationAllowed('ward', $current, $payload);
         $candidate['province_id'] = PositiveId::normalize($candidate['province_id'], 'province_id', self::ERROR_PROVINCE_REFERENCE_INVALID);
-        $this->province($candidate['province_id']);
+        // Historical Ward references remain editable when their Province has
+        // since been inactivated. Only a *new* Province selection must be ACTIVE.
+        if ((int) $current['province_id'] !== $candidate['province_id']) {
+            return $this->reparentWard($id, (int) $current['province_id'], $candidate['province_id'], $payload);
+        }
         $this->assertCodeAvailable('wards', (string) $candidate['code'], $id);
 
         return $this->repo()->update('wards', $id, $payload, $this->operation());
@@ -116,6 +123,50 @@ final class FoundationLocationService
         }
 
         return $row;
+    }
+
+    private function assertActiveProvince(int $id): void
+    {
+        if ((string) $this->province($id)['status'] !== 'ACTIVE') {
+            throw new DomainException(self::ERROR_PROVINCE_INACTIVE, ['province_id' => $id]);
+        }
+    }
+
+    /**
+     * Reparent is rare. Serialize the Ward row and check referenced address
+     * pairs in the same transaction, rather than adding cost to ordinary edit.
+     * FK locks also serialize actual child inserts against the Ward row write.
+     *
+     * @param array<string,mixed> $payload
+     */
+    private function reparentWard(int $id, int $expectedProvinceId, int $newProvinceId, array $payload): bool
+    {
+        if (! $this->db instanceof \CodeIgniter\Database\BaseConnection || ! $this->db->transBegin()) {
+            throw new PersistenceException(FoundationLocationRepository::ERROR_PERSISTENCE_FAILED, 'wardReparentBegin');
+        }
+        try {
+            $locked = $this->repo()->lockWardForUpdate($id);
+            if ($locked === null || (int) $locked['province_id'] !== $expectedProvinceId) {
+                throw new DomainException('CONCURRENT_MODIFICATION', ['ward_id' => $id]);
+            }
+            $this->assertActiveProvince($newProvinceId);
+            // Keep the canonical duplicate-code domain error when editing
+            // code and parent in the same request, not only on ordinary edits.
+            $this->assertCodeAvailable('wards', (string) ($payload['code'] ?? $locked['code']), $id);
+            if ($this->repo()->wardHasConflictingAddress($id, $newProvinceId)) {
+                throw new DomainException(self::ERROR_WARD_REFERENCED, [
+                    'ward_id' => $id, 'province_id' => $newProvinceId,
+                ]);
+            }
+            $updated = $this->repo()->update('wards', $id, $payload, $this->operation());
+            if (! $this->db->transStatus() || ! $this->db->transCommit()) {
+                throw new PersistenceException(FoundationLocationRepository::ERROR_PERSISTENCE_FAILED, 'wardReparentCommit');
+            }
+            return $updated;
+        } catch (\Throwable $exception) {
+            $this->db->transRollback();
+            throw $exception;
+        }
     }
 
     /**

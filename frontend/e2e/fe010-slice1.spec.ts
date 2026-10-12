@@ -231,7 +231,14 @@ test('Ward filtering and active Province-only create selection', async ({ page }
     { id: '12', code: 'P2', name: 'Inactive Province', status: 'INACTIVE' },
   ]
   await page.route('**/api/v1/provinces**', (route) =>
-    route.fulfill({ status: 200, contentType: 'application/json', body: collection(provinces, 2) }),
+    route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify({
+        data: provinces,
+        meta: mockPagination(route, provinces.length, 'fe010-province-lookup'),
+      }),
+    }),
   )
   await page.route('**/api/v1/wards**', (route) =>
     route.fulfill({
@@ -260,6 +267,134 @@ test('Ward filtering and active Province-only create selection', async ({ page }
   const provinceMenu = page.locator('.n-base-select-menu').last()
   await expect(provinceMenu.getByText('P3 - North Province', { exact: true })).toBeVisible()
   await expect(provinceMenu.getByText('P2 - Inactive Province', { exact: true })).toHaveCount(0)
+})
+
+test('Ward edit keeps status on set-state only, without changing the canonical Province', async ({
+  page,
+}) => {
+  await mockSession(page)
+  const ward = {
+    id: '21',
+    province_id: '11',
+    code: 'W1',
+    name: 'Ward One',
+    name_full: 'Ward One, Province One',
+    status: 'ACTIVE',
+  }
+  const province = { id: '11', code: 'P1', name: 'Province One', status: 'ACTIVE' }
+  const patched: { value: Record<string, unknown> | null } = { value: null }
+  await page.route('**/api/v1/provinces**', (route) =>
+    route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify({ data: [province], meta: mockPagination(route, 1) }),
+    }),
+  )
+  await page.route('**/api/v1/wards**', (route) => {
+    if (route.request().method() === 'PATCH') {
+      patched.value = route.request().postDataJSON() as Record<string, unknown>
+      ward.name = String(patched.value.name)
+      return route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({ data: ward, meta: { request_id: 'ward-patch' } }),
+      })
+    }
+    return route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify({ data: [ward], meta: mockPagination(route, 1) }),
+    })
+  })
+
+  await page.goto('/settings/locations/wards')
+  const row = page
+    .getByRole('row')
+    .filter({ has: page.getByRole('cell', { name: 'Ward One', exact: true }) })
+  await row.getByRole('button', { name: 'Sửa' }).click()
+  const dialog = page.getByRole('dialog', { name: 'Biểu mẫu' })
+  await expect(dialog.getByRole('combobox', { name: 'Trạng thái' })).toBeDisabled()
+  await dialog.getByRole('textbox', { name: 'Tên', exact: true }).fill('Ward Renamed')
+  await dialog.getByRole('button', { name: 'Lưu' }).click()
+  await expect.poll(() => patched.value).not.toBeNull()
+  expect(patched.value).toMatchObject({ name: 'Ward Renamed', province_id: '11' })
+  expect(patched.value).not.toHaveProperty('status')
+})
+
+test('Province selector retrieves later pages rather than silently truncating at 200', async ({
+  page,
+}) => {
+  await mockSession(page)
+  const provinces = Array.from({ length: 205 }, (_, index) => ({
+    id: String(index + 1),
+    code: `P${index + 1}`,
+    name: `Province ${index + 1}`,
+    status: 'ACTIVE',
+  }))
+  await page.route('**/api/v1/provinces**', (route) => {
+    const query = new URL(route.request().url()).searchParams
+    const pageIndex = Number(query.get('page') || '1')
+    const pageSize = Number(query.get('page_size') || '50')
+    const start = (pageIndex - 1) * pageSize
+    return route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify({
+        data: provinces.slice(start, start + pageSize),
+        meta: mockPagination(route, provinces.length),
+      }),
+    })
+  })
+  await page.route('**/api/v1/wards**', (route) =>
+    route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify({ data: [], meta: mockPagination(route, 0) }),
+    }),
+  )
+  await page.goto('/settings/locations/wards')
+  await page.getByRole('button', { name: /Tạo/ }).click()
+  const selector = page.locator('.modal-card').getByRole('textbox').first()
+  await selector.click()
+  await selector.fill('P205')
+  await expect(
+    page.locator('.n-base-select-menu').last().getByText('P205 - Province 205'),
+  ).toBeVisible()
+})
+
+test('Province create lets the server assign the initial Workflow State', async ({ page }) => {
+  await mockSession(page)
+  const posted: { value: Record<string, unknown> | null } = { value: null }
+  await page.route('**/api/v1/provinces**', (route) => {
+    if (route.request().method() === 'POST') {
+      posted.value = route.request().postDataJSON() as Record<string, unknown>
+      return route.fulfill({
+        status: 201,
+        contentType: 'application/json',
+        body: JSON.stringify({
+          data: { id: '51', code: 'PV51', name: 'New Province', status: 'INACTIVE' },
+          meta: { request_id: 'fe010-workflow-create' },
+        }),
+      })
+    }
+    return route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify({ data: [], meta: mockPagination(route, 0) }),
+    })
+  })
+
+  await page.goto('/settings/locations/provinces')
+  await page.getByRole('button', { name: /Tạo/ }).click()
+  const dialog = page.getByRole('dialog', { name: 'Biểu mẫu' })
+  await expect(dialog.getByRole('note')).toContainText('Workflow State')
+  await expect(dialog.getByRole('combobox', { name: 'Trạng thái' })).toHaveCount(0)
+  await dialog.getByRole('textbox', { name: 'Mã' }).fill('PV51')
+  await dialog.getByRole('textbox', { name: 'Tên' }).fill('New Province')
+  await dialog.getByRole('button', { name: 'Lưu' }).click()
+  await expect.poll(() => posted.value).not.toBeNull()
+  expect(posted.value).toMatchObject({ code: 'PV51', name: 'New Province' })
+  expect(posted.value).not.toHaveProperty('status')
 })
 
 test('403 and 404 list responses remain visible as common error states', async ({ page }) => {
