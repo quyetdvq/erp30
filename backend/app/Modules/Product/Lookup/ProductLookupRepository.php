@@ -89,7 +89,7 @@ final class ProductLookupRepository
 SELECT ranked.owner_id, ranked.product_id, ranked.total
 FROM (
     SELECT rel.owner_id, rel.product_id,
-           ROW_NUMBER() OVER (PARTITION BY rel.owner_id ORDER BY rel.product_id ASC) AS row_number,
+           ROW_NUMBER() OVER (PARTITION BY rel.owner_id ORDER BY rel.product_id ASC) AS relation_rank,
            COUNT(*) OVER (PARTITION BY rel.owner_id) AS total
     FROM (
         SELECT child.parent_product_id AS owner_id, child.id AS product_id
@@ -101,7 +101,7 @@ FROM (
     JOIN {$productTable} child ON child.id = rel.product_id
     WHERE HEX(child.status) IN ({$statuses})
 ) ranked
-WHERE ranked.row_number <= ?
+WHERE ranked.relation_rank <= ?
 ORDER BY ranked.owner_id, ranked.product_id
 SQL;
         try {
