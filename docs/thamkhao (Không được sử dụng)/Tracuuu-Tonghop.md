@@ -1,3 +1,52 @@
+# Danh sách chính thức 10 Resource có cơ chế State riêng không theo Lifecycles
+
+| Resource | Cơ chế State | Lifecycle |
+|----------|--------------|-----------|
+| `authorization_group` | Native State | Không sử dụng |
+| `authorization_log` | Chỉ **All States** | Không sử dụng |
+| `display_setting` | Chỉ **All States** | Không sử dụng |
+| `employee_assignment` | Native State | Không sử dụng |
+| `import_job` | Native State | Không sử dụng |
+| `lifecycle` | Native State (tự quản lý) | Không sử dụng |
+| `policy` | Native State `ACTIVE` / `INACTIVE` | Không sử dụng |
+| `user` | Native State (Shield) | Không sử dụng |
+| `workflow_state` | Native State | Không sử dụng |
+| `resource` | Native State `ACTIVE` / `INACTIVE` | Không sử dụng |
+
+
+
+git add backend/ frontend/ contracts/ docs
+git commit -m "Improve LayoutSider resize collapsed layout and contrast 2"
+git push
+
+
+
+git commit -m "Sua loi combo va san pham con"
+git push
+
+git log --oneline -5
+
+git status -sb
+
+
+
+
+git add .\frontend\
+
+git add .\backend\
+ 
+git add .\contracts\
+
+git commit -m "Unify Lifecycle state authority and align E2E regressions"
+
+git push
+
+git commit -m "backend/frontend theo Lifecycle"
+
+===
+
+
+
 | Nhóm                       | Lệnh                                         | Mô tả ngắn gọn                                        |
 | -------------------------- | -------------------------------------------- | ----------------------------------------------------- |
 | **Kiểm tra**               | `git status`                                 | Xem trạng thái Working Tree và Staging Area           |
@@ -1078,118 +1127,6 @@ Decision register	Đối soát trạng thái theo kết quả recheck mới nh�
 
 
 
-PS D:\XAMPP\htdocs\erp> git status
-On branch main
-Your branch is up to date with 'origin/main'.
-
-Changes not staged for commit:
-  (use "git add <file>..." to update what will be committed)
-  (use "git restore <file>..." to discard changes in working directory)
-        modified:   backend/app/Repositories/EmployeeAssignmentRepository.php
-        modified:   backend/app/Services/Api020EmployeeStructureService.php
-        modified:   backend/app/Services/EmployeeAssignmentService.php
-        modified:   backend/tests/unit/P1Api020EmployeeStructureTest.php
-        modified:   backend/tests/unit/P1Emp002EmployeeAssignmentRepositoryTest.php
-        modified:   backend/tests/unit/P1Emp003EmployeeAssignmentServiceTest.php
-
-Untracked files:
-  (use "git add <file>..." to include in what will be committed)
-        DinkERP_Batch4_Bundle_Report_Metrics_Fix.patch
-        DinkERP_Batch4_ListLookups_Oxlint_Fix.patch
-        DinkERP_Increment3_EmployeeAssignment_Nplus1_Batch.patch
-        DinkERP_Increment3_ProductList_Nplus1_Batch.patch
-
-no changes added to commit (use "git add" and/or "git commit -a")
-PS D:\XAMPP\htdocs\erp> git diff --check
-PS D:\XAMPP\htdocs\erp> git diff --stat
- .../Repositories/EmployeeAssignmentRepository.php  | 49 +++++++++++++
- .../Services/Api020EmployeeStructureService.php    | 19 ++++-
- backend/app/Services/EmployeeAssignmentService.php | 26 +++++++
- .../tests/unit/P1Api020EmployeeStructureTest.php   | 81 ++++++++++++++++++++++
- .../P1Emp002EmployeeAssignmentRepositoryTest.php   | 62 +++++++++++++++++
- .../unit/P1Emp003EmployeeAssignmentServiceTest.php | 30 ++++++++
- 6 files changed, 264 insertions(+), 3 deletions(-)
-PS D:\XAMPP\htdocs\erp> git status
-On branch main
-Your branch is up to date with 'origin/main'.
-
-Changes not staged for commit:
-  (use "git add <file>..." to update what will be committed)
-  (use "git restore <file>..." to discard changes in working directory)
-        modified:   backend/app/Repositories/EmployeeAssignmentRepository.php
-        modified:   backend/app/Services/Api020EmployeeStructureService.php
-        modified:   backend/app/Services/EmployeeAssignmentService.php
-        modified:   backend/tests/unit/P1Api020EmployeeStructureTest.php
-        modified:   backend/tests/unit/P1Emp002EmployeeAssignmentRepositoryTest.php
-        modified:   backend/tests/unit/P1Emp003EmployeeAssignmentServiceTest.php
-
-Untracked files:
-  (use "git add <file>..." to include in what will be committed)
-        DinkERP_Batch4_Bundle_Report_Metrics_Fix.patch
-        DinkERP_Batch4_ListLookups_Oxlint_Fix.patch
-        DinkERP_Increment3_EmployeeAssignment_Nplus1_Batch.patch
-        DinkERP_Increment3_ProductList_Nplus1_Batch.patch
-
-no changes added to commit (use "git add" and/or "git commit -a")
-PS D:\XAMPP\htdocs\erp> git diff --check
-PS D:\XAMPP\htdocs\erp> git diff --stat
- .../Repositories/EmployeeAssignmentRepository.php  | 49 +++++++++++++
- .../Services/Api020EmployeeStructureService.php    | 19 ++++-
- backend/app/Services/EmployeeAssignmentService.php | 26 +++++++
- .../tests/unit/P1Api020EmployeeStructureTest.php   | 81 ++++++++++++++++++++++
- .../P1Emp002EmployeeAssignmentRepositoryTest.php   | 62 +++++++++++++++++
- .../unit/P1Emp003EmployeeAssignmentServiceTest.php | 30 ++++++++
- 6 files changed, 264 insertions(+), 3 deletions(-)
-PS D:\XAMPP\htdocs\erp>
-PS D:\XAMPP\htdocs\erp> git add -- `
->>   backend/app/Repositories/EmployeeAssignmentRepository.php `
->>   backend/app/Services/Api020EmployeeStructureService.php `
->>   backend/app/Services/EmployeeAssignmentService.php `
->>   backend/tests/unit/P1Api020EmployeeStructureTest.php `
->>   backend/tests/unit/P1Emp002EmployeeAssignmentRepositoryTest.php `
->>   backend/tests/unit/P1Emp003EmployeeAssignmentServiceTest.php
-PS D:\XAMPP\htdocs\erp>
-PS D:\XAMPP\htdocs\erp> git diff --cached --check
-PS D:\XAMPP\htdocs\erp> git diff --cached --stat
- .../Repositories/EmployeeAssignmentRepository.php  | 49 +++++++++++++
- .../Services/Api020EmployeeStructureService.php    | 19 ++++-
- backend/app/Services/EmployeeAssignmentService.php | 26 +++++++
- .../tests/unit/P1Api020EmployeeStructureTest.php   | 81 ++++++++++++++++++++++
- .../P1Emp002EmployeeAssignmentRepositoryTest.php   | 62 +++++++++++++++++
- .../unit/P1Emp003EmployeeAssignmentServiceTest.php | 30 ++++++++
- 6 files changed, 264 insertions(+), 3 deletions(-)
-PS D:\XAMPP\htdocs\erp>
-PS D:\XAMPP\htdocs\erp> git commit -m "perf(backend): batch effective employee assignment lookups"
-[main 9f32e79] perf(backend): batch effective employee assignment lookups
- 6 files changed, 264 insertions(+), 3 deletions(-)
-PS D:\XAMPP\htdocs\erp>
-PS D:\XAMPP\htdocs\erp> git push origin main
-Enumerating objects: 27, done.
-Counting objects: 100% (27/27), done.
-Delta compression using up to 16 threads
-Compressing objects: 100% (14/14), done.
-Writing objects: 100% (14/14), 5.68 KiB | 2.84 MiB/s, done.
-Total 14 (delta 11), reused 0 (delta 0), pack-reused 0 (from 0)
-remote: Resolving deltas: 100% (11/11), completed with 11 local objects.
-To https://github.com/quyetdvq/erp30.git
-   f9824a7..9f32e79  main -> main
-PS D:\XAMPP\htdocs\erp>
-PS D:\XAMPP\htdocs\erp> git status
-On branch main
-Your branch is up to date with 'origin/main'.
-
-Untracked files:
-  (use "git add <file>..." to include in what will be committed)
-        DinkERP_Batch4_Bundle_Report_Metrics_Fix.patch
-        DinkERP_Batch4_ListLookups_Oxlint_Fix.patch
-        DinkERP_Increment3_EmployeeAssignment_Nplus1_Batch.patch
-        DinkERP_Increment3_ProductList_Nplus1_Batch.patch
-
-nothing added to commit but untracked files present (use "git add" to track)
-PS D:\XAMPP\htdocs\erp> git log -1 --oneline
-9f32e79 (HEAD -> main, origin/main) perf(backend): batch effective employee assignment lookups
-PS D:\XAMPP\htdocs\erp>
-
 Trước khi làm tiếp tôi muốn xác nhận và fix nội dung sau:
 
 
@@ -1219,3 +1156,24 @@ Hãy kiểm tra và xác nhận các nội dung sau:
 
 Chốt vấn đề 3: User Có Assignment Ở bất kỳ GROUP hoặc COMPANY/BRANCH/PLANT/WAREHOUSE nào đều thấy các resource SYSTEM và MASTER.
 
+
+
+
+
+Tôi có một số vấn đề cần làm rõ trước khi triển khai tiếp theo:
+
+1. Trong các resource đều được gán Lifecycle. Lifecycle này tôi thấy chưa được sử dụng.
+
+2. Phân quyền theo State chưa có hiệu lực với state cụ thể.
+VD: như ảnh. Với Employee Đinh Văn Thắng (Employee Đinh Văn Thắng <--> user 2 (thangdv))
+
+Nếu : Áp dụng cho Resource "ward"	với "All States" và ABSOLUTE_DENY:view --> Có tác dụng.
+
+Còn : Áp dụng cho Resource "province"	với "INACTIVE" và ABSOLUTE_DENY:view --> Không tác dụng.
+
+3. Tác dụng của việc khai báo "Transitions"
+
+
+Vấn đề phân quyền theo States đã có hiệu lực đối với Resource "province". Tuy nhiên đây phải là quy tắc chung cho tất cả các Resource. 
+
+Đồng thời có 1 quy tắc bắt buộc là các States hợp lệ của Resources phải do Lifecycle của Resource đó quy định, không phải States là tự do. (Ngoại lệ: Áp dụng cho Resource "lifecycle" phải có States độc lập vì nó dùng để quản lý state, không thể quản lý chính nó)

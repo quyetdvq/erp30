@@ -643,6 +643,8 @@ onBeforeUnmount(handleResizeCancel)
               <NMenu
                 :value="route.path"
                 :options="menuOptions"
+				:root-indent="12"
+				:indent="14"
                 :collapsed="workspace.sidebarCollapsed"
                 :collapsed-width="72"
                 :collapsed-icon-size="20"
@@ -871,7 +873,7 @@ onBeforeUnmount(handleResizeCancel)
   min-width: 0;
   flex-direction: column;
   gap: 14px;
-  padding: 16px 12px 12px;
+  padding: 16px 8px 12px;
   overflow: hidden;
 }
 .mode-switcher {
