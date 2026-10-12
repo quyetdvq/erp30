@@ -2,7 +2,13 @@
 import { computed } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { NIcon } from 'naive-ui'
-import { BanOutline, CheckmarkCircleOutline, CloseCircleOutline } from '@vicons/ionicons5'
+import {
+  BanOutline,
+  CheckmarkCircleOutline,
+  CloseCircleOutline,
+  DocumentTextOutline,
+  HelpCircleOutline,
+} from '@vicons/ionicons5'
 
 const props = defineProps<{
   status: string | boolean
@@ -17,10 +23,14 @@ const normalizedStatus = computed(() => {
 
 const isActive = computed(() => normalizedStatus.value === 'ACTIVE')
 const isClosed = computed(() => normalizedStatus.value === 'CLOSED')
+const isDraft = computed(() => normalizedStatus.value === 'DRAFT')
+const isInactive = computed(() => normalizedStatus.value === 'INACTIVE')
 const icon = computed(() => {
   if (isActive.value) return CheckmarkCircleOutline
   if (isClosed.value) return BanOutline
-  return CloseCircleOutline
+  if (isDraft.value) return DocumentTextOutline
+  if (isInactive.value) return CloseCircleOutline
+  return HelpCircleOutline
 })
 const label = computed(() => {
   const key = normalizedStatus.value.toLowerCase()
@@ -35,7 +45,9 @@ const label = computed(() => {
     :class="{
       'table-status--active': isActive,
       'table-status--closed': isClosed,
-      'table-status--inactive': !isActive && !isClosed,
+      'table-status--inactive': isInactive,
+      'table-status--draft': isDraft,
+      'table-status--other': !isActive && !isClosed && !isDraft && !isInactive,
     }"
     :title="label"
     :aria-label="label"
@@ -68,6 +80,14 @@ const label = computed(() => {
 .table-status--closed {
   color: #64748b;
   background: #e2e8f0;
+}
+.table-status--draft {
+  color: #a16207;
+  background: #fef9c3;
+}
+.table-status--other {
+  color: #36567b;
+  background: #e0ebfa;
 }
 .sr-only {
   position: absolute;

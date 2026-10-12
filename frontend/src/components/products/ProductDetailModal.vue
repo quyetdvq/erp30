@@ -14,6 +14,10 @@ import type {
 import DecimalInput from '@/components/forms/DecimalInput.vue'
 import RemoteSearchableSelect from '@/components/forms/RemoteSearchableSelect.vue'
 import SearchableSelect from '@/components/forms/SearchableSelect.vue'
+import TableStatus from '@/components/lists/TableStatus.vue'
+import TableRowActions from '@/components/lists/TableRowActions.vue'
+import ProductImageField from '@/components/products/ProductImageField.vue'
+import { productHasImage } from '@/services/productImage'
 import { useBasePermission } from '@/composables/useBasePermission'
 import { useFormatters } from '@/composables/useFormatters'
 import {
@@ -78,6 +82,8 @@ const comboItems = ref<ComboForm[]>([])
 const componentMetadata = ref<ProductOption[]>([])
 let viewEpoch = 0
 const childFormOpen = ref(false)
+const childImageField = ref<InstanceType<typeof ProductImageField> | null>(null)
+const childImagePartialError = ref(false)
 const childForm = ref({
   product_code: '',
   sku: '',
@@ -312,6 +318,7 @@ function resetChildForm(): void {
 function openChildForm(): void {
   resetChildForm()
   childError.value = null
+  childImagePartialError.value = false
   childFormOpen.value = true
 }
 async function createChild(): Promise<void> {
@@ -339,7 +346,14 @@ async function createChild(): Promise<void> {
       price: childForm.value.price,
       serial_management_enabled: false,
     }
-    await saveProduct(payload)
+    const saved = await saveProduct(payload)
+    try {
+      await childImageField.value?.commit(String(saved.id))
+    } catch {
+      // Product child exists. Close CREATE to prevent duplicate submission.
+      childImagePartialError.value = true
+      error.value = new Error(t('product.imagePartialSave'))
+    }
     childFormOpen.value = false
     await loadTabData()
   } catch (caught: unknown) {
@@ -468,6 +482,7 @@ watch(
     parentProduct.value = null
     activeTab.value = 'general'
     childFormOpen.value = false
+    childImagePartialError.value = false
     children.value = []
     comboItems.value = []
     conversions.value = []
@@ -527,8 +542,17 @@ watch(
         </button>
       </nav>
       <div class="detail-body">
-        <p v-if="error" class="inline-error" role="alert">{{ t('product.requestError') }}</p>
+        <p v-if="error && !childImagePartialError" class="inline-error" role="alert">
+          {{ t('product.requestError') }}
+        </p>
+        <p v-if="childImagePartialError" class="inline-error" role="alert">
+          {{ t('product.imagePartialSave') }}
+        </p>
         <section v-if="activeTab === 'general'" class="tab-panel">
+          <ProductImageField
+            :product-id="currentProduct ? String(currentProduct.id) : undefined"
+            :image-available="productHasImage(currentProduct)"
+          />
           <dl class="detail-grid">
             <dt>{{ t('product.productCode') }}</dt>
             <dd>{{ currentProduct?.product_code ?? t('list.noValue') }}</dd>
@@ -672,18 +696,23 @@ watch(
                   <td>
                     {{ productUomName(props.uoms, row.base_uom_id) ?? t('list.noValue') }}
                   </td>
-                  <td>{{ displayMoney(row.price) }}</td>
-                  <td>{{ businessStateLabel(row.status) }}</td>
-                  <td>
-                    <button
-                      v-if="hasBasePermission('product', 'edit')"
-                      type="button"
-                      class="icon-button"
-                      :aria-label="`${t('common.edit')} ${row.full_name}`"
-                      @click="emit('edit', row)"
-                    >
-                      {{ t('common.edit') }}
-                    </button>
+                  <td class="child-price">{{ displayMoney(row.price) }}</td>
+                  <td class="child-state">
+                    <span class="child-status-label">
+                      <TableStatus :status="row.status" />
+                      <span>{{ businessStateLabel(row.status) }}</span>
+                    </span>
+                  </td>
+                  <td class="child-actions">
+                    <TableRowActions
+                      :show-view="hasBasePermission('product', 'view')"
+                      :show-edit="hasBasePermission('product', 'edit')"
+                      :busy="busy"
+                      :view-label="`${t('common.view')} ${row.full_name}`"
+                      :edit-label="`${t('common.edit')} ${row.full_name}`"
+                      @view="openChild(row)"
+                      @edit="emit('edit', row)"
+                    />
                   </td>
                 </tr>
                 <tr v-if="children.length === 0">
@@ -852,6 +881,11 @@ watch(
           :aria-label="t('product.defaultPrice')"
           required
       /></label>
+      <ProductImageField
+        ref="childImageField"
+        :editable="hasBasePermission('product', 'create')"
+        :disabled="busy"
+      />
       <p v-if="childError" class="inline-error" role="alert">
         {{ t('product.childFieldsRequired') }}
       </p>
@@ -1077,6 +1111,26 @@ watch(
   background: #f7fafb;
   color: #536b7b;
   font-size: 12px;
+}
+.child-price {
+  text-align: right !important;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+.child-state,
+.child-actions {
+  text-align: center !important;
+  white-space: nowrap;
+}
+.child-status-label {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  font-size: 12px;
+}
+.detail-table tbody tr:hover {
+  background: #f8fbfd;
 }
 .detail-table tbody tr:last-child td {
   border-bottom: 0;

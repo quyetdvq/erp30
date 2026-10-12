@@ -323,6 +323,10 @@ final class ProductLookupService
     /** @return array<string,mixed> */
     private function productForApi(array $row): array
     {
+        if (array_key_exists('image_filename', $row)) {
+            $row['image_available'] = is_string($row['image_filename']) && $row['image_filename'] !== '';
+        }
+        unset($row['image_filename'], $row['image_mime'], $row['image_size_bytes']);
         if (array_key_exists('code', $row)) {
             $row['product_code'] = $row['code'];
             unset($row['code']);

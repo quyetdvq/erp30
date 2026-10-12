@@ -318,6 +318,22 @@ final class Api050ProductCatalogService
         return $this->decorateProduct($row);
     }
 
+    /**
+     * Image reads and mutations follow the same row-State PBAC as Product
+     * GET/PATCH. The supplied ID and State are read from persistence, never
+     * trusted from a multipart form.
+     * @return array<string,mixed>
+     */
+    public function productForImage(int $id, string $action): array
+    {
+        if (! in_array($action, ['view', 'edit'], true)) {
+            throw new DomainException('PRODUCT_INVALID_ACTION');
+        }
+        $row = $this->requireRow($this->products()->findById($id), ProductMasterService::ERROR_NOT_FOUND);
+        $this->authorize('product', $action, $row);
+        return $row;
+    }
+
     /** @param array<string,mixed> $payload
      *  @return array<string,mixed>
      */
@@ -506,6 +522,11 @@ final class Api050ProductCatalogService
     {
         // Database TINYINT(1) reads are driver-dependent (0, '0', false).
         // The public OpenAPI contract promises a JSON boolean.
+        // Never expose internal storage filenames or server paths in API JSON.
+        if (array_key_exists('image_filename', $row)) {
+            $row['image_available'] = is_string($row['image_filename']) && $row['image_filename'] !== '';
+        }
+        unset($row['image_filename'], $row['image_mime'], $row['image_size_bytes']);
         if (array_key_exists('serial_management_enabled', $row)) {
             $row['serial_management_enabled'] = in_array($row['serial_management_enabled'], [true, 1, '1'], true);
         }

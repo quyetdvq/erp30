@@ -290,6 +290,7 @@ export const zProduct = z.object({
     description: z.string().nullish(),
     manual_standard_cost: zDecimal.nullish(),
     serial_management_enabled: z.boolean().optional(),
+    image_available: z.boolean().optional(),
     status: zBusinessWorkflowStatus,
     role: z.enum([
         'SIMPLE',
@@ -3132,6 +3133,37 @@ export const zUpdateProductPath = z.object({
  * Product response.
  */
 export const zUpdateProductResponse = zProductResponse;
+
+export const zDeleteProductImagePath = z.object({
+    id: zBigInt
+});
+
+/**
+ * Product response.
+ */
+export const zDeleteProductImageResponse = zProductResponse;
+
+export const zGetProductImagePath = z.object({
+    id: zBigInt
+});
+
+/**
+ * Image bytes. Not publicly cacheable.
+ */
+export const zGetProductImageResponse = z.string();
+
+export const zUploadProductImageBody = z.object({
+    image: z.string()
+});
+
+export const zUploadProductImagePath = z.object({
+    id: zBigInt
+});
+
+/**
+ * Product response.
+ */
+export const zUploadProductImageResponse = zProductResponse;
 
 export const zSetProductStateBody = zState2;
 

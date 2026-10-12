@@ -32,6 +32,8 @@ import {
 } from '@/services/productCatalog'
 import { reportApiError } from '@/services/errorBoundary'
 import BusinessWorkflowAction from '@/components/lists/BusinessWorkflowAction.vue'
+import ProductImageField from '@/components/products/ProductImageField.vue'
+import { productHasImage } from '@/services/productImage'
 import { useUnsavedChanges } from '@/composables/useUnsavedChanges'
 import { loadLookupPages } from '@/services/listLookups'
 import {
@@ -70,6 +72,12 @@ const formatters = useFormatters()
 const id = computed(() => (typeof route.params.id === 'string' ? route.params.id : undefined))
 const editing = computed(() => Boolean(id.value))
 const product = ref<Product | null>(null)
+const imageField = ref<InstanceType<typeof ProductImageField> | null>(null)
+const imagePartialError = ref(false)
+const imageDirty = ref(false)
+function onImageDirty(value: boolean): void {
+  imageDirty.value = value
+}
 const groups = ref<ProductGroup[]>([])
 const uoms = ref<ProductUom[]>([])
 const products = ref<ProductOption[]>([])
@@ -107,7 +115,9 @@ const form = ref({
   description: '',
   status: 'ACTIVE' as Product['status'],
 })
-const unsaved = useUnsavedChanges(form)
+const unsaved = useUnsavedChanges(
+  computed(() => ({ form: form.value, imageDirty: imageDirty.value })),
+)
 function emptyConversion(): ConversionForm {
   return {
     id: '',
@@ -413,16 +423,24 @@ async function save(): Promise<void> {
   try {
     const saved = await saveProduct(payload(), id.value)
     product.value = saved
-    // Save completed: do not ask for discard confirmation on route replacement.
+    imagePartialError.value = false
+    // Commit the pending file BEFORE router.replace changes productId; otherwise
+    // the image field could discard its selection when the new route mounts.
+    try {
+      const imageChanged = await imageField.value?.commit(String(saved.id))
+      if (imageChanged) product.value = await getProductById(String(saved.id))
+    } catch {
+      // Product CREATE/PATCH already committed. Never retry creating it.
+      imagePartialError.value = true
+    }
     unsaved.markClean()
     if (!id.value && typeof route.query.return_parent_id === 'string') {
       await router.replace(`/products/${route.query.return_parent_id}`)
       product.value = await getProductById(route.query.return_parent_id)
-    } else {
-      if (!id.value) await router.replace(`/products/${saved.id}`)
-      product.value = saved
+    } else if (!id.value) {
+      await router.replace(`/products/${saved.id}`)
     }
-    resetFromRow(product.value)
+    if (product.value) resetFromRow(product.value)
     unsaved.markClean()
     await Promise.all([loadConversions(), loadChildren(), loadComboItems()])
   } catch (caught: unknown) {
@@ -551,7 +569,21 @@ watch(
     <p v-if="isParentRole" class="restriction-note" role="status">
       {{ t('product.parentRestriction') }}
     </p>
+    <p v-if="imagePartialError" class="inline-error" role="alert">
+      {{ t('product.imagePartialSave') }}
+    </p>
     <form class="editor-form" @submit.prevent="save">
+      <fieldset>
+        <legend>{{ t('product.image') }}</legend>
+        <ProductImageField
+          ref="imageField"
+          :product-id="id"
+          :image-available="productHasImage(product)"
+          :editable="canEdit"
+          :disabled="busy"
+          @dirty="onImageDirty"
+        />
+      </fieldset>
       <fieldset :disabled="!canEdit || busy">
         <legend>{{ t('product.identity') }}</legend>
         <div class="form-grid">

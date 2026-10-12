@@ -112,6 +112,9 @@ $routes->group('api/v1', ['filter' => 'cors'], static function (RouteCollection 
     $routes->post('products', 'Api\\ProductCatalog::createProduct');
     $routes->get('products/(:num)', 'Api\\ProductCatalog::showProduct/$1');
     $routes->patch('products/(:num)', 'Api\\ProductCatalog::updateProduct/$1');
+    $routes->get('products/(:num)/image', 'Api\\ProductImages::show/$1');
+    $routes->post('products/(:num)/image', 'Api\\ProductImages::upload/$1');
+    $routes->delete('products/(:num)/image', 'Api\\ProductImages::delete/$1');
     $routes->post('products/(:num)/actions/set-state', 'Api\\ProductCatalog::setProductState/$1');
     $routes->get('products/(:num)/uom-conversions', 'Api\\ProductCatalog::listConversions/$1');
     $routes->put('products/(:num)/uom-conversions', 'Api\\ProductCatalog::replaceConversions/$1');

@@ -291,6 +291,10 @@ export type Product = {
     description?: string | null;
     manual_standard_cost?: Decimal | null;
     serial_management_enabled?: boolean;
+    /**
+     * Whether this Product has an uploaded representative image.
+     */
+    image_available?: boolean;
     status: BusinessWorkflowStatus;
     role: 'SIMPLE' | 'PARENT' | 'CHILD' | 'COMBO';
     full_name: string;
@@ -6587,6 +6591,120 @@ export type UpdateProductResponses = {
 };
 
 export type UpdateProductResponse = UpdateProductResponses[keyof UpdateProductResponses];
+
+export type DeleteProductImageData = {
+    body?: never;
+    path: {
+        id: BigInt;
+    };
+    query?: never;
+    url: '/api/v1/products/{id}/image';
+};
+
+export type DeleteProductImageErrors = {
+    /**
+     * Unauthenticated or invalid authentication.
+     */
+    401: ErrorResponse;
+    /**
+     * Visible target but action denied.
+     */
+    403: ErrorResponse;
+    /**
+     * Target not found or not visible.
+     */
+    404: ErrorResponse;
+};
+
+export type DeleteProductImageError = DeleteProductImageErrors[keyof DeleteProductImageErrors];
+
+export type DeleteProductImageResponses = {
+    /**
+     * Product response.
+     */
+    200: ProductResponse;
+};
+
+export type DeleteProductImageResponse = DeleteProductImageResponses[keyof DeleteProductImageResponses];
+
+export type GetProductImageData = {
+    body?: never;
+    path: {
+        id: BigInt;
+    };
+    query?: never;
+    url: '/api/v1/products/{id}/image';
+};
+
+export type GetProductImageErrors = {
+    /**
+     * Unauthenticated or invalid authentication.
+     */
+    401: ErrorResponse;
+    /**
+     * Visible target but action denied.
+     */
+    403: ErrorResponse;
+    /**
+     * Target not found or not visible.
+     */
+    404: ErrorResponse;
+};
+
+export type GetProductImageError = GetProductImageErrors[keyof GetProductImageErrors];
+
+export type GetProductImageResponses = {
+    /**
+     * Image bytes. Not publicly cacheable.
+     */
+    200: Blob | File;
+};
+
+export type GetProductImageResponse = GetProductImageResponses[keyof GetProductImageResponses];
+
+export type UploadProductImageData = {
+    body: {
+        /**
+         * JPEG, PNG or WebP, up to 3 MiB and 5000x5000 pixels.
+         */
+        image: Blob | File;
+    };
+    path: {
+        id: BigInt;
+    };
+    query?: never;
+    url: '/api/v1/products/{id}/image';
+};
+
+export type UploadProductImageErrors = {
+    /**
+     * Unauthenticated or invalid authentication.
+     */
+    401: ErrorResponse;
+    /**
+     * Visible target but action denied.
+     */
+    403: ErrorResponse;
+    /**
+     * Target not found or not visible.
+     */
+    404: ErrorResponse;
+    /**
+     * Semantically invalid request.
+     */
+    422: ErrorResponse;
+};
+
+export type UploadProductImageError = UploadProductImageErrors[keyof UploadProductImageErrors];
+
+export type UploadProductImageResponses = {
+    /**
+     * Product response.
+     */
+    200: ProductResponse;
+};
+
+export type UploadProductImageResponse = UploadProductImageResponses[keyof UploadProductImageResponses];
 
 export type SetProductStateData = {
     body: State2;

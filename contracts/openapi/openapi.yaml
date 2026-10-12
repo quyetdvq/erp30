@@ -888,6 +888,50 @@ paths:
       summary: Update a product
       requestBody: {$ref: '#/components/requestBodies/ProductPatch'}
       responses: {'200': {$ref: '#/components/responses/ProductResponse'}, '401': {$ref: '#/components/responses/Unauthorized'}, '403': {$ref: '#/components/responses/Forbidden'}, '404': {$ref: '#/components/responses/NotFound'}, '409': {$ref: '#/components/responses/Conflict'}, '422': {$ref: '#/components/responses/UnprocessableEntity'}}
+  /api/v1/products/{id}/image:
+    parameters: [{$ref: '#/components/parameters/Id'}]
+    get:
+      operationId: getProductImage
+      summary: Download the optional Product image (requires product.view on current State)
+      responses:
+        '200':
+          description: Image bytes. Not publicly cacheable.
+          content:
+            image/jpeg: {schema: {type: string, format: binary}}
+            image/png: {schema: {type: string, format: binary}}
+            image/webp: {schema: {type: string, format: binary}}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+        '404': {$ref: '#/components/responses/NotFound'}
+    post:
+      operationId: uploadProductImage
+      summary: Upload or replace one representative image (requires product.edit on current State)
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required: [image]
+              properties:
+                image:
+                  type: string
+                  format: binary
+                  description: JPEG, PNG or WebP, up to 3 MiB and 5000x5000 pixels.
+      responses:
+        '200': {$ref: '#/components/responses/ProductResponse'}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+        '404': {$ref: '#/components/responses/NotFound'}
+        '422': {$ref: '#/components/responses/UnprocessableEntity'}
+    delete:
+      operationId: deleteProductImage
+      summary: Remove the representative image (requires product.edit on current State)
+      responses:
+        '200': {$ref: '#/components/responses/ProductResponse'}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+        '404': {$ref: '#/components/responses/NotFound'}
   /api/v1/products/{id}/actions/set-state:
     parameters: [{$ref: '#/components/parameters/Id'}]
     post:
@@ -1762,6 +1806,7 @@ components:
         description: {type: [string, 'null']}
         manual_standard_cost: {oneOf: [{$ref: '#/components/schemas/Decimal'}, {type: 'null'}]}
         serial_management_enabled: {type: boolean}
+        image_available: {type: boolean, description: Whether this Product has an uploaded representative image.}
         status: {$ref: '#/components/schemas/BusinessWorkflowStatus'}
         role: {type: string, enum: [SIMPLE, PARENT, CHILD, COMBO]}
         full_name: {type: string}
