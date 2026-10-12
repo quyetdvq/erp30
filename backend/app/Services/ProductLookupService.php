@@ -154,11 +154,15 @@ final class ProductLookupService
             if ($owners === []) {
                 return [];
             }
-            // Compile only the two persisted Product states: the same
-            // exact-State decisions apply to ALL MASTER Product rows. The
-            // predicate runs before window totals, preventing disclosure.
+            // Count only Product rows whose Lifecycle State is currently
+            // viewable by this operation. Hard-coded ACTIVE/INACTIVE would
+            // silently omit DRAFT/CLOSED children after Lifecycle Unified v2.
+            // The SQL applies this predicate BEFORE windowed totals/LIMIT;
+            // the per-row authorization check below remains mandatory.
             $statuses = [];
-            foreach (['ACTIVE', 'INACTIVE'] as $status) {
+            $stateCodes = (new ResourceWorkflowStateResolver($this->connection()))
+                ->allowedPolicyStateCodes('product');
+            foreach (array_unique($stateCodes) as $status) {
                 if ($this->mayView($operation, 'product', ['status' => $status])) {
                     $statuses[] = strtoupper(bin2hex($status));
                 }

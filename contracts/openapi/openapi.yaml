@@ -1860,7 +1860,15 @@ components:
       properties: {data: {type: array, items: {$ref: '#/components/schemas/OrganizationLabel'}}}
     ProductCreate:
       type: object
+      description: >-
+        Optional combo_items are persisted atomically with a new COMBO. This
+        operation requires product.create and product.edit authorization for
+        the initial persisted Workflow State. Failure rolls back the Product.
       properties:
+        combo_items:
+          type: array
+          description: Only allowed when product_type is COMBO. DRAFT owner may be composed; referenced components must be ACTIVE.
+          items: {$ref: '#/components/schemas/ComboItemInput'}
         product_code: {type: [string, 'null'], maxLength: 50}
         sku: {type: [string, 'null']}
         barcode: {type: [string, 'null']}

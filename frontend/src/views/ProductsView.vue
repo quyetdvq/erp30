@@ -1,9 +1,11 @@
 <script setup lang="ts">
-import { computed, onMounted, ref } from 'vue'
+import { computed, nextTick, onMounted, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useRouter } from 'vue-router'
 import type { ComboItem, Product, ProductGroup, ProductUom } from '@/api/generated/types.gen'
 import ProductDetailModal from '@/components/products/ProductDetailModal.vue'
+import ProductRelationSummary from '@/components/products/ProductRelationSummary.vue'
+import ProductRelationsDialog from '@/components/products/ProductRelationsDialog.vue'
 import {
   ListPagination,
   ListQueryControls,
@@ -25,6 +27,7 @@ import {
 import { reportApiError } from '@/services/errorBoundary'
 import { useBusinessWorkflowStates } from '@/composables/useBusinessWorkflowStates'
 import { loadLookupPages } from '@/services/listLookups'
+import { databaseFlagEnabled, productRoleLabel } from '@/services/productPresentation'
 import { chunks, previewProductRelations, resolveProductDetails } from '@/services/productLookups'
 
 type RelationState = {
@@ -46,9 +49,12 @@ const groups = ref<ProductGroup[]>([])
 const uoms = ref<ProductUom[]>([])
 // Resolve table labels in O(1) per visible row even with thousands of groups/UOMs.
 const groupNameById = computed(() => new Map(groups.value.map((row) => [String(row.id), row.name])))
-const uomCodeById = computed(() => new Map(uoms.value.map((row) => [String(row.id), row.code])))
+const uomNameById = computed(() => new Map(uoms.value.map((row) => [String(row.id), row.name])))
 const relations = ref<Record<string, RelationState>>({})
-const expandedRows = ref<Record<string, boolean>>({})
+const relatedOwner = ref<Product | null>(null)
+const relationsOpen = ref(false)
+const relationLoadError = ref(false)
+let relationReturnFocus: HTMLElement | null = null
 const detailProduct = ref<Product | null>(null)
 const detailOpen = ref(false)
 const busy = ref(false)
@@ -106,7 +112,7 @@ function groupName(id: string | null | undefined): string {
   return groupNameById.value.get(String(id)) ?? t('list.noValue')
 }
 function uomName(id: string | null | undefined): string {
-  return uomCodeById.value.get(String(id)) ?? t('list.noValue')
+  return uomNameById.value.get(String(id)) ?? t('list.noValue')
 }
 function relation(row: Product): RelationState {
   return (
@@ -123,20 +129,43 @@ function relation(row: Product): RelationState {
 function relatedProducts(row: Product): Product[] {
   return row.role === 'COMBO' ? relation(row).components : relation(row).children
 }
-function relatedLabel(row: Product): string {
-  return row.role === 'COMBO' ? t('product.components') : t('product.children')
+const dialogRelation = computed(() => (relatedOwner.value ? relation(relatedOwner.value) : null))
+const dialogProducts = computed(() =>
+  relatedOwner.value ? relatedProducts(relatedOwner.value) : [],
+)
+function closeRelations(restoreFocus = true): void {
+  relationsOpen.value = false
+  relatedOwner.value = null
+  relationLoadError.value = false
+  const previousFocus = relationReturnFocus
+  relationReturnFocus = null
+  if (restoreFocus && previousFocus?.isConnected) {
+    void nextTick(() => previousFocus.focus())
+  }
 }
-function canExpand(row: Product): boolean {
-  return relation(row).total > 2
+function retryRelations(): void {
+  if (relatedOwner.value) void loadFullRelations(relatedOwner.value)
 }
-async function toggleExpanded(row: Product): Promise<void> {
+function viewRelatedProduct(item: Product): void {
+  closeRelations(false)
+  openDetail(item)
+}
+function openRelations(row: Product): void {
+  relationReturnFocus =
+    document.activeElement instanceof HTMLElement ? document.activeElement : null
+  relatedOwner.value = row
+  relationsOpen.value = true
+  relationLoadError.value = false
+  void loadFullRelations(row)
+}
+async function loadFullRelations(row: Product): Promise<void> {
   const key = String(row.id)
   const epoch = listEpoch
   const generation = auth.getSessionGeneration()
-  expandedRows.value[key] = !expandedRows.value[key]
-  if (!expandedRows.value[key] || relation(row).full) return
   const previous = relation(row)
+  if (previous.full) return
   relations.value[key] = { ...previous, loading: true }
+  relationLoadError.value = false
   try {
     if (row.role === 'COMBO') {
       const componentItems = await listProductComboItems(key)
@@ -175,6 +204,7 @@ async function toggleExpanded(row: Product): Promise<void> {
   } catch (caught: unknown) {
     if (epoch !== listEpoch || generation !== auth.getSessionGeneration()) return
     relations.value[key] = { ...previous, loading: false }
+    if (relatedOwner.value && String(relatedOwner.value.id) === key) relationLoadError.value = true
     error.value = caught
     reportApiError(caught)
   }
@@ -253,7 +283,7 @@ async function load(): Promise<void> {
   try {
     await state.apply()
     if (epoch !== listEpoch) return
-    expandedRows.value = {}
+    closeRelations()
     await loadRelations(state.rows.value, epoch)
   } catch (caught: unknown) {
     if (epoch !== listEpoch) return
@@ -374,91 +404,63 @@ onMounted(async () => {
             </tr>
           </thead>
           <tbody>
-            <template v-for="row in state.rows.value" :key="String(row.id)"
-              ><tr>
-                <td>{{ row.product_code ?? t('list.noValue') }}</td>
-                <td>
-                  <button type="button" class="product-link" @click="openDetail(row)">
-                    {{ productName(row) }}
-                  </button>
-                  <div v-if="row.role === 'COMBO' || row.role === 'PARENT'" class="related-preview">
-                    <span class="related-label">{{ relatedLabel(row) }}:</span
-                    ><span v-if="relation(row).loading">{{ t('common.loading') }}</span
-                    ><template v-else
-                      ><button
-                        v-for="item in relatedProducts(row).slice(0, 2)"
-                        :key="String(item.id)"
-                        type="button"
-                        class="related-link"
-                        @click.stop="openDetail(item)"
-                      >
-                        {{ productName(item) }}</button
-                      ><button
-                        v-if="canExpand(row)"
-                        type="button"
-                        class="more-link"
-                        @click.stop="void toggleExpanded(row)"
-                      >
-                        {{
-                          expandedRows[String(row.id)]
-                            ? t('product.collapse')
-                            : t('product.viewMore')
-                        }}
-                      </button></template
-                    >
-                  </div>
-                </td>
-                <td>{{ row.sku ?? t('list.noValue') }}</td>
-                <td>{{ row.product_type }}</td>
-                <td>
-                  <span class="role-badge" :class="`role-${row.role.toLowerCase()}`">{{
-                    row.role
-                  }}</span>
-                </td>
-                <td>{{ groupName(row.product_group_id) }}</td>
-                <td>{{ uomName(row.base_uom_id) }}</td>
-                <td>{{ displayMoney(row.price) }}</td>
-                <td>{{ row.serial_management_enabled ? t('common.yes') : t('common.no') }}</td>
-                <td><TableStatus :status="row.status" /></td>
-                <td>
-                  <TableRowActions
-                    :active="row.status === 'ACTIVE'"
-                    :state-target-id="String(row.id)"
-                    :busy="busy"
-                    :show-view="hasBasePermission('product', 'view')"
-                    :show-edit="hasBasePermission('product', 'edit')"
-                    :show-toggle="hasBasePermission('product', 'setstate')"
-                    view-permission="product.view"
-                    edit-permission="product.edit"
-                    toggle-permission="product.setstate"
-                    :view-label="t('common.view')"
-                    :edit-label="t('common.edit')"
-                    :activate-label="t('common.activate')"
-                    :deactivate-label="t('common.deactivate')"
-                    @view="openDetail(row)"
-                    @edit="router.push(`/products/${row.id}`)"
-                    @state-changed="afterWorkflowChange"
-                  />
-                </td>
-              </tr>
-              <tr v-if="expandedRows[String(row.id)]" class="expanded-row">
-                <td colspan="11">
-                  <div class="expanded-content">
-                    <strong>{{ relatedLabel(row) }}</strong
-                    ><span v-if="relatedProducts(row).length === 0">{{ t('list.noResults') }}</span
-                    ><button
-                      v-for="item in relatedProducts(row)"
-                      :key="String(item.id)"
-                      type="button"
-                      class="expanded-item"
-                      @click="openDetail(item)"
-                    >
-                      {{ productName(item) }}<small>{{ item.product_code ?? item.role }}</small>
-                    </button>
-                  </div>
-                </td>
-              </tr></template
-            >
+            <tr v-for="row in state.rows.value" :key="String(row.id)">
+              <td>{{ row.product_code ?? t('list.noValue') }}</td>
+              <td>
+                <button type="button" class="product-link" @click="openDetail(row)">
+                  {{ productName(row) }}
+                </button>
+                <ProductRelationSummary
+                  v-if="row.role === 'COMBO' || row.role === 'PARENT'"
+                  :kind="row.role === 'COMBO' ? 'COMBO' : 'PARENT'"
+                  :total="relation(row).total"
+                  :preview="relatedProducts(row)"
+                  :loading="relation(row).loading"
+                  @view="openDetail"
+                  @show-all="openRelations(row)"
+                />
+              </td>
+              <td>{{ row.sku ?? t('list.noValue') }}</td>
+              <td>
+                {{ row.product_type === 'COMBO' ? t('product.combo') : t('product.standard') }}
+              </td>
+              <td>
+                <span class="role-badge" :class="`role-${row.role.toLowerCase()}`">{{
+                  productRoleLabel(row.role, t)
+                }}</span>
+              </td>
+              <td>{{ groupName(row.product_group_id) }}</td>
+              <td>{{ uomName(row.base_uom_id) }}</td>
+              <td>{{ displayMoney(row.price) }}</td>
+              <td>
+                {{
+                  databaseFlagEnabled(row.serial_management_enabled)
+                    ? t('common.yes')
+                    : t('common.no')
+                }}
+              </td>
+              <td><TableStatus :status="row.status" /></td>
+              <td>
+                <TableRowActions
+                  :active="row.status === 'ACTIVE'"
+                  :state-target-id="String(row.id)"
+                  :busy="busy"
+                  :show-view="hasBasePermission('product', 'view')"
+                  :show-edit="hasBasePermission('product', 'edit')"
+                  :show-toggle="hasBasePermission('product', 'setstate')"
+                  view-permission="product.view"
+                  edit-permission="product.edit"
+                  toggle-permission="product.setstate"
+                  :view-label="t('common.view')"
+                  :edit-label="t('common.edit')"
+                  :activate-label="t('common.activate')"
+                  :deactivate-label="t('common.deactivate')"
+                  @view="openDetail(row)"
+                  @edit="router.push(`/products/${row.id}`)"
+                  @state-changed="afterWorkflowChange"
+                />
+              </td>
+            </tr>
           </tbody>
         </table>
       </div>
@@ -482,6 +484,19 @@ onMounted(async () => {
       />
     </ListShell>
   </section>
+  <ProductRelationsDialog
+    :open="relationsOpen"
+    :owner="relatedOwner"
+    :products="dialogProducts"
+    :total="dialogRelation?.total ?? 0"
+    :combo-items="dialogRelation?.componentItems ?? []"
+    :loading="dialogRelation?.loading ?? false"
+    :error="relationLoadError"
+    :uoms="uoms"
+    @close="closeRelations"
+    @retry="retryRelations"
+    @view="viewRelatedProduct"
+  />
   <ProductDetailModal
     :open="detailOpen"
     :product="detailProduct"
@@ -533,10 +548,7 @@ onMounted(async () => {
 .master-table tbody tr:last-child td {
   border-bottom: 0;
 }
-.product-link,
-.related-link,
-.more-link,
-.expanded-item {
+.product-link {
   border: 0;
   background: transparent;
   color: #1876a8;
@@ -545,44 +557,6 @@ onMounted(async () => {
 }
 .product-link {
   font-weight: 700;
-}
-.related-preview {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 4px 8px;
-  margin-top: 6px;
-  font-size: 11px;
-}
-.related-label {
-  color: #536b7b;
-  font-weight: 700;
-}
-.related-link,
-.more-link {
-  padding: 0;
-  text-decoration: underline;
-}
-.expanded-row td {
-  background: #f7fafb;
-}
-.expanded-content {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 8px 14px;
-}
-.expanded-item {
-  display: grid;
-  gap: 2px;
-  min-width: 150px;
-  padding: 8px;
-  border: 1px solid #dbe5ea;
-  border-radius: 4px;
-  background: #fff;
-}
-.expanded-item small {
-  color: #536b7b;
 }
 .role-badge {
   display: inline-block;

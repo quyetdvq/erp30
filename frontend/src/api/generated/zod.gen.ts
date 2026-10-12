@@ -401,28 +401,6 @@ export const zOrganizationLabelsResponse = zSuccessResponse.and(z.object({
     data: z.array(zOrganizationLabel).optional()
 }));
 
-export const zProductCreate = z.object({
-    product_code: z.string().max(50).nullish(),
-    sku: z.string().nullish(),
-    barcode: z.string().nullish(),
-    parent_product_id: zBigInt.optional(),
-    product_name: z.string().nullish(),
-    product_child_name: z.string().nullish(),
-    product_group_id: zBigInt.optional(),
-    product_type: z.enum(['STANDARD', 'COMBO']).optional(),
-    base_uom_id: zBigInt.optional(),
-    price: zDecimal.optional(),
-    net_weight_g: zDecimal.optional(),
-    package_gross_weight_g: zDecimal.optional(),
-    package_length_mm: zDecimal.optional(),
-    package_width_mm: zDecimal.optional(),
-    package_height_mm: zDecimal.optional(),
-    description: z.string().optional(),
-    manual_standard_cost: zDecimal.optional(),
-    serial_management_enabled: z.boolean().optional(),
-    status: zBusinessWorkflowStatus.optional()
-});
-
 export const zProductPatch = z.object({
     product_code: z.string().max(50).nullish(),
     sku: z.string().nullish(),
@@ -549,6 +527,32 @@ export const zComboItem = z.object({
 export const zComboItemInput = z.object({
     component_product_id: zBigInt,
     quantity: zDecimal
+});
+
+/**
+ * Optional combo_items are persisted atomically with a new COMBO. This operation requires product.create and product.edit authorization for the initial persisted Workflow State. Failure rolls back the Product.
+ */
+export const zProductCreate = z.object({
+    combo_items: z.array(zComboItemInput).optional(),
+    product_code: z.string().max(50).nullish(),
+    sku: z.string().nullish(),
+    barcode: z.string().nullish(),
+    parent_product_id: zBigInt.optional(),
+    product_name: z.string().nullish(),
+    product_child_name: z.string().nullish(),
+    product_group_id: zBigInt.optional(),
+    product_type: z.enum(['STANDARD', 'COMBO']).optional(),
+    base_uom_id: zBigInt.optional(),
+    price: zDecimal.optional(),
+    net_weight_g: zDecimal.optional(),
+    package_gross_weight_g: zDecimal.optional(),
+    package_length_mm: zDecimal.optional(),
+    package_width_mm: zDecimal.optional(),
+    package_height_mm: zDecimal.optional(),
+    description: z.string().optional(),
+    manual_standard_cost: zDecimal.optional(),
+    serial_management_enabled: z.boolean().optional(),
+    status: zBusinessWorkflowStatus.optional()
 });
 
 export const zComboItemsRequest = z.union([

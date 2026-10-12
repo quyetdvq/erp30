@@ -386,7 +386,14 @@ export type OrganizationLabelsResponse = SuccessResponse & {
     data?: Array<OrganizationLabel>;
 };
 
+/**
+ * Optional combo_items are persisted atomically with a new COMBO. This operation requires product.create and product.edit authorization for the initial persisted Workflow State. Failure rolls back the Product.
+ */
 export type ProductCreate = {
+    /**
+     * Only allowed when product_type is COMBO. DRAFT owner may be composed; referenced components must be ACTIVE.
+     */
+    combo_items?: Array<ComboItemInput>;
     product_code?: string | null;
     sku?: string | null;
     barcode?: string | null;

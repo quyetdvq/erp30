@@ -4,7 +4,7 @@ import { useI18n } from 'vue-i18n'
 import { useRoute, useRouter } from 'vue-router'
 import type {
   ComboItem,
-  ComboItemsRequest,
+  ComboItemInput,
   Product,
   ProductCreate,
   ProductGroup,
@@ -34,6 +34,14 @@ import { reportApiError } from '@/services/errorBoundary'
 import BusinessWorkflowAction from '@/components/lists/BusinessWorkflowAction.vue'
 import { useUnsavedChanges } from '@/composables/useUnsavedChanges'
 import { loadLookupPages } from '@/services/listLookups'
+import {
+  databaseFlagEnabled,
+  productRoleLabel,
+  productUomName,
+  productUsageLabel,
+  selectableProductGroupOptions,
+  selectableProductUomOptions,
+} from '@/services/productPresentation'
 import {
   resolveProductOptions,
   searchProductOptions,
@@ -123,11 +131,9 @@ const role = computed(
 const isParentRole = computed(() => role.value === 'PARENT')
 const canEdit = computed(() => hasBasePermission('product', editing.value ? 'edit' : 'create'))
 const groupOptions = computed(() =>
-  groups.value.map((row) => ({ value: String(row.id), label: `${row.code} - ${row.name}` })),
+  selectableProductGroupOptions(groups.value, form.value.product_group_id),
 )
-const uomOptions = computed(() =>
-  uoms.value.map((row) => ({ value: String(row.id), label: `${row.code} - ${row.name}` })),
-)
+const uomOptions = computed(() => selectableProductUomOptions(uoms.value, form.value.base_uom_id))
 const parentSelectOptions = computed(() =>
   products.value
     .filter((row) => row.id !== id.value && row.id === form.value.parent_product_id)
@@ -141,7 +147,7 @@ const comboSelectOptions = computed(() =>
     .filter((row) => String(row.id) !== id.value)
     .map((row) => ({
       value: String(row.id),
-      label: `${row.full_name} (${row.role})`,
+      label: `${row.full_name} (${productRoleLabel(row.role, t)})`,
       disabled: row.status !== 'ACTIVE' || !row.selectable,
     })),
 )
@@ -164,7 +170,8 @@ async function searchComboProducts(q: string, page: number) {
       .filter((row) => String(row.id) !== id.value)
       .map((row) => ({
         value: String(row.id),
-        label: `${row.full_name} (${row.role})`,
+        label: `${row.full_name} (${productRoleLabel(row.role, t)})`,
+        disabled: row.status !== 'ACTIVE' || !row.selectable,
       })),
     total: response.meta.total,
   }
@@ -188,12 +195,17 @@ async function componentChanged(index: number, value: string): Promise<void> {
   if (value) await hydrateChosenProducts([value])
 }
 const baseUomName = computed(
-  () =>
-    uoms.value.find((row) => String(row.id) === form.value.base_uom_id)?.code ?? t('list.noValue'),
+  () => productUomName(uoms.value, form.value.base_uom_id) ?? t('list.noValue'),
 )
 const parentRow = computed(() =>
   products.value.find((row) => String(row.id) === form.value.parent_product_id),
 )
+function businessStateLabel(code: string | null | undefined): string {
+  if (!code) return t('list.noValue')
+  const key = `status.${code.toLowerCase()}`
+  const translated = t(key)
+  return translated === key ? code : translated
+}
 function textValue(value: string | number | null | undefined): string {
   return value === null || value === undefined ? '' : String(value)
 }
@@ -232,7 +244,7 @@ function resetFromRow(row: Product): void {
     package_length_mm: textValue(row.package_length_mm),
     package_width_mm: textValue(row.package_width_mm),
     package_height_mm: textValue(row.package_height_mm),
-    serial_management_enabled: Boolean(row.serial_management_enabled),
+    serial_management_enabled: databaseFlagEnabled(row.serial_management_enabled),
     description: textValue(row.description),
     status: row.status,
   }
@@ -320,7 +332,7 @@ async function load(): Promise<void> {
 function optionalString(value: string): string | undefined {
   return value === '' ? undefined : value
 }
-function comboPayload(): ComboItemsRequest {
+function comboPayload(): ComboItemInput[] {
   return comboItems.value.map((row) => ({
     component_product_id: row.component_product_id,
     quantity: row.quantity,
@@ -364,7 +376,10 @@ function payload(): ProductCreate | ProductPatch {
     ...(form.value.description ? { description: form.value.description } : {}),
     serial_management_enabled: isCombo.value ? false : form.value.serial_management_enabled,
   }
-  return base
+  // One CREATE request: product + COMBO components are written atomically.
+  return !editing.value && isCombo.value && comboItems.value.length
+    ? { ...base, combo_items: comboPayload() }
+    : base
 }
 function decimalIsPositive(value: string): boolean {
   return /^\d+(?:\.\d+)?$/.test(value) && !/^0+(?:\.0+)?$/.test(value)
@@ -380,6 +395,17 @@ async function save(): Promise<void> {
     validationError.value = t('product.nameRequired')
   else if (!isParentRole.value && !form.value.base_uom_id)
     validationError.value = t('product.baseUomRequired')
+  else if (
+    form.value.product_group_id &&
+    groupOptions.value.find((option) => option.value === form.value.product_group_id)?.disabled !==
+      false
+  )
+    validationError.value = t('product.invalidGroupReference')
+  else if (
+    !isParentRole.value &&
+    uomOptions.value.find((option) => option.value === form.value.base_uom_id)?.disabled !== false
+  )
+    validationError.value = t('product.invalidUomReference')
   else if (!editing.value && isCombo.value && !validateComboItems()) return
   if (validationError.value) return
   busy.value = true
@@ -387,13 +413,6 @@ async function save(): Promise<void> {
   try {
     const saved = await saveProduct(payload(), id.value)
     product.value = saved
-    if (
-      !id.value &&
-      form.value.product_type === 'COMBO' &&
-      hasBasePermission('product', 'edit') &&
-      comboItems.value.length > 0
-    )
-      await replaceProductComboItems(String(saved.id), comboPayload())
     // Save completed: do not ask for discard confirmation on route replacement.
     unsaved.markClean()
     if (!id.value && typeof route.query.return_parent_id === 'string') {
@@ -473,17 +492,17 @@ function addChild(): void {
     })
 }
 function componentName(componentId: string): string {
-  return products.value.find((row) => String(row.id) === componentId)?.full_name ?? componentId
+  return (
+    products.value.find((row) => String(row.id) === componentId)?.full_name ?? t('list.noValue')
+  )
 }
 function componentRole(componentId: string): string {
-  return products.value.find((row) => String(row.id) === componentId)?.role ?? t('list.noValue')
+  const role = products.value.find((row) => String(row.id) === componentId)?.role
+  return role ? productRoleLabel(role, t) : t('list.noValue')
 }
 function componentUom(componentId: string): string {
   const row = products.value.find((item) => String(item.id) === componentId)
-  return (
-    uoms.value.find((item) => String(item.id) === String(row?.base_uom_id))?.code ??
-    t('list.noValue')
-  )
+  return productUomName(uoms.value, row?.base_uom_id) ?? t('list.noValue')
 }
 function addComboItem(): void {
   comboItems.value.push({ id: '', component_product_id: '', quantity: '' })
@@ -616,7 +635,7 @@ watch(
         </div>
       </fieldset>
       <fieldset :disabled="!canEdit || busy">
-        <legend>{{ t('product.packaging') }}</legend>
+        <legend>{{ t('product.package') }}</legend>
         <div class="form-grid">
           <label
             ><span>{{ t('product.netWeight') }}</span
@@ -737,13 +756,10 @@ watch(
               <td>{{ row.full_name }}</td>
               <td>{{ row.sku ?? t('list.noValue') }}</td>
               <td>
-                {{
-                  uoms.find((item) => String(item.id) === String(row.base_uom_id))?.code ??
-                  t('list.noValue')
-                }}
+                {{ productUomName(uoms, row.base_uom_id) ?? t('list.noValue') }}
               </td>
               <td>{{ displayMoney(row.price) }}</td>
-              <td>{{ row.status === 'ACTIVE' ? t('status.active') : t('status.inactive') }}</td>
+              <td>{{ businessStateLabel(row.status) }}</td>
               <td class="table-actions">
                 <button
                   v-if="hasBasePermission('product', 'view')"
@@ -837,16 +853,16 @@ watch(
           <tbody>
             <tr v-for="(row, index) in conversions" :key="row.id || index">
               <td>
-                {{ uoms.find((item) => String(item.id) === row.uom_id)?.code ?? t('list.noValue') }}
+                {{ productUomName(uoms, row.uom_id) ?? t('list.noValue') }}
               </td>
               <td>
-                1 {{ uoms.find((item) => String(item.id) === row.uom_id)?.code ?? '' }} =
+                1 {{ productUomName(uoms, row.uom_id) ?? '' }} =
                 {{ displayQuantity(row.conversion_factor) }} {{ baseUomName }}
               </td>
-              <td>{{ row.usage_type }}</td>
+              <td>{{ productUsageLabel(row.usage_type, t) }}</td>
               <td>{{ displayMoney(row.price) }}</td>
               <td>{{ displayPackage(row) }}</td>
-              <td>{{ row.status === 'ACTIVE' ? t('status.active') : t('status.inactive') }}</td>
+              <td>{{ businessStateLabel(row.status) }}</td>
               <td class="table-actions">
                 <button
                   v-if="hasBasePermission('product', 'edit')"
@@ -894,7 +910,7 @@ watch(
         <div>
           <h2>{{ t('product.comboComponents') }}</h2>
           <p class="field-note">{{ t('product.comboComponentsDescription') }}</p>
-          <p v-if="!editing" class="field-note">{{ t('product.saveBeforeComponents') }}</p>
+          <p v-if="!editing" class="field-note">{{ t('product.atomicComboCreate') }}</p>
         </div>
         <button
           v-if="hasBasePermission('product', editing ? 'edit' : 'create')"
@@ -1015,9 +1031,9 @@ watch(
         ><label
           ><span>{{ t('product.usage') }}</span
           ><select v-model="conversionDraft.usage_type">
-            <option value="PURCHASE">PURCHASE</option>
-            <option value="SALES">SALES</option>
-            <option value="BOTH">BOTH</option>
+            <option value="PURCHASE">{{ t('product.usagePurchase') }}</option>
+            <option value="SALES">{{ t('product.usageSales') }}</option>
+            <option value="BOTH">{{ t('product.usageBoth') }}</option>
           </select></label
         ><label
           ><span>{{ t('product.sellingPrice') }}</span

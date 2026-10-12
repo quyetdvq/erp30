@@ -19,6 +19,7 @@ use App\Infrastructure\Mutation\OperationContext;
 use App\Infrastructure\Time\Clock;
 use App\Modules\Product\Product\ProductRoleService;
 use App\Modules\Product\Uom\ProductUomService;
+use App\Services\ResourceWorkflowStateResolver;
 use CodeIgniter\Database\BaseConnection;
 use CodeIgniter\Database\ConnectionInterface;
 
@@ -435,14 +436,19 @@ final class ComboCompositionService
     }
 
     /** @return array<string,mixed> */
-    private function owner(int $id, bool $requireActive): array
+    private function owner(int $id, bool $requireSelectable): array
     {
         $product = $this->existingProduct($id);
         $role = $this->roles()->getRole($product);
         if ($role !== ProductRoleService::ROLE_COMBO) {
             throw new DomainException(ProductRoleService::ERROR_INVALID_ROLE, ['product_id' => $id, 'role' => $role]);
         }
-        if ($requireActive && ! $this->roles()->isSelectable($product)) {
+        // Legacy (Lifecycle-unbound) products retain their ACTIVE-only
+        // mutation rule. Once bound, any configured Lifecycle State (including
+        // DRAFT) may be edited *if* product.edit PBAC permits that State.
+        // This does not make a DRAFT COMBO selectable for sales or nesting.
+        if ($requireSelectable && (new ResourceWorkflowStateResolver($this->db))->lifecycleId('product') === null
+            && ! $this->roles()->isSelectable($product)) {
             throw new DomainException('INACTIVE_REFERENCE', ['product_id' => $id]);
         }
 

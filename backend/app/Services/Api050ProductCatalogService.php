@@ -273,9 +273,41 @@ final class Api050ProductCatalogService
      */
     public function createProduct(array $payload): array
     {
+        // The COMBO composition belongs to the CREATE operation. A second PUT
+        // after POST previously left an orphaned DRAFT COMBO if edit/PBAC or
+        // domain validation rejected its component set.
+        $hasItems = array_key_exists('combo_items', $payload);
+        $items = $payload['combo_items'] ?? null;
+        unset($payload['combo_items']);
+        if ($hasItems && (! is_array($items) || ! array_is_list($items)
+            || strtoupper((string) ($payload['product_type'] ?? '')) !== 'COMBO')) {
+            throw new DomainException('VALIDATION_ERROR', ['field' => 'combo_items']);
+        }
         $payload = (new InitialCreateStateNormalizer($this->stateResolver()))->normalize('product', $payload);
-        $id = $this->products()->create($payload, $this->operation());
-        return $this->getProduct($id);
+        if (! $hasItems) {
+            $id = $this->products()->create($payload, $this->operation());
+            return $this->getProduct($id);
+        }
+
+        $db = $this->connection();
+        if (! $db instanceof BaseConnection || ! $db->transBegin()) {
+            throw new DomainException('PRODUCT_MUTATION_FAILED', ['operation' => 'combo_create']);
+        }
+        try {
+            $id = $this->products()->create($payload, $this->operation());
+            // Always apply normal product.edit PBAC in the new record's trusted
+            // Initial State. No create->edit privilege escalation is allowed.
+            $this->combos()->replaceItems($id, $items, $this->operation());
+            $created = $this->getProduct($id);
+            if (! $db->transStatus() || ! $db->transCommit()) {
+                throw new DomainException('PRODUCT_MUTATION_FAILED', ['operation' => 'combo_create']);
+            }
+            return $created;
+        } catch (\Throwable $exception) {
+            $db->transRollback();
+            $db->resetTransStatus();
+            throw $exception;
+        }
     }
 
     /** @return array<string,mixed> */
@@ -472,6 +504,11 @@ final class Api050ProductCatalogService
      */
     private function productCodeForApi(array $row): array
     {
+        // Database TINYINT(1) reads are driver-dependent (0, '0', false).
+        // The public OpenAPI contract promises a JSON boolean.
+        if (array_key_exists('serial_management_enabled', $row)) {
+            $row['serial_management_enabled'] = in_array($row['serial_management_enabled'], [true, 1, '1'], true);
+        }
         if (array_key_exists('code', $row)) {
             $row['product_code'] = $row['code'];
             unset($row['code']);

@@ -28,6 +28,12 @@ import {
 import { reportApiError } from '@/services/errorBoundary'
 import { useAuthStore } from '@/stores/auth'
 import {
+  productRoleLabel,
+  productUomName,
+  productUsageLabel,
+  selectableProductUomOptions,
+} from '@/services/productPresentation'
+import {
   resolveProductOptions,
   searchProductOptions,
   type ProductOption,
@@ -156,9 +162,7 @@ const role = computed(() => currentProduct.value?.role)
 const isCombo = computed(() => role.value === 'COMBO')
 const isParent = computed(() => role.value === 'PARENT')
 const baseUomName = computed(
-  () =>
-    props.uoms.find((row) => String(row.id) === String(currentProduct.value?.base_uom_id))?.code ??
-    t('list.noValue'),
+  () => productUomName(props.uoms, currentProduct.value?.base_uom_id) ?? t('list.noValue'),
 )
 const groupName = computed(
   () =>
@@ -170,7 +174,7 @@ const selectedComponentOptions = computed(() =>
     .filter((row) => String(row.id) !== String(currentProduct.value?.id))
     .map((row) => ({
       value: String(row.id),
-      label: `${row.full_name} (${row.role})`,
+      label: `${row.full_name} (${productRoleLabel(row.role, t)})`,
       disabled: row.status !== 'ACTIVE' || !row.selectable,
     })),
 )
@@ -179,7 +183,11 @@ async function searchComboProducts(q: string, page: number) {
   return {
     options: response.data
       .filter((row) => String(row.id) !== String(currentProduct.value?.id))
-      .map((row) => ({ value: String(row.id), label: `${row.full_name} (${row.role})` })),
+      .map((row) => ({
+        value: String(row.id),
+        label: `${row.full_name} (${productRoleLabel(row.role, t)})`,
+        disabled: row.status !== 'ACTIVE' || !row.selectable,
+      })),
     total: response.meta.total,
   }
 }
@@ -207,7 +215,7 @@ async function componentChanged(index: number, value: string): Promise<void> {
   }
 }
 const uomOptions = computed(() =>
-  props.uoms.map((row) => ({ value: String(row.id), label: `${row.code} - ${row.name}` })),
+  selectableProductUomOptions(props.uoms, childForm.value.base_uom_id),
 )
 const tabItems = computed(() => {
   const tabs: Array<{ key: Tab; label: string }> = [
@@ -405,17 +413,15 @@ function findComponent(id: string): ProductOption | Product | undefined {
   )
 }
 function componentName(id: string): string {
-  return findComponent(id)?.full_name ?? id
+  return findComponent(id)?.full_name ?? t('list.noValue')
 }
 function componentRole(id: string): string {
-  return findComponent(id)?.role ?? t('list.noValue')
+  const role = findComponent(id)?.role
+  return role ? productRoleLabel(role, t) : t('list.noValue')
 }
 function componentUom(id: string): string {
   const product = findComponent(id)
-  return (
-    props.uoms.find((row) => String(row.id) === String(product?.base_uom_id))?.code ??
-    t('list.noValue')
-  )
+  return productUomName(props.uoms, product?.base_uom_id) ?? t('list.noValue')
 }
 function addComboItem(): void {
   comboItems.value.push({ id: '', component_product_id: '', quantity: '' })
@@ -486,7 +492,11 @@ watch(
     >
       <header class="detail-header">
         <div>
-          <p class="eyebrow">{{ currentProduct?.role }}</p>
+          <p class="eyebrow">
+            {{
+              currentProduct?.role ? productRoleLabel(currentProduct.role, t) : t('list.noValue')
+            }}
+          </p>
           <h2>{{ currentProduct?.full_name }}</h2>
         </div>
         <button
@@ -525,9 +535,19 @@ watch(
             <dt>{{ t('product.fullName') }}</dt>
             <dd>{{ currentProduct?.full_name }}</dd>
             <dt>{{ t('product.type') }}</dt>
-            <dd>{{ currentProduct?.product_type }}</dd>
+            <dd>
+              {{
+                currentProduct?.product_type === 'COMBO'
+                  ? t('product.combo')
+                  : t('product.standard')
+              }}
+            </dd>
             <dt>{{ t('product.role') }}</dt>
-            <dd>{{ currentProduct?.role }}</dd>
+            <dd>
+              {{
+                currentProduct?.role ? productRoleLabel(currentProduct.role, t) : t('list.noValue')
+              }}
+            </dd>
             <dt>{{ t('product.sku') }}</dt>
             <dd>{{ currentProduct?.sku ?? t('list.noValue') }}</dd>
             <dt>{{ t('product.productGroup') }}</dt>
@@ -650,10 +670,7 @@ watch(
                   </td>
                   <td>{{ row.sku ?? t('list.noValue') }}</td>
                   <td>
-                    {{
-                      props.uoms.find((uom) => String(uom.id) === String(row.base_uom_id))?.code ??
-                      t('list.noValue')
-                    }}
+                    {{ productUomName(props.uoms, row.base_uom_id) ?? t('list.noValue') }}
                   </td>
                   <td>{{ displayMoney(row.price) }}</td>
                   <td>{{ businessStateLabel(row.status) }}</td>
@@ -711,16 +728,13 @@ watch(
               <tbody>
                 <tr v-for="(row, index) in conversions" :key="row.id || index">
                   <td>
-                    {{
-                      props.uoms.find((uom) => String(uom.id) === row.uom_id)?.code ??
-                      t('list.noValue')
-                    }}
+                    {{ productUomName(props.uoms, row.uom_id) ?? t('list.noValue') }}
                   </td>
                   <td>
-                    1 {{ props.uoms.find((uom) => String(uom.id) === row.uom_id)?.code ?? '' }} =
+                    1 {{ productUomName(props.uoms, row.uom_id) ?? '' }} =
                     {{ displayQuantity(row.conversion_factor) }} {{ baseUomName }}
                   </td>
-                  <td>{{ row.usage_type }}</td>
+                  <td>{{ productUsageLabel(row.usage_type, t) }}</td>
                   <td>{{ displayMoney(row.price) }}</td>
                   <td>{{ displayPackage(row) }}</td>
                   <td>{{ row.status === 'ACTIVE' ? t('status.active') : t('status.inactive') }}</td>
@@ -888,9 +902,9 @@ watch(
       ><label
         ><span>{{ t('product.usage') }}</span
         ><select v-model="conversionDraft.usage_type">
-          <option value="PURCHASE">PURCHASE</option>
-          <option value="SALES">SALES</option>
-          <option value="BOTH">BOTH</option>
+          <option value="PURCHASE">{{ t('product.usagePurchase') }}</option>
+          <option value="SALES">{{ t('product.usageSales') }}</option>
+          <option value="BOTH">{{ t('product.usageBoth') }}</option>
         </select></label
       ><label
         ><span>{{ t('product.sellingPrice') }}</span

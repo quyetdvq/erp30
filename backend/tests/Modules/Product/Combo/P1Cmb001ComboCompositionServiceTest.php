@@ -4,10 +4,14 @@ declare(strict_types=1);
 
 use App\Database\Seeds\ResourceActionSeeder;
 use App\Exceptions\DomainException;
+use App\Infrastructure\Mutation\MutationContext;
 use App\Infrastructure\Mutation\OperationContext;
 use App\Infrastructure\Time\EvaluationTime;
+use App\Infrastructure\Time\SystemClock;
+use App\Repositories\LifecycleRepository;
 use App\Modules\Product\Combo\ComboCompositionService;
 use App\Modules\Product\Product\ProductMasterService;
+use App\Services\Api050ProductCatalogService;
 use CodeIgniter\Test\CIUnitTestCase;
 use CodeIgniter\Test\DatabaseTestTrait;
 use Tests\Support\Authorization\EligibleActorFixture;
@@ -50,6 +54,106 @@ final class P1Cmb001ComboCompositionServiceTest extends CIUnitTestCase
 
         $this->assertSame([], $service->replaceItems($owner, [], $operation));
         $this->assertSame(0, (int) $this->db->table('product_combo_items')->where('combo_product_id', $owner)->countAllResults());
+    }
+
+    public function testLifecycleDraftComboCanBeComposedAndCreationIsAtomic(): void
+    {
+        [$operation, $userId, $uomId, $groupId] = $this->fixture(['create', 'view', 'edit']);
+        $this->bindProductLifecycleDraft();
+        $componentId = $this->product('ATOMIC-LEAF', $uomId, $groupId);
+        $application = new Api050ProductCatalogService(
+            db: $this->db,
+            mutationContext: new MutationContext(new SystemClock(), $userId, 'atomic-combo-test', false),
+        );
+        $created = $application->createProduct([
+            'product_code' => 'CMB-ATOMIC-' . uniqid(),
+            'sku' => 'SKU-CMB-ATOMIC-' . uniqid(),
+            'product_name' => 'Draft Combo',
+            'price' => '20.00',
+            'product_type' => 'COMBO',
+            'product_group_id' => $groupId,
+            'base_uom_id' => $uomId,
+            'combo_items' => [['component_product_id' => $componentId, 'quantity' => '2.500000']],
+        ]);
+        $this->assertSame('DRAFT', $created['status']);
+        $this->assertSame('COMBO', $created['role']);
+        $this->assertFalse($created['serial_management_enabled']);
+        $items = (new ComboCompositionService(db: $this->db))->listItems((int) $created['id'], $operation);
+        $this->assertCount(1, $items);
+        $this->assertSame($componentId, (int) $items[0]['component_product_id']);
+
+        $badCode = 'CMB-BAD-' . uniqid();
+        $this->assertDomainCode(fn () => $application->createProduct([
+            'product_code' => $badCode,
+            'sku' => 'SKU-' . $badCode,
+            'product_name' => 'Should roll back',
+            'price' => '20.00',
+            'product_type' => 'COMBO',
+            'base_uom_id' => $uomId,
+            'combo_items' => [['component_product_id' => $componentId, 'quantity' => '0']],
+        ]), 'VALIDATION_ERROR');
+        $this->assertSame(0, (int) $this->db->table('products')->where('code', $badCode)->countAllResults());
+    }
+
+    public function testAtomicComboCreationRollsBackWithoutEditPermission(): void
+    {
+        [$_operation, $userId, $uomId, $groupId] = $this->fixture(['create', 'view']);
+        $this->bindProductLifecycleDraft();
+        $componentId = $this->product('DENIED-LEAF', $uomId, $groupId);
+        $application = new Api050ProductCatalogService(
+            db: $this->db,
+            mutationContext: new MutationContext(new SystemClock(), $userId, 'denied-combo-test', false),
+        );
+        $code = 'CMB-DENIED-' . uniqid();
+        $this->assertDomainCode(fn () => $application->createProduct([
+            'product_code' => $code,
+            'sku' => 'SKU-' . $code,
+            'product_name' => 'Denied Combo',
+            'price' => '20.00',
+            'product_type' => 'COMBO',
+            'base_uom_id' => $uomId,
+            'combo_items' => [['component_product_id' => $componentId, 'quantity' => '1']],
+        ]), ComboCompositionService::ERROR_AUTHORIZATION_DENIED);
+        $this->assertSame(0, (int) $this->db->table('products')->where('code', $code)->countAllResults());
+    }
+
+    private function bindProductLifecycleDraft(): void
+    {
+        $draft = $this->db->table('workflow_states')->where('code', 'DRAFT')->get()->getRowArray();
+        if ($draft === null) {
+            $this->db->table('workflow_states')->insert([
+                'code' => 'DRAFT', 'name' => 'Draft', 'status' => 'ACTIVE',
+                'created_at' => '2026-10-12 00:00:00',
+            ]);
+            $draft = ['id' => $this->db->insertID()];
+        } else {
+            $this->db->table('workflow_states')->where('id', $draft['id'])->update(['status' => 'ACTIVE']);
+        }
+        $repo = new LifecycleRepository($this->db);
+        $lifecycleId = $repo->insertLifecycle([
+            'code' => 'CMB-WF-' . uniqid(), 'name' => 'Draft Combo workflow', 'status' => 'ACTIVE',
+        ]);
+        $repo->insertLifecycleState([
+            'lifecycle_id' => $lifecycleId, 'state_id' => (int) $draft['id'],
+            'sequence' => 1, 'is_initial' => 1, 'is_final' => 0,
+        ]);
+        // ACTIVE component products belong to the same Lifecycle, but new COMBO
+        // products must begin at DRAFT.
+        $active = $this->db->table('workflow_states')->where('code', 'ACTIVE')->get()->getRowArray();
+        if ($active === null) {
+            $this->db->table('workflow_states')->insert([
+                'code' => 'ACTIVE', 'name' => 'Active', 'status' => 'ACTIVE',
+                'created_at' => '2026-10-12 00:00:00',
+            ]);
+            $active = ['id' => $this->db->insertID()];
+        } else {
+            $this->db->table('workflow_states')->where('id', $active['id'])->update(['status' => 'ACTIVE']);
+        }
+        $repo->insertLifecycleState([
+            'lifecycle_id' => $lifecycleId, 'state_id' => (int) $active['id'],
+            'sequence' => 2, 'is_initial' => 0, 'is_final' => 0,
+        ]);
+        $this->db->table('resources')->where('type', 'product')->update(['lifecycle_id' => $lifecycleId]);
     }
 
     public function testValidationRejectsInvalidRolesReferencesSelfDuplicatesAndQuantities(): void

@@ -63,6 +63,29 @@ final class P1Perf007ProductLookupBatchTest extends CIUnitTestCase
         self::assertSame([], $lookup->relationPreview([$parent], [], 2));
     }
 
+    public function testLifecycleDraftAndClosedChildrenCountBeforePreviewLimit(): void
+    {
+        $parent = $this->product('LOOKUP-STATE-PARENT', 'STANDARD', 'ACTIVE', null);
+        $active = $this->product('LOOKUP-STATE-ACTIVE', 'STANDARD', 'ACTIVE', $parent);
+        $draft = $this->product('LOOKUP-STATE-DRAFT', 'STANDARD', 'DRAFT', $parent);
+        $closed = $this->product('LOOKUP-STATE-CLOSED', 'STANDARD', 'CLOSED', $parent);
+
+        $lookup = new ProductLookupRepository($this->db);
+        $authorizedStates = array_map(
+            static fn (string $code): string => strtoupper(bin2hex($code)),
+            ['ACTIVE', 'DRAFT', 'CLOSED'],
+        );
+        $preview = $lookup->relationPreview([$parent], $authorizedStates, 2);
+        self::assertSame([$active, $draft], array_map('intval', array_column($preview, 'product_id')));
+        self::assertSame([3, 3], array_map('intval', array_column($preview, 'total')),
+            'DRAFT and CLOSED must count toward the visible total before LIMIT 2.');
+
+        $restricted = $lookup->relationPreview([$parent], [strtoupper(bin2hex('ACTIVE'))], 2);
+        self::assertSame([$active], array_map('intval', array_column($restricted, 'product_id')));
+        self::assertSame([1], array_map('intval', array_column($restricted, 'total')),
+            'State-denied records must not leak into the total.');
+    }
+
     public function testNewEndpointsKeepOriginalProductCatalogOperationsAndBounds(): void
     {
         $routes = (string) file_get_contents(__DIR__ . '/../../app/Config/Routes.php');
