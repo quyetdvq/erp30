@@ -18,6 +18,7 @@ import {
   NTabs,
   NDropdown,
   type MenuOption,
+  type MenuGroupOption,
 } from 'naive-ui'
 import {
   AddOutline,
@@ -53,6 +54,7 @@ import {
   SearchOutline,
   SettingsOutline,
   ShieldCheckmarkOutline,
+  Star,
   StarOutline,
   SunnyOutline,
   TimeOutline,
@@ -316,41 +318,131 @@ function visibleNavItems(items: NavigationItem[]): NavigationItem[] {
 
 const allowedNavItems = computed(() => visibleNavItems(navItems))
 
-// Reuse the resource icon in Recent / Favorites for known navigation routes.
-function navigationIconForTab(path: string): object {
-  const pathname = path.split(/[?#]/, 1)[0]
-  for (const item of navItems) {
-    if (item.to === pathname) return item.icon
-    const child = item.children?.find((candidate) => candidate.to === pathname)
-    if (child) return child.icon
-  }
-  return InformationCircleOutline
+function flattenNavItems(items: NavigationItem[]): NavigationItem[] {
+  return items.flatMap((item) => (item.children ? flattenNavItems(item.children) : [item]))
+}
+
+const permittedMenuByPath = computed(
+  () => new Map(flattenNavItems(allowedNavItems.value).map((item) => [item.to, item])),
+)
+
+const favoriteItems = computed(() =>
+  workspace.favorites.flatMap((path) => {
+    const item = permittedMenuByPath.value.get(path)
+    return item ? [item] : []
+  }),
+)
+
+const recentItems = computed<NavigationItem[]>(() =>
+  workspace.recent.flatMap((path) => {
+    const destination = router.resolve(path)
+    if (!destination.name || destination.name === 'not-found' || destination.meta.public)
+      return []
+    const menuItem = permittedMenuByPath.value.get(path)
+    if (menuItem) return [menuItem]
+
+    // Detail/profile routes are not sidebar menu entries. Keep only the
+    // explicitly recognized routes and enforce their Base Permission hints.
+    let recentIcon: object
+    if (destination.name === 'products-new' || destination.name === 'products-edit') {
+      if (!hasBasePermissionKey('product.view')) return []
+      recentIcon = CubeOutline
+    } else if (destination.name === 'products-import-job-detail') {
+      if (!hasBasePermissionKey('import_job.view')) return []
+      recentIcon = TimeOutline
+    } else if (destination.name === 'profile') {
+      recentIcon = PersonCircleOutline
+    } else if (destination.name === 'display-preferences') {
+      recentIcon = SettingsOutline
+    } else {
+      return []
+    }
+    const labelKey = destination.meta.labelKey
+    return typeof labelKey === 'string' ? [{ labelKey, to: path, icon: recentIcon }] : []
+  }),
+)
+
+function filterNavItems(items: NavigationItem[], search: string): NavigationItem[] {
+  if (!search) return items
+  return items.flatMap((item) => {
+    if (
+      t(item.labelKey).toLocaleLowerCase().includes(search) ||
+      item.to.toLocaleLowerCase().includes(search)
+    )
+      return [item]
+    const children = item.children ? filterNavItems(item.children, search) : []
+    return children.length ? [{ ...item, children }] : []
+  })
 }
 
 const modeItems = computed(() => {
-  if (activeMode.value === 'favorites' || activeMode.value === 'recent') {
-    const tabItems = workspace.tabs
-      .map((tab) => ({
-        labelKey: tab.labelKey,
-        to: tab.path,
-        icon: navigationIconForTab(tab.path),
-      }))
-      .filter((item) => t(item.labelKey).toLowerCase().includes(menuSearch.value.toLowerCase()))
-    return tabItems.length > 0 ? tabItems : allowedNavItems.value
+  let items: NavigationItem[]
+  switch (activeMode.value) {
+    case 'favorites':
+      items = favoriteItems.value
+      break
+    case 'recent':
+      items = recentItems.value
+      break
+    case 'system':
+      items = allowedNavItems.value.filter((item) => SYSTEM_NAV_PATHS.has(item.to))
+      break
+    case 'organization':
+      items = allowedNavItems.value.filter((item) => ORGANIZATION_NAV_PATHS.has(item.to))
+      break
+    default:
+      items = allowedNavItems.value.filter(
+        (item) => !MAIN_MENU_HIDDEN_PATHS.has(item.to) && !ORGANIZATION_NAV_PATHS.has(item.to),
+      )
   }
-  if (activeMode.value === 'system') {
-    return allowedNavItems.value.filter((item) => SYSTEM_NAV_PATHS.has(item.to))
-  }
-  if (activeMode.value === 'organization') {
-    return allowedNavItems.value.filter((item) => ORGANIZATION_NAV_PATHS.has(item.to))
-  }
-  return allowedNavItems.value.filter(
-    (item) =>
-      !MAIN_MENU_HIDDEN_PATHS.has(item.to) &&
-      !ORGANIZATION_NAV_PATHS.has(item.to) &&
-      t(item.labelKey).toLowerCase().includes(menuSearch.value.toLowerCase()),
-  )
+  return filterNavItems(items, menuSearch.value.trim().toLocaleLowerCase())
 })
+
+const activeModeCount = computed(() => {
+  if (activeMode.value === 'favorites') return favoriteItems.value.length
+  if (activeMode.value === 'recent') return recentItems.value.length
+  return null
+})
+
+const sidebarEmptyMessage = computed(() => {
+  if (menuSearch.value.trim()) return t('shell.noMatchingMenus')
+  if (activeMode.value === 'favorites') return t('shell.emptyFavorites')
+  if (activeMode.value === 'recent') return t('shell.emptyRecent')
+  return t('shell.noAvailableMenus')
+})
+
+function renderFavoriteExtra(option: MenuOption | MenuGroupOption) {
+  if (option.children?.length) return null
+  const path = String(option.key)
+  const item = permittedMenuByPath.value.get(path)
+  if (!item) return null
+  const favorite = workspace.isFavorite(path)
+  const actionLabel = t(favorite ? 'shell.removeFavorite' : 'shell.addFavorite', {
+    name: t(item.labelKey),
+  })
+  return h(
+    NButton,
+    {
+      class: ['sidebar-favorite-toggle', favorite && 'sidebar-favorite-toggle--active'],
+      quaternary: true,
+      circle: true,
+      size: 'tiny',
+      title: actionLabel,
+      'aria-label': actionLabel,
+      'aria-pressed': favorite,
+      onClick: (event: MouseEvent) => {
+        event.stopPropagation()
+        workspace.toggleFavorite(path)
+      },
+      onKeydown: (event: KeyboardEvent) => event.stopPropagation(),
+    },
+    { icon: () => h(NIcon, null, { default: () => h(favorite ? Star : StarOutline) }) },
+  )
+}
+
+function menuNodeProps(option: MenuOption | MenuGroupOption) {
+  return { 'aria-label': typeof option.label === 'string' ? option.label : '' }
+}
 
 function toMenuOption(item: NavigationItem): MenuOption {
   return {
@@ -383,12 +475,24 @@ function tabForRoute(): Omit<WorkspaceTab, 'dirty'> {
 
 watch(
   () => route.fullPath,
-  () => workspace.openTab(tabForRoute()),
+  () => {
+    workspace.openTab(tabForRoute())
+    if (
+      route.name &&
+      route.name !== 'dashboard' &&
+      route.name !== 'not-found' &&
+      typeof route.meta.labelKey === 'string'
+    )
+      workspace.recordRecent(route.path)
+  },
   { immediate: true },
 )
 
 function selectMode(mode: string): void {
-  if (SIDEBAR_MODES.includes(mode as SidebarMode)) workspace.setSidebarMode(mode as SidebarMode)
+  if (SIDEBAR_MODES.includes(mode as SidebarMode)) {
+    if (activeMode.value !== mode) menuSearch.value = ''
+    workspace.setSidebarMode(mode as SidebarMode)
+  }
   if (workspace.sidebarCollapsed) workspace.setSidebarCollapsed(false)
 }
 
@@ -669,19 +773,26 @@ onBeforeUnmount(handleResizeCancel)
               </NButton>
             </div>
             <div v-if="!workspace.sidebarCollapsed && !mobileMenuOpen" class="sider-heading">
-              {{ activeModeLabel }}
+              <span>{{ activeModeLabel }}</span>
+              <span v-if="activeModeCount !== null" class="sider-heading-count">
+                {{ activeModeCount }}
+              </span>
             </div>
             <div v-if="!workspace.sidebarCollapsed" class="sider-menu-scroll">
               <NMenu
+                v-if="menuOptions.length"
                 :value="route.path"
                 :options="menuOptions"
                 :root-indent="12"
                 :indent="14"
+                :render-extra="renderFavoriteExtra"
+                :node-props="menuNodeProps"
                 :collapsed="workspace.sidebarCollapsed"
                 :collapsed-width="72"
                 :collapsed-icon-size="20"
                 @update:value="handleMenuSelect"
               />
+              <p v-else class="sider-empty-state">{{ sidebarEmptyMessage }}</p>
             </div>
             <div v-if="!workspace.sidebarCollapsed && !mobileMenuOpen" class="sider-footer">
               <NIcon><InformationCircleOutline /></NIcon
@@ -944,12 +1055,28 @@ onBeforeUnmount(handleResizeCancel)
   height: 44px;
 }
 .sider-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
   padding: 0 8px;
   color: #53687e;
   font-size: 11px;
   font-weight: 700;
   letter-spacing: 0.06em;
   text-transform: uppercase;
+}
+.sider-heading-count {
+  padding: 1px 6px;
+  border-radius: 9px;
+  background: #edf3f7;
+  color: #37556d;
+  font-variant-numeric: tabular-nums;
+}
+.sider-empty-state {
+  margin: 8px;
+  color: #52687b;
+  font-size: 13px;
+  line-height: 1.6;
 }
 .sider-menu-scroll {
   flex: 1;
@@ -972,6 +1099,19 @@ onBeforeUnmount(handleResizeCancel)
   color: #273e57;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+.sider-menu-scroll :deep(.sidebar-favorite-toggle) {
+  width: 28px;
+  height: 28px;
+  flex-shrink: 0;
+  color: #52687b;
+}
+.sider-menu-scroll :deep(.sidebar-favorite-toggle--active) {
+  color: #066248;
+}
+.sider-menu-scroll :deep(.sidebar-favorite-toggle:hover),
+.sider-menu-scroll :deep(.sidebar-favorite-toggle:focus-visible) {
+  background: #e2f4ea;
 }
 .sider-menu-scroll :deep(.n-menu-item-content--selected .n-menu-item-content-header) {
   color: #066248;

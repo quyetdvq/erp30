@@ -30,9 +30,34 @@ const DEFAULT_PREFERENCES: WorkspacePreferences = {
 const MIN_SIDEBAR_WIDTH = 240
 const MAX_SIDEBAR_WIDTH = 420
 const STORAGE_PREFIX = 'ui.workspace.'
+const FAVORITES_STORAGE_PREFIX = 'ui.sidebar.favorites.'
+const RECENT_STORAGE_PREFIX = 'ui.sidebar.recent.'
+const MAX_FAVORITES = 50
+const MAX_RECENT = 20
 
 function storageKey(userId: string): string {
   return `${STORAGE_PREFIX}${userId}`
+}
+
+// Only internal, canonical route paths may be stored or restored. Query strings,
+// hashes and external URLs are not workspace shortcuts.
+function isCanonicalPath(value: unknown): value is string {
+  return (
+    typeof value === 'string' &&
+    value.length <= 200 &&
+    /^\/(?:[a-zA-Z0-9_-]+(?:\/[a-zA-Z0-9_-]+)*)?$/.test(value)
+  )
+}
+
+function restorePaths(key: string, limit: number): string[] {
+  if (typeof window === 'undefined') return []
+  try {
+    const stored: unknown = JSON.parse(window.localStorage.getItem(key) || 'null')
+    if (!Array.isArray(stored)) return []
+    return [...new Set(stored.filter(isCanonicalPath))].slice(0, limit)
+  } catch {
+    return []
+  }
 }
 
 function normalizePreferences(value: unknown): WorkspacePreferences {
@@ -57,6 +82,8 @@ export const useWorkspaceStore = defineStore('workspace', () => {
   const activeUserId = ref<string | null>(null)
   const preferences = ref<WorkspacePreferences>({ ...DEFAULT_PREFERENCES })
   const tabs = ref<WorkspaceTab[]>([])
+  const favorites = ref<string[]>([])
+  const recent = ref<string[]>([])
   // Non-persistent form instances tracked independently per route/tab.
   const dirtySources = new Map<string, Set<symbol>>()
   const manuallyDirty = new Set<string>()
@@ -89,6 +116,15 @@ export const useWorkspaceStore = defineStore('workspace', () => {
     window.localStorage.setItem(storageKey(activeUserId.value), JSON.stringify(preferences.value))
   }
 
+  function persistPaths(prefix: string, paths: string[]): void {
+    if (!activeUserId.value || typeof window === 'undefined') return
+    try {
+      window.localStorage.setItem(`${prefix}${activeUserId.value}`, JSON.stringify(paths))
+    } catch {
+      // Preferences still work for the current session if browser storage is blocked.
+    }
+  }
+
   function activateUser(userId: number | string): void {
     const normalized = String(userId).trim()
     if (!normalized) return
@@ -105,6 +141,8 @@ export const useWorkspaceStore = defineStore('workspace', () => {
     }
     preferences.value = normalizePreferences(stored)
     tabs.value = []
+    favorites.value = restorePaths(`${FAVORITES_STORAGE_PREFIX}${normalized}`, MAX_FAVORITES)
+    recent.value = restorePaths(`${RECENT_STORAGE_PREFIX}${normalized}`, MAX_RECENT)
   }
 
   function clearSession(): void {
@@ -113,6 +151,29 @@ export const useWorkspaceStore = defineStore('workspace', () => {
     activeUserId.value = null
     preferences.value = { ...DEFAULT_PREFERENCES }
     tabs.value = []
+    favorites.value = []
+    recent.value = []
+  }
+
+  function isFavorite(path: string): boolean {
+    return favorites.value.includes(path)
+  }
+
+  function toggleFavorite(path: string): void {
+    if (!activeUserId.value || !isCanonicalPath(path)) return
+    favorites.value = isFavorite(path)
+      ? favorites.value.filter((candidate) => candidate !== path)
+      : [path, ...favorites.value].slice(0, MAX_FAVORITES)
+    persistPaths(FAVORITES_STORAGE_PREFIX, favorites.value)
+  }
+
+  function recordRecent(path: string): void {
+    if (!activeUserId.value || !isCanonicalPath(path) || path === '/') return
+    recent.value = [path, ...recent.value.filter((candidate) => candidate !== path)].slice(
+      0,
+      MAX_RECENT,
+    )
+    persistPaths(RECENT_STORAGE_PREFIX, recent.value)
   }
 
   function setSidebarMode(mode: SidebarMode): void {
@@ -181,6 +242,8 @@ export const useWorkspaceStore = defineStore('workspace', () => {
     activeUserId,
     preferences,
     tabs,
+    favorites,
+    recent,
     sidebarMode,
     sidebarCollapsed,
     sidebarWidth,
@@ -191,6 +254,9 @@ export const useWorkspaceStore = defineStore('workspace', () => {
     setSidebarCollapsed,
     setSidebarWidth,
     setThemeMode,
+    isFavorite,
+    toggleFavorite,
+    recordRecent,
     openTab,
     markDirty,
     markDirtySource,

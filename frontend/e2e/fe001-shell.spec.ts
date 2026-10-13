@@ -9,7 +9,10 @@ test.beforeEach(async ({ page }) => {
 
 const { vi, en } = messages
 
-async function mockAuthenticatedSession(page: Page): Promise<void> {
+async function mockAuthenticatedSession(
+  page: Page,
+  excludedPermissions: string[] = [],
+): Promise<void> {
   // Shell tests still mount OrganizationsView; never let its background GET
   // escape to a real API and invalidate the mocked user session.
   await page.route('**/api/v1/organizations/tree**', (route) =>
@@ -48,7 +51,7 @@ async function mockAuthenticatedSession(page: Page): Promise<void> {
               'workflow_state.view',
               'lifecycle.view',
               'product.view',
-            ],
+            ].filter((permission) => !excludedPermissions.includes(permission)),
           },
         },
       }),
@@ -132,6 +135,89 @@ test('shell keeps organization structure routes in the Organization mode', async
   await expect(menu.getByRole('menuitem', { name: vi.nav.authorizationLogs })).toBeVisible()
   await expect(menu.getByRole('menuitem', { name: vi.nav.workflowStates })).toBeVisible()
   await expect(menu.getByRole('menuitem', { name: vi.nav.lifecycles })).toBeVisible()
+})
+
+test('Favorites only shows explicitly starred menus, persists across reload and never navigates when starring', async ({
+  page,
+}) => {
+  await mockAuthenticatedSession(page)
+  await page.goto('/organizations')
+  const sidebar = page.locator('.shell-sider')
+  await page.getByRole('button', { name: vi.shell.modes.favorites, exact: true }).click()
+  await expect(sidebar.getByText(vi.shell.emptyFavorites)).toBeVisible()
+  await expect(sidebar.locator('.n-menu')).toHaveCount(0)
+
+  await page.getByRole('button', { name: vi.shell.modes.organization }).click()
+  await page
+    .getByRole('button', { name: vi.shell.addFavorite.replace('{name}', vi.nav.wards) })
+    .click()
+  await expect(page).toHaveURL(/\/organizations$/)
+
+  await page.getByRole('button', { name: vi.shell.modes.menu }).click()
+  await page
+    .getByRole('button', { name: vi.shell.addFavorite.replace('{name}', vi.nav.dashboard) })
+    .click()
+  await expect(page).toHaveURL(/\/organizations$/)
+
+  await page.getByRole('button', { name: vi.shell.modes.favorites, exact: true }).click()
+  await expect(sidebar.getByRole('menuitem', { name: vi.nav.wards, exact: true })).toBeVisible()
+  await expect(sidebar.getByRole('menuitem', { name: vi.nav.dashboard, exact: true })).toBeVisible()
+  await expect(sidebar.getByRole('menuitem', { name: vi.nav.organizations })).toHaveCount(0)
+
+  // Clicking the label targets navigation, not the nested favorite-toggle button.
+  await sidebar
+    .getByRole('menuitem', { name: vi.nav.dashboard, exact: true })
+    .getByText(vi.nav.dashboard, { exact: true })
+    .click()
+  await expect(page).toHaveURL(/\/$/)
+  await page.reload()
+  await expect(
+    page.getByRole('button', { name: vi.shell.modes.favorites, exact: true }),
+  ).toHaveAttribute('aria-pressed', 'true')
+  await expect(sidebar.getByRole('menuitem', { name: vi.nav.wards, exact: true })).toBeVisible()
+
+  await page
+    .getByRole('button', { name: vi.shell.removeFavorite.replace('{name}', vi.nav.wards) })
+    .click()
+  await expect(sidebar.getByRole('menuitem', { name: vi.nav.wards })).toHaveCount(0)
+  await page
+    .getByRole('button', { name: vi.shell.removeFavorite.replace('{name}', vi.nav.dashboard) })
+    .click()
+  await expect(sidebar.getByText(vi.shell.emptyFavorites)).toBeVisible()
+})
+
+test('Recent is visited history, not a duplicate Favorites/menu list', async ({ page }) => {
+  await mockAuthenticatedSession(page)
+  await page.goto('/organizations')
+  const sidebar = page.locator('.shell-sider')
+  await page.getByRole('button', { name: vi.shell.modes.recent }).click()
+  await expect(sidebar.getByRole('menuitem', { name: vi.nav.organizations })).toBeVisible()
+  await expect(sidebar.getByRole('menuitem', { name: vi.nav.wards })).toHaveCount(0)
+
+  await page.goto('/profile')
+  await expect(sidebar.getByRole('menuitem', { name: vi.shell.profile, exact: true })).toBeVisible()
+  await expect(sidebar.getByRole('menuitem', { name: vi.nav.organizations })).toBeVisible()
+  await expect(sidebar.locator('.n-menu-item')).toHaveCount(2)
+
+  await page.reload()
+  await expect(sidebar.locator('.n-menu-item')).toHaveCount(2)
+  await page.getByRole('button', { name: vi.shell.modes.favorites, exact: true }).click()
+  await expect(sidebar.getByText(vi.shell.emptyFavorites)).toBeVisible()
+})
+
+test('Favorites cannot reveal routes after Base Permission is revoked', async ({ page }) => {
+  await page.addInitScript(() => {
+    localStorage.setItem(
+      'ui.sidebar.favorites.7',
+      JSON.stringify(['/security/policies', '/organizations']),
+    )
+  })
+  await mockAuthenticatedSession(page, ['policy.view'])
+  await page.goto('/organizations')
+  await page.getByRole('button', { name: vi.shell.modes.favorites, exact: true }).click()
+  const sidebar = page.locator('.shell-sider')
+  await expect(sidebar.getByRole('menuitem', { name: vi.nav.organizations })).toBeVisible()
+  await expect(sidebar.getByRole('menuitem', { name: vi.nav.policies })).toHaveCount(0)
 })
 
 test('removed menu routes resolve to the not-found boundary', async ({ page }) => {
