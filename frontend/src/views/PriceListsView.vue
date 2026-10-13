@@ -538,7 +538,7 @@ onMounted(() => void load())
           <NIcon :size="20"> <Refresh /> </NIcon>
           {{ t('common.cancel') }}
         </button>
-        <button type="submit" class="primary-button" :disabled="busy || !organizationLookupReady">
+        <button type="submit" form="create-pricing-list" class="primary-button" :disabled="busy || !organizationLookupReady">
            <NIcon :size="20"> <SaveOutline /> </NIcon>
           {{ busy ? t('common.saving') : t('common.save') }}
         </button>

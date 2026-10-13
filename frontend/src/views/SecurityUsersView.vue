@@ -695,7 +695,7 @@ onMounted(() => void load())
 .security-detail-heading small {
   display: block;
   margin-top: 5px;
-  color: #536b7b;
+  color: #354f60;
 }
 .detail-heading-actions,
 .detail-actions {
