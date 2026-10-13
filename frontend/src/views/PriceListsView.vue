@@ -437,203 +437,123 @@ onMounted(() => void load())
       <h1>{{ t('pricing.title') }}</h1>
       <p>{{ t('pricing.description') }}</p>
     </div>
-    <button
-      v-if="hasBasePermission('price_list', 'create')"
-      type="button"
-      class="primary-button"
-      @click="openCreate"
-    >
+    <button v-if="hasBasePermission('price_list', 'create')" type="button" class="primary-button" @click="openCreate">
       {{ t('common.create') }}
     </button>
   </div>
   <section class="content-panel pricing-panel">
     <div class="pricing-query-toolbar">
-      <ListQueryControls
-        :model-value="state.query"
-        :show-page-size="false"
-        :filters="statusFilters"
-        @apply="applyQuery"
-        @reset="resetQuery"
-      />
-      <button
-        type="button"
-        class="secondary-button pricing-refresh"
-        :disabled="listBusy"
-        :aria-label="t('common.refresh')"
-        @click="void refresh()"
-      >
+      <ListQueryControls :model-value="state.query" :show-page-size="false" :filters="statusFilters" @apply="applyQuery"
+        @reset="resetQuery" />
+      <button type="button" class="secondary-button pricing-refresh" :disabled="listBusy"
+        :aria-label="t('common.refresh')" @click="void refresh()">
         <NIcon :component="RefreshOutline" aria-hidden="true" />
         {{ t('common.refresh') }}
       </button>
     </div>
-    <ListPagination
-      :page="state.query.page"
-      :page-size="state.query.page_size"
-      :total="state.total.value"
-      :disabled="listBusy"
-      :aria-label="t('pricing.topPagination')"
-      @update:page="
+    <ListPagination :page="state.query.page" :page-size="state.query.page_size" :total="state.total.value"
+      :disabled="listBusy" :aria-label="t('pricing.topPagination')" @update:page="
         (value) => {
           state.setPage(value)
           void load()
         }
-      "
-      @update:page-size="
+      " @update:page-size="
         (value) => {
           state.setPageSize(value)
           void load()
         }
-      "
-    />
-    <ListShell
-      :initial-loading="state.isInitialLoading.value"
-      :refreshing="state.isBackgroundRefreshing.value"
-      :has-data="state.queryState.hasData.value"
-      :empty-dataset="state.isEmptyDataset.value"
-      :empty-filtered-result="state.isEmptyFilteredResult.value"
-      :error="state.queryState.error.value"
-    >
-      <ListTable
-        :rows="state.rows.value"
-        :columns="columns"
-        :sort="state.query.sort"
-        :busy="state.isBackgroundRefreshing.value"
-      >
+      " />
+    <ListShell :initial-loading="state.isInitialLoading.value" :refreshing="state.isBackgroundRefreshing.value"
+      :has-data="state.queryState.hasData.value" :empty-dataset="state.isEmptyDataset.value"
+      :empty-filtered-result="state.isEmptyFilteredResult.value" :error="state.queryState.error.value">
+      <ListTable :rows="state.rows.value" :columns="columns" :sort="state.query.sort"
+        :busy="state.isBackgroundRefreshing.value">
         <template #cell-organization_id="{ row }">{{
           organizationName(row.organization_id)
-        }}</template>
+          }}</template>
         <template #cell-status="{ row }">
           <TableStatus :status="row.status" />
         </template>
         <template #cell-actions="{ row }">
-          <TableRowActions
-            :active="row.status === 'ACTIVE'"
-            :state-target-id="String(row.id)"
-            :busy="busy"
-            :show-view="hasBasePermission('price_list', 'view')"
-            :show-edit="hasBasePermission('price_list', 'edit')"
-            :show-toggle="hasBasePermission('price_list', 'setstate')"
-            view-permission="price_list.view"
-            edit-permission="price_list.edit"
-            toggle-permission="price_list.setstate"
-            :view-label="t('common.view')"
-            :edit-label="t('common.edit')"
-            :activate-label="t('common.activate')"
-            :deactivate-label="t('common.deactivate')"
-            @view="openDetail(row)"
-            @edit="openEdit(row)"
-            @state-changed="afterWorkflowChange"
-          />
+          <TableRowActions :active="row.status === 'ACTIVE'" :state-target-id="String(row.id)" :busy="busy"
+            :show-view="hasBasePermission('price_list', 'view')" :show-edit="hasBasePermission('price_list', 'edit')"
+            :show-toggle="hasBasePermission('price_list', 'setstate')" view-permission="price_list.view"
+            edit-permission="price_list.edit" toggle-permission="price_list.setstate" :view-label="t('common.view')"
+            :edit-label="t('common.edit')" :activate-label="t('common.activate')"
+            :deactivate-label="t('common.deactivate')" @view="openDetail(row)" @edit="openEdit(row)"
+            @state-changed="afterWorkflowChange" />
         </template>
       </ListTable>
-      <ListPagination
-        :page="state.query.page"
-        :page-size="state.query.page_size"
-        :total="state.total.value"
-        :disabled="listBusy"
-        :aria-label="t('pricing.bottomPagination')"
-        @update:page="
+      <ListPagination :page="state.query.page" :page-size="state.query.page_size" :total="state.total.value"
+        :disabled="listBusy" :aria-label="t('pricing.bottomPagination')" @update:page="
           (value) => {
             state.setPage(value)
             void load()
           }
-        "
-        @update:page-size="
+        " @update:page-size="
           (value) => {
             state.setPageSize(value)
             void load()
           }
-        "
-      />
+        " />
     </ListShell>
   </section>
 
   <div v-if="modalOpen" class="modal-backdrop">
     <section class="modal-card" role="dialog" aria-modal="true" :aria-label="t('pricing.form')">
       <header class="modal-card__header">
-        <h2>
+        <h2 class="modal-card-title">
           {{ editingId ? t('common.edit') : t('common.create') }} {{ t('pricing.priceList') }}
         </h2>
-        <button
-          type="button"
-          class="icon-button"
-          :aria-label="t('common.close')"
-          @click="closeForm"
-        >
-          <NIcon :component="CloseOutline" aria-hidden="true" />
+        <button type="button" class="modal-card-button-close" :aria-label="t('common.close')" @click="closeForm">
         </button>
       </header>
-      <form class="modal-card__body" @submit.prevent="save">
-        <label
-          ><span>{{ t('pricing.code') }}</span
-          ><input v-model="form.code" required
-        /></label>
-        <label
-          ><span>{{ t('pricing.name') }}</span
-          ><input v-model="form.name" required
-        /></label>
+      <form class="modal-card__body" id="create-pricing-list" @submit.prevent="save">
+        <label><span>{{ t('pricing.code') }}</span><input v-model="form.code" required /></label>
+        <label><span>{{ t('pricing.name') }}</span><input v-model="form.name" required /></label>
         <label>
           <span>{{ t('pricing.organizationScope') }}</span>
-          <SearchableSelect
-            :model-value="form.organization_id"
-            :options="organizationOptions"
-            :aria-label="t('pricing.organizationScope')"
-            @update:model-value="
+          <SearchableSelect :model-value="form.organization_id" :options="organizationOptions"
+            :aria-label="t('pricing.organizationScope')" @update:model-value="
               (value) => (form.organization_id = typeof value === 'string' ? value : '')
-            "
-          />
+            " />
         </label>
-        <label
-          ><span>{{ t('pricing.effectiveFrom') }}</span
-          ><input v-model="form.effective_from" type="datetime-local" required
-        /></label>
-        <label
-          ><span>{{ t('pricing.effectiveTo') }}</span
-          ><input v-model="form.effective_to" type="datetime-local"
-        /></label>
-        <label
-          ><span>{{ t('pricing.priority') }}</span
-          ><input v-model="form.priority" type="number" min="0" step="1" required
-        /></label>
+        <label><span>{{ t('pricing.effectiveFrom') }}</span><input v-model="form.effective_from" type="datetime-local"
+            required /></label>
+        <label><span>{{ t('pricing.effectiveTo') }}</span><input v-model="form.effective_to"
+            type="datetime-local" /></label>
+        <label><span>{{ t('pricing.priority') }}</span><input v-model="form.priority" type="number" min="0" step="1"
+            required /></label>
         <p v-if="!editingId" class="workflow-initial-note" role="note">
           {{ t('workflow.initialManaged') }}
           <strong v-if="workflowStates.initial.value">{{ workflowStates.initial.value }}</strong>
         </p>
-        <label
-          ><span>{{ t('pricing.descriptionField') }}</span
-          ><textarea v-model="form.description" rows="3" />
+        <label><span>{{ t('pricing.descriptionField') }}</span><textarea v-model="form.description" rows="3" />
         </label>
         <p v-if="error" class="inline-error" role="alert">{{ t('pricing.requestError') }}</p>
-        <footer class="modal-card__footer">
-          <button type="button" class="secondary-button" @click="closeForm">
-            {{ t('common.cancel') }}
-          </button>
-          <button type="submit" class="primary-button" :disabled="busy || !organizationLookupReady">
-            {{ busy ? t('common.saving') : t('common.save') }}
-          </button>
-        </footer>
+
       </form>
+      <footer class="modal-card__footer">
+        <button type="button" class="secondary-button" for="create-pricing-list" @click="closeForm">
+          <NIcon :size="20"> <Refresh /> </NIcon>
+          {{ t('common.cancel') }}
+        </button>
+        <button type="submit" class="primary-button" :disabled="busy || !organizationLookupReady">
+           <NIcon :size="20"> <SaveOutline /> </NIcon>
+          {{ busy ? t('common.saving') : t('common.save') }}
+        </button>
+      </footer>
     </section>
   </div>
 
   <div v-if="detailOpen && detailRow" class="modal-backdrop">
-    <section
-      class="modal-card price-items-modal"
-      role="dialog"
-      aria-modal="true"
-      :aria-label="t('pricing.items')"
-    >
+    <section class="modal-card price-items-modal" role="dialog" aria-modal="true" :aria-label="t('pricing.items')">
       <header class="modal-card__header">
         <div>
           <p class="eyebrow">{{ detailRow.code }}</p>
           <h2>{{ detailRow.name }}</h2>
         </div>
-        <button
-          type="button"
-          class="icon-button"
-          :aria-label="t('common.close')"
-          @click="closeDetail"
-        >
+        <button type="button" class="icon-button" :aria-label="t('common.close')" @click="closeDetail">
           <NIcon :component="CloseOutline" aria-hidden="true" />
         </button>
       </header>
@@ -654,17 +574,15 @@ onMounted(() => void load())
           <dt>{{ t('pricing.priority') }}</dt>
           <dd>{{ detailRow.priority }}</dd>
           <dt>{{ t('pricing.status') }}</dt>
-          <dd><TableStatus :status="detailRow.status" /></dd>
+          <dd>
+            <TableStatus :status="detailRow.status" />
+          </dd>
         </dl>
         <section class="items-section">
           <header class="section-header">
             <h3>{{ t('pricing.items') }}</h3>
-            <button
-              v-if="hasBasePermission('price_list', 'edit')"
-              type="button"
-              class="secondary-button"
-              @click="addItem"
-            >
+            <button v-if="hasBasePermission('price_list', 'edit')" type="button" class="secondary-button"
+              @click="addItem">
               {{ t('pricing.addItem') }}
             </button>
           </header>
@@ -684,40 +602,23 @@ onMounted(() => void load())
               <tbody>
                 <tr v-for="(item, index) in itemRows" :key="`${item.product_id}-${index}`">
                   <td>
-                    <RemoteSearchableSelect
-                      :model-value="item.product_id"
-                      :selected-options="selectedProductOptions"
-                      :search="searchPriceListProducts"
-                      :aria-label="t('pricing.product')"
-                      @update:model-value="(value) => void productChanged(index, value)"
-                    />
+                    <RemoteSearchableSelect :model-value="item.product_id" :selected-options="selectedProductOptions"
+                      :search="searchPriceListProducts" :aria-label="t('pricing.product')"
+                      @update:model-value="(value) => void productChanged(index, value)" />
                   </td>
                   <td>
-                    <SearchableSelect
-                      :model-value="item.uom_id"
-                      :options="optionsForProduct(item.product_id)"
-                      :aria-label="t('pricing.uom')"
-                      @update:model-value="
+                    <SearchableSelect :model-value="item.uom_id" :options="optionsForProduct(item.product_id)"
+                      :aria-label="t('pricing.uom')" @update:model-value="
                         (value) => (item.uom_id = typeof value === 'string' ? value : '')
-                      "
-                    />
+                      " />
                   </td>
                   <td>
-                    <DecimalInput
-                      v-model="item.price"
-                      kind="money"
-                      :max-decimals="2"
-                      :aria-label="t('pricing.price')"
-                    />
+                    <DecimalInput v-model="item.price" kind="money" :max-decimals="2"
+                      :aria-label="t('pricing.price')" />
                   </td>
                   <td>
-                    <button
-                      v-if="hasBasePermission('price_list', 'edit')"
-                      type="button"
-                      class="icon-button danger"
-                      :aria-label="t('common.delete')"
-                      @click="removeItem(index)"
-                    >
+                    <button v-if="hasBasePermission('price_list', 'edit')" type="button" class="icon-button danger"
+                      :aria-label="t('common.delete')" @click="removeItem(index)">
                       <NIcon :component="TrashOutline" aria-hidden="true" />
                     </button>
                   </td>
@@ -728,19 +629,16 @@ onMounted(() => void load())
               </tbody>
             </table>
           </div>
-          <button
-            v-if="hasBasePermission('price_list', 'edit')"
-            type="button"
-            class="primary-button"
-            :disabled="itemBusy || !itemLookupsReady"
-            @click="saveItems"
-          >
+          <button v-if="hasBasePermission('price_list', 'edit')" type="button" class="primary-button"
+            :disabled="itemBusy || !itemLookupsReady" @click="saveItems">
+             <NIcon :size="20"> <SaveOutline /> </NIcon>
             {{ itemBusy ? t('common.saving') : t('common.save') }}
           </button>
         </section>
       </div>
       <footer class="modal-card__footer">
         <button type="button" class="secondary-button" @click="closeDetail">
+          <NIcon :size="20"> <Refresh /> </NIcon>
           {{ t('common.close') }}
         </button>
       </footer>
@@ -754,26 +652,31 @@ onMounted(() => void load())
   gap: 14px;
   padding: 18px 20px 20px;
 }
+
 .pricing-query-toolbar {
   display: flex;
   align-items: end;
   gap: 10px;
   flex-wrap: wrap;
 }
+
 .pricing-query-toolbar :deep(.list-query-controls) {
   flex: 1 1 auto;
 }
+
 .pricing-refresh {
   display: inline-flex;
   align-items: center;
   gap: 6px;
   white-space: nowrap;
 }
+
 .inline-error {
   margin: 0;
   color: #b64444;
   font-size: 12px;
 }
+
 .modal-backdrop {
   position: fixed;
   inset: 0;
@@ -783,6 +686,7 @@ onMounted(() => void load())
   padding: 20px;
   background: rgb(18 38 54 / 45%);
 }
+
 .modal-card {
   width: min(100%, 680px);
   max-height: calc(100vh - 40px);
@@ -791,18 +695,9 @@ onMounted(() => void load())
   background: #fff;
   box-shadow: 0 20px 60px rgb(18 42 62 / 24%);
 }
-.modal-card__header,
-.modal-card__footer {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-  padding: 16px 22px;
-  border-bottom: 1px solid #e4ebef;
-}
-.modal-card__header h2 {
-  margin: 0;
-}
+
+
+
 .modal-card__body {
   display: grid;
   gap: 12px;
@@ -810,6 +705,7 @@ onMounted(() => void load())
   overflow: auto;
   padding: 22px;
 }
+
 .modal-card__body label {
   display: grid;
   gap: 5px;
@@ -817,6 +713,7 @@ onMounted(() => void load())
   font-size: 12px;
   font-weight: 600;
 }
+
 .modal-card__body input,
 .modal-card__body select,
 .modal-card__body textarea {
@@ -827,92 +724,87 @@ onMounted(() => void load())
   color: #183b57;
   font: inherit;
 }
-.modal-card__footer {
-  justify-content: flex-end;
-  margin: 0;
-  border-top: 1px solid #e4ebef;
-  border-bottom: 0;
-}
-.icon-button {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 32px;
-  height: 32px;
-  padding: 0;
-  border: 0;
-  background: transparent;
-  color: #536b7b;
-  cursor: pointer;
-}
-.icon-button:hover,
-.icon-button:focus-visible {
-  color: #1876a8;
-}
+
+
+
 .price-items-modal {
   width: min(1060px, 100%);
   max-height: calc(100vh - 36px);
 }
+
 .price-items-modal .modal-card__body {
   max-height: calc(100vh - 160px);
 }
+
 .eyebrow {
   margin: 0 0 3px;
   color: #1876a8;
   font-size: 11px;
   font-weight: 700;
 }
-.eyebrow + h2 {
+
+.eyebrow+h2 {
   margin: 0;
 }
+
 .detail-grid {
   display: grid;
   grid-template-columns: minmax(150px, 0.35fr) minmax(0, 1fr);
   margin: 0;
 }
+
 .detail-grid dt,
 .detail-grid dd {
   margin: 0;
   padding: 8px 0;
   border-bottom: 1px solid #edf2f4;
 }
+
 .detail-grid dt {
   color: #536b7b;
   font-size: 12px;
   font-weight: 700;
 }
+
 .detail-grid dd {
   overflow-wrap: anywhere;
 }
+
 .items-section {
   display: grid;
   gap: 12px;
 }
+
 .section-header {
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 12px;
 }
+
 .section-header h3 {
   margin: 0;
 }
+
 .field-note {
   margin: 0;
   color: #536b7b;
   font-size: 12px;
 }
+
 .table-wrap {
   overflow-x: auto;
   border: 1px solid #dbe5ea;
   border-radius: 6px;
 }
+
 .detail-table {
   width: 100%;
   min-width: 760px;
   border-collapse: collapse;
   font-size: 13px;
 }
+
 .detail-table th,
 .detail-table td {
   padding: 9px 10px;
@@ -920,11 +812,13 @@ onMounted(() => void load())
   text-align: start;
   vertical-align: middle;
 }
+
 .detail-table th {
   background: #f7fafb;
   color: #536b7b;
   font-size: 12px;
 }
+
 .detail-table input {
   min-height: 34px;
   width: 100%;
@@ -932,6 +826,7 @@ onMounted(() => void load())
   border-radius: 4px;
   padding: 7px 9px;
 }
+
 .danger {
   color: #b64444;
 }

@@ -22,20 +22,37 @@ import {
 import {
   AddOutline,
   AlertCircleOutline,
+  BarcodeOutline,
+  BriefcaseOutline,
   BusinessOutline,
   ChevronBackOutline,
   ChevronDownOutline,
   ChevronForwardOutline,
   CloseOutline,
+  CloudUploadOutline,
+  CubeOutline,
+  FlagOutline,
+  FolderOpenOutline,
   HomeOutline,
+  IdCardOutline,
   InformationCircleOutline,
+  LayersOutline,
+  LocationOutline,
+  MapOutline,
   MenuOutline,
   MoonOutline,
   NotificationsOutline,
+  OptionsOutline,
+  PeopleCircleOutline,
   PeopleOutline,
   PersonCircleOutline,
+  PricetagsOutline,
+  ReaderOutline,
+  RepeatOutline,
+  ScaleOutline,
   SearchOutline,
   SettingsOutline,
+  ShieldCheckmarkOutline,
   StarOutline,
   SunnyOutline,
   TimeOutline,
@@ -126,13 +143,13 @@ const navItems: NavigationItem[] = [
   {
     labelKey: 'nav.locations',
     to: '/settings/locations/provinces',
-    icon: BusinessOutline,
+    icon: MapOutline,
     permission: 'province.view',
   },
   {
     labelKey: 'nav.wards',
     to: '/settings/locations/wards',
-    icon: BusinessOutline,
+    icon: LocationOutline,
     permission: 'ward.view',
   },
   {
@@ -144,108 +161,108 @@ const navItems: NavigationItem[] = [
   {
     labelKey: 'nav.positions',
     to: '/people/positions',
-    icon: PeopleOutline,
+    icon: BriefcaseOutline,
     permission: 'position.view',
   },
   {
     labelKey: 'nav.employees',
     to: '/people/employees',
-    icon: PersonCircleOutline,
+    icon: IdCardOutline,
     permission: 'employee.view',
   },
   {
     labelKey: 'nav.displaySettings',
     to: '/system/display-settings',
-    icon: SettingsOutline,
+    icon: OptionsOutline,
     permission: 'display_setting.view',
   },
   {
     labelKey: 'nav.securityUsers',
     to: '/security/users',
-    icon: SettingsOutline,
+    icon: PersonCircleOutline,
     permission: 'user.view',
   },
   {
     labelKey: 'nav.authorizationGroups',
     to: '/security/authorization-groups',
-    icon: PeopleOutline,
+    icon: PeopleCircleOutline,
     permission: 'authorization_group.view',
   },
   {
     labelKey: 'nav.resources',
     to: '/security/resources',
-    icon: SettingsOutline,
+    icon: LayersOutline,
     permission: 'resource.view',
   },
   {
     labelKey: 'nav.policies',
     to: '/security/policies',
-    icon: SettingsOutline,
+    icon: ShieldCheckmarkOutline,
     permission: 'policy.view',
   },
   {
     labelKey: 'nav.authorizationLogs',
     to: '/security/authorization-logs',
-    icon: TimeOutline,
+    icon: ReaderOutline,
     permission: 'authorization_log.view',
   },
   {
     labelKey: 'nav.workflowStates',
     to: '/configuration/workflow-states',
-    icon: TimeOutline,
+    icon: FlagOutline,
     permission: 'workflow_state.view',
   },
   {
     labelKey: 'nav.lifecycles',
     to: '/configuration/lifecycles',
-    icon: TimeOutline,
+    icon: RepeatOutline,
     permission: 'lifecycle.view',
   },
   {
     labelKey: 'nav.autoNumbering',
     to: '/configuration/auto-numbering',
-    icon: SettingsOutline,
+    icon: BarcodeOutline,
     permission: 'resource.configure_numbering',
   },
   {
     labelKey: 'nav.products',
     to: '/products',
-    icon: BusinessOutline,
+    icon: CubeOutline,
     children: [
       {
         labelKey: 'nav.productGroups',
         to: '/products/groups',
-        icon: BusinessOutline,
+        icon: FolderOpenOutline,
         permission: 'product_group.view',
       },
       {
         labelKey: 'nav.products',
         to: '/products',
-        icon: BusinessOutline,
+        icon: CubeOutline,
         permission: 'product.view',
       },
       {
         labelKey: 'nav.productUoms',
         to: '/products/uoms',
-        icon: BusinessOutline,
+        icon: ScaleOutline,
         permission: 'product_uom.view',
       },
       {
         labelKey: 'nav.productPricePolicies',
         to: '/products/price-lists',
-        icon: BusinessOutline,
+        icon: PricetagsOutline,
         permission: 'price_list.view',
       },
       {
         labelKey: 'nav.productImport',
         to: '/products/import',
-        icon: BusinessOutline,
+        icon: CloudUploadOutline,
         permission: 'product.import',
       },
       {
         labelKey: 'nav.productImportJobs',
         to: '/products/import-jobs',
-        icon: BusinessOutline,
+        icon: TimeOutline,
         permission: 'import_job.view',
       },
     ],
@@ -299,10 +316,25 @@ function visibleNavItems(items: NavigationItem[]): NavigationItem[] {
 
 const allowedNavItems = computed(() => visibleNavItems(navItems))
 
+// Reuse the resource icon in Recent / Favorites for known navigation routes.
+function navigationIconForTab(path: string): object {
+  const pathname = path.split(/[?#]/, 1)[0]
+  for (const item of navItems) {
+    if (item.to === pathname) return item.icon
+    const child = item.children?.find((candidate) => candidate.to === pathname)
+    if (child) return child.icon
+  }
+  return InformationCircleOutline
+}
+
 const modeItems = computed(() => {
   if (activeMode.value === 'favorites' || activeMode.value === 'recent') {
     const tabItems = workspace.tabs
-      .map((tab) => ({ labelKey: tab.labelKey, to: tab.path, icon: InformationCircleOutline }))
+      .map((tab) => ({
+        labelKey: tab.labelKey,
+        to: tab.path,
+        icon: navigationIconForTab(tab.path),
+      }))
       .filter((item) => t(item.labelKey).toLowerCase().includes(menuSearch.value.toLowerCase()))
     return tabItems.length > 0 ? tabItems : allowedNavItems.value
   }
@@ -643,8 +675,8 @@ onBeforeUnmount(handleResizeCancel)
               <NMenu
                 :value="route.path"
                 :options="menuOptions"
-				:root-indent="12"
-				:indent="14"
+                :root-indent="12"
+                :indent="14"
                 :collapsed="workspace.sidebarCollapsed"
                 :collapsed-width="72"
                 :collapsed-icon-size="20"
@@ -753,17 +785,6 @@ onBeforeUnmount(handleResizeCancel)
             <strong>{{ t('shell.commandPalette') }}</strong>
             <small>{{ t('shell.commandDescription') }}</small>
           </div>
-          <NButton
-            quaternary
-            circle
-            :aria-label="t('common.close')"
-            :title="t('common.close')"
-            @click="commandOpen = false"
-          >
-            <template #icon
-              ><NIcon><CloseOutline /></NIcon
-            ></template>
-          </NButton>
         </div>
       </template>
       <NInput
@@ -844,7 +865,7 @@ onBeforeUnmount(handleResizeCancel)
   object-position: left center;
 }
 .workspace-search {
-  width: min(430px, 40vw);
+  width: min(430px, 20vw);
   justify-content: flex-start;
   color: #718298;
   text-align: left;

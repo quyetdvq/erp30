@@ -319,52 +319,25 @@ onMounted(() => void load())
   </div>
 
   <section class="content-panel product-panel">
-    <ListQueryControls
-      :model-value="state.query"
-      :filters="statusFilters"
-      @apply="applyQuery"
-      @reset="resetQuery"
-    />
+    <ListQueryControls :model-value="state.query" :filters="statusFilters" @apply="applyQuery" @reset="resetQuery" />
     <p v-if="error && !state.queryState.hasData.value" class="inline-error" role="alert">
       {{ t('product.requestError') }}
     </p>
-    <ListPagination
-      :page="state.query.page"
-      :page-size="state.query.page_size"
-      :total="state.total.value"
-      :disabled="state.isInitialLoading.value"
-      :aria-label="t('product.topPagination')"
-      @update:page="handlePageChange"
-      @update:page-size="handlePageSizeChange"
-    />
+    <ListPagination :page="state.query.page" :page-size="state.query.page_size" :total="state.total.value"
+      :disabled="state.isInitialLoading.value" :aria-label="t('product.topPagination')" @update:page="handlePageChange"
+      @update:page-size="handlePageSizeChange" />
 
-    <ListShell
-      :initial-loading="state.isInitialLoading.value"
-      :refreshing="state.isBackgroundRefreshing.value"
-      :has-data="state.queryState.hasData.value"
-      :empty-dataset="state.isEmptyDataset.value"
-      :empty-filtered-result="state.isEmptyFilteredResult.value"
-      :error="state.queryState.error.value"
-      :retryable="true"
-      @retry="void load()"
-    >
-      <ListTable
-        :busy="state.isBackgroundRefreshing.value"
-        :rows="treeRows"
-        :columns="columns"
-        :sort="localSort"
-        @sort-change="handleSortChange"
-      >
+    <ListShell :initial-loading="state.isInitialLoading.value" :refreshing="state.isBackgroundRefreshing.value"
+      :has-data="state.queryState.hasData.value" :empty-dataset="state.isEmptyDataset.value"
+      :empty-filtered-result="state.isEmptyFilteredResult.value" :error="state.queryState.error.value" :retryable="true"
+      @retry="void load()">
+      <ListTable :busy="state.isBackgroundRefreshing.value" :rows="treeRows" :columns="columns" :sort="localSort"
+        @sort-change="handleSortChange">
         <template #cell-code="{ row }">
           <span class="tree-code" :style="{ paddingLeft: `${row.depth * 20}px` }">
-            <button
-              v-if="row.hasChildren"
-              type="button"
-              class="tree-toggle"
-              :aria-label="row.expanded ? t('product.collapse') : t('product.expand')"
-              :aria-expanded="row.expanded"
-              @click="toggleExpanded(String(row.id))"
-            >
+            <button v-if="row.hasChildren" type="button" class="tree-toggle"
+              :aria-label="row.expanded ? t('product.collapse') : t('product.expand')" :aria-expanded="row.expanded"
+              @click="toggleExpanded(String(row.id))">
               {{ row.expanded ? '-' : '+' }}
             </button>
             <span v-else class="tree-toggle-spacer" />
@@ -374,74 +347,41 @@ onMounted(() => void load())
         <template #cell-parent="{ row }">{{ parentName(row) }}</template>
         <template #cell-actions="{ row }">
           <span class="tree-row-actions">
-            <TableRowActions
-              :active="row.status === 'ACTIVE'"
-              :state-target-id="String(row.id)"
-              :busy="busy"
-              :show-view="permissions.view"
-              :show-edit="permissions.edit"
-              :show-toggle="permissions.setstate"
-              view-permission="product_group.view"
-              edit-permission="product_group.edit"
-              toggle-permission="product_group.setstate"
-              :view-label="t('common.view')"
-              :edit-label="t('common.edit')"
-              :activate-label="t('common.activate')"
-              :deactivate-label="t('common.deactivate')"
-              @view="openView(row)"
-              @edit="openEdit(row)"
-              @state-changed="afterWorkflowChange"
-            />
-            <button
-              v-if="permissions.create"
-              type="button"
-              class="icon-button"
-              :aria-label="t('product.createChild')"
-              :title="t('product.createChild')"
-              @click="openCreate(row)"
-            >
+            <TableRowActions :active="row.status === 'ACTIVE'" :state-target-id="String(row.id)" :busy="busy"
+              :show-view="permissions.view" :show-edit="permissions.edit" :show-toggle="permissions.setstate"
+              view-permission="product_group.view" edit-permission="product_group.edit"
+              toggle-permission="product_group.setstate" :view-label="t('common.view')" :edit-label="t('common.edit')"
+              :activate-label="t('common.activate')" :deactivate-label="t('common.deactivate')" @view="openView(row)"
+              @edit="openEdit(row)" @state-changed="afterWorkflowChange" />
+            <button v-if="permissions.create" type="button" class="icon-button" :aria-label="t('product.createChild')"
+              :title="t('product.createChild')" @click="openCreate(row)">
               +
             </button>
           </span>
         </template>
       </ListTable>
-      <ListPagination
-        :page="state.query.page"
-        :page-size="state.query.page_size"
-        :total="state.total.value"
-        :aria-label="t('product.bottomPagination')"
-        @update:page="handlePageChange"
-        @update:page-size="handlePageSizeChange"
-      />
+      <ListPagination :page="state.query.page" :page-size="state.query.page_size" :total="state.total.value"
+        :aria-label="t('product.bottomPagination')" @update:page="handlePageChange"
+        @update:page-size="handlePageSizeChange" />
     </ListShell>
   </section>
 
-  <TableDetailModal
-    :open="detailOpen"
-    :title="t('product.groupDetails')"
-    :fields="detailFields"
-    @close="detailOpen = false"
-  />
+  <TableDetailModal :open="detailOpen" :title="t('product.groupDetails')" :fields="detailFields"
+    @close="detailOpen = false" />
 
   <div v-if="modalOpen" class="modal-backdrop">
-    <section
-      class="modal-card"
-      role="dialog"
-      aria-modal="true"
-      :aria-label="t('product.groupForm')"
-    >
+    <section class="modal-card" role="dialog" aria-modal="true" :aria-label="t('product.groupForm')">
       <header class="modal-card__header">
-        <h2>{{ editingId ? t('common.edit') : t('common.create') }} {{ t('product.group') }}</h2>
-        <button
-          type="button"
-          class="icon-button"
-          :aria-label="t('common.close')"
-          @click="closeForm"
-        >
-          x
+        <h2 class="modal-card-title">
+          <NIcon :size="24"> <FolderOpenOutline /> </NIcon>
+          <span>
+            {{ editingId ? t('common.edit') : t('common.create') }} {{ t('product.group') }}
+          </span>
+        </h2>
+        <button type="button" class="modal-card-button-close" :aria-label="t('common.close')" @click="closeForm">
         </button>
       </header>
-      <form class="modal-card__body" @submit.prevent="save">
+      <form id="product-group-form" class="modal-card__body" @submit.prevent="save">
         <label>
           <span>{{ t('product.code') }}</span>
           <input v-model="form.code" required />
@@ -452,14 +392,9 @@ onMounted(() => void load())
         </label>
         <label>
           <span>{{ t('product.parentGroup') }}</span>
-          <SearchableSelect
-            :disabled="!parentLookupReady"
-            :model-value="form.parent_id"
-            :options="parentSelectOptions"
-            :placeholder="t('product.root')"
-            :aria-label="t('product.parentGroup')"
-            @update:model-value="updateParentId"
-          />
+          <SearchableSelect :disabled="!parentLookupReady" :model-value="form.parent_id" :options="parentSelectOptions"
+            :placeholder="t('product.root')" :aria-label="t('product.parentGroup')"
+            @update:model-value="updateParentId" />
         </label>
         <label>
           <span>{{ t('product.description') }}</span>
@@ -470,21 +405,18 @@ onMounted(() => void load())
           <strong v-if="workflowStates.initial.value">{{ workflowStates.initial.value }}</strong>
         </p>
         <p v-if="error" class="inline-error" role="alert">{{ t('product.requestError') }}</p>
-        <footer class="modal-card__footer">
-          <button type="button" class="secondary-button" @click="closeForm">
-            {{ t('common.cancel') }}
-          </button>
-          <button
-            type="submit"
-            class="primary-button"
-            :disabled="
-              busy || !parentLookupReady || !(editingId ? permissions.edit : permissions.create)
-            "
-          >
-            {{ busy ? t('common.saving') : t('common.save') }}
-          </button>
-        </footer>
+
       </form>
+      <footer class="modal-card__footer">
+        <button type="button" class="secondary-button" @click="closeForm"> 
+          <NIcon :size="20"> <Refresh /> </NIcon>
+          {{ t('common.cancel') }}
+        </button>
+        <button type="submit" class="primary-button" form="product-group-form" :disabled="busy || !parentLookupReady || !(editingId ? permissions.edit : permissions.create)">
+          <NIcon :size="20"> <SaveOutline /> </NIcon>
+          {{ busy ? t('common.saving') : t('common.save') }}
+        </button>
+      </footer>
     </section>
   </div>
 </template>
@@ -495,11 +427,13 @@ onMounted(() => void load())
   gap: 14px;
   padding: 18px 20px 20px;
 }
+
 .tree-code {
   display: inline-flex;
   align-items: center;
   gap: 4px;
 }
+
 .tree-toggle,
 .tree-toggle-spacer {
   width: 22px;
@@ -513,28 +447,24 @@ onMounted(() => void load())
   color: #294b65;
   cursor: pointer;
 }
+
 .tree-toggle-spacer {
   border-color: transparent;
 }
+
 .tree-row-actions {
   display: inline-flex;
   align-items: center;
   gap: 4px;
 }
+
 .inline-error {
   margin: 0;
   color: #b64444;
   font-size: 12px;
 }
-.modal-backdrop {
-  position: fixed;
-  inset: 0;
-  z-index: 40;
-  display: grid;
-  place-items: center;
-  padding: 20px;
-  background: rgb(18 38 54 / 45%);
-}
+
+
 .modal-card {
   width: min(100%, 680px);
   max-height: calc(100vh - 40px);
@@ -543,20 +473,7 @@ onMounted(() => void load())
   background: #fff;
   box-shadow: 0 20px 60px rgb(18 42 62 / 24%);
 }
-.modal-card__header,
-.modal-card__footer {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-  padding: 15px 18px;
-  border-bottom: 1px solid #e4ebef;
-}
-.modal-card__body {
-  display: grid;
-  gap: 12px;
-  padding: 18px;
-}
+
 .modal-card__body label {
   display: grid;
   gap: 5px;
@@ -564,6 +481,7 @@ onMounted(() => void load())
   font-size: 12px;
   font-weight: 600;
 }
+
 .modal-card__body input,
 .modal-card__body select,
 .modal-card__body textarea {
@@ -573,17 +491,5 @@ onMounted(() => void load())
   padding: 7px 9px;
   color: #183b57;
   font: inherit;
-}
-.modal-card__footer {
-  justify-content: flex-end;
-  margin: 6px -18px -18px;
-  border-top: 1px solid #e4ebef;
-  border-bottom: 0;
-}
-.icon-button {
-  border: 0;
-  background: transparent;
-  color: #536b7b;
-  cursor: pointer;
 }
 </style>

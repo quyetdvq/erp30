@@ -1,3 +1,6 @@
+Tôi xin cung cấp thêm thông tin như sau. Đây là thông tin quan trọng cần bổ sung vào tài liệu.
+
+
 # Danh sách chính thức 10 Resource có cơ chế State riêng không theo Lifecycles
 
 | Resource | Cơ chế State | Lifecycle |
@@ -13,10 +16,39 @@
 | `workflow_state` | Native State | Không sử dụng |
 | `resource` | Native State `ACTIVE` / `INACTIVE` | Không sử dụng |
 
+# Các Resource còn lại (Trừ 10 Resource trên) tuân theo Lifecycles và Transitions
 
+
+1. Các icon đã thay đổi
+Menu	Icon mới
+Tỉnh / Thành phố	MapOutline
+Phường / Xã	LocationOutline
+Chức vụ	BriefcaseOutline
+Nhân viên	IdCardOutline
+Cài đặt hiển thị	OptionsOutline
+Người dùng	PersonCircleOutline
+Nhóm phân quyền	PeopleCircleOutline
+Resource	LayersOutline
+Policy	ShieldCheckmarkOutline
+Nhật ký phân quyền	ReaderOutline
+Workflow State	FlagOutline
+Lifecycle	RepeatOutline
+Đánh số tự động	BarcodeOutline
+Phân hệ sản phẩm	CubeOutline
+Nhóm sản phẩm	FolderOpenOutline
+Sản phẩm	CubeOutline
+Đơn vị tính	ScaleOutline
+Chính sách giá	PricetagsOutline
+Import sản phẩm	CloudUploadOutline
+Lịch sử Import	TimeOutline
+Phòng ban PeopleOutline
+
+
+
+Còn lại 
 
 git add backend/ frontend/ contracts/ docs
-git commit -m "Improve LayoutSider resize collapsed layout and contrast 2"
+git commit -m "Sua giao dien và icon"
 git push
 
 

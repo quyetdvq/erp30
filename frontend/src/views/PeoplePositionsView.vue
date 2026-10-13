@@ -138,129 +138,71 @@ onMounted(() => void load())
       <h1>{{ t('people.positionsTitle') }}</h1>
       <p>{{ t('people.positionsDescription') }}</p>
     </div>
-    <button
-      v-if="hasBasePermission('position', 'create')"
-      type="button"
-      class="primary-button"
-      @click="openCreate"
-    >
+    <button v-if="hasBasePermission('position', 'create')" type="button" class="primary-button" @click="openCreate">
       ＋ {{ t('common.create') }}
     </button>
   </div>
   <section class="content-panel location-panel">
     <div class="location-toolbar">
-      <ListQueryControls
-        :model-value="state.query"
-        @apply="applyQuery"
-        @reset="resetQuery"
-      /><button type="button" class="secondary-button" @click="void load()">
+      <ListQueryControls :model-value="state.query" @apply="applyQuery" @reset="resetQuery" /><button type="button"
+        class="secondary-button" @click="void load()">
         ↻ {{ t('common.refresh') }}
       </button>
     </div>
     <p v-if="error" class="inline-error" role="alert">{{ t('people.requestError') }}</p>
-    <ListShell
-      :initial-loading="state.isInitialLoading.value"
-      :refreshing="state.isBackgroundRefreshing.value"
-      :has-data="state.queryState.hasData.value"
-      :empty-dataset="state.isEmptyDataset.value"
-      :empty-filtered-result="state.isEmptyFilteredResult.value"
-      :error="state.queryState.error.value"
-      :retryable="true"
-      @retry="void load()"
-    >
-      <ListTable
-        :busy="state.isBackgroundRefreshing.value"
-        :rows="state.rows.value"
-        :columns="columns"
-        :sort="state.query.sort"
-        @sort-change="
+    <ListShell :initial-loading="state.isInitialLoading.value" :refreshing="state.isBackgroundRefreshing.value"
+      :has-data="state.queryState.hasData.value" :empty-dataset="state.isEmptyDataset.value"
+      :empty-filtered-result="state.isEmptyFilteredResult.value" :error="state.queryState.error.value" :retryable="true"
+      @retry="void load()">
+      <ListTable :busy="state.isBackgroundRefreshing.value" :rows="state.rows.value" :columns="columns"
+        :sort="state.query.sort" @sort-change="
           (sort) => {
             state.setSort(sort)
             void load()
           }
-        "
-      >
+        ">
         <template #cell-actions="{ row }">
-          <TableRowActions
-            :active="row.status === 'ACTIVE'"
-            :state-target-id="String(row.id)"
-            :busy="busy"
-            :show-view="true"
-            :show-edit="true"
-            :show-toggle="true"
-            view-permission="position.view"
-            edit-permission="position.edit"
-            toggle-permission="position.setstate"
-            :view-label="t('common.view')"
-            :edit-label="t('common.edit')"
-            :activate-label="t('common.activate')"
-            :deactivate-label="t('common.deactivate')"
-            @view="openView(row)"
-            @edit="openEdit(row)"
-            @state-changed="afterWorkflowChange"
-          />
+          <TableRowActions :active="row.status === 'ACTIVE'" :state-target-id="String(row.id)" :busy="busy"
+            :show-view="true" :show-edit="true" :show-toggle="true" view-permission="position.view"
+            edit-permission="position.edit" toggle-permission="position.setstate" :view-label="t('common.view')"
+            :edit-label="t('common.edit')" :activate-label="t('common.activate')"
+            :deactivate-label="t('common.deactivate')" @view="openView(row)" @edit="openEdit(row)"
+            @state-changed="afterWorkflowChange" />
         </template>
       </ListTable>
-      <ListPagination
-        :page="state.query.page"
-        :page-size="state.query.page_size"
-        :total="state.total.value"
+      <ListPagination :page="state.query.page" :page-size="state.query.page_size" :total="state.total.value"
         @update:page="
           (page) => {
             state.setPage(page)
             void load()
           }
-        "
-        @update:page-size="
+        " @update:page-size="
           (size) => {
             state.setPageSize(size)
             void load()
           }
-        "
-      />
+        " />
     </ListShell>
   </section>
-  <TableDetailModal
-    :open="detailOpen"
-    :title="t('common.view') + ' - ' + t('people.position')"
-    :fields="detailFields"
-    @close="detailOpen = false"
-  />
+  <TableDetailModal :open="detailOpen" :title="t('common.view') + ' - ' + t('people.position')" :fields="detailFields"
+    @close="detailOpen = false" />
   <div v-if="modalOpen" class="modal-backdrop">
-    <section
-      class="modal-card"
-      role="dialog"
-      aria-modal="true"
-      :aria-label="t('people.positionForm')"
-    >
+    <section class="modal-card" role="dialog" aria-modal="true" :aria-label="t('people.positionForm')">
       <header class="modal-card__header">
-        <h2>{{ editingId ? t('common.edit') : t('common.create') }} {{ t('people.position') }}</h2>
-        <button
-          type="button"
-          class="icon-button"
-          :aria-label="t('common.close')"
-          @click="closeForm"
-        >
-          ×
+        <h2 class="modal-card-title">
+          <NIcon :size="24"> <BriefcaseOutline /> </NIcon>
+          {{ editingId ? t('common.edit') : t('common.create') }} {{ t('people.position') }}</h2>
+        <button type="button" class="modal-card-button-close" :aria-label="t('common.close')" @click="closeForm">
         </button>
       </header>
-      <form class="modal-card__body" @submit.prevent="save">
+      <form class="modal-card__body" id="position-form" @submit.prevent="save">
         <div class="form-grid">
-          <label
-            ><span>{{ t('people.code') }}</span
-            ><input v-model="form.code" required /></label
-          ><label
-            ><span>{{ t('people.name') }}</span
-            ><input v-model="form.name" required
-          /></label>
+          <label><span>{{ t('people.code') }}</span><input v-model="form.code" required /></label><label><span>{{
+            t('people.name') }}</span><input v-model="form.name" required /></label>
         </div>
-        <label
-          ><span>{{ t('people.level') }}</span
-          ><input v-model="form.level" type="number" min="0" step="1" /></label
-        ><label
-          ><span>{{ t('people.description') }}</span
-          ><textarea v-model="form.description" rows="3" /></label
-        ><label v-if="editingId">
+        <label><span>{{ t('people.level') }}</span><input v-model="form.level" type="number" min="0"
+            step="1" /></label><label><span>{{ t('people.description') }}</span><textarea v-model="form.description"
+            rows="3" /></label><label v-if="editingId">
           <span>{{ t('people.status') }}</span>
           <output>{{ form.status }}</output>
         </label>
@@ -268,18 +210,22 @@ onMounted(() => void load())
           {{ t('workflow.initialManaged') }}
           <strong v-if="workflowStates.initial.value">{{ workflowStates.initial.value }}</strong>
         </p>
-        <footer class="modal-card__footer">
-          <button type="button" class="secondary-button" @click="closeForm">
-            {{ t('common.cancel') }}</button
-          ><button
-            type="submit"
-            class="primary-button"
-            :disabled="busy || !hasBasePermission('position', editingId ? 'edit' : 'create')"
-          >
-            {{ busy ? t('common.saving') : t('common.save') }}
-          </button>
-        </footer>
+
       </form>
+
+      <footer class="modal-card__footer">
+        <button type="button" class="secondary-button" @click="closeForm">
+          <NIcon :size="20"> <Refresh /> </NIcon>
+          {{ t('common.cancel') }}
+        
+        </button>
+          
+          <button type="submit" class="primary-button" form="position-form"
+          :disabled="busy || !hasBasePermission('position', editingId ? 'edit' : 'create')">
+          <NIcon :size="20"> <SaveOutline /> </NIcon>
+          {{ busy ? t('common.saving') : t('common.save') }}
+        </button>
+      </footer>
     </section>
   </div>
 </template>
@@ -290,6 +236,7 @@ onMounted(() => void load())
   gap: 14px;
   padding: 18px 20px 20px;
 }
+
 .location-toolbar {
   display: flex;
   align-items: end;
@@ -297,20 +244,15 @@ onMounted(() => void load())
   gap: 10px;
   flex-wrap: wrap;
 }
+
 .inline-error {
   margin: 0;
   color: #b64444;
   font-size: 12px;
 }
-.modal-backdrop {
-  position: fixed;
-  inset: 0;
-  z-index: 40;
-  display: grid;
-  place-items: center;
-  padding: 20px;
-  background: rgb(18 38 54 / 45%);
-}
+
+
+
 .modal-card {
   width: min(100%, 680px);
   max-height: calc(100vh - 40px);
@@ -319,20 +261,15 @@ onMounted(() => void load())
   background: #fff;
   box-shadow: 0 20px 60px rgb(18 42 62 / 24%);
 }
-.modal-card__header,
-.modal-card__footer {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-  padding: 15px 18px;
-  border-bottom: 1px solid #e4ebef;
-}
+
+
+
 .modal-card__body {
   display: grid;
   gap: 12px;
   padding: 18px;
 }
+
 .modal-card__body label {
   display: grid;
   gap: 5px;
@@ -340,6 +277,7 @@ onMounted(() => void load())
   font-size: 12px;
   font-weight: 600;
 }
+
 .modal-card__body input,
 .modal-card__body select,
 .modal-card__body textarea {
@@ -350,17 +288,6 @@ onMounted(() => void load())
   color: #183b57;
   font: inherit;
 }
-.modal-card__footer {
-  justify-content: flex-end;
-  margin: 6px -18px -18px;
-  border-top: 1px solid #e4ebef;
-  border-bottom: 0;
-}
-.icon-button {
-  border: 0;
-  background: transparent;
-  color: #536b7b;
-  font-size: 22px;
-  cursor: pointer;
-}
+
+
 </style>
