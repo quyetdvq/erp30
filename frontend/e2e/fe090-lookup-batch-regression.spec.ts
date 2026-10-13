@@ -1,4 +1,4 @@
-import { expect, test, type Page } from '@playwright/test'
+import { expect, test, type Page, type Route } from '@playwright/test'
 import { mockLookupBatch, type ApiCall } from './support/lookupBatchMock'
 
 const callsTo = (calls: ApiCall[], path: string, method?: string) =>
@@ -126,6 +126,104 @@ test.describe('E2E-LOOKUP-BATCH (browser contract, mocked API)', () => {
     expect(
       distinctPaths(api.calls).filter((path) => path.endsWith('uom-conversions')),
     ).toHaveLength(0)
+    expect(api.unexpected).toEqual([])
+  })
+
+  test('Price List Product/UOM batch resolves with a rotating session CSRF token', async ({
+    page,
+  }) => {
+    const api = await mockLookupBatch(page)
+    let serverCsrfToken = 'e2e-csrf'
+    const acceptedTokens: string[] = []
+    const csrfFailures: string[] = []
+    const rotatingResolve = async (route: Route) => {
+      if (route.request().method() !== 'POST') return route.fallback()
+      const request = route.request()
+      const token = request.headers()['x-csrf-token'] || ''
+      const headers = {
+        'Access-Control-Allow-Origin': request.headers()['origin'] ?? 'http://localhost:5173',
+        'Access-Control-Allow-Credentials': 'true',
+        'Access-Control-Expose-Headers': 'X-CSRF-TOKEN',
+      }
+      if (token !== serverCsrfToken) {
+        csrfFailures.push(token)
+        await route.fulfill({
+          status: 403,
+          headers,
+          contentType: 'application/json',
+          body: JSON.stringify({ error: { code: 'CSRF_INVALID', message: 'CSRF token expired' } }),
+        })
+        return
+      }
+      acceptedTokens.push(token)
+      serverCsrfToken = `rotated-csrf-${acceptedTokens.length}`
+      const ids = (request.postDataJSON() as { product_ids: string[] }).product_ids
+      const responseData = request.url().includes('/sales-uom-options/')
+        ? ids.map((id) => ({ product_id: id, options: [{ id: '20', code: 'PCS' }] }))
+        : ids.map((id) => ({
+            id,
+            product_code: 'E2E-SIMPLE',
+            full_name: 'E2E Simple',
+            role: 'SIMPLE',
+            status: 'ACTIVE',
+            base_uom_id: '20',
+            selectable: true,
+          }))
+      await route.fulfill({
+        status: 200,
+        headers: { ...headers, 'X-CSRF-TOKEN': serverCsrfToken },
+        contentType: 'application/json',
+        body: JSON.stringify({ data: responseData }),
+      })
+    }
+    await page.route('**/api/v1/products/options/resolve', rotatingResolve)
+    await page.route('**/api/v1/products/sales-uom-options/resolve', rotatingResolve)
+
+    await page.goto('/products/price-lists')
+    const dialog = await openPriceItems(page)
+    await expect.poll(() => acceptedTokens.length).toBe(2)
+    expect(acceptedTokens).toEqual(['e2e-csrf', 'rotated-csrf-1'])
+    expect(csrfFailures).toEqual([])
+    await expect(dialog.getByRole('textbox', { name: 'Giá' })).toHaveValue('125,000.00')
+    await expect(dialog.locator('.inline-error')).toHaveCount(0)
+    expect(api.unexpected).toEqual([])
+  })
+
+  test('Price List save reuses the rotated CSRF header after a validation error', async ({ page }) => {
+    const api = await mockLookupBatch(page)
+    const attemptedTokens: string[] = []
+    await page.route('**/api/v1/price-lists/70/items', async (route) => {
+      const request = route.request()
+      if (request.method() !== 'PUT') return route.fallback()
+      const token = request.headers()['x-csrf-token'] || ''
+      attemptedTokens.push(token)
+      const headers = {
+        'Access-Control-Allow-Origin': request.headers()['origin'] ?? 'http://localhost:5173',
+        'Access-Control-Allow-Credentials': 'true',
+        'Access-Control-Expose-Headers': 'X-CSRF-TOKEN',
+        'X-CSRF-TOKEN': 'rotated-after-422',
+      }
+      await route.fulfill({
+        status: attemptedTokens.length === 1 ? 422 : token === 'rotated-after-422' ? 200 : 403,
+        headers,
+        contentType: 'application/json',
+        body: attemptedTokens.length === 1
+          ? JSON.stringify({ error: { code: 'VALIDATION_ERROR', message: 'Invalid price' } })
+          : JSON.stringify({ data: [] }),
+      })
+    })
+
+    await page.goto('/products/price-lists')
+    const dialog = await openPriceItems(page)
+    const save = dialog.getByRole('button', { name: 'Lưu' })
+    await expect(save).toBeEnabled()
+    await save.click()
+    await expect.poll(() => attemptedTokens.length).toBe(1)
+    await expect(dialog.locator('.inline-error')).toBeVisible()
+    await expect(save).toBeEnabled()
+    await save.click()
+    await expect.poll(() => attemptedTokens.length).toBe(2)
+    expect(attemptedTokens).toEqual(['e2e-csrf', 'rotated-after-422'])
     expect(api.unexpected).toEqual([])
   })
 

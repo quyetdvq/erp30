@@ -13,7 +13,11 @@ export const apiClient = axios.create({
   },
 })
 
-type RequestSession = { __dinkerpSessionVersion?: number; __dinkerpCsrfEpoch?: number }
+type RequestSession = {
+  __dinkerpSessionVersion?: number
+  __dinkerpCsrfEpoch?: number
+  __dinkerpReleaseCsrfTurn?: () => void
+}
 
 function requestSessionVersion(config: RequestSession | undefined): number | undefined {
   return config?.__dinkerpSessionVersion
@@ -23,6 +27,28 @@ let csrfToken: string | null = null
 let csrfEpoch = 0
 let csrfBootstrap: Promise<string> | null = null
 const mutationMethods = new Set(['post', 'put', 'patch', 'delete'])
+
+// CodeIgniter regenerates the SESSION CSRF hash after each protected request.
+// Concurrent POST lookups must not submit the same hash before either response
+// can replace it. Hold this turn until the response/error interceptor runs.
+let csrfTurn: Promise<void> = Promise.resolve()
+async function acquireCsrfTurn(): Promise<() => void> {
+  const previous = csrfTurn
+  let release!: () => void
+  csrfTurn = new Promise<void>((resolve) => {
+    release = resolve
+  })
+  await previous
+  return release
+}
+
+function releaseCsrfTurn(config: RequestSession | undefined): void {
+  const release = config?.__dinkerpReleaseCsrfTurn
+  if (release) {
+    config.__dinkerpReleaseCsrfTurn = undefined
+    release()
+  }
+}
 
 /** Drop the session-bound token after Shield rotates or destroys the session. */
 export function invalidateCsrfToken(): void {
@@ -71,10 +97,8 @@ async function ensureCsrfToken(): Promise<string> {
 }
 
 apiClient.interceptors.request.use(async (config) => {
-  // Avoid ASI joining the previous numeric result to the next parenthesized cast.
   const metadata = config as typeof config & RequestSession
   metadata.__dinkerpSessionVersion = useAuthStore().getSessionGeneration()
-  metadata.__dinkerpCsrfEpoch = csrfEpoch
   config.headers.set('Accept-Language', i18n.global.locale.value)
   if (!config.headers.get('X-Request-ID')) {
     const requestId =
@@ -83,55 +107,98 @@ apiClient.interceptors.request.use(async (config) => {
         : `fe-${Date.now()}-${Math.random().toString(16).slice(2)}`
     config.headers.set('X-Request-ID', requestId)
   }
-  // The API enforces session CSRF for browser mutations in every deployed mode.
-  // Do not key this security requirement off Vite's build mode: a misconfigured
-  // live server can still report MODE=development while serving production traffic.
-  if (mutationMethods.has((config.method || '').toLowerCase())) {
-    config.headers.set('X-CSRF-TOKEN', await ensureCsrfToken())
+  if (!mutationMethods.has((config.method || '').toLowerCase())) {
+    metadata.__dinkerpCsrfEpoch = csrfEpoch
+    return config
   }
-  return config
+
+  // This also covers read-only POST projections such as sales-uom-options.
+  // All protected requests must wait for the preceding response's rotated token.
+  metadata.__dinkerpReleaseCsrfTurn = await acquireCsrfTurn()
+  try {
+    if (metadata.__dinkerpSessionVersion !== useAuthStore().getSessionGeneration()) {
+      throw new Error('Session changed while waiting for the CSRF token.')
+    }
+    metadata.__dinkerpCsrfEpoch = csrfEpoch
+    const token = await ensureCsrfToken()
+    if (
+      metadata.__dinkerpSessionVersion !== useAuthStore().getSessionGeneration() ||
+      metadata.__dinkerpCsrfEpoch !== csrfEpoch
+    ) {
+      throw new Error('Session or CSRF token changed while preparing the request.')
+    }
+    config.headers.set('X-CSRF-TOKEN', token)
+    return config
+  } catch (error) {
+    releaseCsrfTurn(metadata)
+    throw error
+  }
 })
 
 apiClient.interceptors.response.use(
   (response) => {
-    // Ignore session-bound tokens returned by a request from the previous user.
-    const version = requestSessionVersion(response.config as unknown as RequestSession)
-    const epoch = (response.config as unknown as RequestSession).__dinkerpCsrfEpoch
-    if (version === useAuthStore().getSessionGeneration() && epoch === csrfEpoch) {
-      storeCsrfToken(response)
+    const metadata = response.config as typeof response.config & RequestSession
+    const method = (response.config.method || '').toLowerCase()
+    try {
+      // A late GET response might carry a CSRF hash from BEFORE a POST rotation.
+      // Only the explicit bootstrap GET and protected request responses can
+      // update the token shared by subsequent protected requests.
+      if (
+        metadata.__dinkerpSessionVersion === useAuthStore().getSessionGeneration() &&
+        metadata.__dinkerpCsrfEpoch === csrfEpoch &&
+        (mutationMethods.has(method) || response.config.url === '/api/v1/auth/csrf')
+      ) {
+        storeCsrfToken(response)
+      }
+      return response
+    } finally {
+      releaseCsrfTurn(metadata)
     }
-    return response
   },
   (error: unknown) => {
-    const url = axios.isAxiosError(error) ? error.config?.url || '' : ''
+    const config = axios.isAxiosError(error) ? error.config : undefined
+    const metadata = config as (typeof config & RequestSession) | undefined
+    const url = config?.url || ''
     const status = axios.isAxiosError(error) ? error.response?.status : undefined
-    const auth = useAuthStore()
-    const version = requestSessionVersion(
-      axios.isAxiosError(error) ? (error.config as unknown as RequestSession) : undefined,
-    )
-    // A late failure from a logged-out/superseded session must not revoke the new
-    // user's permissions, CSRF token, or UI state.
-    if (version !== undefined && version !== auth.getSessionGeneration()) {
+    try {
+      const auth = useAuthStore()
+      const version = requestSessionVersion(metadata)
+      // A late failure from a logged-out/superseded session must not revoke
+      // the new user's permissions, CSRF token, or UI state.
+      if (version !== undefined && version !== auth.getSessionGeneration()) {
+        return Promise.reject(error)
+      }
+      // The CSRF hash also rotates for a valid POST that returns 409/422.
+      // Preserve that returned hash instead of sending a stale one next time.
+      if (
+        axios.isAxiosError(error) &&
+        error.response &&
+        metadata?.__dinkerpCsrfEpoch === csrfEpoch &&
+        mutationMethods.has((config?.method || '').toLowerCase())
+      ) {
+        storeCsrfToken(error.response)
+      }
+      // A 404 can mean an absent or invisible record, not that Base Permissions changed.
+      // For an actual 403, refresh the authenticated snapshot once in the background;
+      // never automatically retry a denied mutation.
+      if (status === 403 && !url.startsWith('/api/v1/auth/')) {
+        auth.markPermissionSnapshotStale()
+        void auth.refreshBasePermissions().catch(() => undefined)
+      }
+      if (
+        status === 401 &&
+        (!url.startsWith('/api/v1/auth/') || (url === '/api/v1/auth/me' && auth.isAuthenticated))
+      ) {
+        invalidateCsrfToken()
+        auth.expireSession()
+      }
+      if ((status === 403 || status === 419) && url !== '/api/v1/auth/csrf') {
+        invalidateCsrfToken()
+      }
+      if (!(url.includes('/auth/me') && status === 401)) reportApiError(error)
       return Promise.reject(error)
+    } finally {
+      releaseCsrfTurn(metadata)
     }
-    // A 404 can mean an absent or invisible record, not that Base Permissions changed.
-    // For an actual 403, refresh the authenticated snapshot once in the background;
-    // never automatically retry a denied mutation.
-    if (status === 403 && !url.startsWith('/api/v1/auth/')) {
-      auth.markPermissionSnapshotStale()
-      void auth.refreshBasePermissions().catch(() => undefined)
-    }
-    if (
-      status === 401 &&
-      (!url.startsWith('/api/v1/auth/') || (url === '/api/v1/auth/me' && auth.isAuthenticated))
-    ) {
-      invalidateCsrfToken()
-      auth.expireSession()
-    }
-    if ((status === 403 || status === 419) && url !== '/api/v1/auth/csrf') {
-      invalidateCsrfToken()
-    }
-    if (!(url.includes('/auth/me') && status === 401)) reportApiError(error)
-    return Promise.reject(error)
   },
 )
