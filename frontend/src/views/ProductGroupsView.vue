@@ -319,25 +319,52 @@ onMounted(() => void load())
   </div>
 
   <section class="content-panel product-panel">
-    <ListQueryControls :model-value="state.query" :filters="statusFilters" @apply="applyQuery" @reset="resetQuery" />
+    <ListQueryControls
+      :model-value="state.query"
+      :filters="statusFilters"
+      @apply="applyQuery"
+      @reset="resetQuery"
+    />
     <p v-if="error && !state.queryState.hasData.value" class="inline-error" role="alert">
       {{ t('product.requestError') }}
     </p>
-    <ListPagination :page="state.query.page" :page-size="state.query.page_size" :total="state.total.value"
-      :disabled="state.isInitialLoading.value" :aria-label="t('product.topPagination')" @update:page="handlePageChange"
-      @update:page-size="handlePageSizeChange" />
+    <ListPagination
+      :page="state.query.page"
+      :page-size="state.query.page_size"
+      :total="state.total.value"
+      :disabled="state.isInitialLoading.value"
+      :aria-label="t('product.topPagination')"
+      @update:page="handlePageChange"
+      @update:page-size="handlePageSizeChange"
+    />
 
-    <ListShell :initial-loading="state.isInitialLoading.value" :refreshing="state.isBackgroundRefreshing.value"
-      :has-data="state.queryState.hasData.value" :empty-dataset="state.isEmptyDataset.value"
-      :empty-filtered-result="state.isEmptyFilteredResult.value" :error="state.queryState.error.value" :retryable="true"
-      @retry="void load()">
-      <ListTable :busy="state.isBackgroundRefreshing.value" :rows="treeRows" :columns="columns" :sort="localSort"
-        @sort-change="handleSortChange">
+    <ListShell
+      :initial-loading="state.isInitialLoading.value"
+      :refreshing="state.isBackgroundRefreshing.value"
+      :has-data="state.queryState.hasData.value"
+      :empty-dataset="state.isEmptyDataset.value"
+      :empty-filtered-result="state.isEmptyFilteredResult.value"
+      :error="state.queryState.error.value"
+      :retryable="true"
+      @retry="void load()"
+    >
+      <ListTable
+        :busy="state.isBackgroundRefreshing.value"
+        :rows="treeRows"
+        :columns="columns"
+        :sort="localSort"
+        @sort-change="handleSortChange"
+      >
         <template #cell-code="{ row }">
           <span class="tree-code" :style="{ paddingLeft: `${row.depth * 20}px` }">
-            <button v-if="row.hasChildren" type="button" class="tree-toggle"
-              :aria-label="row.expanded ? t('product.collapse') : t('product.expand')" :aria-expanded="row.expanded"
-              @click="toggleExpanded(String(row.id))">
+            <button
+              v-if="row.hasChildren"
+              type="button"
+              class="tree-toggle"
+              :aria-label="row.expanded ? t('product.collapse') : t('product.expand')"
+              :aria-expanded="row.expanded"
+              @click="toggleExpanded(String(row.id))"
+            >
               {{ row.expanded ? '-' : '+' }}
             </button>
             <span v-else class="tree-toggle-spacer" />
@@ -347,30 +374,62 @@ onMounted(() => void load())
         <template #cell-parent="{ row }">{{ parentName(row) }}</template>
         <template #cell-actions="{ row }">
           <span class="tree-row-actions">
-            <TableRowActions :active="row.status === 'ACTIVE'" :state-target-id="String(row.id)" :busy="busy"
-              :show-view="permissions.view" :show-edit="permissions.edit" :show-toggle="permissions.setstate"
-              view-permission="product_group.view" edit-permission="product_group.edit"
-              toggle-permission="product_group.setstate" :view-label="t('common.view')" :edit-label="t('common.edit')"
-              :activate-label="t('common.activate')" :deactivate-label="t('common.deactivate')" @view="openView(row)"
-              @edit="openEdit(row)" @state-changed="afterWorkflowChange" />
-            <button v-if="permissions.create" type="button" class="icon-button" :aria-label="t('product.createChild')"
-              :title="t('product.createChild')" @click="openCreate(row)">
+            <TableRowActions
+              :active="row.status === 'ACTIVE'"
+              :state-target-id="String(row.id)"
+              :busy="busy"
+              :show-view="permissions.view"
+              :show-edit="permissions.edit"
+              :show-toggle="permissions.setstate"
+              view-permission="product_group.view"
+              edit-permission="product_group.edit"
+              toggle-permission="product_group.setstate"
+              :view-label="t('common.view')"
+              :edit-label="t('common.edit')"
+              :activate-label="t('common.activate')"
+              :deactivate-label="t('common.deactivate')"
+              @view="openView(row)"
+              @edit="openEdit(row)"
+              @state-changed="afterWorkflowChange"
+            />
+            <button
+              v-if="permissions.create"
+              type="button"
+              class="icon-button"
+              :aria-label="t('product.createChild')"
+              :title="t('product.createChild')"
+              @click="openCreate(row)"
+            >
               +
             </button>
           </span>
         </template>
       </ListTable>
-      <ListPagination :page="state.query.page" :page-size="state.query.page_size" :total="state.total.value"
-        :aria-label="t('product.bottomPagination')" @update:page="handlePageChange"
-        @update:page-size="handlePageSizeChange" />
+      <ListPagination
+        :page="state.query.page"
+        :page-size="state.query.page_size"
+        :total="state.total.value"
+        :aria-label="t('product.bottomPagination')"
+        @update:page="handlePageChange"
+        @update:page-size="handlePageSizeChange"
+      />
     </ListShell>
   </section>
 
-  <TableDetailModal :open="detailOpen" :title="t('product.groupDetails')" :fields="detailFields"
-    @close="detailOpen = false" />
+  <TableDetailModal
+    :open="detailOpen"
+    :title="t('product.groupDetails')"
+    :fields="detailFields"
+    @close="detailOpen = false"
+  />
 
   <div v-if="modalOpen" class="modal-backdrop">
-    <section class="modal-card" role="dialog" aria-modal="true" :aria-label="t('product.groupForm')">
+    <section
+      class="modal-card"
+      role="dialog"
+      aria-modal="true"
+      :aria-label="t('product.groupForm')"
+    >
       <header class="modal-card__header">
         <h2 class="modal-card-title">
           <NIcon :size="24"> <FolderOpenOutline /> </NIcon>
@@ -378,8 +437,12 @@ onMounted(() => void load())
             {{ editingId ? t('common.edit') : t('common.create') }} {{ t('product.group') }}
           </span>
         </h2>
-        <button type="button" class="modal-card-button-close" :aria-label="t('common.close')" @click="closeForm">
-        </button>
+        <button
+          type="button"
+          class="modal-card-button-close"
+          :aria-label="t('common.close')"
+          @click="closeForm"
+        ></button>
       </header>
       <form id="product-group-form" class="modal-card__body" @submit.prevent="save">
         <label>
@@ -392,9 +455,14 @@ onMounted(() => void load())
         </label>
         <label>
           <span>{{ t('product.parentGroup') }}</span>
-          <SearchableSelect :disabled="!parentLookupReady" :model-value="form.parent_id" :options="parentSelectOptions"
-            :placeholder="t('product.root')" :aria-label="t('product.parentGroup')"
-            @update:model-value="updateParentId" />
+          <SearchableSelect
+            :disabled="!parentLookupReady"
+            :model-value="form.parent_id"
+            :options="parentSelectOptions"
+            :placeholder="t('product.root')"
+            :aria-label="t('product.parentGroup')"
+            @update:model-value="updateParentId"
+          />
         </label>
         <label>
           <span>{{ t('product.description') }}</span>
@@ -405,14 +473,20 @@ onMounted(() => void load())
           <strong v-if="workflowStates.initial.value">{{ workflowStates.initial.value }}</strong>
         </p>
         <p v-if="error" class="inline-error" role="alert">{{ t('product.requestError') }}</p>
-
       </form>
       <footer class="modal-card__footer">
-        <button type="button" class="secondary-button" @click="closeForm"> 
+        <button type="button" class="secondary-button" @click="closeForm">
           <NIcon :size="20"> <Refresh /> </NIcon>
           {{ t('common.cancel') }}
         </button>
-        <button type="submit" class="primary-button" form="product-group-form" :disabled="busy || !parentLookupReady || !(editingId ? permissions.edit : permissions.create)">
+        <button
+          type="submit"
+          class="primary-button"
+          form="product-group-form"
+          :disabled="
+            busy || !parentLookupReady || !(editingId ? permissions.edit : permissions.create)
+          "
+        >
           <NIcon :size="20"> <SaveOutline /> </NIcon>
           {{ busy ? t('common.saving') : t('common.save') }}
         </button>
@@ -463,7 +537,6 @@ onMounted(() => void load())
   color: #b64444;
   font-size: 12px;
 }
-
 
 .modal-card {
   width: min(100%, 680px);

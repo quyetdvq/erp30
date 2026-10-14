@@ -65,7 +65,6 @@ app.use(createPinia())
 app.use(i18n)
 app.use(router)
 
-
 // Chèn sau const app = createApp(App), trước app.mount(...)
 app.component('NIcon', NIcon)
 

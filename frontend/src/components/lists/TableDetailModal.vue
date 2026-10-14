@@ -105,9 +105,7 @@ function onKeydown(event: KeyboardEvent): void {
           :aria-label="t('common.close')"
           :title="t('common.close')"
           @click="emit('close')"
-        >
-          
-        </button>
+        ></button>
       </header>
       <div class="table-detail-modal__body">
         <dl class="table-detail-modal__fields">
@@ -131,7 +129,6 @@ function onKeydown(event: KeyboardEvent): void {
 </template>
 
 <style scoped>
-
 .table-detail-modal {
   width: min(100%, 560px);
   max-height: calc(100vh - 40px);
@@ -140,7 +137,6 @@ function onKeydown(event: KeyboardEvent): void {
   background: #fff;
   box-shadow: 0 20px 60px rgb(18 42 62 / 24%);
 }
-
 
 .table-detail-modal__fields {
   display: grid;

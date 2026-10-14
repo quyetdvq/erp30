@@ -1076,11 +1076,11 @@ onBeforeUnmount(handleResizeCancel)
 }
 
 .mode-switcher :deep(.n-button) {
-  width: 100%;
+  width: 40px;
   min-width: 0;
-  height: 40px;
+  height: 32px;
   padding: 0;
-  border-radius: 10px;
+  border-radius: 5px;
   color: #273e57;
 }
 
@@ -1111,7 +1111,7 @@ onBeforeUnmount(handleResizeCancel)
 }
 
 .shell-sider.sider-collapsed .mode-switcher {
-  width: 44px;
+  width: 40px;
   max-width: 100%;
   grid-template-columns: minmax(0, 1fr);
   gap: 8px;
@@ -1119,8 +1119,8 @@ onBeforeUnmount(handleResizeCancel)
 }
 
 .shell-sider.sider-collapsed .mode-switcher :deep(.n-button) {
-  width: 44px;
-  height: 44px;
+  width: 40px;
+  height: 40px;
 }
 
 .sider-heading {
