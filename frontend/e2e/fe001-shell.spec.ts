@@ -262,6 +262,108 @@ test('shell keeps the header full width and uses the official logo', async ({ pa
   )
 })
 
+test('compact header keeps Search, Language and User as icons without wrapping', async ({
+  page,
+}) => {
+  await mockAuthenticatedSession(page)
+  await page.goto('/organizations')
+
+  for (const width of [768, 390, 320]) {
+    await page.setViewportSize({ width, height: 720 })
+    await expect(page.locator('.workspace-search-label')).toBeHidden()
+    await expect(page.locator('.workspace-search kbd')).toBeHidden()
+    await expect(page.locator('.header-language-label')).toBeHidden()
+    await expect(page.locator('.header-language-chevron')).toBeHidden()
+    await expect(page.locator('.header-language-icon')).toBeVisible()
+    await expect(page.locator('.header-user-label')).toBeHidden()
+    await expect(page.locator('.header-user-chevron')).toBeHidden()
+
+    const search = page.getByRole('button', { name: vi.shell.searchWorkspace, exact: true })
+    const language = page.getByRole('button', { name: vi.shell.language, exact: true })
+    const user = page.getByRole('button', { name: 'quyetdv', exact: true })
+    await expect(search).toBeVisible()
+    await expect(language).toBeVisible()
+    await expect(user).toBeVisible()
+
+    const bounds = await page.locator('.shell-header').evaluate((element) => {
+      const header = element.getBoundingClientRect()
+      const buttons = Array.from(element.querySelectorAll('button')).map((button) => {
+        const box = button.getBoundingClientRect()
+        return { left: box.left, right: box.right, top: box.top, bottom: box.bottom }
+      })
+      return {
+        viewportWidth: window.innerWidth,
+        header: {
+          left: header.left,
+          right: header.right,
+          top: header.top,
+          bottom: header.bottom,
+        },
+        buttons,
+      }
+    })
+    expect(bounds.header.right).toBeLessThanOrEqual(bounds.viewportWidth + 1)
+    expect(bounds.buttons).toHaveLength(6)
+
+    // Measure the seven CSS Grid items, not nested controls. The notification
+    // button lives inside NBadge, whose counter can offset the button bounds.
+    const gridCenters = await page.locator('.shell-header').evaluate((header) => {
+      const gridItems = Array.from(header.children).flatMap((group) =>
+        getComputedStyle(group).display === 'contents' ? Array.from(group.children) : [group],
+      )
+      return gridItems.map((item) => {
+        const box = item.getBoundingClientRect()
+        return box.left + box.width / 2
+      })
+    })
+    expect(gridCenters).toHaveLength(7)
+    const slotWidth = (bounds.header.right - bounds.header.left - 16) / 7
+    const slotNames = ['Logo', 'Menu', 'Search', 'Notifications', 'Theme', 'Language', 'User']
+    gridCenters.forEach((center, index) => {
+      const expectedCenter = bounds.header.left + 8 + slotWidth * (index + 0.5)
+      expect(
+        Math.abs(center - expectedCenter),
+        `${slotNames[index]} grid item must be centered in its header column`,
+      ).toBeLessThanOrEqual(3)
+    })
+    expect(
+      bounds.buttons.every(
+        (box) =>
+          box.left >= bounds.header.left - 1 &&
+          box.right <= bounds.header.right + 1 &&
+          box.top >= bounds.header.top - 1 &&
+          box.bottom <= bounds.header.bottom + 1,
+      ),
+    ).toBe(true)
+  }
+
+  await page.setViewportSize({ width: 1280, height: 720 })
+  await expect(page.locator('.workspace-search-label')).toBeVisible()
+  await expect(page.locator('.header-language-label')).toBeVisible()
+  await expect(page.locator('.header-user-label')).toBeVisible()
+  await expect(page.locator('.header-language-icon')).toBeHidden()
+})
+
+test('compact header icon buttons preserve search, locale and account actions', async ({
+  page,
+}) => {
+  await mockAuthenticatedSession(page)
+  await page.setViewportSize({ width: 390, height: 720 })
+  await page.goto('/organizations')
+
+  const search = page.getByRole('button', { name: vi.shell.searchWorkspace, exact: true })
+  await search.click()
+  await expect(page.getByText(vi.shell.commandPalette)).toBeVisible()
+  await page.keyboard.press('Escape')
+  await expect(page.getByText(vi.shell.commandPalette)).toBeHidden()
+
+  await page.getByRole('button', { name: vi.shell.language, exact: true }).click()
+  await page.getByText('English', { exact: true }).click()
+  await expect.poll(() => page.evaluate(() => document.documentElement.lang)).toBe('en')
+  await page.getByRole('button', { name: 'quyetdv', exact: true }).click()
+  await expect(page.getByText(en.shell.profile, { exact: true })).toBeVisible()
+})
+
 test('collapsed shell keeps only five mode icons and shell actions work', async ({ page }) => {
   await mockAuthenticatedSession(page)
   await page.goto('/organizations')

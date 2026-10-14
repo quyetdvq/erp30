@@ -13,7 +13,6 @@ import {
   NMenu,
   NModal,
   NPopover,
-  NSpace,
   NTabPane,
   NTabs,
   NDropdown,
@@ -34,6 +33,7 @@ import {
   CubeOutline,
   FlagOutline,
   FolderOpenOutline,
+  LanguageOutline,
   HomeOutline,
   IdCardOutline,
   InformationCircleOutline,
@@ -641,65 +641,55 @@ onBeforeUnmount(handleResizeCancel)
 </script>
 
 <template>
-  <div
-    ref="shellElement"
-    class="erp-shell"
+  <div ref="shellElement" class="erp-shell"
     :class="{ 'theme-dark': workspace.themeMode === 'dark', 'shell-resizing': isResizingSidebar }"
-    :style="{ '--sidebar-width': `${sidebarWidth}px` }"
-  >
+    :style="{ '--sidebar-width': `${sidebarWidth}px` }">
     <NLayout class="shell-layout">
       <NLayoutHeader bordered class="shell-header">
-        <NSpace align="center" :size="10" class="header-left">
+        <div class="header-left">
           <RouterLink class="brand" to="/">
             <img class="shell-brand-logo" src="/logo-dinktech.svg" alt="Dinktech" />
           </RouterLink>
-          <NButton
-            class="mobile-menu-button"
-            quaternary
-            circle
-            :aria-label="t('shell.openMenu')"
-            @click="mobileMenuOpen = !mobileMenuOpen"
-          >
-            <template #icon
-              ><NIcon><MenuOutline /></NIcon
-            ></template>
+          <NButton class="mobile-menu-button" quaternary circle :aria-label="t('shell.openMenu')"
+            @click="mobileMenuOpen = !mobileMenuOpen">
+            <template #icon>
+              <NIcon>
+                <MenuOutline />
+              </NIcon>
+            </template>
           </NButton>
-          <NButton class="workspace-search" secondary @click="openCommandPalette">
-            <template #icon
-              ><NIcon><SearchOutline /></NIcon
-            ></template>
-            {{ t('shell.searchWorkspace') }}<kbd>/</kbd>
+
+          <NButton class="workspace-search" secondary :aria-label="t('shell.searchWorkspace')"
+            :title="t('shell.searchWorkspace')" @click="openCommandPalette">
+
+            <NIcon :size="20"> <SearchOutline /> </NIcon>
+
+            <span class="workspace-search-label">{{ t('shell.searchWorkspace') }}</span>
+
           </NButton>
-        </NSpace>
-        <NSpace align="center" :size="6" class="header-actions">
+        </div>
+        <div class="header-actions">
           <NPopover v-model:show="notificationsOpen" trigger="click" placement="bottom-end">
             <template #trigger>
               <NBadge :value="unreadNotifications" :max="99" type="error">
                 <NButton quaternary circle :aria-label="t('shell.notifications')">
-                  <template #icon
-                    ><NIcon><NotificationsOutline /></NIcon
-                  ></template>
+                  <template #icon>
+                    <NIcon>
+                      <NotificationsOutline />
+                    </NIcon>
+                  </template>
                 </NButton>
               </NBadge>
             </template>
             <section class="notification-popover" aria-live="polite">
               <header class="notification-header">
                 <strong>{{ t('shell.notifications') }}</strong>
-                <NButton
-                  text
-                  size="tiny"
-                  :disabled="notificationsRead"
-                  @click="markNotificationsRead"
-                >
+                <NButton text size="tiny" :disabled="notificationsRead" @click="markNotificationsRead">
                   {{ notificationsRead ? t('shell.allRead') : t('shell.markAllRead') }}
                 </NButton>
               </header>
               <div class="notification-list">
-                <article
-                  v-for="item in notificationItems"
-                  :key="item.key"
-                  class="notification-item"
-                >
+                <article v-for="item in notificationItems" :key="item.key" class="notification-item">
                   <span class="notification-dot" aria-hidden="true" />
                   <div>
                     <strong>{{ item.title }}</strong>
@@ -710,66 +700,62 @@ onBeforeUnmount(handleResizeCancel)
             </section>
           </NPopover>
           <NButton quaternary circle :aria-label="t('shell.theme')" @click="toggleTheme">
-            <template #icon><NIcon :component="themeIcon" /></template>
+            <template #icon>
+              <NIcon :component="themeIcon" />
+            </template>
           </NButton>
           <NDropdown :options="localeOptions" trigger="click" @select="handleLocale">
-            <NButton quaternary size="small" :aria-label="t('shell.language')">
-              {{ localeLabel }}<NIcon><ChevronDownOutline /></NIcon>
+            <NButton class="header-language-button" quaternary size="small" :aria-label="t('shell.language')"
+              :title="t('shell.language')">
+              <span class="header-language-label">{{ localeLabel }}</span>
+              <NIcon class="header-language-chevron">
+                <ChevronDownOutline />
+              </NIcon>
+              <NIcon class="header-language-icon" aria-hidden="true">
+                <LanguageOutline />
+              </NIcon>
             </NButton>
           </NDropdown>
-          <NDropdown
-            v-model:show="userMenuOpen"
-            trigger="click"
-            :options="userOptions"
-            @select="handleUserAction"
-          >
-            <NButton quaternary class="user-button">
-              <template #icon
-                ><NIcon><PersonCircleOutline /></NIcon
-              ></template>
-              {{ auth.user?.username || 'quyetdv' }}<NIcon><ChevronDownOutline /></NIcon>
+          <NDropdown v-model:show="userMenuOpen" trigger="click" :options="userOptions" @select="handleUserAction">
+            <NButton quaternary class="user-button" :aria-label="auth.user?.username || t('shell.profile')"
+              :title="auth.user?.username || t('shell.profile')">
+              <template #icon>
+                <NIcon>
+                  <PersonCircleOutline />
+                </NIcon>
+              </template>
+              <span class="header-user-label">{{ auth.user?.username || t('shell.profile') }}</span>
+              <NIcon class="header-user-chevron">
+                <ChevronDownOutline />
+              </NIcon>
             </NButton>
           </NDropdown>
-        </NSpace>
+        </div>
       </NLayoutHeader>
 
       <NLayout has-sider class="shell-body">
-        <NLayoutSider
-          bordered
-          :width="workspace.sidebarWidth"
-          :collapsed-width="72"
-          :collapsed="workspace.sidebarCollapsed"
-          collapse-mode="width"
-          class="shell-sider"
-          :class="{
+        <NLayoutSider bordered :width="workspace.sidebarWidth" :collapsed-width="72"
+          :collapsed="workspace.sidebarCollapsed" collapse-mode="width" class="shell-sider" :class="{
             'sider-mobile-open': mobileMenuOpen,
             'sider-collapsed': workspace.sidebarCollapsed,
-          }"
-        >
+          }">
           <div class="sider-content">
-            <NInput
-              v-if="!workspace.sidebarCollapsed"
-              v-model:value="menuSearch"
-              clearable
-              :placeholder="t('shell.searchMenu')"
-            >
-              <template #prefix
-                ><NIcon><SearchOutline /></NIcon
-              ></template>
+            <NInput v-if="!workspace.sidebarCollapsed" v-model:value="menuSearch" clearable
+              :placeholder="t('shell.searchMenu')">
+              <template #prefix>
+                <NIcon>
+                  <SearchOutline />
+                </NIcon>
+              </template>
             </NInput>
             <div class="mode-switcher" role="group" :aria-label="t('shell.sidebarModes')">
-              <NButton
-                v-for="mode in sidebarModes"
-                :key="mode.key"
-                quaternary
+              <NButton v-for="mode in sidebarModes" :key="mode.key" quaternary
                 :type="activeMode === mode.key ? 'primary' : 'default'"
-                :class="{ 'mode-button--active': activeMode === mode.key }"
-                :aria-pressed="activeMode === mode.key"
-                :aria-label="t(mode.labelKey)"
-                :title="t(mode.labelKey)"
-                @click="selectMode(mode.key)"
-              >
-                <template #icon><NIcon :component="mode.icon" /></template>
+                :class="{ 'mode-button--active': activeMode === mode.key }" :aria-pressed="activeMode === mode.key"
+                :aria-label="t(mode.labelKey)" :title="t(mode.labelKey)" @click="selectMode(mode.key)">
+                <template #icon>
+                  <NIcon :component="mode.icon" />
+                </template>
               </NButton>
             </div>
             <div v-if="!workspace.sidebarCollapsed && !mobileMenuOpen" class="sider-heading">
@@ -779,150 +765,99 @@ onBeforeUnmount(handleResizeCancel)
               </span>
             </div>
             <div v-if="!workspace.sidebarCollapsed" class="sider-menu-scroll">
-              <NMenu
-                v-if="menuOptions.length"
-                :value="route.path"
-                :options="menuOptions"
-                :root-indent="12"
-                :indent="14"
-                :render-extra="renderFavoriteExtra"
-                :node-props="menuNodeProps"
-                :collapsed="workspace.sidebarCollapsed"
-                :collapsed-width="72"
-                :collapsed-icon-size="20"
-                @update:value="handleMenuSelect"
-              />
+              <NMenu v-if="menuOptions.length" :value="route.path" :options="menuOptions" :root-indent="12" :indent="14"
+                :render-extra="renderFavoriteExtra" :node-props="menuNodeProps" :collapsed="workspace.sidebarCollapsed"
+                :collapsed-width="72" :collapsed-icon-size="20" @update:value="handleMenuSelect" />
               <p v-else class="sider-empty-state">{{ sidebarEmptyMessage }}</p>
             </div>
             <div v-if="!workspace.sidebarCollapsed && !mobileMenuOpen" class="sider-footer">
-              <NIcon><InformationCircleOutline /></NIcon
-              ><span>{{ t('shell.filteredByPermission') }}</span>
+              <NIcon>
+                <InformationCircleOutline />
+              </NIcon><span>{{ t('shell.filteredByPermission') }}</span>
             </div>
-            <button
-              class="sider-collapse"
-              type="button"
-              :aria-label="
-                workspace.sidebarCollapsed ? t('shell.expandSidebar') : t('shell.collapseSidebar')
-              "
-              @click="toggleSidebar"
-            >
-              <NIcon
-                ><ChevronForwardOutline v-if="workspace.sidebarCollapsed" /><ChevronBackOutline
-                  v-else
-              /></NIcon>
+            <button class="sider-collapse" type="button" :aria-label="workspace.sidebarCollapsed ? t('shell.expandSidebar') : t('shell.collapseSidebar')
+              " @click="toggleSidebar">
+              <NIcon>
+                <ChevronForwardOutline v-if="workspace.sidebarCollapsed" />
+                <ChevronBackOutline v-else />
+              </NIcon>
             </button>
-            <div
-              v-if="!workspace.sidebarCollapsed"
-              class="sider-resize"
-              role="separator"
-              aria-orientation="vertical"
-              tabindex="0"
-              :aria-valuemin="workspace.MIN_SIDEBAR_WIDTH"
-              :aria-valuemax="workspace.MAX_SIDEBAR_WIDTH"
-              :aria-valuenow="workspace.sidebarWidth"
-              @pointerdown="startResize"
-              @keydown="handleResizeKey"
-            />
+            <div v-if="!workspace.sidebarCollapsed" class="sider-resize" role="separator" aria-orientation="vertical"
+              tabindex="0" :aria-valuemin="workspace.MIN_SIDEBAR_WIDTH" :aria-valuemax="workspace.MAX_SIDEBAR_WIDTH"
+              :aria-valuenow="workspace.sidebarWidth" @pointerdown="startResize" @keydown="handleResizeKey" />
           </div>
         </NLayoutSider>
 
         <NLayout class="workspace-layout">
           <div class="workspace-tabs-wrap">
-            <NTabs
-              type="card"
-              size="small"
-              :value="currentTabKey"
-              closable
-              @update:value="handleTabChange"
-              @close="closeTab"
-            >
-              <NTabPane
-                v-for="tab in workspace.tabs"
-                :key="tab.key"
-                :name="tab.key"
-                :closable="tab.closable"
-              >
+            <NTabs type="card" size="small" :value="currentTabKey" closable @update:value="handleTabChange"
+              @close="closeTab">
+              <NTabPane v-for="tab in workspace.tabs" :key="tab.key" :name="tab.key" :closable="tab.closable">
                 <template #tab>{{ t(tab.labelKey) }}</template>
               </NTabPane>
             </NTabs>
-            <NButton
-              quaternary
-              circle
-              :aria-label="t('shell.openNewTab')"
-              @click="openCommandPalette"
-            >
-              <template #icon
-                ><NIcon><AddOutline /></NIcon
-              ></template>
+            <NButton quaternary circle :aria-label="t('shell.openNewTab')" @click="openCommandPalette">
+              <template #icon>
+                <NIcon>
+                  <AddOutline />
+                </NIcon>
+              </template>
             </NButton>
           </div>
           <div class="error-stack" aria-live="polite">
-            <NAlert
-              v-for="notice in errorNotices"
-              :key="notice.id"
-              :type="notice.status === 401 || notice.status === 403 ? 'warning' : 'error'"
-              closable
-              @close="dismissError(notice.id)"
-            >
-              <template #icon
-                ><NIcon><AlertCircleOutline /></NIcon
-              ></template>
+            <NAlert v-for="notice in errorNotices" :key="notice.id"
+              :type="notice.status === 401 || notice.status === 403 ? 'warning' : 'error'" closable
+              @close="dismissError(notice.id)">
+              <template #icon>
+                <NIcon>
+                  <AlertCircleOutline />
+                </NIcon>
+              </template>
               <strong>{{ t(`errors.status.${notice.status}`) }}</strong>
               <span>{{ notice.message || t('errors.defaultMessage') }}</span>
-              <small v-if="notice.code || notice.requestId" class="error-meta"
-                >{{ notice.code || t('errors.unknownCode')
-                }}<span v-if="notice.requestId"> · {{ notice.requestId }}</span></small
-              >
+              <small v-if="notice.code || notice.requestId" class="error-meta">{{ notice.code || t('errors.unknownCode')
+              }}<span v-if="notice.requestId"> · {{ notice.requestId }}</span></small>
             </NAlert>
           </div>
-          <main class="workspace-content"><RouterView /></main>
+          <main class="workspace-content">
+            <RouterView />
+          </main>
         </NLayout>
       </NLayout>
     </NLayout>
 
-    <NModal
-      v-model:show="commandOpen"
-      preset="card"
-      class="command-modal"
-      :mask-closable="false"
-      :close-on-esc="false"
-    >
+    <NModal v-model:show="commandOpen" preset="card" class="command-modal" :mask-closable="false" :close-on-esc="true">
       <template #header>
         <div class="command-modal-header">
-          <span class="command-modal-icon"
-            ><NIcon><SearchOutline /></NIcon
-          ></span>
+          <span class="command-modal-icon">
+            <NIcon>
+              <SearchOutline />
+            </NIcon>
+          </span>
           <div>
             <strong>{{ t('shell.commandPalette') }}</strong>
             <small>{{ t('shell.commandDescription') }}</small>
           </div>
         </div>
       </template>
-      <NInput
-        v-model:value="commandSearch"
-        autofocus
-        size="large"
-        clearable
-        :placeholder="t('shell.searchCommand')"
-        class="command-search-input"
-        @keydown="handleCommandKeydown"
-      >
-        <template #prefix
-          ><NIcon><SearchOutline /></NIcon
-        ></template>
+      <NInput v-model:value="commandSearch" autofocus size="large" clearable :placeholder="t('shell.searchCommand')"
+        class="command-search-input" @keydown="handleCommandKeydown">
+        <template #prefix>
+          <NIcon>
+            <SearchOutline />
+          </NIcon>
+        </template>
       </NInput>
       <div v-if="commandOptions.length" class="command-list">
-        <NButton
-          v-for="command in commandOptions"
-          :key="command.key"
-          class="command-option"
-          quaternary
-          block
-          @click="openCommandRoute(command.key)"
-        >
-          <template #icon><NIcon :component="command.icon" /></template>
+        <NButton v-for="command in commandOptions" :key="command.key" class="command-option" quaternary block
+          @click="openCommandRoute(command.key)">
+          <template #icon>
+            <NIcon :component="command.icon" />
+          </template>
           <span class="command-option-label">{{ command.label }}</span>
-          <NIcon class="command-option-arrow"><ChevronForwardOutline /></NIcon>
+          <NIcon class="command-option-arrow">
+            <ChevronForwardOutline />
+          </NIcon>
         </NButton>
       </div>
       <div v-else class="command-empty">{{ t('shell.noCommands') }}</div>
@@ -940,12 +875,14 @@ onBeforeUnmount(handleResizeCancel)
   min-height: 100vh;
   background: #f5f7fa;
 }
+
 .shell-body {
   height: calc(100vh - 62px);
   min-height: 0;
   overflow: hidden;
   background: #f5f7fa;
 }
+
 .shell-header {
   position: relative;
   z-index: 20;
@@ -956,18 +893,32 @@ onBeforeUnmount(handleResizeCancel)
   padding: 0 18px 0 16px;
   background: #fff;
 }
+
 .mobile-menu-button {
   display: none;
 }
+
 .header-left,
 .header-actions {
+  display: flex;
   min-width: 0;
+  align-items: center;
 }
+
+.header-left {
+  gap: 10px;
+}
+
+.header-actions {
+  gap: 6px;
+}
+
 .brand {
   display: inline-flex;
   align-items: center;
   min-width: 150px;
 }
+
 .shell-brand-logo {
   display: block;
   width: 132px;
@@ -975,29 +926,51 @@ onBeforeUnmount(handleResizeCancel)
   object-fit: contain;
   object-position: left center;
 }
+
 .workspace-search {
-  width: min(430px, 20vw);
+  width: max-content;
+  max-width: 550px;
+  flex-shrink: 0;
   justify-content: flex-start;
   color: #718298;
   text-align: left;
+  display: inline-flex;
+  align-items: center;
 }
-.workspace-search kbd {
-  margin-left: auto;
+
+.workspace-search :deep(.n-button__content) {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
 }
+
+.workspace-search-label {
+  white-space: nowrap;
+}
+
+
+.header-language-icon {
+  display: none;
+}
+
 .locale-select {
   width: 122px;
 }
+
 .user-button {
   gap: 7px;
 }
+
 .shell-sider {
   position: relative;
   min-width: 0;
   background: #fff;
 }
+
 .shell-sider :deep(.n-layout-sider-scroll-container) {
   overflow: hidden;
 }
+
 .sider-content {
   position: relative;
   display: flex;
@@ -1008,11 +981,13 @@ onBeforeUnmount(handleResizeCancel)
   padding: 16px 8px 12px;
   overflow: hidden;
 }
+
 .mode-switcher {
   display: grid;
   grid-template-columns: repeat(5, minmax(0, 1fr));
   gap: 4px;
 }
+
 .mode-switcher :deep(.n-button) {
   width: 100%;
   min-width: 0;
@@ -1021,21 +996,25 @@ onBeforeUnmount(handleResizeCancel)
   border-radius: 10px;
   color: #273e57;
 }
+
 .mode-switcher :deep(.n-button:hover) {
   background: #eaf2f8;
   color: #114c7c;
 }
+
 .mode-switcher :deep(.n-button.mode-button--active) {
   background: #dff3e9;
   color: #066248;
   box-shadow: inset 0 0 0 1px #9fd8be;
 }
+
 .mode-switcher :deep(.n-button:focus-visible),
 .sider-collapse:focus-visible,
 .sider-resize:focus-visible {
   outline: 2px solid #126bb0;
   outline-offset: 2px;
 }
+
 .shell-sider.sider-collapsed .sider-content {
   box-sizing: border-box;
   width: 72px;
@@ -1043,6 +1022,7 @@ onBeforeUnmount(handleResizeCancel)
   align-items: center;
   padding: 16px 10px 58px;
 }
+
 .shell-sider.sider-collapsed .mode-switcher {
   width: 44px;
   max-width: 100%;
@@ -1050,10 +1030,12 @@ onBeforeUnmount(handleResizeCancel)
   gap: 8px;
   justify-items: center;
 }
+
 .shell-sider.sider-collapsed .mode-switcher :deep(.n-button) {
   width: 44px;
   height: 44px;
 }
+
 .sider-heading {
   display: flex;
   align-items: center;
@@ -1065,6 +1047,7 @@ onBeforeUnmount(handleResizeCancel)
   letter-spacing: 0.06em;
   text-transform: uppercase;
 }
+
 .sider-heading-count {
   padding: 1px 6px;
   border-radius: 9px;
@@ -1072,12 +1055,14 @@ onBeforeUnmount(handleResizeCancel)
   color: #37556d;
   font-variant-numeric: tabular-nums;
 }
+
 .sider-empty-state {
   margin: 8px;
   color: #52687b;
   font-size: 13px;
   line-height: 1.6;
 }
+
 .sider-menu-scroll {
   flex: 1;
   min-width: 0;
@@ -1086,13 +1071,16 @@ onBeforeUnmount(handleResizeCancel)
   overflow-y: auto;
   scrollbar-gutter: stable;
 }
+
 .sider-menu-scroll :deep(.n-menu) {
   width: 100%;
   min-width: 0;
 }
+
 .sider-menu-scroll :deep(.n-menu-item-content) {
   min-width: 0;
 }
+
 .sider-menu-scroll :deep(.n-menu-item-content-header) {
   min-width: 0;
   overflow: hidden;
@@ -1100,23 +1088,28 @@ onBeforeUnmount(handleResizeCancel)
   text-overflow: ellipsis;
   white-space: nowrap;
 }
+
 .sider-menu-scroll :deep(.sidebar-favorite-toggle) {
   width: 28px;
   height: 28px;
   flex-shrink: 0;
   color: #52687b;
 }
+
 .sider-menu-scroll :deep(.sidebar-favorite-toggle--active) {
   color: #066248;
 }
+
 .sider-menu-scroll :deep(.sidebar-favorite-toggle:hover),
 .sider-menu-scroll :deep(.sidebar-favorite-toggle:focus-visible) {
   background: #e2f4ea;
 }
+
 .sider-menu-scroll :deep(.n-menu-item-content--selected .n-menu-item-content-header) {
   color: #066248;
   font-weight: 650;
 }
+
 .sider-footer {
   display: flex;
   align-items: center;
@@ -1126,6 +1119,7 @@ onBeforeUnmount(handleResizeCancel)
   color: #53687e;
   font-size: 11px;
 }
+
 .sider-collapse {
   position: absolute;
   top: 128px;
@@ -1142,6 +1136,7 @@ onBeforeUnmount(handleResizeCancel)
   cursor: pointer;
   box-shadow: 0 2px 8px rgb(24 47 68 / 8%);
 }
+
 .shell-sider.sider-collapsed .sider-collapse {
   top: auto;
   right: calc(50% - 18px);
@@ -1149,6 +1144,7 @@ onBeforeUnmount(handleResizeCancel)
   width: 36px;
   height: 36px;
 }
+
 .sider-resize {
   position: absolute;
   top: 0;
@@ -1159,6 +1155,7 @@ onBeforeUnmount(handleResizeCancel)
   cursor: col-resize;
   touch-action: none;
 }
+
 .sider-resize::after {
   position: absolute;
   top: 0;
@@ -1169,11 +1166,13 @@ onBeforeUnmount(handleResizeCancel)
   content: '';
   opacity: 0;
 }
+
 .sider-resize:hover::after,
 .sider-resize:focus-visible::after,
 .shell-resizing .sider-resize::after {
   opacity: 1;
 }
+
 .shell-resizing .shell-sider {
   width: var(--sidebar-width) !important;
   min-width: var(--sidebar-width) !important;
@@ -1181,19 +1180,23 @@ onBeforeUnmount(handleResizeCancel)
   flex: 0 0 var(--sidebar-width) !important;
   transition: none !important;
 }
+
 .shell-resizing .shell-body {
   cursor: col-resize;
   user-select: none;
 }
+
 .shell-resizing .workspace-layout {
   pointer-events: none;
 }
+
 .workspace-layout {
   min-height: 100%;
   min-width: 0;
   overflow: hidden;
   background: #f5f7fa;
 }
+
 .workspace-tabs-wrap {
   display: flex;
   align-items: center;
@@ -1202,67 +1205,81 @@ onBeforeUnmount(handleResizeCancel)
   border-bottom: 1px solid #dfe7ed;
   background: #fff;
 }
+
 .workspace-tabs-wrap :deep(.n-tabs) {
   flex: 1;
   min-width: 0;
 }
+
 .workspace-tabs-wrap :deep(.n-tabs-nav) {
   margin-bottom: 0;
 }
+
 .error-stack {
   display: grid;
   gap: 8px;
   padding: 12px 28px 0;
 }
+
 .error-stack :deep(.n-alert) {
   align-items: flex-start;
 }
+
 .error-meta {
   display: block;
   margin-top: 4px;
   color: #728095;
 }
+
 .workspace-content {
   overflow-x: hidden;
   overflow-y: auto;
   min-width: 0;
   padding: 26px clamp(18px, 2.2vw, 36px) 48px;
 }
-.workspace-content > :deep(.breadcrumbs),
-.workspace-content > :deep(.page-heading),
-.workspace-content > :deep(.content-panel),
-.workspace-content > :deep(.metric-grid),
-.workspace-content > :deep(.dashboard-blank),
-.workspace-content > :deep(.profile-layout) {
+
+.workspace-content> :deep(.breadcrumbs),
+.workspace-content> :deep(.page-heading),
+.workspace-content> :deep(.content-panel),
+.workspace-content> :deep(.metric-grid),
+.workspace-content> :deep(.dashboard-blank),
+.workspace-content> :deep(.profile-layout) {
   width: min(100%, 1680px);
   margin-inline: auto;
 }
+
 .command-modal {
-  width: min(620px, calc(100vw - 32px));
+  width: min(420px, calc(80vw - 32px));
   border: 1px solid #dbe5ec;
   box-shadow: 0 24px 70px rgb(15 44 67 / 22%);
 }
+
 .command-modal-header {
   display: flex;
   align-items: center;
   gap: 12px;
 }
-.command-modal-header > div {
+
+.command-modal-header>div {
   display: grid;
   gap: 3px;
 }
-.command-modal-header > .n-button {
+
+.command-modal-header>.n-button {
   margin-left: auto;
 }
+
 .command-modal-header strong {
   color: #183b57;
   font-size: 15px;
 }
+
 .command-modal-header small {
   color: #7b8d9d;
   font-size: 11px;
   font-weight: 400;
 }
+
 .command-modal-icon {
   display: grid;
   width: 34px;
@@ -1272,12 +1289,15 @@ onBeforeUnmount(handleResizeCancel)
   background: #e9f5f7;
   color: #0878b6;
 }
+
 .command-search-input {
   margin-top: 2px;
 }
+
 .command-search-input :deep(.n-input__input-el) {
   font-size: 14px;
 }
+
 .command-list {
   display: grid;
   gap: 4px;
@@ -1285,6 +1305,7 @@ onBeforeUnmount(handleResizeCancel)
   margin-top: 12px;
   overflow: auto;
 }
+
 .command-option {
   min-height: 44px;
   justify-content: flex-start;
@@ -1292,23 +1313,28 @@ onBeforeUnmount(handleResizeCancel)
   color: #294b65;
   text-align: left;
 }
+
 .command-option:hover {
   background: #eff8f8;
   color: #0569ad;
 }
+
 .command-option-label {
   flex: 1;
   text-align: left;
 }
+
 .command-option-arrow {
   color: #9aaab7;
 }
+
 .command-empty {
   padding: 34px 12px;
   color: #7b8d9d;
   font-size: 13px;
   text-align: center;
 }
+
 .command-modal-footer {
   display: flex;
   gap: 16px;
@@ -1318,6 +1344,7 @@ onBeforeUnmount(handleResizeCancel)
   color: #8393a1;
   font-size: 11px;
 }
+
 .command-modal-footer kbd {
   padding: 2px 6px;
   border: 1px solid #dce5eb;
@@ -1326,9 +1353,11 @@ onBeforeUnmount(handleResizeCancel)
   color: #5e7487;
   font-size: 10px;
 }
+
 .notification-popover {
   width: min(330px, calc(100vw - 36px));
 }
+
 .notification-header {
   display: flex;
   align-items: center;
@@ -1338,33 +1367,40 @@ onBeforeUnmount(handleResizeCancel)
   color: #183b57;
   font-size: 14px;
 }
+
 .notification-list {
   display: grid;
   gap: 2px;
   padding-top: 5px;
 }
+
 .notification-item {
   display: flex;
   gap: 10px;
   padding: 10px 4px;
   border-bottom: 1px solid #f0f3f5;
 }
+
 .notification-item:last-child {
   border-bottom: 0;
 }
-.notification-item > div {
+
+.notification-item>div {
   min-width: 0;
 }
+
 .notification-item strong {
   color: #294b65;
   font-size: 12px;
 }
+
 .notification-item p {
   margin: 3px 0 0;
   color: #7b8d9d;
   font-size: 11px;
   line-height: 1.45;
 }
+
 .notification-dot {
   width: 8px;
   height: 8px;
@@ -1373,17 +1409,20 @@ onBeforeUnmount(handleResizeCancel)
   border-radius: 50%;
   background: #0b7dbd;
 }
+
 .erp-shell.theme-dark,
 .erp-shell.theme-dark .shell-body,
 .erp-shell.theme-dark .workspace-layout {
   background: #111923;
 }
+
 .erp-shell.theme-dark .shell-header,
 .erp-shell.theme-dark .shell-sider,
 .erp-shell.theme-dark .workspace-tabs-wrap {
   border-color: #273746;
   background: #17232e;
 }
+
 .erp-shell.theme-dark .workspace-content,
 .erp-shell.theme-dark .sider-heading,
 .erp-shell.theme-dark .sider-footer,
@@ -1392,33 +1431,39 @@ onBeforeUnmount(handleResizeCancel)
 .erp-shell.theme-dark .command-modal-footer {
   color: #a9bac7;
 }
+
 .erp-shell.theme-dark .workspace-search {
   border-color: #304454;
   background: #1b2a36;
 }
+
 .erp-shell.theme-dark .mode-switcher :deep(.n-button) {
   color: #d9e7f2;
 }
+
 .erp-shell.theme-dark .mode-switcher :deep(.n-button:hover) {
   background: #294255;
   color: #ffffff;
 }
+
 .erp-shell.theme-dark .mode-switcher :deep(.n-button.mode-button--active) {
   background: #174b3d;
   color: #9af0ce;
   box-shadow: inset 0 0 0 1px #3b9b79;
 }
+
 .erp-shell.theme-dark .sider-menu-scroll :deep(.n-menu-item-content-header) {
   color: #d9e7f2;
 }
-.erp-shell.theme-dark
-  .sider-menu-scroll
-  :deep(.n-menu-item-content--selected .n-menu-item-content-header) {
+
+.erp-shell.theme-dark .sider-menu-scroll :deep(.n-menu-item-content--selected .n-menu-item-content-header) {
   color: #9af0ce;
 }
+
 .erp-shell.theme-dark .sider-resize::after {
   background: #7dd4ec;
 }
+
 .erp-shell.theme-dark .sider-footer,
 .erp-shell.theme-dark .workspace-tabs-wrap,
 .erp-shell.theme-dark .notification-header,
@@ -1426,50 +1471,96 @@ onBeforeUnmount(handleResizeCancel)
 .erp-shell.theme-dark .command-modal-footer {
   border-color: #2a3b49;
 }
+
 .erp-shell.theme-dark .sider-collapse {
   border-color: #385062;
   background: #1d2d3a;
   color: #b5c8d5;
 }
+
 .erp-shell.theme-dark .command-modal,
 .erp-shell.theme-dark .command-option:hover,
 .erp-shell.theme-dark .notification-popover {
   background: #1b2a36;
 }
+
 .erp-shell.theme-dark .command-modal-header strong,
 .erp-shell.theme-dark .notification-header,
 .erp-shell.theme-dark .notification-item strong {
   color: #e3edf3;
 }
+
 .erp-shell.theme-dark .command-modal-header small,
 .erp-shell.theme-dark .command-empty {
   color: #9eb1bf;
 }
+
 .erp-shell.theme-dark .command-modal-icon {
   background: #214354;
   color: #8bd9e9;
 }
+
 @media (max-width: 800px) {
   .shell-header {
-    padding-inline: 10px;
+    display: grid;
+    grid-template-columns: repeat(7, minmax(0, 1fr));
+    justify-items: center;
+    align-items: center;
+    gap: 0;
+    padding-inline: 8px;
   }
+
+  .header-left,
+  .header-actions {
+    display: contents;
+  }
+
   .brand {
-    min-width: auto;
+    min-width: 0;
+    justify-content: center;
   }
+
   .mobile-menu-button {
     display: inline-flex;
   }
+
   .shell-brand-logo {
-    width: 112px;
+    width: clamp(32px, 12vw, 96px);
     height: 42px;
+    object-position: center;
   }
+
+  .workspace-search,
+  .header-language-button,
+  .user-button {
+    width: 34px;
+    min-width: 34px;
+    height: 34px;
+    padding: 0;
+    justify-content: center;
+  }
+
   .workspace-search {
-    width: min(260px, 44vw);
+    margin-left: 0;
+    border-radius: 50%;
   }
-  .header-actions > :deep(.n-button:nth-child(2)),
-  .locale-select {
+
+  .workspace-search-label,
+  .header-language-label,
+  .header-language-chevron,
+  .header-user-label,
+  .header-user-chevron {
     display: none;
   }
+
+  .header-language-icon {
+    display: inline-flex;
+  }
+
+  .user-button {
+    gap: 0;
+  }
+
   .shell-sider {
     position: fixed;
     inset: 62px auto 0 0;
@@ -1478,11 +1569,19 @@ onBeforeUnmount(handleResizeCancel)
     transform: translateX(-100%);
     box-shadow: 8px 0 24px rgb(26 51 73 / 14%);
   }
+
   .shell-sider.sider-mobile-open {
     transform: translateX(0);
   }
+
   .workspace-content {
     padding: 18px 14px 36px;
+  }
+}
+
+@media (max-width: 420px) {
+  .shell-brand-logo {
+    height: 36px;
   }
 }
 </style>
