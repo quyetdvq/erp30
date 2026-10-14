@@ -189,7 +189,9 @@ test.describe('E2E-LOOKUP-BATCH (browser contract, mocked API)', () => {
     expect(api.unexpected).toEqual([])
   })
 
-  test('Price List save reuses the rotated CSRF header after a validation error', async ({ page }) => {
+  test('Price List save reuses the rotated CSRF header after a validation error', async ({
+    page,
+  }) => {
     const api = await mockLookupBatch(page)
     const attemptedTokens: string[] = []
     await page.route('**/api/v1/price-lists/70/items', async (route) => {
@@ -207,9 +209,10 @@ test.describe('E2E-LOOKUP-BATCH (browser contract, mocked API)', () => {
         status: attemptedTokens.length === 1 ? 422 : token === 'rotated-after-422' ? 200 : 403,
         headers,
         contentType: 'application/json',
-        body: attemptedTokens.length === 1
-          ? JSON.stringify({ error: { code: 'VALIDATION_ERROR', message: 'Invalid price' } })
-          : JSON.stringify({ data: [] }),
+        body:
+          attemptedTokens.length === 1
+            ? JSON.stringify({ error: { code: 'VALIDATION_ERROR', message: 'Invalid price' } })
+            : JSON.stringify({ data: [] }),
       })
     })
 

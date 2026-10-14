@@ -47,8 +47,8 @@ Phòng ban PeopleOutline
 
 Còn lại 
 
-git add backend/ frontend/ contracts/ docs
-git commit -m "Sua giao dien và icon ttt al"
+git add backend/ frontend/ contracts/ docs/ tools/
+git commit -m "Bo tri lai V2.1"
 git push
 
 

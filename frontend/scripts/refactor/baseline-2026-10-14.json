@@ -1,0 +1,598 @@
+{
+  "schema": "frontend-refactor-equivalence/1",
+  "routes": [
+    {
+      "path": "/login",
+      "name": "login",
+      "component": "{lazy-view:LoginView.vue}",
+      "meta": {
+        "public": true,
+        "closable": false
+      }
+    },
+    {
+      "path": "/",
+      "component": "{identifier:AppShell}",
+      "children": [
+        {
+          "path": "",
+          "name": "dashboard",
+          "component": "{lazy-view:DashboardView.vue}",
+          "meta": {
+            "labelKey": "nav.dashboard",
+            "closable": false
+          }
+        },
+        {
+          "path": "profile",
+          "name": "profile",
+          "component": "{lazy-view:ProfileView.vue}",
+          "meta": {
+            "labelKey": "shell.profile",
+            "breadcrumbTrail": "{member:breadcrumbTrails.account}"
+          }
+        },
+        {
+          "path": "profile/display-preferences",
+          "name": "display-preferences",
+          "component": "{lazy-view:DisplayPreferencesView.vue}",
+          "meta": {
+            "labelKey": "shell.displayPreferences",
+            "breadcrumbTrail": "{member:breadcrumbTrails.displayPreferences}"
+          }
+        },
+        {
+          "path": "system/display-settings",
+          "name": "display-settings",
+          "component": "{lazy-view:DisplaySettingsView.vue}",
+          "meta": {
+            "labelKey": "nav.displaySettings",
+            "breadcrumbTrail": "{member:breadcrumbTrails.configuration}"
+          }
+        },
+        {
+          "path": "security/users",
+          "name": "security-users",
+          "component": "{lazy-view:SecurityUsersView.vue}",
+          "meta": {
+            "labelKey": "nav.securityUsers",
+            "breadcrumbTrail": "{member:breadcrumbTrails.security}"
+          }
+        },
+        {
+          "path": "security/authorization-groups",
+          "name": "security-authorization-groups",
+          "component": "{lazy-view:SecurityAuthorizationGroupsView.vue}",
+          "meta": {
+            "labelKey": "nav.authorizationGroups",
+            "breadcrumbTrail": "{member:breadcrumbTrails.security}"
+          }
+        },
+        {
+          "path": "security/resources",
+          "name": "security-resources",
+          "component": "{lazy-view:SecurityResourcesView.vue}",
+          "meta": {
+            "labelKey": "nav.resources",
+            "breadcrumbTrail": "{member:breadcrumbTrails.security}"
+          }
+        },
+        {
+          "path": "security/policies",
+          "name": "security-policies",
+          "component": "{lazy-view:SecurityPoliciesView.vue}",
+          "meta": {
+            "labelKey": "nav.policies",
+            "breadcrumbTrail": "{member:breadcrumbTrails.security}"
+          }
+        },
+        {
+          "path": "security/authorization-logs",
+          "name": "security-authorization-logs",
+          "component": "{lazy-view:SecurityAuthorizationLogsView.vue}",
+          "meta": {
+            "labelKey": "nav.authorizationLogs",
+            "breadcrumbTrail": "{member:breadcrumbTrails.security}"
+          }
+        },
+        {
+          "path": "configuration/workflow-states",
+          "name": "configuration-workflow-states",
+          "component": "{lazy-view:WorkflowStatesView.vue}",
+          "meta": {
+            "labelKey": "nav.workflowStates",
+            "breadcrumbTrail": "{member:breadcrumbTrails.configuration}"
+          }
+        },
+        {
+          "path": "configuration/lifecycles",
+          "name": "configuration-lifecycles",
+          "component": "{lazy-view:LifecyclesView.vue}",
+          "meta": {
+            "labelKey": "nav.lifecycles",
+            "breadcrumbTrail": "{member:breadcrumbTrails.configuration}"
+          }
+        },
+        {
+          "path": "configuration/auto-numbering",
+          "name": "configuration-auto-numbering",
+          "component": "{lazy-view:AutoNumberingView.vue}",
+          "meta": {
+            "labelKey": "nav.autoNumbering",
+            "breadcrumbTrail": "{member:breadcrumbTrails.configuration}"
+          }
+        },
+        {
+          "path": "products/groups",
+          "name": "products-groups",
+          "component": "{lazy-view:ProductGroupsView.vue}",
+          "meta": {
+            "labelKey": "nav.productGroups",
+            "breadcrumbTrail": "{member:breadcrumbTrails.products}"
+          }
+        },
+        {
+          "path": "products/uoms",
+          "name": "products-uoms",
+          "component": "{lazy-view:ProductUomsView.vue}",
+          "meta": {
+            "labelKey": "nav.productUoms",
+            "breadcrumbTrail": "{member:breadcrumbTrails.products}"
+          }
+        },
+        {
+          "path": "products/price-lists",
+          "name": "products-price-lists",
+          "component": "{lazy-view:PriceListsView.vue}",
+          "meta": {
+            "labelKey": "nav.productPricePolicies",
+            "breadcrumbTrail": "{member:breadcrumbTrails.products}"
+          }
+        },
+        {
+          "path": "products/import",
+          "name": "products-import",
+          "component": "{lazy-view:ProductImportView.vue}",
+          "meta": {
+            "labelKey": "nav.productImport",
+            "breadcrumbTrail": "{member:breadcrumbTrails.products}"
+          }
+        },
+        {
+          "path": "products/import-jobs/:id",
+          "name": "products-import-job-detail",
+          "component": "{lazy-view:ProductImportJobDetailView.vue}",
+          "meta": {
+            "labelKey": "nav.productImportJobDetail",
+            "breadcrumbTrail": "{member:breadcrumbTrails.importJobDetail}"
+          }
+        },
+        {
+          "path": "products/import-jobs",
+          "name": "products-import-jobs",
+          "component": "{lazy-view:ProductImportJobsView.vue}",
+          "meta": {
+            "labelKey": "nav.productImportJobs",
+            "breadcrumbTrail": "{member:breadcrumbTrails.products}"
+          }
+        },
+        {
+          "path": "products/new",
+          "name": "products-new",
+          "component": "{lazy-view:ProductEditorView.vue}",
+          "meta": {
+            "labelKey": "nav.productCreate",
+            "breadcrumbTrail": "{member:breadcrumbTrails.products}"
+          }
+        },
+        {
+          "path": "products/:id",
+          "name": "products-edit",
+          "component": "{lazy-view:ProductEditorView.vue}",
+          "meta": {
+            "labelKey": "nav.productEdit",
+            "breadcrumbTrail": "{member:breadcrumbTrails.products}"
+          }
+        },
+        {
+          "path": "products",
+          "name": "products",
+          "component": "{lazy-view:ProductsView.vue}",
+          "meta": {
+            "labelKey": "nav.products"
+          }
+        },
+        {
+          "path": "organizations",
+          "name": "organizations",
+          "component": "{lazy-view:OrganizationsView.vue}",
+          "meta": {
+            "labelKey": "nav.organizations",
+            "breadcrumbTrail": "{member:breadcrumbTrails.organization}"
+          }
+        },
+        {
+          "path": "settings/locations/provinces",
+          "name": "locations-provinces",
+          "component": "{lazy-view:LocationsView.vue}",
+          "meta": {
+            "labelKey": "nav.locations",
+            "breadcrumbTrail": "{member:breadcrumbTrails.locations}"
+          }
+        },
+        {
+          "path": "settings/locations/wards",
+          "name": "locations-wards",
+          "component": "{lazy-view:LocationsView.vue}",
+          "meta": {
+            "labelKey": "nav.wards",
+            "breadcrumbTrail": "{member:breadcrumbTrails.locations}"
+          }
+        },
+        {
+          "path": "people/departments",
+          "name": "people-departments",
+          "component": "{lazy-view:PeopleDepartmentsView.vue}",
+          "meta": {
+            "labelKey": "nav.departments",
+            "breadcrumbTrail": "{member:breadcrumbTrails.people}"
+          }
+        },
+        {
+          "path": "people/positions",
+          "name": "people-positions",
+          "component": "{lazy-view:PeoplePositionsView.vue}",
+          "meta": {
+            "labelKey": "nav.positions",
+            "breadcrumbTrail": "{member:breadcrumbTrails.people}"
+          }
+        },
+        {
+          "path": "people/employees",
+          "name": "people-employees",
+          "component": "{lazy-view:PeopleEmployeesView.vue}",
+          "meta": {
+            "labelKey": "nav.employees",
+            "breadcrumbTrail": "{member:breadcrumbTrails.people}"
+          }
+        },
+        {
+          "path": ":pathMatch(.*)*",
+          "name": "not-found",
+          "component": "{lazy-view:NotFoundView.vue}",
+          "meta": {
+            "labelKey": "errors.status.404"
+          }
+        }
+      ]
+    }
+  ],
+  "navigation": {
+    "sidebarModes": [
+      {
+        "key": "menu",
+        "labelKey": "shell.modes.menu",
+        "icon": "{identifier:MenuOutline}"
+      },
+      {
+        "key": "favorites",
+        "labelKey": "shell.modes.favorites",
+        "icon": "{identifier:StarOutline}"
+      },
+      {
+        "key": "recent",
+        "labelKey": "shell.modes.recent",
+        "icon": "{identifier:TimeOutline}"
+      },
+      {
+        "key": "system",
+        "labelKey": "shell.modes.system",
+        "icon": "{identifier:SettingsOutline}"
+      },
+      {
+        "key": "organization",
+        "labelKey": "shell.modes.organization",
+        "icon": "{identifier:BusinessOutline}"
+      }
+    ],
+    "SYSTEM_NAV_PATHS": [
+      "/system/display-settings",
+      "/security/users",
+      "/security/authorization-groups",
+      "/security/resources",
+      "/security/policies",
+      "/security/authorization-logs",
+      "/configuration/workflow-states",
+      "/configuration/lifecycles",
+      "/configuration/auto-numbering"
+    ],
+    "ORGANIZATION_NAV_PATHS": [
+      "/organizations",
+      "/settings/locations/provinces",
+      "/settings/locations/wards",
+      "/people/departments",
+      "/people/positions",
+      "/people/employees"
+    ],
+    "navItems": [
+      {
+        "labelKey": "nav.dashboard",
+        "to": "/",
+        "icon": "{identifier:HomeOutline}"
+      },
+      {
+        "labelKey": "nav.organizations",
+        "to": "/organizations",
+        "icon": "{identifier:BusinessOutline}",
+        "permission": "organization.view"
+      },
+      {
+        "labelKey": "nav.locations",
+        "to": "/settings/locations/provinces",
+        "icon": "{identifier:MapOutline}",
+        "permission": "province.view"
+      },
+      {
+        "labelKey": "nav.wards",
+        "to": "/settings/locations/wards",
+        "icon": "{identifier:LocationOutline}",
+        "permission": "ward.view"
+      },
+      {
+        "labelKey": "nav.departments",
+        "to": "/people/departments",
+        "icon": "{identifier:PeopleOutline}",
+        "permission": "department.view"
+      },
+      {
+        "labelKey": "nav.positions",
+        "to": "/people/positions",
+        "icon": "{identifier:BriefcaseOutline}",
+        "permission": "position.view"
+      },
+      {
+        "labelKey": "nav.employees",
+        "to": "/people/employees",
+        "icon": "{identifier:IdCardOutline}",
+        "permission": "employee.view"
+      },
+      {
+        "labelKey": "nav.displaySettings",
+        "to": "/system/display-settings",
+        "icon": "{identifier:OptionsOutline}",
+        "permission": "display_setting.view"
+      },
+      {
+        "labelKey": "nav.securityUsers",
+        "to": "/security/users",
+        "icon": "{identifier:PersonCircleOutline}",
+        "permission": "user.view"
+      },
+      {
+        "labelKey": "nav.authorizationGroups",
+        "to": "/security/authorization-groups",
+        "icon": "{identifier:PeopleCircleOutline}",
+        "permission": "authorization_group.view"
+      },
+      {
+        "labelKey": "nav.resources",
+        "to": "/security/resources",
+        "icon": "{identifier:LayersOutline}",
+        "permission": "resource.view"
+      },
+      {
+        "labelKey": "nav.policies",
+        "to": "/security/policies",
+        "icon": "{identifier:ShieldCheckmarkOutline}",
+        "permission": "policy.view"
+      },
+      {
+        "labelKey": "nav.authorizationLogs",
+        "to": "/security/authorization-logs",
+        "icon": "{identifier:ReaderOutline}",
+        "permission": "authorization_log.view"
+      },
+      {
+        "labelKey": "nav.workflowStates",
+        "to": "/configuration/workflow-states",
+        "icon": "{identifier:FlagOutline}",
+        "permission": "workflow_state.view"
+      },
+      {
+        "labelKey": "nav.lifecycles",
+        "to": "/configuration/lifecycles",
+        "icon": "{identifier:RepeatOutline}",
+        "permission": "lifecycle.view"
+      },
+      {
+        "labelKey": "nav.autoNumbering",
+        "to": "/configuration/auto-numbering",
+        "icon": "{identifier:BarcodeOutline}",
+        "permission": "resource.configure_numbering"
+      },
+      {
+        "labelKey": "nav.products",
+        "to": "/products",
+        "icon": "{identifier:CubeOutline}",
+        "children": [
+          {
+            "labelKey": "nav.productGroups",
+            "to": "/products/groups",
+            "icon": "{identifier:FolderOpenOutline}",
+            "permission": "product_group.view"
+          },
+          {
+            "labelKey": "nav.products",
+            "to": "/products",
+            "icon": "{identifier:CubeOutline}",
+            "permission": "product.view"
+          },
+          {
+            "labelKey": "nav.productUoms",
+            "to": "/products/uoms",
+            "icon": "{identifier:ScaleOutline}",
+            "permission": "product_uom.view"
+          },
+          {
+            "labelKey": "nav.productPricePolicies",
+            "to": "/products/price-lists",
+            "icon": "{identifier:PricetagsOutline}",
+            "permission": "price_list.view"
+          },
+          {
+            "labelKey": "nav.productImport",
+            "to": "/products/import",
+            "icon": "{identifier:CloudUploadOutline}",
+            "permission": "product.import"
+          },
+          {
+            "labelKey": "nav.productImportJobs",
+            "to": "/products/import-jobs",
+            "icon": "{identifier:TimeOutline}",
+            "permission": "import_job.view"
+          }
+        ]
+      }
+    ],
+    "RECENT_ROUTE_HINTS": [
+      [
+        "products-new",
+        {
+          "icon": "{identifier:CubeOutline}",
+          "permission": "product.view"
+        }
+      ],
+      [
+        "products-edit",
+        {
+          "icon": "{identifier:CubeOutline}",
+          "permission": "product.view"
+        }
+      ],
+      [
+        "products-import-job-detail",
+        {
+          "icon": "{identifier:TimeOutline}",
+          "permission": "import_job.view"
+        }
+      ],
+      [
+        "profile",
+        {
+          "icon": "{identifier:PersonCircleOutline}"
+        }
+      ],
+      [
+        "display-preferences",
+        {
+          "icon": "{identifier:SettingsOutline}"
+        }
+      ]
+    ]
+  },
+  "locales": {
+    "vi": {
+      "sha256": "a0c7fb2fa3392a0840fa811112a13e65fb6b1f9251b4ffec03b4a3c008439982",
+      "leafCount": 789
+    },
+    "en": {
+      "sha256": "5a230e574c5e4663f713b3d55aaa0b2df00bee5678b72312c726fbd3158031d5",
+      "leafCount": 789
+    }
+  },
+  "views": {
+    "AutoNumberingView.vue": "dfd4d276c5bda8c0fe390e83b5f233dd24c6dcdf4ba380822bfcf0aaadf141c9",
+    "ConnectivityView.vue": "2208c5e393ecca7fe9cb9261ce5ac48121f9f51bd886251db3d65b2a53d65988",
+    "DashboardView.vue": "49c10dd3c06b2f0d4f7c39b49d56bb58126c172ada4411c70052fbe94bbae497",
+    "DisplayPreferencesView.vue": "2fff863bf783d769966f0666b68ccbec6f011792f4ba509e80c684277caa97ec",
+    "DisplaySettingsView.vue": "fc4ba5407dabb7dff7acca54e8ffefc67826daaed1b0941b33e6aacf046fe0c2",
+    "LifecyclesView.vue": "338eb15fedfea49945b3e9da97bc75ab5c940b05ee4995fec8dff19f7ce8825a",
+    "LocationsView.vue": "095dfb2d4ad5037e4e81d77cee380b019d9ff7b6a5928bf724a1e919962e2e21",
+    "LoginView.vue": "4f7dad52b41ac59f73e58e3da92c7a210c86ae451f0e0481c253c2b3bf3b178d",
+    "NotFoundView.vue": "ffa6a958ba774e7e3d1ca3bf5dc1d489399d438c300a0e2d1287df206e3e758e",
+    "OrganizationsView.vue": "a3846c871b83ea620afa8a15195028bd257402821a791323fa59fe0c9eb093f0",
+    "PeopleDepartmentsView.vue": "c53253effbb62336cabdbde0e523d69f1a3aa2cf3ec1032ad199f83011a7f5ac",
+    "PeopleEmployeesView.vue": "d695508b37bbe1f47ed62485b7815e02a5c4adb8c92950a81c6c9f6b3d2c34c7",
+    "PeoplePositionsView.vue": "925eb5a3426f53b0a0cb1f8121978f1f79d0b337b17f8547d70fc1cfaed3b980",
+    "PriceListsView.vue": "8f307f93230d9f08c75fe4714792e4cc83258d1bde06b076e5f377419be7f833",
+    "ProductEditorView.vue": "085926e737a5949e0f5698535f4c885cad2299993dd46fac11c453a5cfe3fbf6",
+    "ProductGroupsView.vue": "d68154a9b382aad4abec1e35b9dfd0933bac4824ffcc23a68f9ee8abc233b4ac",
+    "ProductImportJobDetailView.vue": "f164dd8d2243375b73b1ede9e5c064fed74f3d8df3474f7e7cfb87e2a2c0f4c3",
+    "ProductImportJobsView.vue": "c10f94917f2bfdf40d7e922b3f4d9142f145bcd7ab954a1cf6a760166e9c4f30",
+    "ProductImportView.vue": "4e29375b10be1f69e66aa592944dc6e69ef6cd85b0441f400a7b329bab926a71",
+    "ProductsView.vue": "772d439bc404348af3369455d084d1cdbc4666f9699baea33fea49ed38f5c1df",
+    "ProductUomsView.vue": "9863ff50398e3e0f85d894f4b4c07ad84c4ca0b0d00738a594183060eac775c0",
+    "ProfileView.vue": "056eca1d4b6905a3760c9ba900969e461a17e3457a59ec956db485d172bd3a17",
+    "SecurityAuthorizationGroupsView.vue": "0eae7e4b296e082e3ea8fb65f27a973cd0bef88ffec17480c8cf8161435652bd",
+    "SecurityAuthorizationLogsView.vue": "c5e0eece7d96dd5787954acf0f2a35ee57ebff17f3a99589f38ff8472e36009c",
+    "SecurityPoliciesView.vue": "4c31471e8bc1c85de430f0018d2c3fcd5c4e1a07b4ab7c75e1f35642f2980021",
+    "SecurityResourcesView.vue": "58535579f7bb4359285cb8c65edb59dea083783f64e8b382e9134a68da279152",
+    "SecurityUsersView.vue": "37305fde0b49c751c59bfc3e1e8d6d147d3fc06731bbd31382b225e806803648",
+    "WorkflowStatesView.vue": "6ba97fa39f8dbe5b33c8b9af72bc1f11e7f66a162b186129c49ed27a10b6ee0b"
+  },
+  "criticalFileHashes": {
+    "backend/app/Config/Routes.php": "c26d7992439d492d0c6d5406efbd3a3f8d0e861b9f8bde65a665add700ee753e",
+    "contracts/openapi/openapi.yaml": "0ac1c1b12af9031476ab5ae225ddf5621b257495833a88d6f48cfed2b32ac31a",
+    "frontend/src/api/client.ts": "5b84877e88c7c078303f5d3d27b3371e7b0d25218fc484ada564cb03549bf9f9",
+    "frontend/src/api/generated/client.gen.ts": "b325822184abc7aed91c42bb1ea0697bb8ae178833c3fca97f6ec498398c1377",
+    "frontend/src/api/generated/client/client.gen.ts": "37a505d099fb4fdd169076aef36c1d48724e2fc658cbaaf32fec7dfe14c560b7",
+    "frontend/src/api/generated/client/index.ts": "1f0a34d02075bc525b9cfad35be27ead469f1575a45086e7985ee48ef0b9df5e",
+    "frontend/src/api/generated/client/types.gen.ts": "6d6757537f8b70a30586c635e0f534d45c2894b31a9b8049fc19bd0b80853eb6",
+    "frontend/src/api/generated/client/utils.gen.ts": "290f8793ed73ae26e68fce4793c2dd1de6d1f92fcb9dcad266d0f05acf2633d1",
+    "frontend/src/api/generated/core/auth.gen.ts": "4b4aca5bd9b2c43a112bb74617295278d84f86360ada71a8db57f09cd0c254f4",
+    "frontend/src/api/generated/core/bodySerializer.gen.ts": "a74163de6731f06f185948895cc4b5f8900e7d30ce76b9588717bad99ab165a7",
+    "frontend/src/api/generated/core/params.gen.ts": "097c75f6e269c6c8680641091832a69b38e8828e8ee8465318d32a177593330f",
+    "frontend/src/api/generated/core/pathSerializer.gen.ts": "6e80a19627d36fd2a9e8daee113713b2e047d107d42ead9b4a9ab344690b998c",
+    "frontend/src/api/generated/core/queryKeySerializer.gen.ts": "adc570c9357a08624cce81dc503abd8d8ff60a76d25bd4d3a4afbe349d82d1f0",
+    "frontend/src/api/generated/core/serverSentEvents.gen.ts": "df993567abbe3e5b477d81517fb967cf63cf40b7866957d5dc6cc03238cb1426",
+    "frontend/src/api/generated/core/types.gen.ts": "0c33c5e096608fc1f859d89bc17ce428e306c7aa3c2c30acd8affa5a734370af",
+    "frontend/src/api/generated/core/utils.gen.ts": "1b637c521d8136dfdbf8dfc4fcc8bb73e0c554466e4d2ca9c9086d4c712983c4",
+    "frontend/src/api/generated/index.ts": "cfd6e23dc5fb15fbcec49da4a8bded6c790cd86f270e18d47cb3b7909d07fe5a",
+    "frontend/src/api/generated/sdk.gen.ts": "d10445bea5420ba1529581477af76799e3ec2cb2a8dafb110b2858174d400ee8",
+    "frontend/src/api/generated/types.gen.ts": "09e2b58727fa9ebd5ab4c2a6f4cfc67a0942b32f8a48aefde4aec5284c4048ae",
+    "frontend/src/api/generated/zod.gen.ts": "21a99ee8ebad6e31fad72b42003064047301bf42b00103cbbfe7e7f0e9d1faa6",
+    "frontend/src/composables/useBasePermission.ts": "a51eeec5674a2bab8bc7a814e3fd99f90b58f86d579cdc92e8b17261a96c3d7e",
+    "frontend/src/composables/useBusinessWorkflowStates.ts": "fa80c6df108965de498e63b0696f4fd21c52bb4efeca12bd3b773234a39a7c83",
+    "frontend/src/composables/useFormatters.ts": "692b559db1dde6f2addc47deaf067533f24e2c6d8c6eea6d9036e027f269f3f6",
+    "frontend/src/composables/useListState.ts": "6bdef4808f9dbaebbffa8f62bcf0a5934cedba1f53c9fb840f9280ab94962ec1",
+    "frontend/src/composables/useMutationState.ts": "5a4bab1c80214985df58b46f032b1bb2e66845538b056f751a2a509e5b871e10",
+    "frontend/src/composables/usePresentationSettings.ts": "817fdbc6a77c9414dcccc59f0ce9e7a2b34158e580a821d593c2cef68d6266f2",
+    "frontend/src/composables/useQueryState.ts": "0454313a19a4ee63e872e0c3db55eaf9cd6ca760c006b32f53f70bb047d5b69e",
+    "frontend/src/composables/useUnsavedChanges.ts": "e0c74a76ffa11c68f05b85434f7f6cefb62bec151e01a3b10f3934c3a576cea4",
+    "frontend/src/services/__tests__/apiSession.spec.ts": "172664ee11e4c505d0789814f93c739dfdc836c196d3111dc6e056c5146ae01e",
+    "frontend/src/services/__tests__/errorBoundary.spec.ts": "f67d8e6a47aa02d2fae0f18142dfafc614dfc7db8f59c645e62ae578b76a0e0a",
+    "frontend/src/services/__tests__/listLookups.spec.ts": "b41b74ed9e23fc6a86d6c0201e1702a142bb388f05c18bf8faa6f72a702c0882",
+    "frontend/src/services/__tests__/productCatalog.spec.ts": "d59afcbb46f37253c406c778075d9072383dbbe648035bffc8dbb2cf26273ba8",
+    "frontend/src/services/api.ts": "da01231f8757feeee3cc0f76430f998e627c4de5780a105932bca8d174242950",
+    "frontend/src/services/auth.ts": "1396a1151568e8f48b006525292138c75417eeaefe27333f644de2f1011ae8f1",
+    "frontend/src/services/authorization.ts": "abea6ac476e1061a2190848fbd31bf38e28985e2c7069e97bc9be29cf652ecc9",
+    "frontend/src/services/autoNumbering.ts": "bea711f5231c375f23f1c64f66c596d111b81ebea3d20d1c64b2d4acabccd7c8",
+    "frontend/src/services/businessWorkflow.ts": "0df0241aa4a9cb35ebe659cb71268cdf098f90a1e9456781d33763ecce5a1bad",
+    "frontend/src/services/displaySettings.ts": "959bd5d570562d7bb89554ebb04e4b64c0be1c3b04a15aca0f87bab5ca8e1799",
+    "frontend/src/services/displaySettingsAdmin.ts": "49c11eeef496b70e1df24ce1ce79e2066a4d9759b07d8b6daf0dddc23c663c31",
+    "frontend/src/services/employeeStructure.ts": "a65c362ccebc0b73f1895facadb52c15a619ed427ff1970602321ccaf141a173",
+    "frontend/src/services/errorBoundary.ts": "5b6167773ba5cc6ca7ed3c3a9d890c9844c193263d937f43c20b825c8bb60f2b",
+    "frontend/src/services/foundation.ts": "fa7b169f9ef48f74a891164d8acc239d2986ee6edbbcdd7b735a47a975e5d4e1",
+    "frontend/src/services/listLookups.ts": "a101cfbfae98a7373d64306d4468c0688b84a8bc6b0b78478277a1290236baf1",
+    "frontend/src/services/pricingCatalog.ts": "83b4ecbec46df16788121bc3c1883fcb596297d8e9d5444c09da134ae618c20e",
+    "frontend/src/services/productCatalog.ts": "3f7d7920843de9ac785d51a98f8a079da4bd2ff796da3a60dccf57d4da754d78",
+    "frontend/src/services/productImage.ts": "aafded40e00d80318b53bfd0baa6c0691d53f76a9e8e129a0abe06e1f0661f6d",
+    "frontend/src/services/productImport.ts": "f2656e3cabe0147eadf48121de00d194048cedb569ba07603c848a28a50d8663",
+    "frontend/src/services/productLookups.ts": "01446c1985a7addbfb94dfeaa48d0e9f73ec2998eca5fb85bcb6e4265f19a33d",
+    "frontend/src/services/productPresentation.ts": "a7dc83ed2d7d264d7a82ad3330453ff0e70e9b5e900b8f7e0118423f329fd939",
+    "frontend/src/services/security.ts": "ecc83b41a47267b4c1d3e7001f4b01f1dbd19d7fb1d995ec5eeb3bfcbb138d45",
+    "frontend/src/services/workflow.ts": "161296f25b33eb57466acf2f830c8ba94417a094256d5d8cacc4802a4ed07207",
+    "frontend/src/stores/auth.ts": "0f178bdb91077cf9fa1fc7e50c2c3264d49459832cbe3ba6cb355c02883c7031",
+    "frontend/src/stores/counter.ts": "020df900053c3934ba667626d2ce87127be2e71a77aeaf4089f0070a0d4a1af1",
+    "frontend/src/stores/displaySettings.ts": "31b9b9ed35ad8ab4404a8b8b5a8f1c8250e98a2b24300de74ed7608f27c5df62",
+    "frontend/src/stores/workspace.ts": "1939eb426f9ead9c31af45c04150f34753256df449aeae5774242112cea3987b"
+  },
+  "preservedRuntimeLogic": {
+    "shell": {
+      "interactionScriptSha256": "a58d9428641245fb37319480b5ccd43d0da052d1c5664cfcce7c791ab5ca61e5",
+      "templateAndStylesSha256": "79fc99f11236cf874d15a75934f8e572abcca9341627ec0eeac8d7d4e9ad9021"
+    },
+    "routerGuardSha256": "89f6b3710a4da38c6711e34be4bd4c74bb54787c988420a01a8041026e57a72c",
+    "localeRuntimeSha256": "b83adf3f18287dd1ed96442d032412c6fa2748b91a8b043ef4eb9c045ec407fb"
+  }
+}

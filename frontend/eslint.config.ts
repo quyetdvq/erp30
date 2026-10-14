@@ -39,5 +39,14 @@ export default defineConfigWithVueTs(
 
   ...pluginOxlint.buildFromOxlintConfigFile('.oxlintrc.json'),
 
+  // These maintenance tools intentionally run as CommonJS under Node.
+  // Keep TypeScript/Vue imports strict without forbidding require() in *.cjs.
+  {
+    files: ['scripts/**/*.cjs'],
+    rules: {
+      '@typescript-eslint/no-require-imports': 'off',
+    },
+  },
+
   skipFormatting,
 )

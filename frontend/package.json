@@ -14,12 +14,18 @@
     "type-check": "vue-tsc --build",
     "lint": "run-s \"lint:*\"",
     "lint:oxlint": "oxlint .",
+    "check:imports": "node scripts/check-imports.cjs",
+    "check:refactor-baseline": "node --test scripts/refactor/paths.test.cjs scripts/refactor/hash-policy.test.cjs && node scripts/refactor/check-equivalence.cjs",
     "lint:eslint": "eslint . --no-cache",
     "format": "prettier --write --experimental-cli src/",
     "format:check": "prettier --check src/ e2e/",
     "openapi:lint": "redocly lint ../contracts/openapi/openapi.yaml --config ../contracts/openapi/redocly.yaml",
     "openapi:generate": "openapi-ts -f openapi-ts.config.ts",
-    "openapi:generate:check": "pnpm run openapi:generate && node scripts/check-openapi-generated.mjs"
+    "openapi:generate:check": "pnpm run openapi:generate && node scripts/check-openapi-generated.mjs",
+    "check:refactor-external": "node scripts/refactor/check-equivalence.cjs --strict-external",
+    "check:v2-baseline": "node --test scripts/refactor/v2-checkpoint.test.cjs && node scripts/refactor/check-v2-checkpoint.cjs --strict",
+    "diff:v2-baseline": "node scripts/refactor/check-v2-checkpoint.cjs --report",
+    "check:v2-1-shell": "node --test scripts/refactor/v2-1-shell.test.cjs"
   },
   "dependencies": {
     "@vicons/ionicons5": "^0.13.0",

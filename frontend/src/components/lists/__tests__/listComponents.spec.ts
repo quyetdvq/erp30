@@ -1,6 +1,8 @@
 import { createPinia, setActivePinia } from 'pinia'
 import { describe, expect, it } from 'vitest'
 import { mount } from '@vue/test-utils'
+import { EyeOutline, Refresh } from '@vicons/ionicons5'
+import { NIcon } from 'naive-ui'
 
 import { i18n } from '@/i18n'
 import { nextTick } from 'vue'
@@ -95,7 +97,7 @@ describe('shared list components', () => {
         title: 'Record details',
         fields: [{ key: 'id', label: 'ID', value: '31' }],
       },
-      global: { plugins: [i18n] },
+      global: { plugins: [i18n], components: { NIcon, EyeOutline, Refresh } },
     })
     await wrapper.setProps({ open: true })
     await nextTick()

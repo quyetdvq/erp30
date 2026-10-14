@@ -3,7 +3,7 @@ import { flushPromises, mount } from '@vue/test-utils'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 import { i18n } from '@/i18n'
-import ProductImportView from '@/views/ProductImportView.vue'
+import ProductImportView from '@/features/product-import/pages/ProductImportView.vue'
 
 const mocks = vi.hoisted(() => ({
   push: vi.fn<() => void>(),

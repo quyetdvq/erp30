@@ -46,6 +46,8 @@ export function buildChunkFileName(chunk: NamedChunk): string {
   const libraryName = libraryNames[groupName]
   if (libraryName) return `assets/${libraryName}-${HASH}.js`
 
-  const isView = /[\\/]src[\\/]views[\\/]/.test(chunk.facadeModuleId ?? '')
+  const isView = /[\\/]src[\\/](?:views[\\/]|(?:features[\\/][^\\/]+[\\/]|app[\\/])pages[\\/])/.test(
+    chunk.facadeModuleId ?? '',
+  )
   return `assets/${isView ? 'page' : 'shared'}-${shortSlug(chunk.name)}-${HASH}.js`
 }

@@ -30,6 +30,20 @@ test('pages and shared modules use short descriptive kebab-case names on both OS
     'assets/page-products-[hash:8].js',
   )
   assert.equal(
+    buildChunkFileName({
+      name: 'ProductEditorView',
+      facadeModuleId: '/erp/frontend/src/features/catalog/pages/ProductEditorView.vue',
+    }),
+    'assets/page-product-editor-[hash:8].js',
+  )
+  assert.equal(
+    buildChunkFileName({
+      name: 'NotFoundView',
+      facadeModuleId: 'D:\\erp\\frontend\\src\\app\\pages\\NotFoundView.vue',
+    }),
+    'assets/page-not-found-[hash:8].js',
+  )
+  assert.equal(
     buildChunkFileName({ name: 'useBusinessWorkflowStates' }),
     'assets/shared-use-business-workflow-states-[hash:8].js',
   )
