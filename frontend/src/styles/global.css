@@ -370,14 +370,6 @@ a {
   gap: 18px;
   margin: 0 0 17px;
 }
-.breadcrumbs {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  margin-bottom: 14px;
-  color: #7b8ca0;
-  font-size: 11px;
-}
 .page-heading h1 {
   margin: 0;
   color: #0b2037;

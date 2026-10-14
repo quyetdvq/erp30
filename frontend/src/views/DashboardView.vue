@@ -10,7 +10,6 @@ const firstName = computed(() => auth.user?.username || 'bạn')
 </script>
 
 <template>
-  <div class="breadcrumbs">⌂ <span>›</span> {{ t('dashboard.breadcrumb') }}</div>
   <div class="page-heading">
     <div>
       <h1>{{ t('dashboard.title') }}</h1>

@@ -141,7 +141,6 @@ function onLocaleChange(event: Event): void {
 </script>
 
 <template>
-  <div class="breadcrumbs">⌂ <span>›</span> {{ t('displaySettings.preferencesBreadcrumb') }}</div>
   <div class="page-heading">
     <div>
       <h1>{{ t('displaySettings.preferencesTitle') }}</h1>

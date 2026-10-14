@@ -82,7 +82,9 @@ test('authenticated shell exposes five modes, deduplicated tabs, locale, and 404
   await expect.poll(() => page.evaluate(() => localStorage.getItem('ui.locale'))).toBe('vi')
 
   await page.goto('/missing-fe001-route')
-  await expect(page.getByRole('main').getByText(vi.errors.status['404'])).toBeVisible()
+  await expect(page.getByRole('main').locator('.n-result-header__title')).toHaveText(
+    vi.errors.status['404'],
+  )
   await expect(page.getByRole('button', { name: vi.errors.backToWorkspace })).toBeVisible()
 })
 
@@ -225,7 +227,9 @@ test('removed menu routes resolve to the not-found boundary', async ({ page }) =
 
   for (const path of ['/approvals', '/sales']) {
     await page.goto(path)
-    await expect(page.getByRole('main').getByText(vi.errors.status['404'])).toBeVisible()
+    await expect(page.getByRole('main').locator('.n-result-header__title')).toHaveText(
+      vi.errors.status['404'],
+    )
   }
 })
 
@@ -479,4 +483,61 @@ test('sidebar drag resizes smoothly with one persisted width and keyboard resize
   await expect
     .poll(async () => (await sider.boundingBox())?.width ?? 0)
     .toBeLessThan(resizedWidth - 20)
+})
+
+test('shell breadcrumbs are accessible, translated and navigate through the dirty-route guard', async ({
+  page,
+}) => {
+  await mockAuthenticatedSession(page)
+  await page.goto('/profile/display-preferences')
+
+  const breadcrumbs = page.getByRole('navigation', { name: vi.breadcrumbs.navigation })
+  await expect(breadcrumbs.locator('li')).toHaveCount(4)
+  await expect(breadcrumbs.getByRole('link', { name: vi.nav.dashboard })).toHaveAttribute(
+    'href',
+    '/',
+  )
+  await expect(breadcrumbs.getByRole('link', { name: vi.shell.profile })).toHaveAttribute(
+    'href',
+    '/profile',
+  )
+  await expect(breadcrumbs.locator('[aria-current="page"]')).toHaveText(vi.shell.displayPreferences)
+
+  await page.getByRole('button', { name: vi.shell.language }).click()
+  await page.locator('.n-dropdown-menu').getByText('English', { exact: true }).click()
+  const english = page.getByRole('navigation', { name: en.breadcrumbs.navigation })
+  await expect(english.locator('[aria-current="page"]')).toHaveText(en.shell.displayPreferences)
+  await english.getByRole('link', { name: en.shell.profile }).click()
+  await expect(page).toHaveURL(/\/profile$/)
+  await expect(english.locator('[aria-current="page"]')).toHaveText(en.shell.profile)
+
+  await page.locator('#profile-username').fill('unsaved-change')
+  page.once('dialog', (dialog) => dialog.dismiss())
+  await english.getByRole('link', { name: en.nav.dashboard }).click()
+  await expect(page).toHaveURL(/\/profile$/)
+})
+
+test('breadcrumbs do not expose links to protected ancestors without the permission hint', async ({
+  page,
+}) => {
+  await mockAuthenticatedSession(page, ['product.view'])
+  await page.route('**/api/v1/import-jobs/42**', (route) =>
+    route.fulfill({
+      status: 404,
+      contentType: 'application/json',
+      body: JSON.stringify({
+        error: { code: 'IMPORT_JOB_NOT_FOUND', message: 'Not found', details: [] },
+        meta: { request_id: 'breadcrumb-test' },
+      }),
+    }),
+  )
+  await page.goto('/products/import-jobs/42')
+
+  const breadcrumbs = page.getByRole('navigation', { name: vi.breadcrumbs.navigation })
+  await expect(breadcrumbs.locator('li')).toHaveCount(4)
+  await expect(breadcrumbs.getByText(vi.nav.products, { exact: true })).toBeVisible()
+  await expect(breadcrumbs.getByRole('link', { name: vi.nav.products })).toHaveCount(0)
+  await expect(breadcrumbs.locator('[aria-current="page"]')).toHaveText(
+    vi.nav.productImportJobDetail,
+  )
 })

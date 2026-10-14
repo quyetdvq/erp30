@@ -326,7 +326,6 @@ onMounted(async () => {
 </script>
 
 <template>
-  <div class="breadcrumbs">⌂ <span>›</span> {{ t('displaySettings.breadcrumb') }}</div>
   <div class="page-heading">
     <div>
       <h1>{{ t('displaySettings.title') }}</h1>

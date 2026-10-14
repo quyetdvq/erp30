@@ -49,6 +49,14 @@ export const messages = {
         organization: 'Cơ cấu tổ chức',
       },
     },
+    breadcrumbs: {
+      navigation: 'Đường dẫn điều hướng',
+      account: 'Tài khoản',
+      locations: 'Địa giới hành chính',
+      people: 'Nhân sự',
+      security: 'Phân quyền',
+      configuration: 'Cấu hình',
+    },
     nav: {
       dashboard: 'Tổng quan',
       organizations: 'Tổ chức và dữ liệu nền',
@@ -393,7 +401,6 @@ export const messages = {
       tableCaption: 'Danh sách dữ liệu',
     },
     displaySettings: {
-      breadcrumb: 'Hệ thống › Cấu hình hiển thị',
       title: 'Cấu hình hiển thị',
       description: 'Quản lý giá trị hiển thị theo System hoặc Organization.',
       context: 'Phạm vi cấu hình',
@@ -431,7 +438,6 @@ export const messages = {
         symbolPosition: 'Symbol position',
         decimalsMode: 'Decimals mode',
       },
-      preferencesBreadcrumb: 'Tài khoản › Tùy chọn hiển thị',
       preferencesTitle: 'Tùy chọn hiển thị',
       preferencesDescription: 'Tùy chỉnh hiển thị trên thiết bị này cho tài khoản hiện tại.',
       language: 'Ngôn ngữ',
@@ -475,7 +481,6 @@ export const messages = {
       },
     },
     dashboard: {
-      breadcrumb: 'Workspace',
       title: 'Tổng quan',
       greeting: 'Không gian làm việc của {name}.',
       quickCreate: 'Tạo nhanh',
@@ -916,6 +921,14 @@ export const messages = {
         organization: 'Organization',
       },
     },
+    breadcrumbs: {
+      navigation: 'Breadcrumb navigation',
+      account: 'Account',
+      locations: 'Administrative locations',
+      people: 'People',
+      security: 'Authorization',
+      configuration: 'Configuration',
+    },
     nav: {
       dashboard: 'Overview',
       organizations: 'Organizations and foundation data',
@@ -1262,7 +1275,6 @@ export const messages = {
       tableCaption: 'Data list',
     },
     displaySettings: {
-      breadcrumb: 'System › Display Settings',
       title: 'Display Settings',
       description: 'Manage presentation values for System or an Organization.',
       context: 'Configuration context',
@@ -1300,7 +1312,6 @@ export const messages = {
         symbolPosition: 'Symbol position',
         decimalsMode: 'Decimals mode',
       },
-      preferencesBreadcrumb: 'Account › My Display Preferences',
       preferencesTitle: 'My Display Preferences',
       preferencesDescription: 'Customize presentation on this device for the current account.',
       language: 'Language',
@@ -1343,7 +1354,6 @@ export const messages = {
       },
     },
     dashboard: {
-      breadcrumb: 'Workspace',
       title: 'Overview',
       greeting: '{name} workspace.',
       quickCreate: 'Quick create',

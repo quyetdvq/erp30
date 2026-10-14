@@ -37,7 +37,6 @@ async function save(): Promise<void> {
 </script>
 
 <template>
-  <div class="breadcrumbs">⌂ <span>›</span> Tài khoản <span>›</span> Profile</div>
   <div class="page-heading">
     <div>
       <h1>Profile user</h1>

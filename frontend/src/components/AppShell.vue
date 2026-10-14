@@ -62,6 +62,7 @@ import {
 import { RouterLink, RouterView, useRoute, useRouter } from 'vue-router'
 
 import { setLocale } from '@/i18n'
+import AppBreadcrumbs from '@/components/AppBreadcrumbs.vue'
 import { useBasePermission } from '@/composables/useBasePermission'
 import { dismissApiError, errorNotices, clearApiErrors } from '@/services/errorBoundary'
 import { useAuthStore } from '@/stores/auth'
@@ -896,7 +897,10 @@ onBeforeUnmount(handleResizeCancel)
             </NAlert>
           </div>
 
-          <main class="workspace-content"><RouterView /></main>
+          <main class="workspace-content">
+            <AppBreadcrumbs />
+            <RouterView />
+          </main>
         </NLayout>
       </NLayout>
     </NLayout>
@@ -1321,7 +1325,6 @@ onBeforeUnmount(handleResizeCancel)
   padding: 26px clamp(18px, 2.2vw, 36px) 48px;
 }
 
-.workspace-content > :deep(.breadcrumbs),
 .workspace-content > :deep(.page-heading),
 .workspace-content > :deep(.content-panel),
 .workspace-content > :deep(.metric-grid),
