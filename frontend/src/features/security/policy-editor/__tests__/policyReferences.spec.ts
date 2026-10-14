@@ -1,0 +1,89 @@
+import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { ref } from 'vue'
+import type { Policy, Resource } from '@/api/generated/types.gen'
+import type { SecurityAction } from '@/services/security'
+import { initialPolicyDraft } from '../model'
+import { usePolicyReferences } from '../usePolicyReferences'
+
+const mocks = vi.hoisted(() => ({
+  getResourceActions: vi.fn<(id: string) => Promise<SecurityAction[]>>(),
+}))
+vi.mock('@/services/security', () => ({
+  getResourceActions: mocks.getResourceActions,
+  listAuthorizationGroupPage: vi.fn<(...args: unknown[]) => unknown>(),
+  listResourcePage: vi.fn<(...args: unknown[]) => unknown>(),
+  listSecurityUserPage: vi.fn<(...args: unknown[]) => unknown>(),
+}))
+vi.mock('@/api/client', () => ({ withTypedClient: vi.fn<(...args: unknown[]) => unknown>() }))
+vi.mock('@/api/generated/sdk.gen', () => ({
+  listDepartments: vi.fn<(...args: unknown[]) => unknown>(),
+  listOrganizations: vi.fn<(...args: unknown[]) => unknown>(),
+  listPositions: vi.fn<(...args: unknown[]) => unknown>(),
+  listWorkflowStates: vi.fn<(...args: unknown[]) => unknown>(),
+}))
+vi.mock('@/i18n', () => ({ i18n: { global: { locale: { value: 'vi' } } } }))
+vi.mock('@/services/errorBoundary', () => ({
+  reportApiError: vi.fn<(...args: unknown[]) => unknown>(),
+}))
+
+const asResource = (resource: Record<string, unknown>) => resource as unknown as Resource
+const samplePolicy = (actions: Policy['actions']): Policy =>
+  ({
+    id: '9',
+    organization_id: '1',
+    resource_id: '2',
+    status: 'ACTIVE',
+    participant_type: 'USER',
+    participant_ref_id: '3',
+    actions,
+  }) as Policy
+
+describe('PBAC Policy references and effect display (V2.4)', () => {
+  beforeEach(() => {
+    vi.resetAllMocks()
+  })
+
+  it('filters action choices by the selected resource without coercing ID to number', () => {
+    const form = ref({ ...initialPolicyDraft(), resource_id: '9007199254740993' })
+    const lookups = usePolicyReferences(form, ref<unknown | null>(null), (key) => key)
+    lookups.actionCatalog.value = [
+      { id: '12', resource_id: '9007199254740993', code: 'read' },
+      { id: '13', resource_id: '9007199254740995', code: 'write' },
+    ]
+    expect(lookups.actionOptions.value.map(({ id }) => id)).toEqual(['12'])
+  })
+
+  it('displays all three effects in stored order, retaining missing-code placeholder', () => {
+    const lookups = usePolicyReferences(ref(initialPolicyDraft()), ref(null), (key) => key)
+    lookups.actionCatalog.value = [
+      { id: '1', resource_id: '2', code: 'list' },
+      { id: '2', resource_id: '2', code: 'edit' },
+    ]
+    expect(
+      lookups.effectsSummary(
+        samplePolicy([
+          { resource_action_id: '1', effect: 'ALLOW' },
+          { resource_action_id: '2', effect: 'DENY' },
+          { resource_action_id: '3', effect: 'ABSOLUTE_DENY' },
+        ]),
+      ),
+    ).toBe('ALLOW:list, DENY:edit, ABSOLUTE_DENY:list.noValue')
+  })
+
+  it('uses the embedded resource actions when available, including an empty action list', async () => {
+    const lookups = usePolicyReferences(ref(initialPolicyDraft()), ref(null), (key) => key)
+    lookups.resources.value = [asResource({ id: '9', actions: [] })]
+    await lookups.loadActions('9')
+    expect(lookups.actions.value).toEqual([])
+    expect(mocks.getResourceActions).not.toHaveBeenCalled()
+  })
+
+  it('fetches actions only if the resource has no embedded list', async () => {
+    mocks.getResourceActions.mockResolvedValue([{ id: '10', resource_id: '9', code: 'view' }])
+    const lookups = usePolicyReferences(ref(initialPolicyDraft()), ref(null), (key) => key)
+    lookups.resources.value = [asResource({ id: '9' })]
+    await lookups.loadActions('9')
+    expect(mocks.getResourceActions).toHaveBeenCalledWith('9')
+    expect(lookups.actions.value[0]?.code).toBe('view')
+  })
+})

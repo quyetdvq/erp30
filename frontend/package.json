@@ -25,7 +25,10 @@
     "check:refactor-external": "node scripts/refactor/check-equivalence.cjs --strict-external",
     "check:v2-baseline": "node --test scripts/refactor/v2-checkpoint.test.cjs && node scripts/refactor/check-v2-checkpoint.cjs --strict",
     "diff:v2-baseline": "node scripts/refactor/check-v2-checkpoint.cjs --report",
-    "check:v2-1-shell": "node --test scripts/refactor/v2-1-shell.test.cjs"
+    "check:v2-1-shell": "node --test scripts/refactor/v2-1-shell.test.cjs",
+    "check:v2-2-product-editor": "node --test scripts/refactor/v2-2-product-editor.test.cjs",
+    "check:v2-3-employees": "node --test scripts/refactor/v2-3-employees.test.cjs",
+    "check:v2-4-policies": "node --test scripts/refactor/v2-4-policies.test.cjs"
   },
   "dependencies": {
     "@vicons/ionicons5": "^0.13.0",

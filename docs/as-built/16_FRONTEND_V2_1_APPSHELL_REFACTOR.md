@@ -78,3 +78,8 @@ On the user's machine, `backend/app/Config/Routes.php` and `contracts/openapi/op
 - Apply only on an unmodified **V2 Start** frontend with the existing local backend/OpenAPI preserved.
 - Keep a clean Git checkpoint. If V2.1 has a regression, use `git apply --reverse <patch>` after checking local changes, or restore the branch from the pre-V2.1 commit.
 - Once tests pass, a later V2.2 slice may extract **presentational child components** from header/sidebar, but must explicitly test responsive CSS scoping, teleport overlay content, keyboard focus, permission filtering, dirty-close, width dragging, and all 243 E2E cases.
+
+
+## 6. Windows acceptance evidence received after this document was authored
+
+The user reported `pnpm run check:v2-1-shell` **4/4**, `check:imports` **546/546**, `type-check` PASS, Oxlint 0 errors, ESLint 0 errors (3 existing Playwright warnings), Prettier PASS, Vitest **102/102** and production build PASS. Playwright completed **243/243 E2E PASS (9.2 minutes)** on Windows. Therefore V2.1 was accepted as the input for V2.2, within the tests' measured coverage. Older PENDING rows above record the original build-time status, not a later regression. Backend/OpenAPI hash deviations remain unresolved.

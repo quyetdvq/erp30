@@ -107,7 +107,7 @@
 - [`ResourceCatalogRepositoryBulkActionsTest.php`](../../../backend/tests/unit/ResourceCatalogRepositoryBulkActionsTest.php)
 - [`ShieldSecurityUserRepositoryTest.php`](../../../backend/tests/unit/ShieldSecurityUserRepositoryTest.php)
 
-## vitest — 26 files
+## vitest — 36 files
 
 - [`App.spec.ts`](../../../frontend/src/__tests__/App.spec.ts)
 - [`client.spec.ts`](../../../frontend/src/api/__tests__/client.spec.ts)
@@ -119,8 +119,18 @@
 - [`basePermission.spec.ts`](../../../frontend/src/composables/__tests__/basePermission.spec.ts)
 - [`queryState.spec.ts`](../../../frontend/src/composables/__tests__/queryState.spec.ts)
 - [`unsavedChanges.spec.ts`](../../../frontend/src/composables/__tests__/unsavedChanges.spec.ts)
+- [`productEditorComponents.spec.ts`](../../../frontend/src/features/catalog/product-editor/__tests__/productEditorComponents.spec.ts)
+- [`productEditorLookups.spec.ts`](../../../frontend/src/features/catalog/product-editor/__tests__/productEditorLookups.spec.ts)
+- [`productEditorModel.spec.ts`](../../../frontend/src/features/catalog/product-editor/__tests__/productEditorModel.spec.ts)
 - [`organizations.spec.ts`](../../../frontend/src/features/organization/__tests__/organizations.spec.ts)
+- [`employeeAssignments.spec.ts`](../../../frontend/src/features/people/employee-editor/__tests__/employeeAssignments.spec.ts)
+- [`employeeEditorModel.spec.ts`](../../../frontend/src/features/people/employee-editor/__tests__/employeeEditorModel.spec.ts)
+- [`employeeLookups.spec.ts`](../../../frontend/src/features/people/employee-editor/__tests__/employeeLookups.spec.ts)
 - [`productImport.spec.ts`](../../../frontend/src/features/product-import/__tests__/productImport.spec.ts)
+- [`policyEditorModel.spec.ts`](../../../frontend/src/features/security/policy-editor/__tests__/policyEditorModel.spec.ts)
+- [`policyParticipants.spec.ts`](../../../frontend/src/features/security/policy-editor/__tests__/policyParticipants.spec.ts)
+- [`policyReferences.spec.ts`](../../../frontend/src/features/security/policy-editor/__tests__/policyReferences.spec.ts)
+- [`policyWorkflowStates.spec.ts`](../../../frontend/src/features/security/policy-editor/__tests__/policyWorkflowStates.spec.ts)
 - [`locale.spec.ts`](../../../frontend/src/i18n/__tests__/locale.spec.ts)
 - [`employeeRules.spec.ts`](../../../frontend/src/modules/__tests__/employeeRules.spec.ts)
 - [`priceListDateTime.spec.ts`](../../../frontend/src/modules/__tests__/priceListDateTime.spec.ts)

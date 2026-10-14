@@ -42,6 +42,7 @@ Chính sách giá	PricetagsOutline
 Import sản phẩm	CloudUploadOutline
 Lịch sử Import	TimeOutline
 Phòng ban PeopleOutline
+Tổ chức BusinessOutline
 
 
 

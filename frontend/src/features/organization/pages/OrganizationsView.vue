@@ -240,75 +240,41 @@ onMounted(() => void load())
       <h1>{{ t('organization.title') }}</h1>
       <p>{{ t('organization.description') }}</p>
     </div>
-    <button
-      type="button"
-      class="primary-button"
-      v-if="hasBasePermission('organization', 'create')"
-      :disabled="!!selected && (selected.status !== 'ACTIVE' || selected.type === 'WAREHOUSE')"
-      @click="openCreate"
-    >
+    <button type="button" class="primary-button" v-if="hasBasePermission('organization', 'create')"
+      :disabled="!!selected && (selected.status !== 'ACTIVE' || selected.type === 'WAREHOUSE')" @click="openCreate">
       ＋ {{ t('organization.createChild') }}
     </button>
   </div>
   <section class="content-panel organization-layout">
     <aside class="organization-tree" :aria-label="t('organization.tree')">
       <div class="organization-tree__toolbar">
-        <ListQueryControls
-          :model-value="state.query"
-          @apply="applyQuery"
-          @reset="resetQuery"
-        /><button
-          type="button"
-          class="secondary-button"
-          :aria-label="t('common.refresh')"
-          @click="void load()"
-        >
+        <ListQueryControls :model-value="state.query" @apply="applyQuery" @reset="resetQuery" /><button type="button"
+          class="secondary-button" :aria-label="t('common.refresh')" @click="void load()">
           ↻
         </button>
       </div>
-      <ListShell
-        :initial-loading="state.isInitialLoading.value"
-        :refreshing="state.isBackgroundRefreshing.value"
-        :has-data="state.queryState.hasData.value"
-        :empty-dataset="state.isEmptyDataset.value"
-        :empty-filtered-result="state.isEmptyFilteredResult.value"
-        :error="state.queryState.error.value"
-      >
+      <ListShell :initial-loading="state.isInitialLoading.value" :refreshing="state.isBackgroundRefreshing.value"
+        :has-data="state.queryState.hasData.value" :empty-dataset="state.isEmptyDataset.value"
+        :empty-filtered-result="state.isEmptyFilteredResult.value" :error="state.queryState.error.value">
         <ul class="tree-list">
-          <li
-            v-for="node in treeRows"
-            :key="node.item.id"
-            :class="{ selected: selectedId === String(node.item.id) }"
-            :style="{ paddingLeft: `${node.depth * 18 + 8}px` }"
-          >
-            <button
-              type="button"
-              class="tree-node"
+          <li v-for="node in treeRows" :key="node.item.id" :class="{ selected: selectedId === String(node.item.id) }"
+            :style="{ paddingLeft: `${node.depth * 18 + 8}px` }">
+            <button type="button" class="tree-node"
               :aria-current="selectedId === String(node.item.id) ? 'true' : undefined"
-              @click="selectedId = String(node.item.id)"
-            >
-              <span class="type-badge">{{ node.item.type }}</span
-              ><span
-                ><strong>{{ node.item.code }}</strong> - {{ node.item.name }}</span
-              ><span
-                class="tree-status"
-                :class="{ off: node.item.status !== 'ACTIVE' }"
-                aria-hidden="true"
-              />
+              @click="selectedId = String(node.item.id)">
+              <span class="type-badge">{{ node.item.type }}</span><span><strong>{{ node.item.code }}</strong> - {{
+                node.item.name }}</span><span class="tree-status" :class="{ off: node.item.status !== 'ACTIVE' }"
+                aria-hidden="true" />
             </button>
           </li>
         </ul>
-        <ListPagination
-          :page="state.query.page"
-          :page-size="state.query.page_size"
-          :total="state.total.value"
+        <ListPagination :page="state.query.page" :page-size="state.query.page_size" :total="state.total.value"
           @update:page="
             (page) => {
               state.setPage(page)
               void load()
             }
-          "
-        />
+          " />
       </ListShell>
     </aside>
     <section class="organization-detail" aria-live="polite" :aria-label="t('organization.detail')">
@@ -320,81 +286,46 @@ onMounted(() => void load())
             <p>{{ t(`status.${selected.status.toLowerCase()}`) }}</p>
           </div>
           <div class="detail-actions">
-            <button
-              v-if="hasBasePermission('organization', 'edit')"
-              type="button"
-              class="secondary-button"
-              @click="openEdit(selected)"
-            >
-              {{ t('common.edit') }}</button
-            ><BusinessWorkflowAction
-              v-if="hasBasePermission('organization', 'setstate')"
-              resource="organization"
-              :target-id="String(selected.id)"
-              :busy="mutationBusy"
-              variant="button"
-              @changed="afterWorkflowChange"
-            />
+            <button v-if="hasBasePermission('organization', 'edit')" type="button" class="secondary-button"
+              @click="openEdit(selected)">
+              {{ t('common.edit') }}</button>
+            <BusinessWorkflowAction v-if="hasBasePermission('organization', 'setstate')" resource="organization"
+              :target-id="String(selected.id)" :busy="mutationBusy" variant="button" @changed="afterWorkflowChange" />
           </div>
         </header>
         <div class="detail-tabs" role="tablist">
-          <button
-            type="button"
-            role="tab"
-            :aria-selected="activeTab === 'overview'"
-            @click="activeTab = 'overview'"
-          >
-            {{ t('organization.overview') }}</button
-          ><button
-            type="button"
-            role="tab"
-            :aria-selected="activeTab === 'contacts'"
-            @click="activeTab = 'contacts'"
-          >
-            {{ t('organization.contacts') }}</button
-          ><button
-            type="button"
-            role="tab"
-            :aria-selected="activeTab === 'audit'"
-            @click="activeTab = 'audit'"
-          >
+          <button type="button" role="tab" :aria-selected="activeTab === 'overview'" @click="activeTab = 'overview'">
+            {{ t('organization.overview') }}</button><button type="button" role="tab"
+            :aria-selected="activeTab === 'contacts'" @click="activeTab = 'contacts'">
+            {{ t('organization.contacts') }}</button><button type="button" role="tab"
+            :aria-selected="activeTab === 'audit'" @click="activeTab = 'audit'">
             {{ t('organization.audit') }}
           </button>
         </div>
         <div v-if="activeTab === 'overview'" class="detail-grid">
           <div>
-            <span>{{ t('organization.type') }}</span
-            ><strong>{{ selected.type }}</strong>
+            <span>{{ t('organization.type') }}</span><strong>{{ selected.type }}</strong>
           </div>
           <div>
-            <span>{{ t('organization.parent') }}</span
-            ><strong>{{
+            <span>{{ t('organization.parent') }}</span><strong>{{
               organizations.find((item) => String(item.id) === String(selected?.parent_id))?.name ??
               t('organization.root')
-            }}</strong>
+              }}</strong>
           </div>
           <div>
-            <span>{{ t('organization.activeFrom') }}</span
-            ><strong>{{ displayDate(selected.active_from) }}</strong>
+            <span>{{ t('organization.activeFrom') }}</span><strong>{{ displayDate(selected.active_from) }}</strong>
           </div>
           <div>
-            <span>{{ t('organization.activeTo') }}</span
-            ><strong>{{ displayDate(selected.active_to) }}</strong>
+            <span>{{ t('organization.activeTo') }}</span><strong>{{ displayDate(selected.active_to) }}</strong>
           </div>
           <div v-if="selected.type === 'COMPANY'">
-            <span>{{ t('organization.legalName') }}</span
-            ><strong>{{ selected.legal_name || '—' }}</strong>
+            <span>{{ t('organization.legalName') }}</span><strong>{{ selected.legal_name || '—' }}</strong>
           </div>
           <div v-if="selected.type === 'COMPANY'">
-            <span>{{ t('organization.taxCode') }}</span
-            ><strong>{{ selected.tax_code || '—' }}</strong>
+            <span>{{ t('organization.taxCode') }}</span><strong>{{ selected.tax_code || '—' }}</strong>
           </div>
         </div>
-        <ContactList
-          v-else-if="activeTab === 'contacts'"
-          :owner-id="String(selected.id)"
-          owner-type="ORGANIZATION"
-        />
+        <ContactList v-else-if="activeTab === 'contacts'" :owner-id="String(selected.id)" owner-type="ORGANIZATION" />
         <div v-else class="audit-placeholder">
           <h3>{{ t('organization.audit') }}</h3>
           <p>{{ t('organization.auditDescription') }}</p>
@@ -411,80 +342,50 @@ onMounted(() => void load())
       <div v-else class="empty-state">{{ t('organization.noSelection') }}</div>
     </section>
   </section>
+
   <div v-if="modalOpen" class="modal-backdrop">
-    <section
-      class="modal-card"
-      role="dialog"
-      aria-modal="true"
-      :aria-label="t('organization.form')"
-    >
-      <header>
-        <div>
-          <h2>{{ editingId ? t('organization.edit') : t('organization.createChild') }}</h2>
-          <p>{{ t('organization.formHint') }}</p>
-        </div>
-        <button
-          type="button"
-          class="icon-button"
-          :aria-label="t('common.close')"
-          @click="closeForm"
-        >
-          ×
+    <section class="modal-card" role="dialog" aria-modal="true" :aria-label="t('organization.form')">
+      <header class="modal-card__header">
+
+        <h2 class="modal-card-title">
+          <NIcon :size="24">
+            <BusinessOutline />
+          </NIcon>
+          {{ editingId ? t('organization.edit') : t('organization.createChild') }}
+        </h2>
+        <p>{{ t('organization.formHint') }}</p>
+
+        <button type="button" class="modal-card-button-close" :aria-label="t('common.close')" @click="closeForm">
         </button>
       </header>
-      <form @submit.prevent="save">
+      <form class="modal-card__body" id="organization-form" @submit.prevent="save">
         <label>
           <span>{{ t('organization.parent') }}</span>
-          <OrganizationTreeSelect
-            v-model="form.parent_id"
-            :organizations="parentOptions"
-            :placeholder="t('organization.root')"
-            :clearable="true"
-          />
+          <OrganizationTreeSelect v-model="form.parent_id" :organizations="parentOptions"
+            :placeholder="t('organization.root')" :clearable="true" />
         </label>
-        <label
-          ><span>{{ t('organization.type') }}</span
-          ><select v-model="form.type" required>
+        <label><span>{{ t('organization.type') }}</span><select v-model="form.type" required>
             <option v-for="type in typeOptions" :key="type" :value="type">{{ type }}</option>
-          </select></label
-        >
+          </select></label>
         <div class="form-grid">
-          <label
-            ><span>{{ t('organization.code') }}</span
-            ><input v-model="form.code" required /></label
-          ><label
-            ><span>{{ t('organization.name') }}</span
-            ><input v-model="form.name" required
-          /></label>
+          <label><span>{{ t('organization.code') }}</span><input v-model="form.code" required /></label><label><span>{{
+            t('organization.name') }}</span><input v-model="form.name" required /></label>
         </div>
-        <label
-          ><span>{{ t('organization.descriptionField') }}</span
-          ><textarea v-model="form.description" rows="3" />
+        <label><span>{{ t('organization.descriptionField') }}</span><textarea v-model="form.description" rows="3" />
         </label>
         <div v-if="companyFieldsVisible" class="company-fields">
           <h3>{{ t('organization.companyFields') }}</h3>
           <div class="form-grid">
-            <label
-              ><span>{{ t('organization.legalName') }}</span
-              ><input v-model="form.legal_name" /></label
-            ><label
-              ><span>{{ t('organization.taxCode') }}</span
-              ><input v-model="form.tax_code"
-            /></label>
+            <label><span>{{ t('organization.legalName') }}</span><input
+                v-model="form.legal_name" /></label><label><span>{{ t('organization.taxCode') }}</span><input
+                v-model="form.tax_code" /></label>
           </div>
-          <label
-            ><span>{{ t('organization.address') }}</span
-            ><input v-model="form.address"
-          /></label>
+          <label><span>{{ t('organization.address') }}</span><input v-model="form.address" /></label>
         </div>
         <div class="form-grid">
-          <label
-            ><span>{{ t('organization.activeFrom') }}</span
-            ><input v-model="form.active_from" type="date" /></label
-          ><label
-            ><span>{{ t('organization.activeTo') }}</span
-            ><input v-model="form.active_to" type="date"
-          /></label>
+          <label><span>{{ t('organization.activeFrom') }}</span><input v-model="form.active_from"
+              type="date" /></label><label><span>{{ t('organization.activeTo') }}</span><input v-model="form.active_to"
+              type="date" /></label>
         </div>
         <label v-if="editingId">
           <span>{{ t('organization.status') }}</span>
@@ -495,20 +396,22 @@ onMounted(() => void load())
           <strong v-if="workflowStates.initial.value">{{ workflowStates.initial.value }}</strong>
         </p>
         <p v-if="error" class="inline-error" role="alert">{{ t('organization.error') }}</p>
-        <footer>
-          <button type="button" class="secondary-button" @click="closeForm">
-            {{ t('common.cancel') }}</button
-          ><button
-            type="submit"
-            class="primary-button"
-            :disabled="
-              mutationBusy || !hasBasePermission('organization', editingId ? 'edit' : 'create')
-            "
-          >
-            {{ mutationBusy ? t('common.saving') : t('common.save') }}
-          </button>
-        </footer>
+
       </form>
+      <footer class="modal-card__footer">
+        <button type="button" class="secondary-button" @click="closeForm">
+          <NIcon :size="20">
+            <Refresh />
+          </NIcon>
+          {{ t('common.cancel') }}
+        </button><button type="submit" class="primary-button" form="organization-form" :disabled="mutationBusy || !hasBasePermission('organization', editingId ? 'edit' : 'create')
+          ">
+          <NIcon :size="20">
+            <SaveOutline />
+          </NIcon>
+          {{ mutationBusy ? t('common.saving') : t('common.save') }}
+        </button>
+      </footer>
     </section>
   </div>
 </template>
@@ -520,17 +423,20 @@ onMounted(() => void load())
   gap: 20px;
   padding: 18px 20px 20px;
 }
+
 .organization-tree {
   min-width: 0;
   border-right: 1px solid #e4ebef;
   padding-right: 18px;
 }
+
 .organization-tree__toolbar {
   display: flex;
   align-items: end;
   gap: 8px;
   margin-bottom: 14px;
 }
+
 .tree-list {
   display: grid;
   gap: 3px;
@@ -538,12 +444,15 @@ onMounted(() => void load())
   padding: 0;
   list-style: none;
 }
+
 .tree-list li {
   border-radius: 4px;
 }
+
 .tree-list li.selected {
   background: #eaf5fa;
 }
+
 .tree-node {
   display: flex;
   align-items: center;
@@ -556,9 +465,11 @@ onMounted(() => void load())
   text-align: left;
   cursor: pointer;
 }
+
 .tree-node strong {
   font-weight: 700;
 }
+
 .type-badge {
   display: inline-flex;
   align-items: center;
@@ -569,6 +480,7 @@ onMounted(() => void load())
   font-size: 10px;
   font-weight: 700;
 }
+
 .tree-status {
   width: 8px;
   height: 8px;
@@ -576,12 +488,15 @@ onMounted(() => void load())
   border-radius: 50%;
   background: #2e9d68;
 }
+
 .tree-status.off {
   background: #bd7c32;
 }
+
 .organization-detail {
   min-width: 0;
 }
+
 .organization-detail__header {
   display: flex;
   justify-content: space-between;
@@ -590,25 +505,30 @@ onMounted(() => void load())
   border-bottom: 1px solid #e4ebef;
   padding-bottom: 14px;
 }
+
 .organization-detail__header h2 {
   margin: 7px 0 4px;
   color: #183b57;
   font-size: 20px;
 }
+
 .organization-detail__header p {
   margin: 0;
   color: #536b7b;
 }
+
 .detail-actions {
   display: flex;
   gap: 8px;
   align-items: center;
 }
+
 .detail-tabs {
   display: flex;
   gap: 4px;
   border-bottom: 1px solid #e4ebef;
 }
+
 .detail-tabs button {
   border: 0;
   border-bottom: 2px solid transparent;
@@ -617,95 +537,84 @@ onMounted(() => void load())
   color: #536b7b;
   cursor: pointer;
 }
+
 .detail-tabs button[aria-selected='true'] {
   border-bottom-color: #1876a8;
   color: #1876a8;
   font-weight: 700;
 }
+
 .detail-grid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 14px;
   padding-top: 16px;
 }
+
 .detail-grid div {
   display: grid;
   gap: 4px;
   border-bottom: 1px solid #edf2f4;
   padding-bottom: 10px;
 }
+
 .detail-grid span,
 .audit-placeholder dt {
   color: #8292a0;
   font-size: 12px;
 }
+
 .detail-grid strong,
 .audit-placeholder dd {
   color: #183b57;
 }
+
 .audit-placeholder {
   display: grid;
   gap: 10px;
   padding-top: 16px;
 }
+
 .audit-placeholder h3 {
   margin: 0;
   color: #183b57;
 }
+
 .audit-placeholder p {
   margin: 0;
   color: #536b7b;
 }
+
 .audit-placeholder dl {
   display: grid;
   grid-template-columns: 160px 1fr;
   gap: 8px;
   margin: 0;
 }
+
 .audit-placeholder dd {
   margin: 0;
 }
-.modal-backdrop {
-  position: fixed;
-  inset: 0;
-  z-index: 40;
-  display: grid;
-  place-items: center;
-  padding: 20px;
-  background: rgb(18 38 54 / 45%);
-}
+
+
 .modal-card {
-  width: min(100%, 680px);
-  max-height: calc(100vh - 40px);
-  overflow: auto;
-  border-radius: 7px;
-  background: #fff;
-  box-shadow: 0 20px 60px rgb(18 42 62 / 24%);
+    width: min(100%, 760px);
+    max-height: calc(100vh - 40px);
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    border-radius: 7px;
+    background: #fff;
+    box-shadow: 0 20px 60px rgb(18 42 62 / 24%);
 }
-.modal-card header,
-.modal-card footer {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-  padding: 15px 18px;
-  border-bottom: 1px solid #e4ebef;
-}
-.modal-card header h2 {
-  margin: 0;
-  color: #173c59;
-  font-size: 18px;
-}
-.modal-card header p {
-  margin: 4px 0 0;
-  color: #8292a0;
-  font-size: 12px;
-}
+
+
 .modal-card form {
   display: grid;
   gap: 12px;
   padding: 18px;
 }
+
 .modal-card label {
   display: grid;
   gap: 5px;
@@ -713,6 +622,7 @@ onMounted(() => void load())
   font-size: 12px;
   font-weight: 600;
 }
+
 .modal-card input,
 .modal-card select,
 .modal-card textarea {
@@ -722,45 +632,40 @@ onMounted(() => void load())
   padding: 7px 9px;
   font: inherit;
 }
+
 .form-grid {
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: 12px;
 }
+
 .company-fields {
   display: grid;
   gap: 10px;
   border-left: 3px solid #eaf5fa;
   padding-left: 12px;
 }
+
 .company-fields h3 {
   margin: 0;
   color: #183b57;
   font-size: 14px;
 }
-.modal-card footer {
-  justify-content: flex-end;
-  margin: 6px -18px -18px;
-  border-top: 1px solid #e4ebef;
-  border-bottom: 0;
-}
-.icon-button {
-  border: 0;
-  background: transparent;
-  color: #536b7b;
-  font-size: 22px;
-  cursor: pointer;
-}
+
+
+
 .inline-error {
   margin: 0;
   color: #b64444;
   font-size: 12px;
 }
+
 @media (max-width: 900px) {
   .organization-layout {
     grid-template-columns: 1fr;
     padding: 16px;
   }
+
   .organization-tree {
     border-right: 0;
     border-bottom: 1px solid #e4ebef;
@@ -768,7 +673,9 @@ onMounted(() => void load())
     padding-bottom: 16px;
   }
 }
+
 @media (max-width: 600px) {
+
   .form-grid,
   .detail-grid {
     grid-template-columns: 1fr;

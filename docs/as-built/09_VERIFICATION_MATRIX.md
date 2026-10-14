@@ -119,3 +119,21 @@ Tham khảo [15_FRONTEND_V2_START_BASELINE.md](15_FRONTEND_V2_START_BASELINE.md)
 ## Frontend V2.1 — AppShell composition (14/10/2026)
 
 V2.1 tách logic AppShell thành bốn composable và chuyển stylesheet nguồn sang `<style scoped src=...>`. Check tại máy biên soạn: template SHA-256 và CSS SHA-256 trùng V2 Start; **72/72 AST script statements** được giữ; **4/4 Node contract tests** và **546/546 import** PASS. Chưa có kết quả type-check/Vitest/build/Playwright sau V2.1 trên Windows; không sử dụng thành tích v1.2 để tự động đánh dấu V2.1 runtime PASS. Xem [16](16_FRONTEND_V2_1_APPSHELL_REFACTOR.md).
+
+
+## Frontend V2.1 user Windows runtime acceptance (14/10/2026)
+
+The user executed V2.1 gates on Windows: `check:v2-1-shell` **4/4**, import validation **546/546**, `vue-tsc` **PASS**, Oxlint **0 errors**, ESLint **0 errors / 3 pre-existing Playwright warnings**, Prettier **PASS**, Vitest **26/26 files and 102/102 tests**, Vite production build **PASS** (4,281 modules), Playwright **243/243 tests PASS (9.2 min)**. This is evidence supplied by the user, not tests executed in the archive-building container. The V2.1 source was not independently compared against that machine's backend/OpenAPI deviations.
+
+## Frontend V2.2 build-workspace verification (14/10/2026)
+
+Product Editor organization-only refactor: `check:v2-2-product-editor` **6/6**, import gate **573/573**, prior AppShell tests **4/4**, V2.1-vs-V2.2 deterministic payload/validation comparisons **2,250/2,250**. New Vitest unit tests were added but could not be executed here; `vue-tsc`, ESLint, Prettier, Vite build and Playwright are **PENDING Windows execution**. See [17_FRONTEND_V2_2_PRODUCT_EDITOR_REFACTOR.md](17_FRONTEND_V2_2_PRODUCT_EDITOR_REFACTOR.md).
+
+
+## Frontend V2.3 build-workspace verification (14/10/2026)
+
+Employees organization-only refactor: `check:v2-3-employees` **5/5**, prior guards V2.1 + V2.2 **10/10**, frontend import scanner **609/609**, differential probe comparing V2.2.1 to V2.3 forms/payload/manager validation **10,000/10,000**, isolated TypeScript semantic probe with module stubs **PASS**. Auth/route/API/template/styles source not modified. **18 new Vitest tests written but not executed**. Full `vue-tsc`, ESLint/Prettier, Vitest/Vite and Playwright **PENDING Windows execution**. See [18](18_FRONTEND_V2_3_EMPLOYEES_REFACTOR.md).
+
+## 14. Frontend V2.4 security-policy source acceptance (2026-10-14)
+
+V2.3 was user-reported green on Windows: 135/135 Vitest, 243/243 Playwright, type-check, lint with three inherited nonblocking warnings, format, build. V2.4 modifies Security Policies only and adds 28 Vitest tests. Builder static checks passed: source guard **6/6**, accumulated guards **21/21**, 653/653 imports, 15,000-case differential oracle, isolated TS module/test type probe. **All V2.4 Windows runtime gates are pending**, so do not transfer V2.3 green status. See [19](19_FRONTEND_V2_4_POLICIES_PBAC_REFACTOR.md).

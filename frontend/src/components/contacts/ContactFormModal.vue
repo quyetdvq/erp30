@@ -38,6 +38,13 @@ const draft = ref({
   ward_id: '',
 })
 
+const requiredFieldsFilled = computed(
+  () =>
+    draft.value.name.trim().length > 0 &&
+    draft.value.phone.trim().length > 0 &&
+    draft.value.address.trim().length > 0,
+)
+
 const { markClean, confirmDiscard } = useUnsavedChanges(
   draft,
   computed(() => props.open),
@@ -89,12 +96,16 @@ function onProvinceChange(value: string): void {
 }
 
 function save(): void {
+  // HTML `required` is not sufficient for values containing only whitespace.
+  // Keep this guard for Enter submissions and direct calls to save().
+  if (props.busy || !requiredFieldsFilled.value) return
+
   const editablePayload: ContactUpdate = {
-    ...(draft.value.name ? { name: draft.value.name } : {}),
+    name: draft.value.name.trim(),
+    phone: draft.value.phone.trim(),
+    address: draft.value.address.trim(),
     ...(draft.value.email ? { email: draft.value.email } : {}),
-    ...(draft.value.phone ? { phone: draft.value.phone } : {}),
     ...(draft.value.mobile ? { mobile: draft.value.mobile } : {}),
-    ...(draft.value.address ? { address: draft.value.address } : {}),
     ...(draft.value.description ? { description: draft.value.description } : {}),
     ...(draft.value.province_id ? { province_id: draft.value.province_id } : {}),
     ...(draft.value.ward_id ? { ward_id: draft.value.ward_id } : {}),
@@ -117,38 +128,45 @@ function save(): void {
     <section class="modal-card" role="dialog" aria-modal="true" :aria-label="title">
       <header class="modal-card__header">
         <div>
-          <h2>{{ title }}</h2>
+          <h2 class="modal-card-title">
+            <NIcon :size="24">
+              <PeopleOutline />
+            </NIcon>
+            {{ title }}
+          </h2>
           <p>{{ t('contact.ownerHint') }}</p>
         </div>
         <button
           type="button"
-          class="icon-button"
+          class="modal-card-button-close"
           :aria-label="t('common.close')"
           @click="requestClose"
-        >
-          ×
-        </button>
+        ></button>
       </header>
-      <form class="modal-card__body" @submit.prevent="save">
+      <form id="contact-form" class="modal-card__body" @submit.prevent="save">
         <div class="form-grid">
-          <label
-            ><span>{{ t('contact.name') }}</span
-            ><input v-model="draft.name"
-          /></label>
-          <label
-            ><span>{{ t('contact.email') }}</span
-            ><input v-model="draft.email" type="email"
-          /></label>
-          <label
-            ><span>{{ t('contact.phone') }}</span
-            ><input v-model="draft.phone"
-          /></label>
-          <label
-            ><span>{{ t('contact.mobile') }}</span
-            ><input v-model="draft.mobile"
-          /></label>
-          <label
-            ><span>{{ t('contact.province') }}</span>
+          <label>
+            <span>
+              {{ t('contact.name') }} <span class="required-mark" aria-hidden="true">*</span>
+            </span>
+            <input v-model.trim="draft.name" type="text" autocomplete="name" required />
+          </label>
+          <label>
+            <span>{{ t('contact.email') }}</span>
+            <input v-model="draft.email" type="email" />
+          </label>
+          <label>
+            <span>
+              {{ t('contact.phone') }} <span class="required-mark" aria-hidden="true">*</span>
+            </span>
+            <input v-model.trim="draft.phone" type="tel" autocomplete="tel" required />
+          </label>
+          <label>
+            <span>{{ t('contact.mobile') }}</span>
+            <input v-model="draft.mobile" />
+          </label>
+          <label>
+            <span>{{ t('contact.province') }}</span>
             <SearchableSelect
               :model-value="draft.province_id"
               :options="provinceOptions"
@@ -159,8 +177,8 @@ function save(): void {
               "
             />
           </label>
-          <label
-            ><span>{{ t('contact.ward') }}</span>
+          <label>
+            <span>{{ t('contact.ward') }}</span>
             <SearchableSelect
               :model-value="draft.ward_id"
               :options="wardOptions"
@@ -173,37 +191,41 @@ function save(): void {
             />
           </label>
         </div>
-        <label
-          ><span>{{ t('contact.address') }}</span
-          ><input v-model="draft.address"
-        /></label>
-        <label
-          ><span>{{ t('contact.description') }}</span
-          ><textarea v-model="draft.description" rows="3" />
+        <label>
+          <span>
+            {{ t('contact.address') }} <span class="required-mark" aria-hidden="true">*</span>
+          </span>
+          <input v-model.trim="draft.address" type="text" autocomplete="street-address" required />
         </label>
-        <footer class="modal-card__footer">
-          <button type="button" class="secondary-button" @click="requestClose">
-            {{ t('common.cancel') }}
-          </button>
-          <button type="submit" class="primary-button" :disabled="props.busy">
-            {{ props.busy ? t('common.saving') : t('common.save') }}
-          </button>
-        </footer>
+        <label>
+          <span>{{ t('contact.description') }}</span>
+          <textarea v-model="draft.description" rows="3" />
+        </label>
       </form>
+      <footer class="modal-card__footer">
+        <button type="button" class="secondary-button" @click="requestClose">
+          <NIcon :size="20">
+            <Refresh />
+          </NIcon>
+          {{ t('common.cancel') }}
+        </button>
+        <button
+          type="submit"
+          class="primary-button"
+          form="contact-form"
+          :disabled="props.busy || !requiredFieldsFilled"
+        >
+          <NIcon :size="20">
+            <SaveOutline />
+          </NIcon>
+          {{ props.busy ? t('common.saving') : t('common.save') }}
+        </button>
+      </footer>
     </section>
   </div>
 </template>
 
 <style scoped>
-.modal-backdrop {
-  position: fixed;
-  inset: 0;
-  z-index: 40;
-  display: grid;
-  place-items: center;
-  padding: 20px;
-  background: rgb(18 38 54 / 45%);
-}
 .modal-card {
   width: min(100%, 680px);
   max-height: calc(100vh - 40px);
@@ -212,20 +234,7 @@ function save(): void {
   background: #fff;
   box-shadow: 0 20px 60px rgb(18 42 62 / 24%);
 }
-.modal-card__header,
-.modal-card__footer {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-  padding: 15px 18px;
-  border-bottom: 1px solid #e4ebef;
-}
-.modal-card__header h2 {
-  margin: 0;
-  color: #173c59;
-  font-size: 18px;
-}
+
 .modal-card__header p {
   margin: 4px 0 0;
   color: #8292a0;
@@ -256,24 +265,15 @@ function save(): void {
 .modal-card__body textarea {
   resize: vertical;
 }
+.required-mark {
+  color: #b42318;
+}
 .form-grid {
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: 12px;
 }
-.modal-card__footer {
-  justify-content: flex-end;
-  margin: 6px -18px -18px;
-  border-top: 1px solid #e4ebef;
-  border-bottom: 0;
-}
-.icon-button {
-  border: 0;
-  background: transparent;
-  color: #536b7b;
-  font-size: 22px;
-  cursor: pointer;
-}
+
 @media (max-width: 600px) {
   .form-grid {
     grid-template-columns: 1fr;

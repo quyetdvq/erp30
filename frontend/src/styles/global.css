@@ -816,16 +816,29 @@ a {
   position: fixed;
   inset: 0;
   z-index: 40;
-  display: grid;
   place-items: center;
   padding: 20px;
   background: rgb(0 0 0 / 55%);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  overflow: hidden;
+}
+
+.modal-card__header,
+.modal-card__footer {
+  flex: 0 0 auto;
+  display: flex;
+  gap: 12px;
 }
 
 .modal-card__body {
-  display: grid;
-  gap: 12px;
-  padding: 18px;
+    flex: 1;
+    min-height: 0;
+    overflow-y: auto;
+    display: grid;
+    gap: 12px;
+    padding: 18px;
 }
 
 .modal-card__header {
@@ -843,6 +856,14 @@ a {
   background: #eeeeee;
 }
 
+.page-heading .btn-add {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 0px 8px;
+}
+
+
 .modal-card__footer .secondary-button,
 .modal-card__footer .primary-button {
   display: inline-flex;
@@ -850,11 +871,7 @@ a {
   gap: 10px;
 }
 
-.modal-card__header,
-.modal-card__footer {
-  display: flex;
-  gap: 12px;
-}
+
 
 .modal-card-title {
   display: inline-flex;

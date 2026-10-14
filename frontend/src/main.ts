@@ -28,6 +28,7 @@ import {
   EyeOutline,
   TrashOutline,
   Refresh,
+  AddCircleOutline,
 } from '@vicons/ionicons5'
 
 const globalIcons = {
@@ -53,6 +54,7 @@ const globalIcons = {
   EyeOutline,
   TrashOutline,
   Refresh,
+  AddCircleOutline,
 }
 
 import App from './App.vue'

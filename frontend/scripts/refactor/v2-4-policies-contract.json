@@ -1,0 +1,37 @@
+{
+  "baseline": "FE-V2.3-ACCEPTED-2026-10-14",
+  "template": "b865ded5da1afedcd71a674fe06f1c25384e85dcd8eb9c23bbc11d156ed3968a",
+  "style": "5e38c1b9dcff114e111bc33345f227787ad0c8ead5ba2ac4ab26732a8b24d24e",
+  "pageHandlers": {
+    "closeForm": "80f268f7ac62a4e3f78dd86478eab007f76aa51cd4639b6a5a3e464d4f2a26fd",
+    "applyQuery": "c4beba81c1fe9ce5a86b1727d89db7000fedb3ee6db2807bcaa871fb0d9e0427",
+    "resetQuery": "3e033fe19c6723ed9359cb846446effee30dbadcc92ab34d1f928c8717027d5d",
+    "load": "5b6f837cd403ca15a014fae98cbf649bff4bf1b12397cb0120fc6af7e529f6a9",
+    "onResourceChange": "38886877691069be2f80f33f42daf195064a125b51877d5974c346da22d554c7",
+    "addAction": "0c3fc2259462b82e8866ce24502fb48156d783fabcba84e6b5c24c80dc940c78",
+    "removeAction": "5104722a683c240400ff90b88dbea7e1c57b90923f2f909c2ec6c46a932a787c",
+    "toggle": "27ab6278f4bfc6db0140fb9b28861264588d99bdc47af55f85cdb6548888f15b",
+    "reloadAfterDuplicate": "1be2d55f6b27d40129f6f8c05837bbfd69c836ebc59118fe2291c26457bc8cd9"
+  },
+  "movedFunctions": {
+    "labelForOrganization": "fe6db00881e6782571b4dc7d0ceda9207beb5f4d35332c43ba6ed996030c4295",
+    "labelForResource": "0fa4c2f1dea7f5c37ee290a9460a2d49d5876e99314541375cbade220c10555f",
+    "actionCodeFor": "ed3ff150da4723c7f6e6de65cb9ad4bbd541b778d2827c1026383ed9261fa7f3",
+    "labelForParticipant": "de9fa37c051dfacdb4444149183fee8b7a36f3a49d2ef4281e7d011bf9a04197",
+    "participantOptionsFor": "be50e51f576f512be3423c3cb4f76aa78fbfd8f4d321bdbbe34a671d37e183ff",
+    "effectsSummary": "36880154465b9020a4a2cab3f368b71373e5861d44e8a9eddeffb83232ea6bfe",
+    "loadReferences": "3b400ec53c978f646cdba9ddf75bec3df46b19f333daa6648c3c5a05fb001ba4",
+    "loadActions": "0ca5e9d189fa1cad7447ba1f2c9f256d0ff14f672a6d4ea7f4e0216dc32a6820",
+    "preserveParticipantSelection": "18c926cc68eff0655a2b862d8aa3fe7704ee13595ce4ce32204543b950ff30d0",
+    "loadParticipantOptions": "e8de672229eb314dcb4835ca584faa9dae66487a141719caa48011f823945ad5",
+    "onParticipantTypeChange": "ca782e57a0f4ab3e8ca9821e57aae9ec056dea0694558a158bd799f111807f73",
+    "searchParticipants": "06590d31c7417560449e0e0c53e2293015e67c6de62b90cf61cde98c8fe70535"
+  },
+  "variables": {
+    "columns": "1169ea497c8921914854decd6c591eb698e55aed5e797eae3505e3adc981f52b",
+    "actionOptions": "375ebf7375ad360390f1ecf5be09856136c82833b32761becf0ed5df45b7ff9b",
+    "participantSelectOptions": "14b6959a6f73c28e2e30c80f806be5a859db3b6e674faf25a7ed6f62dfdadf50",
+    "workflowStateOptions": "95a5214bed85ab7506c74ba9a07bd34964ca0448d28e34ee13e1d76df1b991a2",
+    "isRemoteParticipant": "f22b1a54212c9d22f1450573b006095025a49c7215b8e130e67a4c4e17a7d683"
+  }
+}

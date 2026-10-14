@@ -27,6 +27,9 @@
 | 14 | [14_FRONTEND_REFACTOR_V1_2_VALIDATION.md](14_FRONTEND_REFACTOR_V1_2_VALIDATION.md) | Tách kiểm tra frontend và external API, sửa ESLint `.cjs`, Vitest node:test và Prettier |
 | 15 | [15_FRONTEND_V2_START_BASELINE.md](15_FRONTEND_V2_START_BASELINE.md) | Chốt baseline frontend v1.2 cho V2: evidence Windows 102 Unit / 243 E2E, immutable source snapshot, boundary backend/API và gate V2 |
 | 16 | [16_FRONTEND_V2_1_APPSHELL_REFACTOR.md](16_FRONTEND_V2_1_APPSHELL_REFACTOR.md) | V2.1: tách AppShell thành bốn composable, giữ template/CSS, đối chiếu AST và hướng dẫn quality gates trên Windows |
+| 17 | [17_FRONTEND_V2_2_PRODUCT_EDITOR_REFACTOR.md](17_FRONTEND_V2_2_PRODUCT_EDITOR_REFACTOR.md) | Feature architecture of Product Editor, owned form/payload/validation/lookup/feedback and V2.2 quality gates |
+| 18 | [18_FRONTEND_V2_3_EMPLOYEES_REFACTOR.md](18_FRONTEND_V2_3_EMPLOYEES_REFACTOR.md) | V2.3: People/Employees forms, payload, validation, lookups and assignments, with pinned DOM/CSS/AST and Windows verification gates |
+| 19 | [19_FRONTEND_V2_4_POLICIES_PBAC_REFACTOR.md](19_FRONTEND_V2_4_POLICIES_PBAC_REFACTOR.md) | V2.4: Security Policies/PBAC form, State, participant and catalog extraction; unchanged DOM/CSS and explicit Windows acceptance gates |
 
 ## Catalogue tự động từ source
 
@@ -73,3 +76,12 @@ Mốc **`FE-V2-START-2026-10-14`** khóa riêng frontend bằng manifest SHA-256
 ## V2.1 — AppShell composables (2026-10-14)
 
 `src/components/AppShell.vue` được tách **logic** thành 4 composable trong `src/components/app-shell/`, giữ nguyên cấu trúc template và stylesheet nguồn. `FE-V2-START-2026-10-14` vẫn bất biến. **Không xem kết quả kiểm tra tĩnh là nghiệm thu runtime**; xem [16](16_FRONTEND_V2_1_APPSHELL_REFACTOR.md) để chạy Unit/Playwright/build trước khi merge.
+
+
+## Frontend V2.3 — People / Employees (14/10/2026)
+
+V2.3 tách các quy tắc form/payload/manager validation và các nguồn lookup/assignment khỏi `PeopleEmployeesView.vue`, giữ nguyên template và CSS từ bản V2.2.1. Lệnh `check:v2-3-employees` khóa hash DOM/CSS và các AST được di chuyển; xem [18](18_FRONTEND_V2_3_EMPLOYEES_REFACTOR.md). **Chưa có log chạy Windows của V2.3; không coi 243 E2E PASS của V2.2.1 là kết quả nghiệm thu V2.3.**
+
+## Frontend V2.4 — Security Policies / PBAC (14/10/2026)
+
+Security Policies view is reorganized into `policy-editor/` modules (forms/payload/validation/reference lookups/participants/State) without modifying DOM, scoped CSS, API contract, backend or authorization decision rules. Source checks **6/6** and cross-phase Node checks **21/21** passed. Full V2.4 Windows type-check/Vitest/Playwright/build are **pending**; see [19](19_FRONTEND_V2_4_POLICIES_PBAC_REFACTOR.md).

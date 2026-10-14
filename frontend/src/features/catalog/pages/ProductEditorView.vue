@@ -2,17 +2,7 @@
 import { computed, onMounted, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useRoute, useRouter } from 'vue-router'
-import type {
-  ComboItem,
-  ComboItemInput,
-  Product,
-  ProductCreate,
-  ProductGroup,
-  ProductPatch,
-  ProductUom,
-  ProductUomConversion,
-  ProductUomConversionsRequest,
-} from '@/api/generated/types.gen'
+import type { Product } from '@/api/generated/types.gen'
 import DecimalInput from '@/components/forms/DecimalInput.vue'
 import SearchableSelect from '@/components/forms/SearchableSelect.vue'
 import RemoteSearchableSelect from '@/components/forms/RemoteSearchableSelect.vue'
@@ -34,35 +24,27 @@ import { reportApiError } from '@/services/errorBoundary'
 import BusinessWorkflowAction from '@/components/lists/BusinessWorkflowAction.vue'
 import ProductImageField from '@/components/products/ProductImageField.vue'
 import { productHasImage } from '@/services/productImage'
+import ProductEditorPageHeading from '../product-editor/components/ProductEditorPageHeading.vue'
+import ProductEditorFeedback from '../product-editor/components/ProductEditorFeedback.vue'
+import { useProductEditorLookups } from '../product-editor/useProductEditorLookups'
+import {
+  emptyProductForm,
+  emptyConversion,
+  productToForm,
+  toConversion,
+  toCombo,
+} from '../product-editor/model'
+import { comboPayload, productPayload, conversionsPayload } from '../product-editor/payload'
+import {
+  comboValidationKey,
+  conversionValidationKey,
+  productValidationKey,
+} from '../product-editor/validation'
+import type { ComboForm, ConversionForm } from '../product-editor/types'
 import { useUnsavedChanges } from '@/composables/useUnsavedChanges'
 import { loadLookupPages } from '@/services/listLookups'
-import {
-  databaseFlagEnabled,
-  productRoleLabel,
-  productUomName,
-  productUsageLabel,
-  selectableProductGroupOptions,
-  selectableProductUomOptions,
-} from '@/services/productPresentation'
-import {
-  resolveProductOptions,
-  searchProductOptions,
-  type ProductOption,
-} from '@/services/productLookups'
+import { productRoleLabel, productUomName, productUsageLabel } from '@/services/productPresentation'
 
-type ConversionForm = {
-  id: string
-  uom_id: string
-  conversion_factor: string
-  price: string
-  package_gross_weight_g: string
-  package_length_mm: string
-  package_width_mm: string
-  package_height_mm: string
-  usage_type: ProductUomConversion['usage_type']
-  status: ProductUomConversion['status']
-}
-type ComboForm = { id: string; component_product_id: string; quantity: string }
 const { t } = useI18n()
 const route = useRoute()
 const router = useRouter()
@@ -78,16 +60,12 @@ const imageDirty = ref(false)
 function onImageDirty(value: boolean): void {
   imageDirty.value = value
 }
-const groups = ref<ProductGroup[]>([])
-const uoms = ref<ProductUom[]>([])
-const products = ref<ProductOption[]>([])
 const children = ref<Product[]>([])
 const conversions = ref<ConversionForm[]>([])
 const comboItems = ref<ComboForm[]>([])
 const busy = ref(false)
 const conversionBusy = ref(false)
 const comboBusy = ref(false)
-const lookupsReady = ref(false)
 const error = ref<unknown | null>(null)
 const conversionError = ref<unknown | null>(null)
 const comboError = ref<unknown | null>(null)
@@ -95,43 +73,10 @@ const validationError = ref<string | null>(null)
 const showLegacyRelations = false
 const conversionEditorOpen = ref(false)
 const conversionEditorIndex = ref<number | null>(null)
-const form = ref({
-  product_code: '',
-  sku: '',
-  barcode: '',
-  product_type: 'STANDARD' as Product['product_type'],
-  product_name: '',
-  product_child_name: '',
-  parent_product_id: '',
-  product_group_id: '',
-  base_uom_id: '',
-  price: '',
-  net_weight_g: '',
-  package_gross_weight_g: '',
-  package_length_mm: '',
-  package_width_mm: '',
-  package_height_mm: '',
-  serial_management_enabled: false,
-  description: '',
-  status: 'ACTIVE' as Product['status'],
-})
+const form = ref(emptyProductForm())
 const unsaved = useUnsavedChanges(
   computed(() => ({ form: form.value, imageDirty: imageDirty.value })),
 )
-function emptyConversion(): ConversionForm {
-  return {
-    id: '',
-    uom_id: '',
-    conversion_factor: '',
-    price: '',
-    package_gross_weight_g: '',
-    package_length_mm: '',
-    package_width_mm: '',
-    package_height_mm: '',
-    usage_type: 'BOTH',
-    status: 'ACTIVE',
-  }
-}
 const conversionDraft = ref<ConversionForm>(emptyConversion())
 const isChild = computed(() => editing.value && Boolean(form.value.parent_product_id))
 const isCombo = computed(() => form.value.product_type === 'COMBO')
@@ -140,84 +85,28 @@ const role = computed(
 )
 const isParentRole = computed(() => role.value === 'PARENT')
 const canEdit = computed(() => hasBasePermission('product', editing.value ? 'edit' : 'create'))
-const groupOptions = computed(() =>
-  selectableProductGroupOptions(groups.value, form.value.product_group_id),
-)
-const uomOptions = computed(() => selectableProductUomOptions(uoms.value, form.value.base_uom_id))
-const parentSelectOptions = computed(() =>
-  products.value
-    .filter((row) => row.id !== id.value && row.id === form.value.parent_product_id)
-    .map((row) => ({
-      value: String(row.id),
-      label: `${row.full_name} (${row.product_code ?? row.id})`,
-    })),
-)
-const comboSelectOptions = computed(() =>
-  products.value
-    .filter((row) => String(row.id) !== id.value)
-    .map((row) => ({
-      value: String(row.id),
-      label: `${row.full_name} (${productRoleLabel(row.role, t)})`,
-      disabled: row.status !== 'ACTIVE' || !row.selectable,
-    })),
-)
-async function searchParentProducts(q: string, page: number) {
-  const response = await searchProductOptions('parent_product', q, page)
-  return {
-    options: response.data
-      .filter((row) => String(row.id) !== id.value)
-      .map((row) => ({
-        value: String(row.id),
-        label: `${row.full_name} (${row.product_code ?? row.id})`,
-      })),
-    total: response.meta.total,
-  }
-}
-async function searchComboProducts(q: string, page: number) {
-  const response = await searchProductOptions('combo_component', q, page)
-  return {
-    options: response.data
-      .filter((row) => String(row.id) !== id.value)
-      .map((row) => ({
-        value: String(row.id),
-        label: `${row.full_name} (${productRoleLabel(row.role, t)})`,
-        disabled: row.status !== 'ACTIVE' || !row.selectable,
-      })),
-    total: response.meta.total,
-  }
-}
-async function hydrateChosenProducts(ids: readonly string[]): Promise<void> {
-  const distinct = [...new Set(ids.filter(Boolean))]
-  if (!distinct.length) return
-  const result = await resolveProductOptions(distinct)
-  const known = new Map(products.value.map((row) => [String(row.id), row]))
-  for (const row of result) known.set(String(row.id), row)
-  products.value = [...known.values()]
-}
-async function parentChanged(value: string): Promise<void> {
-  form.value.parent_product_id = value
-  if (value) await hydrateChosenProducts([value])
-}
-async function componentChanged(index: number, value: string): Promise<void> {
-  const row = comboItems.value[index]
-  if (!row) return
-  row.component_product_id = value
-  if (value) await hydrateChosenProducts([value])
-}
-const baseUomName = computed(
-  () => productUomName(uoms.value, form.value.base_uom_id) ?? t('list.noValue'),
-)
-const parentRow = computed(() =>
-  products.value.find((row) => String(row.id) === form.value.parent_product_id),
-)
+const {
+  groups,
+  uoms,
+  products,
+  lookupsReady,
+  groupOptions,
+  uomOptions,
+  parentSelectOptions,
+  comboSelectOptions,
+  searchParentProducts,
+  searchComboProducts,
+  hydrateChosenProducts,
+  parentChanged,
+  componentChanged,
+  baseUomName,
+  parentRow,
+} = useProductEditorLookups(id, form, comboItems, t)
 function businessStateLabel(code: string | null | undefined): string {
   if (!code) return t('list.noValue')
   const key = `status.${code.toLowerCase()}`
   const translated = t(key)
   return translated === key ? code : translated
-}
-function textValue(value: string | number | null | undefined): string {
-  return value === null || value === undefined ? '' : String(value)
 }
 function displayMoney(value: string | number | null | undefined): string {
   return value === null || value === undefined || value === ''
@@ -238,47 +127,7 @@ function displayPackage(row: ConversionForm): string {
   )
 }
 function resetFromRow(row: Product): void {
-  form.value = {
-    product_code: textValue(row.product_code),
-    sku: textValue(row.sku),
-    barcode: textValue(row.barcode),
-    product_type: row.product_type,
-    product_name: textValue(row.product_name),
-    product_child_name: textValue(row.product_child_name),
-    parent_product_id: textValue(row.parent_product_id),
-    product_group_id: textValue(row.product_group_id),
-    base_uom_id: textValue(row.base_uom_id),
-    price: textValue(row.price),
-    net_weight_g: textValue(row.net_weight_g),
-    package_gross_weight_g: textValue(row.package_gross_weight_g),
-    package_length_mm: textValue(row.package_length_mm),
-    package_width_mm: textValue(row.package_width_mm),
-    package_height_mm: textValue(row.package_height_mm),
-    serial_management_enabled: databaseFlagEnabled(row.serial_management_enabled),
-    description: textValue(row.description),
-    status: row.status,
-  }
-}
-function toConversion(row: ProductUomConversion): ConversionForm {
-  return {
-    id: textValue(row.id),
-    uom_id: textValue(row.uom_id),
-    conversion_factor: textValue(row.conversion_factor),
-    price: textValue(row.price),
-    package_gross_weight_g: textValue(row.package_gross_weight_g),
-    package_length_mm: textValue(row.package_length_mm),
-    package_width_mm: textValue(row.package_width_mm),
-    package_height_mm: textValue(row.package_height_mm),
-    usage_type: row.usage_type,
-    status: row.status,
-  }
-}
-function toCombo(row: ComboItem): ComboForm {
-  return {
-    id: textValue(row.id),
-    component_product_id: textValue(row.component_product_id),
-    quantity: textValue(row.quantity),
-  }
+  form.value = productToForm(row)
 }
 async function loadConversions(): Promise<void> {
   if (!id.value || (role.value !== 'SIMPLE' && role.value !== 'CHILD')) return
@@ -339,83 +188,34 @@ async function load(): Promise<void> {
     reportApiError(caught)
   }
 }
-function optionalString(value: string): string | undefined {
-  return value === '' ? undefined : value
-}
-function comboPayload(): ComboItemInput[] {
-  return comboItems.value.map((row) => ({
-    component_product_id: row.component_product_id,
-    quantity: row.quantity,
-  }))
-}
 function validateComboItems(): boolean {
   validationError.value = null
-  if (comboItems.value.some((row) => !row.component_product_id)) {
-    validationError.value = t('product.componentRequired')
-  } else if (comboItems.value.some((row) => !decimalIsPositive(row.quantity))) {
-    validationError.value = t('product.quantityRequired')
-  }
+  const key = comboValidationKey(comboItems.value)
+  if (key) validationError.value = t(key)
   return !validationError.value
 }
-function payload(): ProductCreate | ProductPatch {
-  const base: ProductCreate = {
-    product_code: form.value.product_code || null,
-    sku: form.value.sku || null,
-    barcode: form.value.barcode || null,
-    product_type: form.value.product_type,
-    ...(form.value.product_group_id ? { product_group_id: form.value.product_group_id } : {}),
-    ...(form.value.base_uom_id ? { base_uom_id: form.value.base_uom_id } : {}),
-    ...(form.value.parent_product_id ? { parent_product_id: form.value.parent_product_id } : {}),
-    ...(isChild.value
-      ? { product_child_name: form.value.product_child_name }
-      : { product_name: form.value.product_name }),
-    ...(optionalString(form.value.price) && !isParentRole.value ? { price: form.value.price } : {}),
-    ...(optionalString(form.value.net_weight_g) ? { net_weight_g: form.value.net_weight_g } : {}),
-    ...(optionalString(form.value.package_gross_weight_g)
-      ? { package_gross_weight_g: form.value.package_gross_weight_g }
-      : {}),
-    ...(optionalString(form.value.package_length_mm)
-      ? { package_length_mm: form.value.package_length_mm }
-      : {}),
-    ...(optionalString(form.value.package_width_mm)
-      ? { package_width_mm: form.value.package_width_mm }
-      : {}),
-    ...(optionalString(form.value.package_height_mm)
-      ? { package_height_mm: form.value.package_height_mm }
-      : {}),
-    ...(form.value.description ? { description: form.value.description } : {}),
-    serial_management_enabled: isCombo.value ? false : form.value.serial_management_enabled,
-  }
-  // One CREATE request: product + COMBO components are written atomically.
-  return !editing.value && isCombo.value && comboItems.value.length
-    ? { ...base, combo_items: comboPayload() }
-    : base
-}
-function decimalIsPositive(value: string): boolean {
-  return /^\d+(?:\.\d+)?$/.test(value) && !/^0+(?:\.0+)?$/.test(value)
+function payload() {
+  return productPayload(
+    form.value,
+    {
+      isChild: isChild.value,
+      isCombo: isCombo.value,
+      isParentRole: isParentRole.value,
+      editing: editing.value,
+    },
+    comboItems.value,
+  )
 }
 async function save(): Promise<void> {
   if (!lookupsReady.value) return
   validationError.value = null
-  if (isChild.value && !form.value.parent_product_id)
-    validationError.value = t('product.parentRequired')
-  else if (isChild.value && !form.value.product_child_name.trim())
-    validationError.value = t('product.childRequired')
-  else if (!isChild.value && !form.value.product_name.trim())
-    validationError.value = t('product.nameRequired')
-  else if (!isParentRole.value && !form.value.base_uom_id)
-    validationError.value = t('product.baseUomRequired')
-  else if (
-    form.value.product_group_id &&
-    groupOptions.value.find((option) => option.value === form.value.product_group_id)?.disabled !==
-      false
+  const key = productValidationKey(
+    form.value,
+    { isChild: isChild.value, isParentRole: isParentRole.value },
+    groupOptions.value,
+    uomOptions.value,
   )
-    validationError.value = t('product.invalidGroupReference')
-  else if (
-    !isParentRole.value &&
-    uomOptions.value.find((option) => option.value === form.value.base_uom_id)?.disabled !== false
-  )
-    validationError.value = t('product.invalidUomReference')
+  if (key) validationError.value = t(key)
   else if (!editing.value && isCombo.value && !validateComboItems()) return
   if (validationError.value) return
   busy.value = true
@@ -463,12 +263,8 @@ function openConversion(index?: number): void {
 function saveConversionDraft(): void {
   validationError.value = null
   const draft = conversionDraft.value
-  if (!draft.uom_id || draft.uom_id === form.value.base_uom_id)
-    validationError.value = t('product.alternateUomRequired')
-  else if (!decimalIsPositive(draft.conversion_factor))
-    validationError.value = t('product.factorRequired')
-  else if ((draft.usage_type === 'SALES' || draft.usage_type === 'BOTH') && !draft.price)
-    validationError.value = t('product.priceRequired')
+  const key = conversionValidationKey(draft, form.value.base_uom_id)
+  if (key) validationError.value = t(key)
   if (validationError.value) return
   if (conversionEditorIndex.value === null) conversions.value.push({ ...draft })
   else conversions.value[conversionEditorIndex.value] = { ...draft }
@@ -482,17 +278,7 @@ async function saveConversions(): Promise<void> {
   conversionBusy.value = true
   conversionError.value = null
   try {
-    const body: ProductUomConversionsRequest = conversions.value.map((row) => ({
-      uom_id: row.uom_id,
-      conversion_factor: row.conversion_factor,
-      ...(row.price ? { price: row.price } : {}),
-      ...(row.package_gross_weight_g ? { package_gross_weight_g: row.package_gross_weight_g } : {}),
-      ...(row.package_length_mm ? { package_length_mm: row.package_length_mm } : {}),
-      ...(row.package_width_mm ? { package_width_mm: row.package_width_mm } : {}),
-      ...(row.package_height_mm ? { package_height_mm: row.package_height_mm } : {}),
-      usage_type: row.usage_type,
-      status: row.status,
-    }))
+    const body = conversionsPayload(conversions.value)
     await replaceProductConversions(id.value, body)
     await loadConversions()
   } catch (caught: unknown) {
@@ -534,7 +320,7 @@ async function saveComboItems(): Promise<void> {
   comboBusy.value = true
   comboError.value = null
   try {
-    await replaceProductComboItems(id.value, comboPayload())
+    await replaceProductComboItems(id.value, comboPayload(comboItems.value))
     await loadComboItems()
   } catch (caught: unknown) {
     comboError.value = caught
@@ -553,25 +339,14 @@ watch(
 </script>
 
 <template>
-  <div class="page-heading">
-    <div>
-      <h1>{{ editing ? t('product.editTitle') : t('product.createTitle') }}</h1>
-      <p>{{ t('product.editorDescription') }}</p>
-    </div>
-    <button type="button" class="secondary-button" @click="router.push('/products')">
-      {{ t('common.back') }}
-    </button>
-  </div>
+  <ProductEditorPageHeading :editing="editing" @back="router.push('/products')" />
   <section class="content-panel editor-panel">
-    <p v-if="error || validationError" class="inline-error" role="alert">
-      {{ validationError ?? t('product.requestError') }}
-    </p>
-    <p v-if="isParentRole" class="restriction-note" role="status">
-      {{ t('product.parentRestriction') }}
-    </p>
-    <p v-if="imagePartialError" class="inline-error" role="alert">
-      {{ t('product.imagePartialSave') }}
-    </p>
+    <ProductEditorFeedback
+      :error="error"
+      :validation-error="validationError"
+      :is-parent-role="isParentRole"
+      :image-partial-error="imagePartialError"
+    />
     <form class="editor-form" @submit.prevent="save">
       <fieldset>
         <legend>{{ t('product.image') }}</legend>

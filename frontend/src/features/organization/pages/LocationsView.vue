@@ -136,23 +136,23 @@ const detailFields = computed<readonly TableDetailField[]>(() => {
 const columns = computed<readonly ListColumn<LocationRow>[]>(() =>
   isWards.value
     ? [
-        { key: 'code', labelKey: 'locations.code', sortable: true },
-        { key: 'name', labelKey: 'locations.name', sortable: true },
-        { key: 'name_full', labelKey: 'locations.fullName' },
-        {
-          key: 'province_id',
-          labelKey: 'locations.province',
-          value: (row) => provinceName(String((row as Ward).province_id)),
-        },
-        { key: 'status', labelKey: 'locations.status', sortable: true },
-        { key: 'actions', labelKey: 'locations.actions', align: 'end' },
-      ]
+      { key: 'code', labelKey: 'locations.code', sortable: true },
+      { key: 'name', labelKey: 'locations.name', sortable: true },
+      { key: 'name_full', labelKey: 'locations.fullName' },
+      {
+        key: 'province_id',
+        labelKey: 'locations.province',
+        value: (row) => provinceName(String((row as Ward).province_id)),
+      },
+      { key: 'status', labelKey: 'locations.status', sortable: true },
+      { key: 'actions', labelKey: 'locations.actions', align: 'end' },
+    ]
     : [
-        { key: 'code', labelKey: 'locations.code', sortable: true },
-        { key: 'name', labelKey: 'locations.name', sortable: true },
-        { key: 'status', labelKey: 'locations.status', sortable: true },
-        { key: 'actions', labelKey: 'locations.actions', align: 'end' },
-      ],
+      { key: 'code', labelKey: 'locations.code', sortable: true },
+      { key: 'name', labelKey: 'locations.name', sortable: true },
+      { key: 'status', labelKey: 'locations.status', sortable: true },
+      { key: 'actions', labelKey: 'locations.actions', align: 'end' },
+    ],
 )
 
 function provinceName(id: string): string {
@@ -301,164 +301,107 @@ onUnmounted(() => {
       <h1>{{ title }}</h1>
       <p>{{ description }}</p>
     </div>
-    <button
-      v-if="hasBasePermissionKey(isWards ? 'ward.create' : 'province.create')"
-      type="button"
-      class="primary-button"
-      @click="openCreate"
-    >
+    <button v-if="hasBasePermissionKey(isWards ? 'ward.create' : 'province.create')" type="button"
+      class="primary-button" @click="openCreate">
       ＋ {{ t('common.create') }}
     </button>
   </div>
   <section class="content-panel location-panel">
     <div class="location-toolbar">
-      <ListQueryControls
-        :model-value="state.query"
-        :filters="filters"
-        @apply="applyQuery"
-        @reset="resetQuery"
-      />
+      <ListQueryControls :model-value="state.query" :filters="filters" @apply="applyQuery" @reset="resetQuery" />
       <button type="button" class="secondary-button" @click="void load()">
         ↻ {{ t('common.refresh') }}
       </button>
     </div>
     <p v-if="error" class="inline-error" role="alert">{{ t('locations.error') }}</p>
-    <ListShell
-      :title="title"
-      :initial-loading="state.isInitialLoading.value"
-      :refreshing="state.isBackgroundRefreshing.value"
-      :has-data="state.queryState.hasData.value"
-      :empty-dataset="state.isEmptyDataset.value"
-      :empty-filtered-result="state.isEmptyFilteredResult.value"
-      :error="state.queryState.error.value"
-      :retryable="true"
-      @retry="void load()"
-    >
-      <ListTable
-        :busy="state.isBackgroundRefreshing.value"
-        :rows="state.rows.value"
-        :columns="columns"
-        :sort="state.query.sort"
-        @sort-change="
+    <ListShell :title="title" :initial-loading="state.isInitialLoading.value"
+      :refreshing="state.isBackgroundRefreshing.value" :has-data="state.queryState.hasData.value"
+      :empty-dataset="state.isEmptyDataset.value" :empty-filtered-result="state.isEmptyFilteredResult.value"
+      :error="state.queryState.error.value" :retryable="true" @retry="void load()">
+      <ListTable :busy="state.isBackgroundRefreshing.value" :rows="state.rows.value" :columns="columns"
+        :sort="state.query.sort" @sort-change="
           (sort) => {
             state.setSort(sort)
             void load()
           }
-        "
-      >
+        ">
         <template #cell-actions="{ row }">
-          <TableRowActions
-            :active="row.status === 'ACTIVE'"
-            :state-target-id="String(row.id)"
-            :busy="mutationBusy"
-            :show-view="true"
-            :show-edit="true"
-            :show-toggle="true"
+          <TableRowActions :active="row.status === 'ACTIVE'" :state-target-id="String(row.id)" :busy="mutationBusy"
+            :show-view="true" :show-edit="true" :show-toggle="true"
             :view-permission="isWards ? 'ward.view' : 'province.view'"
             :edit-permission="isWards ? 'ward.edit' : 'province.edit'"
-            :toggle-permission="isWards ? 'ward.setstate' : 'province.setstate'"
-            :edit-label="t('common.edit')"
-            :activate-label="t('common.activate')"
-            :deactivate-label="t('common.deactivate')"
-            :view-label="t('common.view')"
-            @view="openView(row)"
-            @edit="openEdit(row)"
-            @state-changed="afterWorkflowChange"
-          />
+            :toggle-permission="isWards ? 'ward.setstate' : 'province.setstate'" :edit-label="t('common.edit')"
+            :activate-label="t('common.activate')" :deactivate-label="t('common.deactivate')"
+            :view-label="t('common.view')" @view="openView(row)" @edit="openEdit(row)"
+            @state-changed="afterWorkflowChange" />
         </template>
       </ListTable>
-      <ListPagination
-        :page="state.query.page"
-        :page-size="state.query.page_size"
-        :total="state.total.value"
+      <ListPagination :page="state.query.page" :page-size="state.query.page_size" :total="state.total.value"
         @update:page="
           (page) => {
             state.setPage(page)
             void load()
           }
-        "
-        @update:page-size="
+        " @update:page-size="
           (size) => {
             state.setPageSize(size)
             void load()
           }
-        "
-      />
+        " />
     </ListShell>
   </section>
-  <TableDetailModal
-    :open="detailOpen"
-    :title="t('common.view') + ' - ' + title"
-    :fields="detailFields"
-    @close="detailOpen = false"
-  />
+  <TableDetailModal :open="detailOpen" :title="t('common.view') + ' - ' + title" :fields="detailFields"
+    @close="detailOpen = false" />
   <div v-if="modalOpen" class="modal-backdrop">
     <section class="modal-card" role="dialog" aria-modal="true" :aria-label="t('common.form')">
-      <header>
-        <div>
-          <h2>{{ editingId ? t('common.edit') : t('common.create') }}</h2>
-          <p>{{ title }}</p>
-        </div>
-        <button
-          type="button"
-          class="icon-button"
-          :aria-label="t('common.close')"
-          @click="closeForm"
-        >
-          ×
+      <header class="modal-card__header">
+        <h2 class="modal-card-title">
+          <NIcon :size="24">
+            <MapOutline />
+          </NIcon>
+          {{ editingId ? t('common.edit') : t('common.create') }}
+        </h2>
+        <p>{{ title }}</p>
+        <button type="button" class="modal-card-button-close" :aria-label="t('common.close')" @click="closeForm">
         </button>
       </header>
-      <form @submit.prevent="save">
-        <label v-if="isWards"
-          ><span>{{ t('locations.province') }}</span
-          ><SearchableSelect
-            :model-value="form.province_id"
-            :options="provinceSelectOptions"
-            :placeholder="t('locations.selectProvince')"
-            :aria-label="t('locations.province')"
-            @update:model-value="
+      <form id="locations-form" @submit.prevent="save">
+        <label v-if="isWards"><span>{{ t('locations.province') }}</span>
+          <SearchableSelect :model-value="form.province_id" :options="provinceSelectOptions"
+            :placeholder="t('locations.selectProvince')" :aria-label="t('locations.province')" @update:model-value="
               (value) => (form.province_id = typeof value === 'string' ? value : '')
-            "
-        /></label>
-        <label
-          ><span>{{ t('locations.code') }}</span
-          ><input v-model="form.code" required
-        /></label>
-        <label
-          ><span>{{ t('locations.name') }}</span
-          ><input v-model="form.name" required
-        /></label>
-        <label v-if="isWards"
-          ><span>{{ t('locations.fullName') }}</span
-          ><input v-model="form.name_full"
-        /></label>
-        <label v-if="editingId"
-          ><span>{{ t('locations.status') }}</span
-          ><select :value="form.status" disabled>
+            " />
+        </label>
+        <label><span>{{ t('locations.code') }}</span><input v-model="form.code" required /></label>
+        <label><span>{{ t('locations.name') }}</span><input v-model="form.name" required /></label>
+        <label v-if="isWards"><span>{{ t('locations.fullName') }}</span><input v-model="form.name_full" /></label>
+        <label v-if="editingId"><span>{{ t('locations.status') }}</span><select :value="form.status" disabled>
             <option :value="form.status">{{ form.status }}</option>
-          </select></label
-        >
+          </select></label>
         <p v-else class="workflow-initial-note" role="note">
           {{ t('workflow.initialManaged') }}
           <strong v-if="workflowStates.initial.value">{{ workflowStates.initial.value }}</strong>
         </p>
-        <footer>
-          <button type="button" class="secondary-button" @click="closeForm">
-            {{ t('common.cancel') }}</button
-          ><button
-            type="submit"
-            class="primary-button"
-            :disabled="
-              mutationBusy ||
-              (Boolean(editingId) &&
-                !hasBasePermissionKey(isWards ? 'ward.edit' : 'province.edit')) ||
-              (!editingId && !hasBasePermissionKey(isWards ? 'ward.create' : 'province.create'))
-            "
-          >
-            {{ mutationBusy ? t('common.saving') : t('common.save') }}
-          </button>
-        </footer>
+
       </form>
+      <footer class="modal-card__footer">
+        <button type="button" class="secondary-button" @click="closeForm">
+          <NIcon :size="20">
+            <Refresh />
+          </NIcon>
+          {{ t('common.cancel') }}
+        </button>
+        <button type="submit" class="primary-button" form="locations-form" :disabled="mutationBusy ||
+          (Boolean(editingId) &&
+            !hasBasePermissionKey(isWards ? 'ward.edit' : 'province.edit')) ||
+          (!editingId && !hasBasePermissionKey(isWards ? 'ward.create' : 'province.create'))
+          ">
+          <NIcon :size="20">
+            <SaveOutline />
+          </NIcon>
+          {{ mutationBusy ? t('common.saving') : t('common.save') }}
+        </button>
+      </footer>
     </section>
   </div>
 </template>
@@ -469,6 +412,7 @@ onUnmounted(() => {
   gap: 14px;
   padding: 18px 20px 20px;
 }
+
 .location-toolbar {
   display: flex;
   align-items: end;
@@ -476,20 +420,13 @@ onUnmounted(() => {
   gap: 10px;
   flex-wrap: wrap;
 }
+
 .inline-error {
   margin: 0;
   color: #b64444;
   font-size: 12px;
 }
-.modal-backdrop {
-  position: fixed;
-  inset: 0;
-  z-index: 40;
-  display: grid;
-  place-items: center;
-  padding: 20px;
-  background: rgb(18 38 54 / 45%);
-}
+
 .modal-card {
   width: min(100%, 520px);
   max-height: calc(100vh - 40px);
@@ -498,30 +435,13 @@ onUnmounted(() => {
   background: #fff;
   box-shadow: 0 20px 60px rgb(18 42 62 / 24%);
 }
-.modal-card header,
-.modal-card footer {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-  padding: 15px 18px;
-  border-bottom: 1px solid #e4ebef;
-}
-.modal-card header h2 {
-  margin: 0;
-  color: #173c59;
-  font-size: 18px;
-}
-.modal-card header p {
-  margin: 4px 0 0;
-  color: #8292a0;
-  font-size: 12px;
-}
+
 .modal-card form {
   display: grid;
   gap: 12px;
   padding: 18px;
 }
+
 .modal-card label {
   display: grid;
   gap: 5px;
@@ -529,6 +449,7 @@ onUnmounted(() => {
   font-size: 12px;
   font-weight: 600;
 }
+
 .modal-card input,
 .modal-card select {
   min-height: 34px;
@@ -536,18 +457,5 @@ onUnmounted(() => {
   border-radius: 4px;
   padding: 7px 9px;
   font: inherit;
-}
-.modal-card footer {
-  justify-content: flex-end;
-  margin: 6px -18px -18px;
-  border-top: 1px solid #e4ebef;
-  border-bottom: 0;
-}
-.icon-button {
-  border: 0;
-  background: transparent;
-  color: #536b7b;
-  font-size: 22px;
-  cursor: pointer;
 }
 </style>
