@@ -279,7 +279,7 @@ onMounted(() => void load())
 
       </form>
       <footer class="modal-card__footer">
-        <button type="button" class="secondary-button"@click="closeForm">
+        <button type="button" class="secondary-button" @click="closeForm">
           <NIcon :size="20"> <Refresh /> </NIcon>
           {{ t('common.cancel') }}
         </button>

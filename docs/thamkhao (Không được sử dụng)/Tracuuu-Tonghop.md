@@ -48,7 +48,7 @@ Phòng ban PeopleOutline
 Còn lại 
 
 git add backend/ frontend/ contracts/ docs
-git commit -m "Sua giao dien và icon"
+git commit -m "Sua giao dien và icon ttt"
 git push
 
 
@@ -60,7 +60,8 @@ git log --oneline -5
 
 git status -sb
 
-
+Bạn hãy giải nén và đọc toàn bộ code trong file erp_v1.1.1.zip. 
+Sau đó hãy tối ưu cho tôi file frontend\src\components\AppShell.vue (Giữ nguyên tính năng chỉ chỉnh sửa loại bỏ thừa thãi, clear cho dễ bảo dưỡng và nâng cấp)
 
 
 git add .\frontend\
