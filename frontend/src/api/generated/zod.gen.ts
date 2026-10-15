@@ -192,14 +192,17 @@ export const zAuthLogin = z.object({
 });
 
 export const zAuthProfilePatch = z.object({
-    username: z.string(),
-    email: z.email(),
-    password: z.string().optional()
+    username: z.string().optional(),
+    email: z.email().optional(),
+    password: z.string().optional(),
+    name: z.string().min(1).max(255).regex(/.*\S.*/).optional()
 });
 
 export const zAuthUser = z.object({
     id: z.coerce.bigint().gte(BigInt(1)).max(BigInt('9223372036854775807'), { error: 'Invalid value: Expected int64 to be <= 9223372036854775807' }),
     username: z.string(),
+    name: z.string().nullable(),
+    has_avatar: z.boolean(),
     email: z.email().nullable(),
     active: z.boolean(),
     status: z.string().nullable(),
@@ -1068,6 +1071,7 @@ export const zSecurityUser = z.object({
     id: zBigInt,
     username: z.string(),
     name: z.string().nullable(),
+    has_avatar: z.boolean(),
     email: z.string().nullable(),
     active: z.boolean(),
     status: z.string().nullable(),
@@ -1083,6 +1087,8 @@ export const zSecurityUserCollection = zCollectionResponse.and(z.object({
 export const zUserIdentity = z.object({
     id: zBigInt,
     username: z.string(),
+    name: z.string().nullable(),
+    has_avatar: z.boolean(),
     email: z.email(),
     active: z.boolean(),
     status: z.enum([
@@ -1106,12 +1112,15 @@ export const zUserIdentityCreate = z.object({
         'SUSPENDED',
         'BANNED',
         'DISABLED'
-    ])
+    ]),
+    name: z.string().min(1).max(255).regex(/.*\S.*/).optional(),
+    group_ids: z.array(z.string().min(1).max(19).regex(/^[1-9][0-9]*$/)).optional()
 });
 
 export const zUserIdentityPatch = z.object({
     username: z.string().min(1).max(30).optional(),
     email: z.email().optional(),
+    name: z.string().min(1).max(255).regex(/.*\S.*/).optional(),
     row_version: z.string().optional()
 });
 
@@ -1137,6 +1146,15 @@ export const zUserPermissions = z.object({
 
 export const zUserIdentityResponse = zSuccessResponse.and(z.object({
     data: zUserIdentity.optional()
+}));
+
+export const zUserAvatarMutation = z.object({
+    user_id: zBigInt,
+    has_avatar: z.boolean()
+});
+
+export const zUserAvatarMutationResponse = zSuccessResponse.and(z.object({
+    data: zUserAvatarMutation.optional()
 }));
 
 export const zUserPermissionsResponse = zSuccessResponse.and(z.object({
@@ -1489,7 +1507,9 @@ export const zUserIdentityCreateWritable = z.object({
         'SUSPENDED',
         'BANNED',
         'DISABLED'
-    ])
+    ]),
+    name: z.string().min(1).max(255).regex(/.*\S.*/).optional(),
+    group_ids: z.array(z.string().min(1).max(19).regex(/^[1-9][0-9]*$/)).optional()
 });
 
 export const zUserIdentityPasswordResetWritable = z.object({
@@ -1605,6 +1625,10 @@ export const zAuthorizationGroupPermissions2 = zAuthorizationGroupPermissions;
 export const zUserIdentityCreate2 = zUserIdentityCreateWritable;
 
 export const zUserIdentityPatch2 = zUserIdentityPatch;
+
+export const zUserAvatarUpload = z.object({
+    image: z.string()
+});
 
 export const zUserIdentityState2 = zUserIdentityState;
 
@@ -2326,6 +2350,35 @@ export const zUpdateUserPath = z.object({
  * Shield user identity response.
  */
 export const zUpdateUserResponse = zUserIdentityResponse;
+
+export const zDeleteUserAvatarPath = z.object({
+    id: zBigInt
+});
+
+/**
+ * Avatar metadata changed; never includes the private filename.
+ */
+export const zDeleteUserAvatarResponse = zUserAvatarMutationResponse;
+
+export const zGetUserAvatarPath = z.object({
+    id: zBigInt
+});
+
+/**
+ * Authenticated private JPEG, PNG or WebP image bytes; not publicly cacheable.
+ */
+export const zGetUserAvatarResponse = z.string();
+
+export const zUploadUserAvatarBody = zUserAvatarUpload;
+
+export const zUploadUserAvatarPath = z.object({
+    id: zBigInt
+});
+
+/**
+ * Avatar metadata changed; never includes the private filename.
+ */
+export const zUploadUserAvatarResponse = zUserAvatarMutationResponse;
 
 export const zSetUserStateBody = zUserIdentityState2;
 

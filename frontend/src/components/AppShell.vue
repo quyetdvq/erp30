@@ -34,6 +34,7 @@ import { RouterLink, RouterView, useRoute } from 'vue-router'
 
 import { sidebarModes } from '@/app/navigation'
 import AppBreadcrumbs from '@/components/AppBreadcrumbs.vue'
+import UserAvatar from '@/components/users/UserAvatar.vue'
 import { useShellHeader } from '@/components/app-shell/useShellHeader'
 import { useShellNavigation } from '@/components/app-shell/useShellNavigation'
 import { useShellSidebarResize } from '@/components/app-shell/useShellSidebarResize'
@@ -190,13 +191,14 @@ const {
             <NButton
               quaternary
               class="user-button"
-              :aria-label="auth.user?.username || t('shell.profile')"
-              :title="auth.user?.username || t('shell.profile')"
+              :aria-label="auth.user?.name || auth.user?.username || t('shell.profile')"
+              :title="auth.user?.name || auth.user?.username || t('shell.profile')"
             >
               <template #icon>
-                <NIcon><PersonCircleOutline /></NIcon>
+                <UserAvatar v-if="auth.user" :user-id="auth.user.id" :has-avatar="auth.user.has_avatar" :fallback="auth.user.name || auth.user.username" />
+                <NIcon v-else><PersonCircleOutline /></NIcon>
               </template>
-              <span class="header-user-label">{{ auth.user?.username || t('shell.profile') }}</span>
+              <span class="header-user-label">{{ auth.user?.name || auth.user?.username || t('shell.profile') }}</span>
               <NIcon class="header-user-chevron"><ChevronDownOutline /></NIcon>
             </NButton>
           </NDropdown>

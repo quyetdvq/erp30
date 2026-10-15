@@ -441,6 +441,63 @@ test.describe('P1-FE-030 security surfaces', () => {
     expect(securityUserRequests).toBe(2)
   })
 
+  test('create account retries multipart Avatar upload without creating another user', async ({ page }) => {
+    let creates = 0
+    let uploads = 0
+    await page.route('**/api/v1/users', async (route) => {
+      if (route.request().method() !== 'POST') return route.continue()
+      creates++
+      const payload = route.request().postDataJSON() as Record<string, unknown>
+      expect(payload.name).toBe('Nguyễn Văn An')
+      expect(payload.group_ids).toEqual([])
+      await route.fulfill({
+        status: 201,
+        contentType: 'application/json',
+        body: JSON.stringify({ data: {
+          id: '99', username: payload.username, name: payload.name,
+          email: payload.email, has_avatar: false, status: 'ACTIVE', active: true, created_at: null,
+        } }),
+      })
+    })
+    await page.route('**/api/v1/users/99/avatar', async (route) => {
+      const request = route.request()
+      if (request.method() !== 'POST') return route.continue()
+      // PHP 8.3 parses multipart uploads from POST; CI4 routes _method=PUT as PUT.
+      expect(request.headers()['content-type']).toContain('multipart/form-data')
+      const multipart = request.postDataBuffer()?.toString('latin1') ?? ''
+      expect(multipart).toMatch(/name="_method"\r?\n\r?\nPUT\r?\n/)
+      expect(multipart).toContain('name="image"; filename="avatar.png"')
+      uploads++
+      await route.fulfill({
+        status: uploads === 1 ? 403 : 200,
+        contentType: 'application/json',
+        body: JSON.stringify(uploads === 1
+          ? { error: { code: 'FORBIDDEN', message: 'Denied' } }
+          : { data: { user_id: '99', has_avatar: true } }),
+      })
+    })
+    await page.goto('/security/users')
+    await page.getByRole('button', { name: /Tạo|Create/ }).click()
+    const dialog = page.getByRole('dialog', { name: 'Biểu mẫu người dùng' })
+    await dialog.getByLabel('Tên tài khoản').fill('nguyenvanan')
+    await dialog.getByLabel('Họ và tên').fill(' Nguyễn Văn An ')
+    await dialog.getByLabel('Email').fill('an@example.test')
+    await dialog.getByLabel('Mật khẩu').fill('ExamplePassword123!')
+    await dialog.locator('input[type="file"]').setInputFiles({
+      name: 'avatar.png',
+      mimeType: 'image/png',
+      buffer: Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+/j9kAAAAASUVORK5CYII=', 'base64'),
+    })
+    await dialog.getByRole('button', { name: 'Lưu' }).click()
+    await expect(dialog.getByText(/Đã tạo User #99/)).toBeVisible()
+    expect(creates).toBe(1)
+    expect(uploads).toBe(1)
+    await dialog.getByRole('button', { name: 'Thử tải lại Avatar' }).click()
+    await expect(dialog).not.toBeVisible()
+    expect(creates).toBe(1)
+    expect(uploads).toBe(2)
+  })
+
   test('authorization groups show all members and resource/action permissions in a modal', async ({
     page,
   }) => {

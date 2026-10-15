@@ -23,6 +23,8 @@ function deferred<T>() {
 const sampleUser = (id: number): AuthUser => ({
   id,
   username: `user${id}`,
+  name: null,
+  has_avatar: false,
   email: `user${id}@example.test`,
   active: true,
   status: 'ACTIVE',
@@ -91,6 +93,22 @@ describe('session-bound async responses', () => {
     expect(auth.user?.base_permissions).toEqual(['product.edit'])
     expect(auth.permissionSnapshotState).toBe('ready')
     expect(getCurrentUser).toHaveBeenCalledTimes(2)
+  })
+
+  it('does not allow a late avatar/full-name response to update another session', async () => {
+    vi.mocked(login).mockResolvedValueOnce(sampleUser(1)).mockResolvedValueOnce(sampleUser(2))
+    const auth = useAuthStore()
+    await auth.login('one@example.test', 'password', false)
+    const stale = deferred<AuthUser>()
+    vi.mocked(getCurrentUser).mockReturnValue(stale.promise)
+    const avatarRefresh = auth.refreshSelfUser()
+    await auth.logout()
+    await auth.login('two@example.test', 'password', false)
+    stale.resolve({ ...sampleUser(1), name: 'Old user', has_avatar: true })
+    await avatarRefresh
+    expect(auth.user?.id).toBe(2)
+    expect(auth.user?.name).toBeNull()
+    expect(auth.user?.has_avatar).toBe(false)
   })
 
   it('does not let a late display-settings load restore data after sign-out', async () => {

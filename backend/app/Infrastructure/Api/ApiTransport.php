@@ -105,6 +105,12 @@ final class ApiTransport
     public static function message(string $code, int $status): string
     {
         $key = match ($code) {
+            'USER_AVATAR_INVALID_SIZE' => 'userAvatarInvalidSize',
+            'USER_AVATAR_INVALID_TYPE' => 'userAvatarInvalidType',
+            'USER_AVATAR_INVALID_CONTENT' => 'userAvatarInvalidContent',
+            'USER_AVATAR_NOT_FOUND' => 'userAvatarNotFound',
+            'USER_AVATAR_CONCURRENT_UPDATE' => 'userAvatarConcurrentUpdate',
+            'USER_AVATAR_STORAGE_FAILED' => 'userAvatarStorageFailed',
             'INVALID_CREDENTIALS' => 'invalidCredentials',
             'PROFILE_UPDATE_FAILED' => 'profileUpdateFailed',
             'POLICY_SCOPE_ALREADY_EXISTS' => 'policyScopeAlreadyExists',

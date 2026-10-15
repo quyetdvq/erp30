@@ -47,7 +47,7 @@ final class ApiErrorMapper
                 str_contains($code, 'UNAUTHENTICATED') || str_contains($code, 'INVALID_CREDENTIAL') => 401,
                 str_contains($code, 'DENIED') || str_contains($code, 'FORBIDDEN') || $code === 'USER_PASSWORD_ACTION_REQUIRED' => 403,
                 str_contains($code, 'CONCURRENT') || str_contains($code, 'CONFLICT') || str_contains($code, 'DUPLICATE') || str_contains($code, 'IMMUTABLE') || $code === 'POLICY_SCOPE_ALREADY_EXISTS' || $code === 'USER_IDENTITY_ALREADY_EXISTS' => 409,
-                str_contains($code, 'CONNECTION') || str_contains($code, 'PERSISTENCE') || str_contains($code, 'TRANSACTION') || str_contains($code, 'LOCK_FAILED') => 500,
+                str_contains($code, 'CONNECTION') || $code === 'USER_AVATAR_STORAGE_FAILED' || str_contains($code, 'PERSISTENCE') || str_contains($code, 'TRANSACTION') || str_contains($code, 'LOCK_FAILED') => 500,
                 default => 422,
             };
         }
@@ -57,7 +57,7 @@ final class ApiErrorMapper
 
     private static function code(Throwable $exception, int $status): string
     {
-        if ($exception instanceof DomainException && $status !== 500) {
+        if ($exception instanceof DomainException && ($status !== 500 || $exception->getErrorCode() === 'USER_AVATAR_STORAGE_FAILED')) {
             return strtoupper($exception->getErrorCode());
         }
 

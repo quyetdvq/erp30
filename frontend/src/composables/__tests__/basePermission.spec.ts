@@ -14,6 +14,8 @@ vi.mock('@/services/auth', () => ({
 
 const user = (permissions: string[]): AuthUser => ({
   id: 7,
+  name: null,
+  has_avatar: false,
   username: 'tester',
   email: 'tester@example.test',
   active: true,

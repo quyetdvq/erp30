@@ -502,7 +502,7 @@ onMounted(() => {
       tabindex="-1">
       <header class="modal-card__header">
         <h2 class="modal-card-title">
-          <NIcon :size="24">
+          <NIcon :size="24" aria-hidden="true">
             <QrCodeOutline />
           </NIcon>
           {{ editingId ? t('numbering.edit') : t('numbering.create') }}
@@ -622,11 +622,11 @@ onMounted(() => {
       </form>
       <footer class="modal-card__footer">
         <button type="button" class="secondary-button" @click="closeModal">
-          <NIcon :size="24"> <Refresh /> </NIcon>
+          <NIcon :size="24" aria-hidden="true"> <Refresh /> </NIcon>
           {{ t('common.cancel') }}
         </button>
-        <button type="submit" class="primary-button" :disabled="busy || !canConfigure">
-          <NIcon :size="24"> <SaveOutline /> </NIcon>
+        <button type="submit" form="numbering-form" class="primary-button" :disabled="busy || !canConfigure">
+          <NIcon :size="24" aria-hidden="true"> <SaveOutline /> </NIcon>
           {{ busy ? t('common.saving') : t('common.save') }}
         </button>
       </footer>

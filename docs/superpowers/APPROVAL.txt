@@ -1,0 +1,5 @@
+ERP v1.1.4 user full-name/avatar/multi-group specification v1.2
+Approval record: The project owner approved specification v1.2 and requested implementation on 2026-10-15.
+The accompanying specification is preserved verbatim as it was approved, including its original pre-approval status field.
+Implementation plan has been drafted and is awaiting a separate review of tasks/execution approach.
+No product source code changes are part of this documentation-only package.

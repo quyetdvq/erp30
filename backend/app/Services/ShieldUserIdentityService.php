@@ -14,7 +14,7 @@ use App\Infrastructure\RequestContext;
 use CodeIgniter\Database\BaseConnection;
 use CodeIgniter\Database\ConnectionInterface;
 use CodeIgniter\Shield\Entities\User;
-use CodeIgniter\Shield\Models\UserModel;
+use App\Models\UserModel;
 
 /** Authorized Shield-owned User identity mutations. */
 final class ShieldUserIdentityService
@@ -50,24 +50,63 @@ final class ShieldUserIdentityService
     {
         $operation = $this->operation();
         $this->authorize($operation, 'create');
-        $this->assertFields($payload, ['username', 'email', 'password', 'state']);
+        $this->assertFields($payload, ['username', 'email', 'password', 'state', 'name', 'group_ids']);
         $username = $this->username($payload['username'] ?? null);
         $email = $this->email($payload['email'] ?? null);
         $state = $this->state($payload['state'] ?? null);
         $password = $this->password($payload['password'] ?? null);
+        $name = array_key_exists('name', $payload) ? UserDisplayName::normalize($payload['name']) : null;
+        $groupIds = array_key_exists('group_ids', $payload)
+            ? UserGroupSelection::normalize($payload['group_ids']) : [];
         $this->assertUnique($username, $email);
+        // Acquire target group row locks in a stable order across requests.
+        sort($groupIds, SORT_NUMERIC);
 
-        $user = model(UserModel::class)->createNewUser([
+        $groups = new AuthorizationGroupService(db: $this->db);
+        // Check the complete request before a new identity is saved.
+        foreach ($groupIds as $groupId) {
+            $groups->assertAssignableForUserCreation((int) $groupId, $operation);
+        }
+        if ($groupIds !== [] && ! $this->db instanceof BaseConnection) {
+            throw new DomainException('IAM_PERSISTENCE_FAILED');
+        }
+
+        $users = $this->users();
+        $user = $users->createNewUser([
             'username' => $username,
             'active' => $state === 'ACTIVE',
             'status' => strtolower($state),
+            'full_name' => $name,
         ]);
         $user->setEmail($email);
         $this->assertPassword($password, $user);
         $user->setPassword($password);
 
-        $this->transaction(function () use ($user): void {
-            model(UserModel::class)->save($user);
+        $this->transaction(function () use ($users, $user, $groups, $groupIds, $operation): void {
+            if (! $users->save($user)) {
+                throw new DomainException('IAM_PERSISTENCE_FAILED');
+            }
+            // Shield's UserModel inserts a clone of the entity. The original
+            // User does not receive an ID from save(); the model holds it.
+            $insertedId = (int) $users->getInsertID();
+            if ($insertedId < 1) {
+                throw new DomainException('IAM_PERSISTENCE_FAILED');
+            }
+            $user->id = $insertedId;
+            // Serialize group status changes while assigning. Membership is additive,
+            // NEVER a replacement of all existing members.
+            foreach ($groupIds as $groupId) {
+                $groups->assertAssignableForUserCreation((int) $groupId, $operation, true);
+                if (! $groups->assignMember((int) $groupId, (int) $user->id, true, $operation)) {
+                    throw new DomainException('IAM_PERSISTENCE_FAILED');
+                }
+            }
+            // A newly created user without requested groups must have no implicit
+            // Shield group membership, irrespective of AuthGroups.defaultGroup.
+            if ($groupIds === [] && $this->db->table((string) config('Auth')->tables['groups_users'])
+                ->where('user_id', (int) $user->id)->countAllResults() !== 0) {
+                throw new DomainException('IAM_PERSISTENCE_FAILED');
+            }
         });
 
         return $this->output($user->id);
@@ -84,13 +123,16 @@ final class ShieldUserIdentityService
         $target = $this->target($user);
         $this->assertVisible($operation, $target);
         $this->authorize($operation, 'edit', $target);
-        $this->assertFields($payload, ['username', 'email', 'row_version']);
+        $this->assertFields($payload, ['username', 'email', 'row_version', 'name']);
         $changes = [];
         if (array_key_exists('username', $payload)) {
             $changes['username'] = $this->username($payload['username']);
         }
         if (array_key_exists('email', $payload)) {
             $changes['email'] = $this->email($payload['email']);
+        }
+        if (array_key_exists('name', $payload)) {
+            $changes['full_name'] = UserDisplayName::normalize($payload['name']);
         }
         if ($changes === []) {
             throw new DomainException('VALIDATION_ERROR');
@@ -103,8 +145,13 @@ final class ShieldUserIdentityService
         if (isset($changes['email'])) {
             $user->setEmail($changes['email']);
         }
+        if (isset($changes['full_name'])) {
+            $user->full_name = $changes['full_name'];
+        }
         $this->transaction(function () use ($user): void {
-            model(UserModel::class)->save($user);
+            if (! $this->users()->save($user)) {
+                throw new DomainException('IAM_PERSISTENCE_FAILED');
+            }
         });
 
         return $this->output($id);
@@ -126,7 +173,7 @@ final class ShieldUserIdentityService
         $user->active = $state === 'ACTIVE';
         $user->status = strtolower($state);
         $this->transaction(function () use ($user): void {
-            model(UserModel::class)->save($user);
+            $this->users()->save($user);
         });
 
         // A non-operational current user must not retain an active session.
@@ -157,7 +204,7 @@ final class ShieldUserIdentityService
         $this->assertPassword($password, $user);
         $user->setPassword($password);
         $this->transaction(function () use ($user): void {
-            model(UserModel::class)->save($user);
+            $this->users()->save($user);
         });
 
         return $this->output($id);
@@ -208,7 +255,7 @@ final class ShieldUserIdentityService
         if ($id < 1) {
             throw new DomainException(self::ERROR_NOT_FOUND);
         }
-        $user = model(UserModel::class)->withIdentities()->findById($id);
+        $user = $this->users()->withIdentities()->findById($id);
         if (! $user instanceof User || $user->deleted_at !== null) {
             throw new DomainException(self::ERROR_NOT_FOUND, ['user_id' => $id]);
         }
@@ -327,7 +374,7 @@ final class ShieldUserIdentityService
 
     private function assertUnique(string $username, string $email, ?int $ignoreId = null): void
     {
-        $users = model(UserModel::class)->findAll();
+        $users = $this->users()->findAll();
         foreach ($users as $candidate) {
             if ($ignoreId !== null && (int) $candidate->id === $ignoreId) {
                 continue;
@@ -349,13 +396,17 @@ final class ShieldUserIdentityService
             $callback();
             return;
         }
-        $this->db->transBegin();
+        if (! $this->db->transBegin()) {
+            throw new DomainException('IAM_PERSISTENCE_FAILED');
+        }
         try {
             $callback();
             if (! $this->db->transStatus()) {
                 throw new DomainException('IAM_PERSISTENCE_FAILED');
             }
-            $this->db->transCommit();
+            if (! $this->db->transCommit()) {
+                throw new DomainException('IAM_PERSISTENCE_FAILED');
+            }
         } catch (\Throwable $exception) {
             $this->db->transRollback();
             $this->db->resetTransStatus();
@@ -379,10 +430,17 @@ final class ShieldUserIdentityService
             'id' => (int) $user->id,
             'username' => (string) $user->username,
             'email' => $user->getEmail(),
+            'name' => $user->full_name ?? null,
+            'has_avatar' => is_string($user->avatar_filename ?? null) && $user->avatar_filename !== '',
             'active' => (bool) $user->active,
             'status' => $state,
-            'created_at' => $user->created_at?->toAtomString(),
+            'created_at' => $user->created_at?->format(\DATE_ATOM),
         ];
+    }
+
+    private function users(): UserModel
+    {
+        return new UserModel($this->db);
     }
 
     private function identity(): ShieldIdentityAdapter

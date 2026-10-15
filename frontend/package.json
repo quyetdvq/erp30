@@ -22,6 +22,8 @@
     "openapi:lint": "redocly lint ../contracts/openapi/openapi.yaml --config ../contracts/openapi/redocly.yaml",
     "openapi:generate": "openapi-ts -f openapi-ts.config.ts",
     "openapi:generate:check": "pnpm run openapi:generate && node scripts/check-openapi-generated.mjs",
+    "user:v12-ui:logic:test": "node --experimental-strip-types --test src/features/security/user-editor/__tests__/userCreateFlow.node.mjs src/services/__tests__/userAvatarRules.node.mjs src/services/__tests__/userAvatarTransport.node.mjs src/features/account/profile/profileFields.node.mjs",
+    "openapi:v12-contract:test": "node --test scripts/check-user-v12-openapi.test.mjs",
     "check:refactor-external": "node scripts/refactor/check-equivalence.cjs --strict-external",
     "check:v2-baseline": "node --test scripts/refactor/v2-checkpoint.test.cjs && node scripts/refactor/check-v2-checkpoint.cjs --strict",
     "diff:v2-baseline": "node scripts/refactor/check-v2-checkpoint.cjs --report",

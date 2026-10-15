@@ -37,6 +37,7 @@ import {
 import { employeePayload, assignmentPayload } from '../employee-editor/payload'
 import { assignmentErrorKey, employeeManagerErrorKey } from '../employee-editor/validation'
 import { useEmployeeLookups } from '../employee-editor/useEmployeeLookups'
+import { useEmployeeUserLookup } from '../employee-editor/useEmployeeUserLookup'
 import { useEmployeeAssignments } from '../employee-editor/useEmployeeAssignments'
 import type { AssignmentMode, EmployeeDetailTab as Tab, Gender } from '../employee-editor/types'
 
@@ -57,6 +58,8 @@ const error = ref<unknown | null>(null)
 const assignmentMode = ref<AssignmentMode>('active')
 const employeeForm = ref(emptyEmployeeForm())
 const assignmentForm = ref(emptyAssignmentForm())
+// An empty user_id is omitted on PATCH: do not offer a misleading unlink action in edit.
+const userLinkedAtEdit = ref(false)
 const {
   organizations,
   departments,
@@ -73,6 +76,13 @@ const {
   upsertEmployeeLookup,
 } = useEmployeeLookups(selectedId, employeeForm, error)
 const {
+  userSelectOptions,
+  userLookupLoading,
+  userLookupError,
+  loadUserLookup,
+  resetUserLookup,
+} = useEmployeeUserLookup(employeeForm, editingEmployeeId, employeeLookup)
+const {
   selectedEmployeeAssignments,
   selectedAssignments,
   currentPrimary,
@@ -87,6 +97,7 @@ function closeEmployeeForm(): void {
   if (busy.value || !employeeDraft.confirmDiscard()) return
   employeeDraft.markClean()
   employeeModal.value = false
+  resetUserLookup()
 }
 
 function closeAssignmentForm(): void {
@@ -203,17 +214,23 @@ function resetQuery(): void {
   void load()
 }
 function openCreate(): void {
+  resetUserLookup()
   editingEmployeeId.value = undefined
+  userLinkedAtEdit.value = false
   employeeForm.value = emptyEmployeeForm()
   employeeDraft.markClean()
   employeeModal.value = true
+  if (hasBasePermission('user', 'view')) void loadUserLookup()
 }
 function openEdit(row: Employee | null): void {
   if (!row) return
+  resetUserLookup()
   editingEmployeeId.value = String(row.id)
+  userLinkedAtEdit.value = Boolean(row.user_id)
   employeeForm.value = employeeToForm(row)
   employeeDraft.markClean()
   employeeModal.value = true
+  if (hasBasePermission('user', 'view')) void loadUserLookup()
 }
 function openEmployeeDetail(row: Employee): void {
   selectedId.value = String(row.id)
@@ -240,6 +257,7 @@ async function saveEmployeeForm(): Promise<void> {
     upsertEmployeeLookup(saved)
     employeeDraft.markClean()
     employeeModal.value = false
+    resetUserLookup()
     await load()
   } catch (caught: unknown) {
     error.value = caught
@@ -532,7 +550,7 @@ onMounted(async () => {
     <section class="modal-card" role="dialog" aria-modal="true" :aria-label="t('people.employeeForm')">
       <header class="modal-card__header">
         <h2 class="modal-card-title">
-          <NIcon :size="24"> <PeopleOutline /> </NIcon>
+          <NIcon :size="24" aria-hidden="true"> <PeopleOutline /> </NIcon>
           {{ editingEmployeeId ? t('common.edit') : t('common.create') }} {{ t('people.employee') }}
         </h2>
         <button type="button" class="modal-card-button-close" :aria-label="t('common.close')"
@@ -546,8 +564,23 @@ onMounted(async () => {
               required /></label>
         </div>
         <div class="form-grid">
-          <label><span>{{ t('people.userId') }}</span><input v-model="employeeForm.user_id"
-              inputmode="numeric" /></label><label><span>{{ t('people.gender') }}</span><select
+          <label><span>{{ t('people.userId') }}</span>
+            <SearchableSelect v-if="hasBasePermission('user', 'view') && !userLookupError"
+              :model-value="employeeForm.user_id" :options="userSelectOptions"
+              :placeholder="t('people.userSearchPlaceholder')" :aria-label="t('people.userId')"
+              :disabled="userLookupLoading" :clearable="!userLinkedAtEdit" @update:model-value="
+                (value) => (employeeForm.user_id = typeof value === 'string' ? value : '')
+              " />
+            <input v-else v-model="employeeForm.user_id" inputmode="numeric" />
+            <small v-if="!hasBasePermission('user', 'view')" class="field-error">
+              {{ t('people.userLookupPermission') }}
+            </small>
+            <small v-else-if="userLookupLoading" role="status">{{ t('people.userLookupLoading') }}</small>
+            <small v-else-if="userLookupError" class="field-error" role="alert">
+              {{ t('people.userLookupError') }}
+            </small>
+            <small v-else-if="userSelectOptions.length === 0">{{ t('people.userLookupEmpty') }}</small>
+          </label><label><span>{{ t('people.gender') }}</span><select
               v-model="employeeForm.gender">
               <option :value="null">{{ t('people.genderUnspecified') }}</option>
               <option value="MALE">{{ t('people.genderMale') }}</option>
@@ -581,7 +614,7 @@ onMounted(async () => {
 
       <footer class="modal-card__footer">
         <button type="button" class="secondary-button" @click="closeEmployeeForm">
-          <NIcon :size="20">
+          <NIcon :size="20" aria-hidden="true">
             <Refresh />
           </NIcon>
           {{ t('common.cancel') }}
@@ -589,7 +622,7 @@ onMounted(async () => {
           !!managerError() ||
           !hasBasePermission('employee', editingEmployeeId ? 'edit' : 'create')
           ">
-          <NIcon :size="20">
+          <NIcon :size="20" aria-hidden="true">
             <SaveOutline />
           </NIcon>
           {{ busy ? t('common.saving') : t('common.save') }}

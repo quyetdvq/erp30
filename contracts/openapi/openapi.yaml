@@ -422,6 +422,41 @@ paths:
       summary: Update a Shield user identity
       requestBody: {$ref: '#/components/requestBodies/UserIdentityPatch'}
       responses: {'200': {$ref: '#/components/responses/UserIdentityResponse'}, '401': {$ref: '#/components/responses/Unauthorized'}, '403': {$ref: '#/components/responses/Forbidden'}, '404': {$ref: '#/components/responses/NotFound'}, '409': {$ref: '#/components/responses/Conflict'}, '422': {$ref: '#/components/responses/UnprocessableEntity'}}
+  /api/v1/users/{id}/avatar:
+    parameters: [{$ref: '#/components/parameters/Id'}]
+    get:
+      operationId: getUserAvatar
+      summary: Read a private User avatar, by owner or target-scoped user.view
+      description: Requires an authenticated session; returns 404 if the visible User has no avatar or the file is missing. Private bytes are never served as static assets.
+      responses:
+        '200': {$ref: '#/components/responses/UserAvatarBinary'}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+        '404': {$ref: '#/components/responses/NotFound'}
+    put:
+      operationId: uploadUserAvatar
+      summary: Upload or replace a User avatar, by owner or target-scoped user.edit
+      description: 'Requires session CSRF protection. 422 errors include USER_AVATAR_INVALID_SIZE, USER_AVATAR_INVALID_TYPE and USER_AVATAR_INVALID_CONTENT. 500 errors use USER_AVATAR_STORAGE_FAILED. On failed upload retry only PUT, never repeat account creation.'
+      requestBody: {$ref: '#/components/requestBodies/UserAvatarUpload'}
+      responses:
+        '200': {$ref: '#/components/responses/UserAvatarMutationResponse'}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+        '404': {$ref: '#/components/responses/NotFound'}
+        '409': {$ref: '#/components/responses/Conflict'}
+        '422': {$ref: '#/components/responses/UnprocessableEntity'}
+        '500': {$ref: '#/components/responses/InternalServerError'}
+    delete:
+      operationId: deleteUserAvatar
+      summary: Delete a private User avatar, by owner or target-scoped user.edit
+      description: Requires an authenticated session and CSRF; metadata is cleared before the previous file is removed.
+      responses:
+        '200': {$ref: '#/components/responses/UserAvatarMutationResponse'}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+        '404': {$ref: '#/components/responses/NotFound'}
+        '409': {$ref: '#/components/responses/Conflict'}
+        '500': {$ref: '#/components/responses/InternalServerError'}
   /api/v1/users/{id}/actions/set-state:
     parameters: [{$ref: '#/components/parameters/Id'}]
     post:
@@ -1195,6 +1230,16 @@ components:
     AuthorizationGroupPermissions: {required: true, content: {application/json: {schema: {$ref: '#/components/schemas/AuthorizationGroupPermissions'}}}}
     UserIdentityCreate: {required: true, content: {application/json: {schema: {$ref: '#/components/schemas/UserIdentityCreate'}}}}
     UserIdentityPatch: {required: true, content: {application/json: {schema: {$ref: '#/components/schemas/UserIdentityPatch'}}}}
+    UserAvatarUpload:
+      required: true
+      content:
+        multipart/form-data:
+          schema:
+            type: object
+            additionalProperties: false
+            required: [image]
+            properties:
+              image: {type: string, format: binary, description: 'JPEG, PNG or WebP, maximum 2 MiB and 2048 x 2048 pixels.'}
     UserIdentityState: {required: true, content: {application/json: {schema: {$ref: '#/components/schemas/UserIdentityState'}}}}
     UserIdentityPasswordReset: {required: true, content: {application/json: {schema: {$ref: '#/components/schemas/UserIdentityPasswordReset'}}}}
     UserPermissions: {required: true, content: {application/json: {schema: {$ref: '#/components/schemas/UserPermissions'}}}}
@@ -1255,6 +1300,17 @@ components:
     AuthorizationGroupCollection: {description: Authorization group collection., content: {application/json: {schema: {$ref: '#/components/schemas/AuthorizationGroupCollection'}}}}
     SecurityUserCollection: {description: Authorized Shield user collection for the Security Users screen., content: {application/json: {schema: {$ref: '#/components/schemas/SecurityUserCollection'}}}}
     UserIdentityResponse: {description: Shield user identity response., content: {application/json: {schema: {$ref: '#/components/schemas/UserIdentityResponse'}}}}
+    UserAvatarMutationResponse: {description: Avatar metadata changed; never includes the private filename., content: {application/json: {schema: {$ref: '#/components/schemas/UserAvatarMutationResponse'}}}}
+    UserAvatarBinary:
+      description: Authenticated private JPEG, PNG or WebP image bytes; not publicly cacheable.
+      headers:
+        Cache-Control: {description: Disallow shared caching., schema: {type: string, enum: ['private, no-store']}}
+        X-Content-Type-Options: {description: Prevent content-type sniffing., schema: {type: string, enum: [nosniff]}}
+        Content-Disposition: {description: Browser inline rendering., schema: {type: string, enum: [inline]}}
+      content:
+        image/jpeg: {schema: {type: string, format: binary}}
+        image/png: {schema: {type: string, format: binary}}
+        image/webp: {schema: {type: string, format: binary}}
     UserPermissionsResponse: {description: Direct ALLOW permissions response., content: {application/json: {schema: {$ref: '#/components/schemas/UserPermissionsResponse'}}}}
     ResourceResponse: {description: Resource response., content: {application/json: {schema: {$ref: '#/components/schemas/ResourceResponse'}}}}
     ResourceCollection: {description: Resource collection., content: {application/json: {schema: {$ref: '#/components/schemas/ResourceCollection'}}}}
@@ -1708,17 +1764,21 @@ components:
         remember: {type: boolean}
     AuthProfilePatch:
       type: object
-      required: [username, email]
+      additionalProperties: false
+      minProperties: 1
       properties:
         username: {type: string}
         email: {type: string, format: email}
         password: {type: string, format: password}
+        name: {type: string, minLength: 1, maxLength: 255, pattern: '.*\S.*', description: Optional Unicode full name; whitespace-only is invalid.}
     AuthUser:
       type: object
-      required: [id, username, email, active, status, groups, base_permissions]
+      required: [id, username, name, has_avatar, email, active, status, groups, base_permissions]
       properties:
         id: {type: integer, format: int64, minimum: 1}
         username: {type: string}
+        name: {type: [string, 'null'], description: Full name stored in users.full_name; NULL for legacy accounts.}
+        has_avatar: {type: boolean, description: Whether private avatar metadata is present; no storage filename is exposed.}
         email: {type: [string, 'null'], format: email}
         active: {type: boolean}
         status: {type: [string, 'null']}
@@ -2444,15 +2504,17 @@ components:
     Api030State: {type: object, required: [status], properties: {status: {type: string, enum: [ACTIVE, INACTIVE]}}}
     AuthorizationGroup: {type: object, required: [id, code, name, status], properties: {id: {$ref: '#/components/schemas/BigInt'}, code: {type: string}, name: {type: string}, description: {type: [string, 'null']}, status: {type: string, enum: [ACTIVE, INACTIVE]}}}
     SecurityUserGroup: {type: object, required: [id, code, name, status], properties: {id: {$ref: '#/components/schemas/NullableBigInt'}, code: {type: string}, name: {type: [string, 'null']}, status: {type: [string, 'null']}}}
-    SecurityUser: {type: object, required: [id, username, name, email, active, status, created_at, groups, direct_permission_count], properties: {id: {$ref: '#/components/schemas/BigInt'}, username: {type: string}, name: {type: [string, 'null']}, email: {type: [string, 'null']}, active: {type: boolean}, status: {type: [string, 'null']}, created_at: {type: [string, 'null'], format: date-time}, groups: {type: array, items: {$ref: '#/components/schemas/SecurityUserGroup'}}, direct_permission_count: {type: integer, minimum: 0}}}
+    SecurityUser: {type: object, required: [id, username, name, has_avatar, email, active, status, created_at, groups, direct_permission_count], properties: {id: {$ref: '#/components/schemas/BigInt'}, username: {type: string}, name: {type: [string, 'null']}, has_avatar: {type: boolean}, email: {type: [string, 'null']}, active: {type: boolean}, status: {type: [string, 'null']}, created_at: {type: [string, 'null'], format: date-time}, groups: {type: array, items: {$ref: '#/components/schemas/SecurityUserGroup'}}, direct_permission_count: {type: integer, minimum: 0}}}
     SecurityUserCollection: {allOf: [{$ref: '#/components/schemas/CollectionResponse'}], properties: {data: {type: array, items: {$ref: '#/components/schemas/SecurityUser'}}}}
-    UserIdentity: {type: object, required: [id, username, email, active, status, created_at], properties: {id: {$ref: '#/components/schemas/BigInt'}, username: {type: string}, email: {type: string, format: email}, active: {type: boolean}, status: {type: string, enum: [ACTIVE, INACTIVE, LOCKED, SUSPENDED, BANNED, DISABLED]}, created_at: {type: [string, 'null'], format: date-time}}}
-    UserIdentityCreate: {type: object, required: [username, email, password, state], additionalProperties: false, properties: {username: {type: string, minLength: 1, maxLength: 30}, email: {type: string, format: email}, password: {type: string, minLength: 1, writeOnly: true}, state: {type: string, enum: [ACTIVE, INACTIVE, LOCKED, SUSPENDED, BANNED, DISABLED]}}}
-    UserIdentityPatch: {type: object, additionalProperties: false, minProperties: 1, properties: {username: {type: string, minLength: 1, maxLength: 30}, email: {type: string, format: email}, row_version: {type: string}}}
+    UserIdentity: {type: object, required: [id, username, name, has_avatar, email, active, status, created_at], properties: {id: {$ref: '#/components/schemas/BigInt'}, username: {type: string}, name: {type: [string, 'null']}, has_avatar: {type: boolean}, email: {type: string, format: email}, active: {type: boolean}, status: {type: string, enum: [ACTIVE, INACTIVE, LOCKED, SUSPENDED, BANNED, DISABLED]}, created_at: {type: [string, 'null'], format: date-time}}}
+    UserIdentityCreate: {type: object, required: [username, email, password, state], additionalProperties: false, properties: {username: {type: string, minLength: 1, maxLength: 30}, email: {type: string, format: email}, password: {type: string, minLength: 1, writeOnly: true}, state: {type: string, enum: [ACTIVE, INACTIVE, LOCKED, SUSPENDED, BANNED, DISABLED]}, name: {type: string, minLength: 1, maxLength: 255, pattern: '.*\S.*'}, group_ids: {type: array, uniqueItems: true, items: {type: string, minLength: 1, maxLength: 19, pattern: '^[1-9][0-9]*$'}, description: Optional distinct canonical positive decimal Group IDs; omission or an empty array creates no Group memberships.}}}
+    UserIdentityPatch: {type: object, additionalProperties: false, minProperties: 1, properties: {username: {type: string, minLength: 1, maxLength: 30}, email: {type: string, format: email}, name: {type: string, minLength: 1, maxLength: 255, pattern: '.*\S.*'}, row_version: {type: string}}}
     UserIdentityState: {type: object, required: [state], additionalProperties: false, properties: {state: {type: string, enum: [ACTIVE, INACTIVE, LOCKED, SUSPENDED, BANNED, DISABLED]}, row_version: {type: string}}}
     UserIdentityPasswordReset: {type: object, required: [new_password], additionalProperties: false, properties: {new_password: {type: string, minLength: 1, writeOnly: true}, row_version: {type: string}}}
     UserPermissions: {type: object, required: [permissions], additionalProperties: false, properties: {permissions: {type: array, items: {type: string, pattern: '^[a-z0-9_]+\\.[a-z0-9_]+$'}}}}
     UserIdentityResponse: {allOf: [{$ref: '#/components/schemas/SuccessResponse'}], properties: {data: {$ref: '#/components/schemas/UserIdentity'}}}
+    UserAvatarMutation: {type: object, additionalProperties: false, required: [user_id, has_avatar], properties: {user_id: {$ref: '#/components/schemas/BigInt'}, has_avatar: {type: boolean}}}
+    UserAvatarMutationResponse: {allOf: [{$ref: '#/components/schemas/SuccessResponse'}], properties: {data: {$ref: '#/components/schemas/UserAvatarMutation'}}}
     UserPermissionsResponse: {allOf: [{$ref: '#/components/schemas/SuccessResponse'}], properties: {data: {$ref: '#/components/schemas/UserPermissions'}}}
     AuthorizationGroupCreate: {type: object, required: [code, name], properties: {code: {type: string}, name: {type: string}, description: {type: string}, status: {type: string, enum: [ACTIVE, INACTIVE]}}}
     AuthorizationGroupPatch: {type: object, properties: {code: {type: string}, name: {type: string}, description: {type: [string, 'null']}, status: {type: string, enum: [ACTIVE, INACTIVE]}}}

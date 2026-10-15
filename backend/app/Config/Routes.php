@@ -48,6 +48,9 @@ $routes->group('api/v1', ['filter' => 'cors'], static function (RouteCollection 
     $routes->get('security/users', 'Api\\AuthorizationWorkflow::securityUsers');
     $routes->post('users', 'Api\\AuthorizationWorkflow::createUser');
     $routes->patch('users/(:num)', 'Api\\AuthorizationWorkflow::updateUser/$1');
+    $routes->get('users/(:num)/avatar', 'Api\\UserAvatars::show/$1');
+    $routes->put('users/(:num)/avatar', 'Api\\UserAvatars::upload/$1');
+    $routes->delete('users/(:num)/avatar', 'Api\\UserAvatars::delete/$1');
     $routes->post('users/(:num)/actions/set-state', 'Api\\AuthorizationWorkflow::setUserState/$1');
     $routes->post('users/(:num)/actions/reset-password', 'Api\\AuthorizationWorkflow::resetUserPassword/$1');
     $routes->get('users/(:num)/permissions', 'Api\\AuthorizationWorkflow::userPermissions/$1');

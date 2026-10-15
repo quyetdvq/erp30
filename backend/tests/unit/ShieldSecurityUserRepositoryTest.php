@@ -29,6 +29,7 @@ final class ShieldSecurityUserRepositoryTest extends CIUnitTestCase
             'id' => '1',
             'username' => 'quyetdv',
             'name' => 'Đinh Văn Quyết',
+            'avatar_filename' => 'a1b2c3.webp',
             'email' => 'quyetdv@acad.vn',
             'secret2' => '$2y$12$must-not-be-exposed',
             'active' => '1',
@@ -46,9 +47,11 @@ final class ShieldSecurityUserRepositoryTest extends CIUnitTestCase
 
         $this->assertSame('Đinh Văn Quyết', $users[0]['name']);
         $this->assertSame('quyetdv@acad.vn', $users[0]['email']);
+        $this->assertTrue($users[0]['has_avatar']);
+        $this->assertArrayNotHasKey('avatar_filename', $users[0]);
         $this->assertArrayNotHasKey('secret2', $users[0]);
         $this->assertSame(
-            'u.id, u.username, u.active, u.status, u.created_at, ai.name AS name, ai.secret AS email',
+            'u.id, u.username, u.active, u.status, u.created_at, u.full_name AS name, u.avatar_filename, ai.secret AS email',
             $selected[0],
         );
     }

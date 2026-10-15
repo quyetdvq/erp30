@@ -8,7 +8,8 @@ use App\Authorization\EffectiveProfileResolver;
 use CodeIgniter\HTTP\ResponseInterface;
 use CodeIgniter\Shield\Authentication\Authenticators\Session;
 use CodeIgniter\Shield\Entities\User;
-use CodeIgniter\Shield\Models\UserModel;
+use App\Models\UserModel;
+use App\Services\UserDisplayName;
 
 final class Auth extends ApiController
 {
@@ -85,27 +86,41 @@ final class Auth extends ApiController
         }
 
         $payload = $this->jsonPayload();
-        $username = trim((string) ($payload['username'] ?? ''));
-        $email = trim((string) ($payload['email'] ?? ''));
-        $password = (string) ($payload['password'] ?? '');
-
-        if ($username === '' || $email === '' || ! filter_var($email, FILTER_VALIDATE_EMAIL)) {
-            return $this->respondError('INVALID_PROFILE', 422, [[
-                'field' => 'email',
-                'code' => 'INVALID_PROFILE',
-                'message' => \App\Infrastructure\Api\ApiTransport::message('INVALID_PROFILE', 422),
-            ]]);
+        foreach (array_keys($payload) as $field) {
+            if (! in_array($field, ['username', 'email', 'password', 'name'], true)) {
+                return $this->respondError('INVALID_PROFILE', 422);
+            }
         }
-
-        $users = model(UserModel::class);
-        $user->username = $username;
-        $user->setEmail($email);
-        if ($password !== '') {
-            $user->setPassword($password);
+        if ($payload === []) {
+            return $this->respondError('INVALID_PROFILE', 422);
         }
-
+        $username = array_key_exists('username', $payload) ? $payload['username'] : $user->username;
+        $email = array_key_exists('email', $payload) ? $payload['email'] : $user->getEmail();
+        $username = is_string($username) ? trim($username) : $username;
+        $email = is_string($email) ? trim($email) : $email;
+        $password = $payload['password'] ?? '';
+        if (! is_string($username) || trim($username) === '' || ! is_string($email)
+            || filter_var($email, FILTER_VALIDATE_EMAIL) === false || ! is_string($password)) {
+            return $this->respondError('INVALID_PROFILE', 422);
+        }
         try {
-            $users->save($user);
+            if (array_key_exists('name', $payload)) {
+                $user->full_name = UserDisplayName::normalize($payload['name']);
+            }
+            if (array_key_exists('username', $payload)) {
+                $user->username = trim($username);
+            }
+            if (array_key_exists('email', $payload)) {
+                $user->setEmail(trim($email));
+            }
+            if ($password !== '') {
+                $user->setPassword($password);
+            }
+            if (! model(UserModel::class)->save($user)) {
+                return $this->respondError('PROFILE_UPDATE_FAILED', 422);
+            }
+        } catch (\App\Exceptions\DomainException $exception) {
+            return $this->respondError('INVALID_PROFILE', 422);
         } catch (\Throwable $exception) {
             return $this->respondError('PROFILE_UPDATE_FAILED', 422);
         }
@@ -123,6 +138,8 @@ final class Auth extends ApiController
             'id' => (int) $user->id,
             'username' => $user->username,
             'email' => $user->getEmail(),
+            'name' => $user->full_name ?? null,
+            'has_avatar' => is_string($user->avatar_filename ?? null) && $user->avatar_filename !== '',
             'active' => (bool) $user->active,
             'status' => $user->status,
             'groups' => array_values(array_map('strval', $groups)),

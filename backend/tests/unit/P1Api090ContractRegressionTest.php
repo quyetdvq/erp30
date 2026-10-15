@@ -164,6 +164,29 @@ final class P1Api090ContractRegressionTest extends CIUnitTestCase
         $this->assertStringContainsString("gender: {type: [string, 'null'], enum: [MALE, FEMALE, OTHER, null]}", $openapi);
     }
 
+    public function testUserV12OpenApiPreservesLegacyCreateAndDocumentsPrivateAvatarApi(): void
+    {
+        $yaml = file_get_contents(__DIR__ . '/../../../contracts/openapi/openapi.yaml');
+        $this->assertIsString($yaml);
+        $this->assertStringContainsString('UserIdentityCreate: {type: object, required: [username, email, password, state]', $yaml);
+        $this->assertMatchesRegularExpression('/UserIdentityCreate:[^\r\n]*group_ids: \{type: array, uniqueItems: true/', $yaml);
+        $this->assertMatchesRegularExpression('/UserIdentityPatch:[^\r\n]*name: \{type: string, minLength: 1, maxLength: 255/', $yaml);
+        $this->assertStringContainsString('has_avatar: {type: boolean}', $yaml);
+        $this->assertStringNotContainsString('avatar_filename: {', $yaml);
+        $this->assertStringContainsString('UserAvatarMutationResponse:', $yaml);
+
+        $matched = preg_match('/^  \/api\/v1\/users\/\{id\}\/avatar:\s*\n(.*?)(?=^  \/api\/v1\/|\z)/ms', $yaml, $pathMatch);
+        $this->assertSame(1, $matched);
+        $avatarPath = $pathMatch[1];
+        foreach (['getUserAvatar', 'uploadUserAvatar', 'deleteUserAvatar'] as $operationId) {
+            $this->assertStringContainsString('operationId: ' . $operationId, $avatarPath);
+        }
+        $this->assertSame(3, substr_count($avatarPath, 'operationId:'));
+        $this->assertStringContainsString("#/components/requestBodies/UserAvatarUpload", $avatarPath);
+        $this->assertStringContainsString("#/components/responses/UserAvatarBinary", $avatarPath);
+        $this->assertStringContainsString("#/components/responses/UserAvatarMutationResponse", $avatarPath);
+    }
+
     /** @return array<string, string> */
     private function runtimeInventory(): array
     {

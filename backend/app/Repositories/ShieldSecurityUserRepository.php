@@ -25,10 +25,9 @@ final class ShieldSecurityUserRepository
         $tables = config('Auth')->tables;
         try {
             $result = $this->db->table($tables['users'] . ' u')
-                // Shield stores the display identity in `name` and the email
-                // identity in `secret`; `secret2` is the password hash and
-                // must never enter an application payload.
-                ->select('u.id, u.username, u.active, u.status, u.created_at, ai.name AS name, ai.secret AS email')
+                // Profile attributes are stored on users, email on email_password identity.
+                // Never expose the private filename or password hash in the API.
+                ->select('u.id, u.username, u.active, u.status, u.created_at, u.full_name AS name, u.avatar_filename, ai.secret AS email')
                 ->join($tables['identities'] . ' ai', "ai.user_id = u.id AND ai.type = 'email_password'", 'left')
                 ->where('u.deleted_at', null)
                 ->orderBy('u.id', 'ASC')
@@ -47,6 +46,7 @@ final class ShieldSecurityUserRepository
                 'id' => $id,
                 'username' => (string) ($row['username'] ?? ''),
                 'name' => $row['name'] === null ? null : (string) $row['name'],
+                'has_avatar' => is_string($row['avatar_filename'] ?? null) && $row['avatar_filename'] !== '',
                 'email' => $row['email'] === null ? null : (string) $row['email'],
                 'active' => (bool) ($row['active'] ?? false),
                 'status' => $row['status'] === null ? null : strtoupper((string) $row['status']),

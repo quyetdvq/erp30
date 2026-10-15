@@ -210,6 +210,48 @@ test.describe('P1-FE-040 Workflow/Lifecycle UI', () => {
     await expect(transitionDialog.getByRole('button', { name: /Lưu|Save/ })).toBeDisabled()
   })
 
+  test('State membership modal retains active unassigned State validation and submit', async ({
+    page,
+  }) => {
+    await mockSession(page)
+    await mockWorkflowApi(page)
+    let submittedState: unknown = null
+    page.on('request', (request) => {
+      if (
+        request.method() === 'PUT' &&
+        new URL(request.url()).pathname === '/api/v1/lifecycles/21/states'
+      ) {
+        submittedState = request.postDataJSON()
+      }
+    })
+    await page.goto('/configuration/lifecycles')
+    await expect(page.getByRole('heading', { name: 'Lifecycles' })).toBeVisible()
+    await page.getByRole('button', { name: /View details|Xem chi ti.t/ }).click()
+    await page.getByRole('tab', { name: 'States' }).click()
+    await page.getByRole('button', { name: /Add State|Th.m State/ }).click()
+
+    const stateDialog = page.getByRole('dialog', { name: /State.*Lifecycle|Lifecycle State/ })
+    await expect(stateDialog).toBeVisible()
+    await expect(stateDialog.locator('.modal-card__header')).toHaveCount(1)
+    await expect(stateDialog.locator('.modal-card__body')).toHaveCount(1)
+    await expect(stateDialog.locator('.modal-card__footer')).toHaveCount(1)
+    const stateSelect = stateDialog.getByRole('combobox', { name: 'Workflow State', exact: true })
+    await expect(stateSelect).toBeVisible()
+    await expect(stateSelect.locator('option[value="11"]')).toHaveCount(0)
+    await expect(stateSelect.locator('option[value="12"]')).toHaveCount(1)
+    await expect(stateSelect.locator('option[value="13"]')).toHaveCount(0)
+    await expect(stateDialog.getByRole('checkbox', { name: /^Initial/ })).toBeDisabled()
+    const saveButton = stateDialog.locator('button[type="submit"]')
+    await expect(saveButton).toBeDisabled()
+    await stateSelect.selectOption('12')
+    await expect(saveButton).toBeEnabled()
+    await saveButton.click()
+    await expect(stateDialog).toHaveCount(0)
+    await expect.poll(() => submittedState).toMatchObject({
+      states: [{ state_id: '12', sequence: 2, is_initial: false, is_final: false }],
+    })
+  })
+
   test('missing base permissions hide configuration navigation and actions', async ({ page }) => {
     await mockSession(page, [])
     await mockWorkflowApi(page)

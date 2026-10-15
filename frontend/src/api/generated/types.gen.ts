@@ -190,14 +190,26 @@ export type AuthLogin = {
 };
 
 export type AuthProfilePatch = {
-    username: string;
-    email: string;
+    username?: string;
+    email?: string;
     password?: string;
+    /**
+     * Optional Unicode full name; whitespace-only is invalid.
+     */
+    name?: string;
 };
 
 export type AuthUser = {
     id: number;
     username: string;
+    /**
+     * Full name stored in users.full_name; NULL for legacy accounts.
+     */
+    name: string | null;
+    /**
+     * Whether private avatar metadata is present; no storage filename is exposed.
+     */
+    has_avatar: boolean;
     email: string | null;
     active: boolean;
     status: string | null;
@@ -1006,6 +1018,7 @@ export type SecurityUser = {
     id: BigInt;
     username: string;
     name: string | null;
+    has_avatar: boolean;
     email: string | null;
     active: boolean;
     status: string | null;
@@ -1021,6 +1034,8 @@ export type SecurityUserCollection = CollectionResponse & {
 export type UserIdentity = {
     id: BigInt;
     username: string;
+    name: string | null;
+    has_avatar: boolean;
     email: string;
     active: boolean;
     status: 'ACTIVE' | 'INACTIVE' | 'LOCKED' | 'SUSPENDED' | 'BANNED' | 'DISABLED';
@@ -1031,11 +1046,17 @@ export type UserIdentityCreate = {
     username: string;
     email: string;
     state: 'ACTIVE' | 'INACTIVE' | 'LOCKED' | 'SUSPENDED' | 'BANNED' | 'DISABLED';
+    name?: string;
+    /**
+     * Optional distinct canonical positive decimal Group IDs; omission or an empty array creates no Group memberships.
+     */
+    group_ids?: Array<string>;
 };
 
 export type UserIdentityPatch = {
     username?: string;
     email?: string;
+    name?: string;
     row_version?: string;
 };
 
@@ -1054,6 +1075,15 @@ export type UserPermissions = {
 
 export type UserIdentityResponse = SuccessResponse & {
     data?: UserIdentity;
+};
+
+export type UserAvatarMutation = {
+    user_id: BigInt;
+    has_avatar: boolean;
+};
+
+export type UserAvatarMutationResponse = SuccessResponse & {
+    data?: UserAvatarMutation;
 };
 
 export type UserPermissionsResponse = SuccessResponse & {
@@ -1359,6 +1389,11 @@ export type UserIdentityCreateWritable = {
     email: string;
     password: string;
     state: 'ACTIVE' | 'INACTIVE' | 'LOCKED' | 'SUSPENDED' | 'BANNED' | 'DISABLED';
+    name?: string;
+    /**
+     * Optional distinct canonical positive decimal Group IDs; omission or an empty array creates no Group memberships.
+     */
+    group_ids?: Array<string>;
 };
 
 export type UserIdentityPasswordResetWritable = {
@@ -1460,6 +1495,13 @@ export type AuthorizationGroupPermissions2 = AuthorizationGroupPermissions;
 export type UserIdentityCreate2 = UserIdentityCreateWritable;
 
 export type UserIdentityPatch2 = UserIdentityPatch;
+
+export type UserAvatarUpload = {
+    /**
+     * JPEG, PNG or WebP, maximum 2 MiB and 2048 x 2048 pixels.
+     */
+    image: Blob | File;
+};
 
 export type UserIdentityState2 = UserIdentityState;
 
@@ -3816,6 +3858,131 @@ export type UpdateUserResponses = {
 };
 
 export type UpdateUserResponse = UpdateUserResponses[keyof UpdateUserResponses];
+
+export type DeleteUserAvatarData = {
+    body?: never;
+    path: {
+        id: BigInt;
+    };
+    query?: never;
+    url: '/api/v1/users/{id}/avatar';
+};
+
+export type DeleteUserAvatarErrors = {
+    /**
+     * Unauthenticated or invalid authentication.
+     */
+    401: ErrorResponse;
+    /**
+     * Visible target but action denied.
+     */
+    403: ErrorResponse;
+    /**
+     * Target not found or not visible.
+     */
+    404: ErrorResponse;
+    /**
+     * Conflict, concurrency, uniqueness, or current-state failure.
+     */
+    409: ErrorResponse;
+    /**
+     * Unexpected server error without internal diagnostics.
+     */
+    500: ErrorResponse;
+};
+
+export type DeleteUserAvatarError = DeleteUserAvatarErrors[keyof DeleteUserAvatarErrors];
+
+export type DeleteUserAvatarResponses = {
+    /**
+     * Avatar metadata changed; never includes the private filename.
+     */
+    200: UserAvatarMutationResponse;
+};
+
+export type DeleteUserAvatarResponse = DeleteUserAvatarResponses[keyof DeleteUserAvatarResponses];
+
+export type GetUserAvatarData = {
+    body?: never;
+    path: {
+        id: BigInt;
+    };
+    query?: never;
+    url: '/api/v1/users/{id}/avatar';
+};
+
+export type GetUserAvatarErrors = {
+    /**
+     * Unauthenticated or invalid authentication.
+     */
+    401: ErrorResponse;
+    /**
+     * Visible target but action denied.
+     */
+    403: ErrorResponse;
+    /**
+     * Target not found or not visible.
+     */
+    404: ErrorResponse;
+};
+
+export type GetUserAvatarError = GetUserAvatarErrors[keyof GetUserAvatarErrors];
+
+export type GetUserAvatarResponses = {
+    /**
+     * Authenticated private JPEG, PNG or WebP image bytes; not publicly cacheable.
+     */
+    200: Blob | File;
+};
+
+export type GetUserAvatarResponse = GetUserAvatarResponses[keyof GetUserAvatarResponses];
+
+export type UploadUserAvatarData = {
+    body: UserAvatarUpload;
+    path: {
+        id: BigInt;
+    };
+    query?: never;
+    url: '/api/v1/users/{id}/avatar';
+};
+
+export type UploadUserAvatarErrors = {
+    /**
+     * Unauthenticated or invalid authentication.
+     */
+    401: ErrorResponse;
+    /**
+     * Visible target but action denied.
+     */
+    403: ErrorResponse;
+    /**
+     * Target not found or not visible.
+     */
+    404: ErrorResponse;
+    /**
+     * Conflict, concurrency, uniqueness, or current-state failure.
+     */
+    409: ErrorResponse;
+    /**
+     * Semantically invalid request.
+     */
+    422: ErrorResponse;
+    /**
+     * Unexpected server error without internal diagnostics.
+     */
+    500: ErrorResponse;
+};
+
+export type UploadUserAvatarError = UploadUserAvatarErrors[keyof UploadUserAvatarErrors];
+
+export type UploadUserAvatarResponses = {
+    /**
+     * Avatar metadata changed; never includes the private filename.
+     */
+    200: UserAvatarMutationResponse;
+};
+
+export type UploadUserAvatarResponse = UploadUserAvatarResponses[keyof UploadUserAvatarResponses];
 
 export type SetUserStateData = {
     body: UserIdentityState2;

@@ -1,3 +1,6 @@
+Đọc kỹ tài liệu tại https://docs.inoerp.com/docs/intro và các link bên trong.
+
+
 Tôi xin cung cấp thêm thông tin như sau. Đây là thông tin quan trọng cần bổ sung vào tài liệu.
 
 

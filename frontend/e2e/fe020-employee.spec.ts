@@ -10,7 +10,7 @@ test.beforeEach(async ({ page }) => {
 const collection = (route: Route, data: unknown[], total = data.length) =>
   JSON.stringify({ data, meta: mockPagination(route, total, 'fe020-test') })
 
-async function mockBase(page: Page, status = 200): Promise<void> {
+async function mockBase(page: Page, status = 200, canViewUsers = false): Promise<void> {
   await page.route('**/api/v1/auth/me', (route) =>
     route.fulfill({
       status: 200,
@@ -43,6 +43,7 @@ async function mockBase(page: Page, status = 200): Promise<void> {
               'employee_contact.create',
               'employee_contact.edit',
               'employee_contact.setstate',
+              ...(canViewUsers ? ['user.view'] : []),
             ],
           },
         },
@@ -250,4 +251,101 @@ test('Employee structure keeps 403 list errors visible', async ({ page }) => {
   await mockBase(page, 403)
   await page.goto('/people/departments')
   await expect(page.locator('.list-shell__state[role="alert"]')).toBeVisible()
+})
+
+test('Employee User ID picker searches visible accounts and saves their string ID', async ({
+  page,
+}) => {
+  await mockBase(page, 200, true)
+  let userRequests = 0
+  let createBody: Record<string, unknown> | null = null
+  await page.route('**/api/v1/security/users**', (route) => {
+    userRequests += 1
+    return route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: collection(route, [
+        {
+          id: '101',
+          username: 'alice',
+          name: 'Alice Smith',
+          email: 'alice@example.com',
+          status: 'ACTIVE',
+          active: true,
+          created_at: null,
+          groups: [],
+        },
+        {
+          id: '102',
+          username: 'bob',
+          name: 'Bob Nguyen',
+          email: 'bob@example.com',
+          status: 'ACTIVE',
+          active: true,
+          created_at: null,
+          groups: [],
+        },
+      ]),
+    })
+  })
+  await page.route('**/api/v1/employees**', (route) => {
+    if (route.request().method() !== 'POST') return route.fallback()
+    createBody = route.request().postDataJSON() as Record<string, unknown>
+    return route.fulfill({
+      status: 201,
+      contentType: 'application/json',
+      body: JSON.stringify({
+        data: {
+          id: '43',
+          employee_code: 'E-03',
+          employee_name: 'New Employee',
+          user_id: '101',
+          status: 'ACTIVE',
+        },
+      }),
+    })
+  })
+
+  await page.goto('/people/employees')
+  await expect(page.getByRole('cell', { name: 'Nguyen Van A' }).first()).toBeVisible()
+  expect(userRequests).toBe(0) // The lookup is lazy, not requested on page load.
+  await page.getByRole('button', { name: 'Tạo' }).click()
+  const dialog = page.getByRole('dialog', { name: 'Biểu mẫu nhân viên' })
+  const picker = dialog.locator('.searchable-select').first()
+  await expect.poll(() => userRequests).toBe(1)
+  await expect(dialog.getByText('Đang tải danh sách User...')).toHaveCount(0)
+  await expect(picker.locator('.n-base-selection')).toBeVisible()
+  await picker.locator('.n-base-selection').click()
+  await picker.locator('input').fill('alice@example.com')
+  await expect(page.locator('.n-base-select-option').filter({ hasText: 'alice' })).toHaveCount(1)
+  await expect(page.locator('.n-base-select-option').filter({ hasText: 'bob' })).toHaveCount(0)
+  await page.locator('.n-base-select-option').filter({ hasText: 'alice' }).click()
+  await dialog.getByLabel('Mã nhân viên').fill('E-03')
+  await dialog.getByLabel('Tên', { exact: true }).fill('New Employee')
+  await dialog.getByRole('button', { name: 'Lưu' }).click()
+  await expect.poll(() => createBody).not.toBeNull()
+  expect(createBody).toMatchObject({
+    employee_code: 'E-03',
+    employee_name: 'New Employee',
+    user_id: '101',
+  })
+})
+
+test('Employee User picker preserves manual entry without user.view', async ({ page }) => {
+  await mockBase(page)
+  let userRequests = 0
+  await page.route('**/api/v1/security/users**', (route) => {
+    userRequests += 1
+    return route.fulfill({ status: 403, contentType: 'application/json', body: '{}' })
+  })
+  await page.goto('/people/employees')
+  await page.getByRole('button', { name: 'Tạo' }).click()
+  const dialog = page.getByRole('dialog', { name: 'Biểu mẫu nhân viên' })
+  await expect(
+    dialog.getByText('Không có quyền user.view để xem danh sách. Có thể nhập User ID thủ công.'),
+  ).toBeVisible()
+  await expect(dialog.locator('.searchable-select')).toHaveCount(1) // Manager selector only.
+  await dialog.getByLabel('User ID').fill('101')
+  await expect(dialog.getByLabel('User ID')).toHaveValue('101')
+  expect(userRequests).toBe(0)
 })

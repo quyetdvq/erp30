@@ -101,6 +101,7 @@ export const useAuthStore = defineStore('auth', () => {
   async function saveProfile(payload: {
     username: string
     email: string
+    name?: string
     password?: string
   }): Promise<void> {
     const generation = sessionGeneration
@@ -108,6 +109,17 @@ export const useAuthStore = defineStore('auth', () => {
     const nextUser = await updateProfile(payload)
     if (generation === sessionGeneration && currentId === nextUser.id)
       setAuthenticatedUser(nextUser)
+  }
+
+  /** Refresh display/avatar metadata without taking permissions from a superseded session. */
+  async function refreshSelfUser(): Promise<void> {
+    const generation = sessionGeneration
+    const currentId = user.value?.id
+    if (currentId === undefined) return
+    const nextUser = await getCurrentUser()
+    if (generation === sessionGeneration && currentId === nextUser.id) {
+      setAuthenticatedUser(nextUser)
+    }
   }
 
   function refreshBasePermissions(force = false): Promise<void> {
@@ -166,6 +178,7 @@ export const useAuthStore = defineStore('auth', () => {
     expireSession,
     getSessionGeneration,
     saveProfile,
+    refreshSelfUser,
     refreshBasePermissions,
     markPermissionSnapshotStale,
     clearError,

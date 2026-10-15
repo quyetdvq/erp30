@@ -107,7 +107,13 @@ async function mockNumberingApi(page: Page, options: { conflict?: boolean } = {}
     }
     if (/\/numbering-series\/\d+$/.test(url.pathname) && method === 'PATCH') {
       patchRequests += 1
-      if (options.conflict) {
+      const payload = JSON.parse(route.request().postData() ?? '{}') as Record<string, unknown>
+      const changesImmutableField =
+        (payload.series_code !== undefined && payload.series_code !== series.series_code) ||
+        (payload.scope_type !== undefined && payload.scope_type !== series.scope_type) ||
+        (payload.reset_policy !== undefined && payload.reset_policy !== series.reset_policy) ||
+        (payload.resource_id !== undefined && String(payload.resource_id) !== series.resource_id)
+      if (options.conflict && changesImmutableField) {
         return route.fulfill({
           status: 409,
           contentType: 'application/json',
@@ -293,6 +299,9 @@ test.describe('P1-FE-050 Auto Numbering configuration UI', () => {
     const dialog = page.getByRole('dialog', {
       name: /Biểu mẫu Auto Numbering|Auto Numbering form/,
     })
+    // The client fetched issued=false, but another request issued the series before PATCH.
+    // Only changes to an immutable field can trigger NUM_ISSUED_FIELD_IMMUTABLE.
+    await dialog.getByLabel('Mã series').fill('CHANGED_AFTER_FETCH')
     await dialog.getByLabel('Tên').fill('Attempted issued edit')
     await dialog.getByRole('button', { name: /Lưu|Save/ }).dispatchEvent('click')
     await expect(dialog.getByText(/NUM_ISSUED_FIELD_IMMUTABLE/)).toBeVisible()

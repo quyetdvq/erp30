@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, onMounted, ref } from 'vue'
+import { computed, nextTick, onMounted, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 import type {
   Lifecycle,
@@ -47,6 +47,10 @@ const modalOpen = ref(false)
 const stateModalOpen = ref(false)
 const transitionModalOpen = ref(false)
 const detailOpen = ref(false)
+const stateAddButton = ref<HTMLButtonElement | null>(null)
+const transitionAddButton = ref<HTMLButtonElement | null>(null)
+const stateDialog = ref<HTMLElement | null>(null)
+const transitionDialog = ref<HTMLElement | null>(null)
 const editingId = ref<string | undefined>()
 const busy = ref(false)
 const detailBusy = ref(false)
@@ -76,12 +80,14 @@ function closeStateForm(): void {
   if (busy.value || !stateDraft.confirmDiscard()) return
   stateDraft.markClean()
   stateModalOpen.value = false
+  void nextTick(() => stateAddButton.value?.focus())
 }
 
 function closeTransitionForm(): void {
   if (busy.value || !transitionDraft.confirmDiscard()) return
   transitionDraft.markClean()
   transitionModalOpen.value = false
+  void nextTick(() => transitionAddButton.value?.focus())
 }
 
 const columns: readonly ListColumn<Lifecycle>[] = [
@@ -121,6 +127,25 @@ const duplicateTransition = computed(() =>
       item.action_code.trim().toLowerCase() ===
       transitionForm.value.action_code.trim().toLowerCase(),
   ),
+)
+const canSaveState = computed(
+  () =>
+    Boolean(selectedId.value) &&
+    availableStates.value.some((item) => String(item.id) === stateForm.value.state_id) &&
+    Number.isInteger(stateForm.value.sequence) &&
+    stateForm.value.sequence >= 1,
+)
+const canSaveTransition = computed(
+  () =>
+    Boolean(selectedId.value) &&
+    memberStateOptions.value.some(
+      (item) => String(item.membership.state_id) === transitionForm.value.from_state_id,
+    ) &&
+    memberStateOptions.value.some(
+      (item) => String(item.membership.state_id) === transitionForm.value.to_state_id,
+    ) &&
+    /^[a-zA-Z0-9_:-]+$/.test(transitionForm.value.action_code) &&
+    !duplicateTransition.value,
 )
 
 const errorMessage = (value: unknown): string => {
@@ -262,6 +287,7 @@ async function toggle(row: Lifecycle): Promise<void> {
 }
 
 function openStateCreate(): void {
+  detailError.value = null
   stateForm.value = {
     state_id: '',
     sequence: lifecycleStates.value.length + 1,
@@ -270,16 +296,18 @@ function openStateCreate(): void {
   }
   stateDraft.markClean()
   stateModalOpen.value = true
+  void nextTick(() => stateDialog.value?.focus())
 }
 
 async function saveState(): Promise<void> {
-  if (!selectedId.value || !stateForm.value.state_id) return
+  if (busy.value || !hasBasePermission('lifecycle', 'edit') || !canSaveState.value || !selectedId.value) return
   busy.value = true
   detailError.value = null
   try {
     await addLifecycleState(selectedId.value, stateForm.value)
     stateDraft.markClean()
     stateModalOpen.value = false
+    void nextTick(() => stateAddButton.value?.focus())
     await loadDetails()
   } catch (caught: unknown) {
     detailError.value = caught
@@ -290,25 +318,22 @@ async function saveState(): Promise<void> {
 }
 
 function openTransitionCreate(): void {
+  detailError.value = null
   transitionForm.value = { from_state_id: '', action_code: '', to_state_id: '', status: 'ACTIVE' }
   transitionDraft.markClean()
   transitionModalOpen.value = true
+  void nextTick(() => transitionDialog.value?.focus())
 }
 
 async function saveTransition(): Promise<void> {
-  if (
-    !selectedId.value ||
-    !transitionForm.value.from_state_id ||
-    !transitionForm.value.to_state_id ||
-    duplicateTransition.value
-  )
-    return
+  if (busy.value || !hasBasePermission('lifecycle', 'edit') || !canSaveTransition.value || !selectedId.value) return
   busy.value = true
   detailError.value = null
   try {
     await addLifecycleTransition(selectedId.value, transitionForm.value)
     transitionDraft.markClean()
     transitionModalOpen.value = false
+    void nextTick(() => transitionAddButton.value?.focus())
     await loadDetails()
   } catch (caught: unknown) {
     detailError.value = caught
@@ -372,11 +397,12 @@ onMounted(() => void load())
   </section>
 
   <div v-if="detailOpen && selected" class="modal-backdrop">
-    <section class="modal-card" role="dialog" aria-modal="true" aria-labelledby="lifecycle-detail-title">
+    <section class="modal-card" role="dialog" aria-modal="true" aria-labelledby="lifecycle-detail-title"
+      :aria-hidden="stateModalOpen || transitionModalOpen" :inert="stateModalOpen || transitionModalOpen">
       <header class="modal-card__header">
         
-        <h2 class="modal-card-title">
-          <NIcon :size="24"> <RepeatOutline /> </NIcon>
+        <h2 id="lifecycle-detail-title" class="modal-card-title">
+          <NIcon :size="24" aria-hidden="true"> <RepeatOutline /> </NIcon>
           {{ selected.name }}
         </h2>
         <small><code>{{ selected.code }}</code> · {{ t('workflow.status') }}:
@@ -403,7 +429,7 @@ onMounted(() => void load())
         </button>
       </nav>
       <div class="modal-card__body">
-        <p v-if="detailError" class="inline-error" role="alert">{{ errorMessage(detailError) }}</p>
+        <p v-if="detailError && !stateModalOpen && !transitionModalOpen" class="inline-error" role="alert">{{ errorMessage(detailError) }}</p>
         <div v-if="detailBusy" class="workflow-detail-state" role="status">
           {{ t('list.loading') }}
         </div>
@@ -436,7 +462,7 @@ onMounted(() => void load())
         <div v-else-if="tab === 'states'" class="workflow-tab-content">
           <div class="workflow-tab-toolbar">
             <p>{{ t('workflow.statesMembershipNote') }}</p>
-            <button v-if="hasBasePermission('lifecycle', 'edit')" type="button" class="primary-button"
+            <button v-if="hasBasePermission('lifecycle', 'edit')" ref="stateAddButton" type="button" class="primary-button"
               :disabled="availableStates.length === 0" @click="openStateCreate">
               ＋ {{ t('workflow.addState') }}
             </button>
@@ -485,7 +511,7 @@ onMounted(() => void load())
         <div v-else class="workflow-tab-content">
           <div class="workflow-tab-toolbar">
             <p>{{ t('workflow.transitionsNote') }}</p>
-            <button v-if="hasBasePermission('lifecycle', 'edit')" type="button" class="primary-button"
+            <button v-if="hasBasePermission('lifecycle', 'edit')" ref="transitionAddButton" type="button" class="primary-button"
               :disabled="memberStateOptions.length < 1" @click="openTransitionCreate">
               ＋ {{ t('workflow.addTransition') }}
             </button>
@@ -524,7 +550,7 @@ onMounted(() => void load())
       </div>
       <footer class="modal-card__footer">
         <button type="button" class="secondary-button" @click="detailOpen = false">
-          <NIcon :size="20">
+          <NIcon :size="20" aria-hidden="true">
             <Refresh />
           </NIcon>
           {{ t('common.close') }}
@@ -537,7 +563,7 @@ onMounted(() => void load())
     <section class="modal-card" role="dialog" aria-modal="true" :aria-label="t('workflow.lifecycleForm')">
       <header class="modal-card__header">
         <h2 class="modal-card-title">
-          <NIcon :size="24">
+          <NIcon :size="24" aria-hidden="true">
             <ContractOutline />
           </NIcon>
           {{ editingId ? t('common.edit') : t('common.create') }} {{ t('workflow.lifecycle') }}
@@ -558,15 +584,127 @@ onMounted(() => void load())
 
       <footer class="modal-card__footer">
         <button type="button" class="secondary-button" @click="closeForm">
-          <NIcon :size="20">
+          <NIcon :size="20" aria-hidden="true">
             <Refresh />
           </NIcon>
           {{ t('common.cancel') }}
         </button><button type="submit" class="primary-button" form="lifecycle-form"
           :disabled="busy || !hasBasePermission('lifecycle', editingId ? 'edit' : 'create')">
-          <NIcon :size="20">
+          <NIcon :size="20" aria-hidden="true">
             <SaveOutline />
           </NIcon>
+          {{ busy ? t('common.saving') : t('common.save') }}
+        </button>
+      </footer>
+    </section>
+  </div>
+
+  <div v-if="stateModalOpen" class="modal-backdrop">
+    <section ref="stateDialog" class="modal-card" role="dialog" aria-modal="true"
+      :aria-label="t('workflow.stateMembershipForm')" tabindex="-1">
+      <header class="modal-card__header">
+        <h2 class="modal-card-title">
+          <NIcon :size="24" aria-hidden="true"><ContractOutline /></NIcon>
+          {{ t('workflow.addState') }}
+        </h2>
+        <button type="button" class="modal-card-button-close" :aria-label="t('common.close')"
+          @click="closeStateForm"></button>
+      </header>
+      <form id="lifecycle-state-form" class="modal-card__body" @submit.prevent="saveState">
+        <label>
+          <span>{{ t('workflow.state') }}</span>
+          <select v-model="stateForm.state_id" required>
+            <option value="" disabled>{{ t('workflow.selectState') }}</option>
+            <option v-for="item in availableStates" :key="item.id" :value="String(item.id)">
+              {{ item.name }} ({{ item.code }})
+            </option>
+          </select>
+        </label>
+        <label>
+          <span>{{ t('workflow.sequence') }}</span>
+          <input v-model.number="stateForm.sequence" type="number" min="1" step="1" required />
+        </label>
+        <label class="checkbox-field">
+          <input v-model="stateForm.is_initial" type="checkbox" :disabled="initialAlreadySet" />
+          <span>
+            {{ t('workflow.initial') }}
+            <small v-if="initialAlreadySet">{{ t('workflow.initialAlreadySet') }}</small>
+          </span>
+        </label>
+        <label class="checkbox-field">
+          <input v-model="stateForm.is_final" type="checkbox" />
+          <span>{{ t('workflow.final') }}</span>
+        </label>
+        <p v-if="detailError" class="inline-error" role="alert">{{ errorMessage(detailError) }}</p>
+      </form>
+      <footer class="modal-card__footer">
+        <button type="button" class="secondary-button" @click="closeStateForm">
+          <NIcon :size="20" aria-hidden="true"><Refresh /></NIcon>
+          {{ t('common.cancel') }}
+        </button>
+        <button type="submit" form="lifecycle-state-form" class="primary-button"
+          :disabled="busy || !canSaveState || !hasBasePermission('lifecycle', 'edit')">
+          <NIcon :size="20" aria-hidden="true"><SaveOutline /></NIcon>
+          {{ busy ? t('common.saving') : t('common.save') }}
+        </button>
+      </footer>
+    </section>
+  </div>
+
+  <div v-if="transitionModalOpen" class="modal-backdrop">
+    <section ref="transitionDialog" class="modal-card" role="dialog" aria-modal="true"
+      :aria-label="t('workflow.transitionForm')" tabindex="-1">
+      <header class="modal-card__header">
+        <h2 class="modal-card-title">
+          <NIcon :size="24" aria-hidden="true"><RepeatOutline /></NIcon>
+          {{ t('workflow.addTransition') }}
+        </h2>
+        <button type="button" class="modal-card-button-close" :aria-label="t('common.close')"
+          @click="closeTransitionForm"></button>
+      </header>
+      <form id="lifecycle-transition-form" class="modal-card__body" @submit.prevent="saveTransition">
+        <label>
+          <span>{{ t('workflow.fromState') }}</span>
+          <select v-model="transitionForm.from_state_id" required>
+            <option value="" disabled>{{ t('workflow.selectState') }}</option>
+            <option v-for="item in memberStateOptions" :key="item.membership.id"
+              :value="String(item.membership.state_id)">
+              {{ item.state?.name }} ({{ item.state?.code }})
+            </option>
+          </select>
+        </label>
+        <label>
+          <span>{{ t('workflow.action') }}</span>
+          <input v-model="transitionForm.action_code" required pattern="[a-zA-Z0-9_:\-]+" />
+          <small v-if="duplicateTransition" class="field-error">{{ t('workflow.duplicateTransition') }}</small>
+        </label>
+        <label>
+          <span>{{ t('workflow.toState') }}</span>
+          <select v-model="transitionForm.to_state_id" required>
+            <option value="" disabled>{{ t('workflow.selectState') }}</option>
+            <option v-for="item in memberStateOptions" :key="`to-${item.membership.id}`"
+              :value="String(item.membership.state_id)">
+              {{ item.state?.name }} ({{ item.state?.code }})
+            </option>
+          </select>
+        </label>
+        <label>
+          <span>{{ t('workflow.status') }}</span>
+          <select v-model="transitionForm.status">
+            <option value="ACTIVE">{{ t('status.active') }}</option>
+            <option value="INACTIVE">{{ t('status.inactive') }}</option>
+          </select>
+        </label>
+        <p v-if="detailError" class="inline-error" role="alert">{{ errorMessage(detailError) }}</p>
+      </form>
+      <footer class="modal-card__footer">
+        <button type="button" class="secondary-button" @click="closeTransitionForm">
+          <NIcon :size="20" aria-hidden="true"><Refresh /></NIcon>
+          {{ t('common.cancel') }}
+        </button>
+        <button type="submit" form="lifecycle-transition-form" class="primary-button"
+          :disabled="busy || !canSaveTransition || !hasBasePermission('lifecycle', 'edit')">
+          <NIcon :size="20" aria-hidden="true"><SaveOutline /></NIcon>
           {{ busy ? t('common.saving') : t('common.save') }}
         </button>
       </footer>

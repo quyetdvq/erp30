@@ -481,9 +481,15 @@ onMounted(() => {
       </form>
       <footer class="modal-card__footer">
         <button type="button" class="secondary-button" @click="modalOpen = false">
+          <NIcon :size="16">
+            <Refresh />
+          </NIcon>
           {{ t('common.cancel') }}
         </button>
         <button type="submit" form="resource-form" class="primary-button" :disabled="busy">
+          <NIcon :size="16">
+            <SaveOutline />
+          </NIcon>
           {{ busy ? t('common.saving') : t('common.save') }}
         </button>
       </footer>

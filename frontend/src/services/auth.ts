@@ -8,6 +8,8 @@ type ApiEnvelope<T> = {
 export type AuthUser = {
   id: number
   username: string
+  name: string | null
+  has_avatar: boolean
   email: string | null
   active: boolean
   status: string | null
@@ -22,7 +24,7 @@ type AuthPayload = {
 function userFromResponse(response: { data: ApiEnvelope<AuthPayload> }): AuthUser {
   const user = response.data.data.user
   if (!user) throw new Error('Authenticated response did not include a user.')
-  return user
+  return { ...user, name: user.name ?? null, has_avatar: user.has_avatar === true }
 }
 
 export async function login(payload: {
@@ -51,6 +53,7 @@ export async function getCurrentUser(): Promise<AuthUser> {
 export async function updateProfile(payload: {
   username: string
   email: string
+  name?: string
   password?: string
 }): Promise<AuthUser> {
   const response = await apiClient.patch<ApiEnvelope<AuthPayload>>('/api/v1/auth/profile', payload)

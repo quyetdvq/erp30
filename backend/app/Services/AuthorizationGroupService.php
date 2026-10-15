@@ -95,6 +95,25 @@ final class AuthorizationGroupService
         return $this->identity()->setGroupMembership((string) $group['code'], $userId, $assign, $operation);
     }
 
+    /**
+     * Validate an admin's visibility and assignment capability for a requested
+     * group. The lock variant is invoked only inside the User create transaction.
+     * It prevents concurrent inactivation while the membership is committed.
+     */
+    public function assertAssignableForUserCreation(int $groupId, OperationContext $operation, bool $lock = false): void
+    {
+        $groupId = PositiveId::normalize($groupId, 'group_id', self::ERROR_NOT_FOUND);
+        $group = $lock ? $this->repo()->findForUpdate($groupId) : $this->repo()->find($groupId);
+        if ($group === null) {
+            throw new DomainException(self::ERROR_NOT_FOUND, ['group_id' => $groupId]);
+        }
+        $this->authorize($operation, 'view', $group);
+        $this->authorize($operation, 'assign_member', $group);
+        if (($group['status'] ?? null) !== 'ACTIVE') {
+            throw new DomainException(self::ERROR_INACTIVE, ['group_id' => $groupId]);
+        }
+    }
+
     /** @param list<mixed> $resourceActionIds */
     public function replacePermissions(int $groupId, array $resourceActionIds, ?OperationContext $operation = null): bool
     {
