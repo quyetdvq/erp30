@@ -15,6 +15,7 @@ use App\Services\EmployeeService;
 use App\Services\PositionService;
 use CodeIgniter\Test\CIUnitTestCase;
 use CodeIgniter\Test\DatabaseTestTrait;
+use Tests\Support\Database\WorkflowLifecycleFixture;
 
 /** @internal */
 final class P1Api020EmployeeStructureTest extends CIUnitTestCase
@@ -22,6 +23,12 @@ final class P1Api020EmployeeStructureTest extends CIUnitTestCase
     use DatabaseTestTrait;
 
     protected $namespace = null;
+
+    protected function setUp(): void
+    {
+        parent::setUp();
+        WorkflowLifecycleFixture::bind($this->db, ['department', 'position', 'employee']);
+    }
 
     public function testDepartmentCrudAndHierarchyCycleProtection(): void
     {

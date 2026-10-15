@@ -46,11 +46,10 @@ final class BusinessWorkflowWriteBoundary
 
     private static function isLifecycleBound(string $resource, ConnectionInterface $db): bool
     {
-        if (ResourceNativeStateCatalog::isIndependent($resource)) {
-            return false;
-        }
-        $row = $db->table('resources')->select('lifecycle_id')
-            ->where('type', $resource)->get()->getRowArray();
-        return $row !== null && ($row['lifecycle_id'] ?? null) !== null;
+        // Use the same authoritative Resource validation as the rest of the
+        // Workflow engine. A missing catalog entry must never be interpreted
+        // as a legitimate unbound Resource (fail open), and the ten native
+        // exceptions must not carry a Lifecycle association.
+        return (new ResourceWorkflowStateResolver($db))->lifecycleId($resource) !== null;
     }
 }

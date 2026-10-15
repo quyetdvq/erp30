@@ -6,8 +6,10 @@ use App\Exceptions\DomainException;
 use App\Infrastructure\Lock\DomainLockService;
 use App\Repositories\OrganizationRepository;
 use App\Services\OrganizationService;
+use App\Services\ResourceWorkflowStateResolver;
 use CodeIgniter\Test\CIUnitTestCase;
 use CodeIgniter\Test\DatabaseTestTrait;
+use Tests\Support\Database\WorkflowLifecycleFixture;
 
 /** @internal */
 final class P1Org002OrganizationServiceTest extends CIUnitTestCase
@@ -15,6 +17,12 @@ final class P1Org002OrganizationServiceTest extends CIUnitTestCase
     use DatabaseTestTrait;
 
     protected $namespace = null;
+
+    protected function setUp(): void
+    {
+        parent::setUp();
+        WorkflowLifecycleFixture::bind($this->db, ['organization']);
+    }
 
     public function testValidHierarchyAncestorChainAndCompanyResolution(): void
     {
@@ -78,8 +86,13 @@ final class P1Org002OrganizationServiceTest extends CIUnitTestCase
             $this->assertSame(OrganizationService::ERROR_HIERARCHY_CYCLE, $exception->getErrorCode());
         }
 
-        $this->assertTrue($service->inactivate($branchId));
-        $this->assertSame('INACTIVE', (new OrganizationRepository($this->db))->find($branchId)['status']);
+        try {
+            $service->inactivate($branchId);
+            $this->fail('Direct State changes must use a Lifecycle Transition.');
+        } catch (DomainException $exception) {
+            $this->assertSame(ResourceWorkflowStateResolver::ERROR_TRANSITION_REQUIRED, $exception->getErrorCode());
+        }
+        $this->assertSame('DRAFT', (new OrganizationRepository($this->db))->find($branchId)['status']);
     }
 
     public function testHierarchyMutationUsesOrganizationTreeLock(): void
@@ -188,7 +201,7 @@ final class P1Org002OrganizationServiceTest extends CIUnitTestCase
             'type' => $type,
             'code' => 'ORG-SVC-' . $type . '-' . uniqid(),
             'name' => $type . ' Organization',
-            'status' => 'ACTIVE',
+            'status' => 'DRAFT',
             'created_at' => '2026-10-05 00:00:00',
         ];
     }

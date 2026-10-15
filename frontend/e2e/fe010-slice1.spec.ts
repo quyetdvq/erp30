@@ -209,14 +209,24 @@ test('Organization tree, parent matrix, contacts history, and accessibility', as
     .last()
     .click()
   await contactRegion.getByRole('button', { name: 'Sửa liên hệ' }).click()
-  await page.locator('.modal-card input').first().fill('Alice Updated')
-  await page.getByRole('button', { name: 'Lưu' }).click()
+  const contactForm = page.getByRole('dialog', { name: 'Sửa liên hệ' })
+  await contactForm.getByRole('textbox', { name: 'Tên liên hệ' }).fill('Alice Updated')
+  const saveContactButton = contactForm.getByRole('button', { name: 'Lưu' })
+  // The legacy contact mock has no address: saving must remain blocked until it is entered.
+  await expect(saveContactButton).toBeDisabled()
+  await contactForm.getByRole('textbox', { name: 'Địa chỉ' }).fill('12 Nguyen Hue')
+  await expect(saveContactButton).toBeEnabled()
+  await saveContactButton.click()
   await expect.poll(() => contactUpdateBody.value).not.toBeNull()
   expect(contactUpdateBody.value).not.toHaveProperty('contact_type')
   expect(contactUpdateBody.value).not.toHaveProperty('contact_ref_id')
   // Contact PATCH cannot change status; state mutations use set-state.
   expect(contactUpdateBody.value).not.toHaveProperty('status')
-  expect(contactUpdateBody.value).toMatchObject({ name: 'Alice Updated' })
+  expect(contactUpdateBody.value).toMatchObject({
+    name: 'Alice Updated',
+    phone: '0900',
+    address: '12 Nguyen Hue',
+  })
   await contactRegion
     .getByRole('tab', { name: 'Lịch sử' })
     .evaluate((element) => (element as HTMLElement).click())

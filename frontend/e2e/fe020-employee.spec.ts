@@ -223,7 +223,16 @@ test('Employee structure routes expose hierarchy, canonical gender, tabs, and as
   await expect(employeeDetail.getByText('Mã nhân viên', { exact: true })).toBeVisible()
   await page.getByRole('tab', { name: 'Tổng quan' }).click()
   await expect(page.getByText('Chưa khai báo / Not specified', { exact: true })).toBeVisible()
-  await page.getByRole('button', { name: 'Sửa' }).last().click()
+  // Audit the detail dialog while it is still mounted and visible.
+  const accessibility = await new AxeBuilder({ page }).include('.employee-detail-modal').analyze()
+  expect(accessibility.violations).toEqual([])
+  await employeeDetail.getByRole('button', { name: 'Đóng', exact: true }).last().click()
+  await expect(employeeDetail).not.toBeVisible()
+
+  const employeeRow = page.getByRole('row').filter({
+    has: page.getByRole('cell', { name: 'E-01', exact: true }),
+  })
+  await employeeRow.getByRole('button', { name: 'Sửa' }).click()
   const gender = page.getByRole('dialog', { name: 'Biểu mẫu nhân viên' }).locator('select').first()
   await expect(gender.locator('option')).toHaveText([
     'Chưa khai báo / Not specified',
@@ -235,8 +244,6 @@ test('Employee structure routes expose hierarchy, canonical gender, tabs, and as
     .getByRole('dialog', { name: 'Biểu mẫu nhân viên' })
     .getByRole('button', { name: 'Đóng' })
     .click()
-  const accessibility = await new AxeBuilder({ page }).include('.employee-detail-modal').analyze()
-  expect(accessibility.violations).toEqual([])
 })
 
 test('Employee structure keeps 403 list errors visible', async ({ page }) => {

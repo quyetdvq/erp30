@@ -391,7 +391,7 @@ onMounted(async () => {
       <header class="modal-card__header">
          
           <h2 class="modal-card-title">
-            <NIcon :size="24"> <PeopleOutline /> </NIcon>
+            <NIcon :size="24" aria-hidden="true"> <PeopleOutline /> </NIcon>
             
             {{ selected.employee_name }} - 
             {{ selected.employee_code }} - 
@@ -519,7 +519,7 @@ onMounted(async () => {
 
       <footer class="modal-card__footer">
         <button type="button" class="secondary-button" @click="employeeDetailOpen = false">
-          <NIcon :size="20">
+          <NIcon :size="20" aria-hidden="true">
             <Refresh />
           </NIcon>
           {{ t('common.close') }}

@@ -142,12 +142,8 @@ onMounted(() => void load())
       <h1>{{ t('workflow.statesTitle') }}</h1>
       <p>{{ t('workflow.statesDescription') }}</p>
     </div>
-    <button
-      v-if="hasBasePermission('workflow_state', 'create')"
-      type="button"
-      class="primary-button"
-      @click="openCreate"
-    >
+    <button v-if="hasBasePermission('workflow_state', 'create')" type="button" class="primary-button"
+      @click="openCreate">
       ＋ {{ t('common.create') }}
     </button>
   </div>
@@ -159,115 +155,78 @@ onMounted(() => void load())
       </button>
     </div>
     <p v-if="error" class="inline-error" role="alert">{{ errorMessage }}</p>
-    <ListShell
-      :initial-loading="state.isInitialLoading.value"
-      :refreshing="state.isBackgroundRefreshing.value"
-      :has-data="state.queryState.hasData.value"
-      :empty-dataset="state.isEmptyDataset.value"
-      :empty-filtered-result="state.isEmptyFilteredResult.value"
-      :error="state.queryState.error.value"
-      :retryable="true"
-      @retry="void load()"
-    >
-      <ListTable
-        :busy="state.isBackgroundRefreshing.value"
-        :rows="state.rows.value"
-        :columns="columns"
-        :sort="state.query.sort"
-        @sort-change="
+    <ListShell :initial-loading="state.isInitialLoading.value" :refreshing="state.isBackgroundRefreshing.value"
+      :has-data="state.queryState.hasData.value" :empty-dataset="state.isEmptyDataset.value"
+      :empty-filtered-result="state.isEmptyFilteredResult.value" :error="state.queryState.error.value" :retryable="true"
+      @retry="void load()">
+      <ListTable :busy="state.isBackgroundRefreshing.value" :rows="state.rows.value" :columns="columns"
+        :sort="state.query.sort" @sort-change="
           (sort) => {
             state.setSort(sort)
             void load()
           }
-        "
-      >
+        ">
         <template #cell-actions="{ row }">
-          <TableRowActions
-            :active="row.status === 'ACTIVE'"
-            :busy="busy"
-            :show-view="false"
-            :show-edit="true"
-            :show-toggle="true"
-            edit-permission="workflow_state.edit"
-            toggle-permission="workflow_state.setstate"
-            :edit-label="t('common.edit')"
-            :activate-label="t('common.activate')"
-            :deactivate-label="t('common.deactivate')"
-            @edit="openEdit(row)"
-            @toggle="toggle(row)"
-          />
+          <TableRowActions :active="row.status === 'ACTIVE'" :busy="busy" :show-view="false" :show-edit="true"
+            :show-toggle="true" edit-permission="workflow_state.edit" toggle-permission="workflow_state.setstate"
+            :edit-label="t('common.edit')" :activate-label="t('common.activate')"
+            :deactivate-label="t('common.deactivate')" @edit="openEdit(row)" @toggle="toggle(row)" />
         </template>
       </ListTable>
-      <ListPagination
-        :page="state.query.page"
-        :page-size="state.query.page_size"
-        :total="state.total.value"
+      <ListPagination :page="state.query.page" :page-size="state.query.page_size" :total="state.total.value"
         @update:page="
           (page) => {
             state.setPage(page)
             void load()
           }
-        "
-        @update:page-size="
+        " @update:page-size="
           (size) => {
             state.setPageSize(size)
             void load()
           }
-        "
-      />
+        " />
     </ListShell>
   </section>
   <div v-if="modalOpen" class="modal-backdrop">
-    <section
-      class="modal-card workflow-form-modal"
-      role="dialog"
-      aria-modal="true"
-      :aria-label="t('workflow.stateForm')"
-    >
+    <section class="modal-card" role="dialog" aria-modal="true" :aria-label="t('workflow.stateForm')">
       <header class="modal-card__header">
-        <h2>{{ editingId ? t('common.edit') : t('common.create') }} {{ t('workflow.state') }}</h2>
-        <button
-          type="button"
-          class="icon-button"
-          :aria-label="t('common.close')"
-          @click="closeForm"
-        >
-          ×
+        <h2 class="modal-card-title">
+          <NIcon :size="24">
+            <FlagOutline />
+          </NIcon>
+          {{ editingId ? t('common.edit') : t('common.create') }} {{ t('workflow.state') }}
+        </h2>
+        <button type="button" class="modal-card-button-close" :aria-label="t('common.close')" @click="closeForm">
+
         </button>
       </header>
-      <form class="modal-card__body" @submit.prevent="save">
-        <label
-          ><span>{{ t('workflow.code') }}</span
-          ><input v-model="form.code" required
-        /></label>
-        <label
-          ><span>{{ t('workflow.name') }}</span
-          ><input v-model="form.name" required
-        /></label>
-        <label
-          ><span>{{ t('workflow.description') }}</span
-          ><textarea v-model="form.description" rows="3" />
+      <form class="modal-card__body" id="workflow-form" @submit.prevent="save">
+        <label><span>{{ t('workflow.code') }}</span><input v-model="form.code" required /></label>
+        <label><span>{{ t('workflow.name') }}</span><input v-model="form.name" required /></label>
+        <label><span>{{ t('workflow.description') }}</span><textarea v-model="form.description" rows="3" />
         </label>
-        <label
-          ><span>{{ t('workflow.status') }}</span
-          ><select v-model="form.status">
+        <label><span>{{ t('workflow.status') }}</span><select v-model="form.status">
             <option value="ACTIVE">{{ t('status.active') }}</option>
             <option value="INACTIVE">{{ t('status.inactive') }}</option>
-          </select></label
-        >
-        <footer class="modal-card__footer">
-          <button type="button" class="secondary-button" @click="closeForm">
-            {{ t('common.cancel') }}
-          </button>
-          <button
-            type="submit"
-            class="primary-button"
-            :disabled="busy || !hasBasePermission('workflow_state', editingId ? 'edit' : 'create')"
-          >
-            {{ busy ? t('common.saving') : t('common.save') }}
-          </button>
-        </footer>
+          </select></label>
+
       </form>
+
+      <footer class="modal-card__footer">
+        <button type="button" class="secondary-button" @click="closeForm">
+          <NIcon :size="16">
+            <Refresh />
+          </NIcon>
+          {{ t('common.cancel') }}
+        </button>
+        <button type="submit" class="primary-button" form="workflow-form"
+          :disabled="busy || !hasBasePermission('workflow_state', editingId ? 'edit' : 'create')">
+          <NIcon :size="16">
+            <SaveOutline />
+          </NIcon>
+          {{ busy ? t('common.saving') : t('common.save') }}
+        </button>
+      </footer>
     </section>
   </div>
 </template>
@@ -278,6 +237,7 @@ onMounted(() => void load())
   gap: 14px;
   padding: 18px 20px 20px;
 }
+
 .workflow-toolbar {
   display: flex;
   align-items: end;
@@ -285,20 +245,13 @@ onMounted(() => void load())
   gap: 10px;
   flex-wrap: wrap;
 }
+
 .inline-error {
   margin: 0;
   color: #b64444;
   font-size: 12px;
 }
-.modal-backdrop {
-  position: fixed;
-  inset: 0;
-  z-index: 40;
-  display: grid;
-  place-items: center;
-  padding: 20px;
-  background: rgb(18 38 54 / 45%);
-}
+
 .modal-card {
   width: min(100%, 680px);
   max-height: calc(100vh - 40px);
@@ -307,22 +260,8 @@ onMounted(() => void load())
   background: #fff;
   box-shadow: 0 20px 60px rgb(18 42 62 / 24%);
 }
-.modal-card__header,
-.modal-card__footer {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-  padding: 16px 22px;
-  border-bottom: 1px solid #e4ebef;
-}
-.modal-card__body {
-  display: grid;
-  gap: 12px;
-  max-height: calc(100vh - 170px);
-  overflow: auto;
-  padding: 22px;
-}
+
+
 .modal-card__body label {
   display: grid;
   gap: 5px;
@@ -330,6 +269,7 @@ onMounted(() => void load())
   font-size: 12px;
   font-weight: 600;
 }
+
 .modal-card__body input,
 .modal-card__body select,
 .modal-card__body textarea {
@@ -339,29 +279,5 @@ onMounted(() => void load())
   padding: 7px 9px;
   color: #183b57;
   font: inherit;
-}
-.modal-card__footer {
-  justify-content: flex-end;
-  margin: 0;
-  padding: 14px 22px 18px;
-  border-top: 1px solid #e4ebef;
-  border-bottom: 0;
-}
-.workflow-form-modal .modal-card__body .modal-card__footer {
-  margin: 4px -22px -22px;
-  padding: 14px 22px 0;
-}
-.icon-button {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 32px;
-  height: 32px;
-  padding: 0;
-  border: 0;
-  background: transparent;
-  color: #536b7b;
-  font-size: 22px;
-  cursor: pointer;
 }
 </style>

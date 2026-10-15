@@ -29,6 +29,12 @@ import {
   TrashOutline,
   Refresh,
   AddCircleOutline,
+  KeyOutline,
+  BanOutline,
+  ContractOutline,
+  RepeatOutline,
+  FlagOutline,
+  QrCodeOutline,
 } from '@vicons/ionicons5'
 
 const globalIcons = {
@@ -55,6 +61,12 @@ const globalIcons = {
   TrashOutline,
   Refresh,
   AddCircleOutline,
+  KeyOutline,
+  BanOutline,
+  ContractOutline,
+  RepeatOutline,
+  FlagOutline,
+  QrCodeOutline,
 }
 
 import App from './App.vue'

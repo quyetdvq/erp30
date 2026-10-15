@@ -73,9 +73,9 @@ final class ResourceWorkflowStateResolver
     {
         $resource = $this->resource($type);
         $value = $resource['lifecycle_id'] ?? null;
-        // Mandatory Lifecycle-independent resources use native State or are
-        // stateless; other Resources (including owner-aware Contact kinds) may
-        // optionally opt into a Lifecycle.
+        // Only the ten independent Resources use native State/All States.
+        // An unbound business Resource still has a legacy compatibility path;
+        // it is NOT a new native exception. Audit and migrate such bindings.
         if (ResourceNativeStateCatalog::isIndependent($type)) {
             if ($value !== null) {
                 throw new DomainException(self::ERROR_LIFECYCLE_SELF_REFERENCE, ['resource' => $type]);

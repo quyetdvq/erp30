@@ -147,12 +147,13 @@ final class P1Api090ContractRegressionTest extends CIUnitTestCase
         $this->assertDoesNotMatchRegularExpression('#/export(?:[\'"\s])#i', $routes);
         $this->assertDoesNotMatchRegularExpression('#price[-_]?resolution|resolvePrice#i', $routes . "\n" . $openapi);
         $this->assertDoesNotMatchRegularExpression('#preview[-_]?combo|combo[-_]?preview#i', $routes . "\n" . $openapi);
-        // Increment API lookups are explicitly scoped to the approved Product
-        // selectors. Continue rejecting any other unapproved selector surface.
+        // Only the approved Product selectors and the Business Workflow
+        // transition-options endpoint may expose options/selector paths.
         preg_match_all('#^  (/api/v1/[^\r\n:]*(?:selector|options)[^\r\n:]*):#im', $openapi, $optionPaths);
         $actual = $optionPaths[1];
         sort($actual);
         $approved = [
+            '/api/v1/business-workflow/{resource}/{id}/options',
             '/api/v1/products/options',
             '/api/v1/products/options/resolve',
             '/api/v1/products/sales-uom-options/resolve',

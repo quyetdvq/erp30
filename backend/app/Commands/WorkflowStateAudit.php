@@ -28,15 +28,34 @@ final class WorkflowStateAudit extends BaseCommand
     public function run(array $params)
     {
         $db = db_connect();
+        // Audit ALL registered Resources, not just those already bound to a
+        // Lifecycle. Otherwise missing bindings are invisible to operators.
         $resources = $db->table('resources')
             ->select('id, type, lifecycle_id')
-            ->where('lifecycle_id IS NOT NULL', null, false)
             ->orderBy('type', 'ASC')->get()->getResultArray();
         CLI::write('Lifecycle authority audit (READ ONLY)');
         $failures = 0;
+        $bound = 0;
+        $native = 0;
         foreach ($resources as $resource) {
             $type = strtolower(trim((string) $resource['type']));
-            $lifecycleId = (int) $resource['lifecycle_id'];
+            $independent = ResourceNativeStateCatalog::isIndependent($type);
+            $lifecycleId = $resource['lifecycle_id'] === null ? null : (int) $resource['lifecycle_id'];
+            if ($lifecycleId === null) {
+                if ($independent) {
+                    $native++;
+                } else {
+                    $failures++;
+                }
+                CLI::write(sprintf(
+                    '[%s] %s (resource_id=%d) -> %s; issues=%s',
+                    $independent ? 'OK' : 'BLOCKED', $type, (int) $resource['id'],
+                    $independent ? 'native / All States' : 'Lifecycle not configured',
+                    $independent ? '(none)' : 'LIFECYCLE_NOT_CONFIGURED',
+                ), $independent ? 'green' : 'yellow');
+                continue;
+            }
+            $bound++;
             $lifecycle = $db->table('lifecycles')->where('id', $lifecycleId)->get()->getRowArray();
             $members = $db->table('lifecycle_states ls')
                 ->select('ls.is_initial, ws.code, ws.status AS state_status')
@@ -46,7 +65,7 @@ final class WorkflowStateAudit extends BaseCommand
             $initials = [];
             $codes = [];
             $issues = [];
-            if (ResourceNativeStateCatalog::isIndependent($type)) {
+            if ($independent) {
                 $issues[] = 'INDEPENDENT_RESOURCE_HAS_LIFECYCLE';
             }
             if ($lifecycle === null || ($lifecycle['status'] ?? null) !== 'ACTIVE') {
@@ -109,6 +128,9 @@ final class WorkflowStateAudit extends BaseCommand
                 $policies, implode(',', array_unique($issues)) ?: '(none)',
             ), $issues === [] ? 'green' : 'yellow');
         }
-        CLI::write(sprintf('Audited: %d bound resources; blocked: %d. No database changes.', count($resources), $failures));
+        CLI::write(sprintf(
+            'Audited: %d resources (%d Lifecycle-bound, %d native/unbound); blocked: %d. No database changes.',
+            count($resources), $bound, $native, $failures,
+        ));
     }
 }

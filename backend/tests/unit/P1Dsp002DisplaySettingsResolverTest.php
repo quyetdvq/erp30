@@ -11,6 +11,7 @@ use App\Services\OrganizationService;
 use CodeIgniter\Settings\Settings;
 use CodeIgniter\Test\CIUnitTestCase;
 use CodeIgniter\Test\DatabaseTestTrait;
+use Tests\Support\Database\WorkflowLifecycleFixture;
 
 /** @internal */
 final class P1Dsp002DisplaySettingsResolverTest extends CIUnitTestCase
@@ -18,6 +19,12 @@ final class P1Dsp002DisplaySettingsResolverTest extends CIUnitTestCase
     use DatabaseTestTrait;
 
     protected $namespace = null;
+
+    protected function setUp(): void
+    {
+        parent::setUp();
+        WorkflowLifecycleFixture::bind($this->db, ['organization']);
+    }
 
     public function testNearestOrganizationPathOverrideWinsThenFallsBackThroughGroupSystemAndDefault(): void
     {
@@ -187,7 +194,7 @@ final class P1Dsp002DisplaySettingsResolverTest extends CIUnitTestCase
             'type' => $type,
             'code' => 'DSP002-' . $type . '-' . uniqid(),
             'name' => $type . ' Display Settings Organization',
-            'status' => 'ACTIVE',
+            'status' => 'DRAFT',
             'created_at' => '2026-10-07 00:00:00',
         ];
     }

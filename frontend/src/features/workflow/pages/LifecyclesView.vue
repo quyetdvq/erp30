@@ -119,7 +119,7 @@ const duplicateTransition = computed(() =>
     (item) =>
       String(item.from_state_id) === transitionForm.value.from_state_id &&
       item.action_code.trim().toLowerCase() ===
-        transitionForm.value.action_code.trim().toLowerCase(),
+      transitionForm.value.action_code.trim().toLowerCase(),
   ),
 )
 
@@ -327,12 +327,7 @@ onMounted(() => void load())
       <h1>{{ t('workflow.lifecyclesTitle') }}</h1>
       <p>{{ t('workflow.lifecyclesDescription') }}</p>
     </div>
-    <button
-      v-if="hasBasePermission('lifecycle', 'create')"
-      type="button"
-      class="primary-button"
-      @click="openCreate"
-    >
+    <button v-if="hasBasePermission('lifecycle', 'create')" type="button" class="primary-button" @click="openCreate">
       ＋ {{ t('common.create') }}
     </button>
   </div>
@@ -344,119 +339,70 @@ onMounted(() => void load())
         ↻ {{ t('common.refresh') }}
       </button>
     </div>
-    <ListShell
-      :initial-loading="state.isInitialLoading.value"
-      :refreshing="state.isBackgroundRefreshing.value"
-      :has-data="state.queryState.hasData.value"
-      :empty-dataset="state.isEmptyDataset.value"
-      :empty-filtered-result="state.isEmptyFilteredResult.value"
-      :error="state.queryState.error.value"
-    >
-      <ListTable
-        :rows="state.rows.value"
-        :columns="columns"
-        :sort="state.query.sort"
-        @sort-change="
-          (sort) => {
-            state.setSort(sort)
-            void load()
-          }
-        "
-      >
+    <ListShell :initial-loading="state.isInitialLoading.value" :refreshing="state.isBackgroundRefreshing.value"
+      :has-data="state.queryState.hasData.value" :empty-dataset="state.isEmptyDataset.value"
+      :empty-filtered-result="state.isEmptyFilteredResult.value" :error="state.queryState.error.value">
+      <ListTable :rows="state.rows.value" :columns="columns" :sort="state.query.sort" @sort-change="
+        (sort) => {
+          state.setSort(sort)
+          void load()
+        }
+      ">
         <template #cell-actions="{ row }">
-          <TableRowActions
-            :active="row.status === 'ACTIVE'"
-            :busy="busy"
-            :show-view="true"
-            :show-edit="true"
-            :show-toggle="true"
-            view-permission="lifecycle.view"
-            edit-permission="lifecycle.edit"
-            toggle-permission="lifecycle.setstate"
-            :view-label="t('common.view')"
-            :edit-label="t('common.edit')"
-            :activate-label="t('common.activate')"
-            :deactivate-label="t('common.deactivate')"
-            @view="selectLifecycle(row)"
-            @edit="openEdit(row)"
-            @toggle="toggle(row)"
-          />
+          <TableRowActions :active="row.status === 'ACTIVE'" :busy="busy" :show-view="true" :show-edit="true"
+            :show-toggle="true" view-permission="lifecycle.view" edit-permission="lifecycle.edit"
+            toggle-permission="lifecycle.setstate" :view-label="t('common.view')" :edit-label="t('common.edit')"
+            :activate-label="t('common.activate')" :deactivate-label="t('common.deactivate')"
+            @view="selectLifecycle(row)" @edit="openEdit(row)" @toggle="toggle(row)" />
         </template>
       </ListTable>
-      <ListPagination
-        :page="state.query.page"
-        :page-size="state.query.page_size"
-        :total="state.total.value"
+      <ListPagination :page="state.query.page" :page-size="state.query.page_size" :total="state.total.value"
         @update:page="
           (page) => {
             state.setPage(page)
             void load()
           }
-        "
-        @update:page-size="
+        " @update:page-size="
           (size) => {
             state.setPageSize(size)
             void load()
           }
-        "
-      />
+        " />
     </ListShell>
   </section>
 
   <div v-if="detailOpen && selected" class="modal-backdrop">
-    <section
-      class="modal-card modal-card--wide lifecycle-detail-modal"
-      role="dialog"
-      aria-modal="true"
-      aria-labelledby="lifecycle-detail-title"
-    >
-      <header class="modal-card__header lifecycle-detail-modal__header">
-        <div class="lifecycle-detail-modal__identity">
-          <h2 id="lifecycle-detail-title">{{ selected.name }}</h2>
-          <small
-            ><code>{{ selected.code }}</code> · {{ t('workflow.status') }}:
-            {{ t(`status.${selected.status.toLowerCase()}`) }}</small
-          >
-        </div>
-        <button
-          type="button"
-          class="icon-button"
-          :aria-label="t('common.close')"
-          @click="detailOpen = false"
-        >
-          ×
+    <section class="modal-card" role="dialog" aria-modal="true" aria-labelledby="lifecycle-detail-title">
+      <header class="modal-card__header">
+        
+        <h2 class="modal-card-title">
+          <NIcon :size="24"> <RepeatOutline /> </NIcon>
+          {{ selected.name }}
+        </h2>
+        <small><code>{{ selected.code }}</code> · {{ t('workflow.status') }}:
+          {{ t(`status.${selected.status.toLowerCase()}`) }}</small>
+
+        <button type="button" class="modal-card-button-close" :aria-label="t('common.close')"
+          @click="detailOpen = false">
         </button>
       </header>
+
+
       <nav class="workflow-tabs" :aria-label="t('workflow.tabsLabel')" role="tablist">
-        <button
-          type="button"
-          role="tab"
-          :aria-selected="tab === 'overview'"
-          :class="{ active: tab === 'overview' }"
-          @click="tab = 'overview'"
-        >
+        <button type="button" role="tab" :aria-selected="tab === 'overview'" :class="{ active: tab === 'overview' }"
+          @click="tab = 'overview'">
           {{ t('workflow.tabs.overview') }}
         </button>
-        <button
-          type="button"
-          role="tab"
-          :aria-selected="tab === 'states'"
-          :class="{ active: tab === 'states' }"
-          @click="tab = 'states'"
-        >
+        <button type="button" role="tab" :aria-selected="tab === 'states'" :class="{ active: tab === 'states' }"
+          @click="tab = 'states'">
           {{ t('workflow.tabs.states') }}
         </button>
-        <button
-          type="button"
-          role="tab"
-          :aria-selected="tab === 'transitions'"
-          :class="{ active: tab === 'transitions' }"
-          @click="tab = 'transitions'"
-        >
+        <button type="button" role="tab" :aria-selected="tab === 'transitions'"
+          :class="{ active: tab === 'transitions' }" @click="tab = 'transitions'">
           {{ t('workflow.tabs.transitions') }}
         </button>
       </nav>
-      <div class="modal-card__body lifecycle-detail-modal__content">
+      <div class="modal-card__body">
         <p v-if="detailError" class="inline-error" role="alert">{{ errorMessage(detailError) }}</p>
         <div v-if="detailBusy" class="workflow-detail-state" role="status">
           {{ t('list.loading') }}
@@ -490,13 +436,8 @@ onMounted(() => void load())
         <div v-else-if="tab === 'states'" class="workflow-tab-content">
           <div class="workflow-tab-toolbar">
             <p>{{ t('workflow.statesMembershipNote') }}</p>
-            <button
-              v-if="hasBasePermission('lifecycle', 'edit')"
-              type="button"
-              class="primary-button"
-              :disabled="availableStates.length === 0"
-              @click="openStateCreate"
-            >
+            <button v-if="hasBasePermission('lifecycle', 'edit')" type="button" class="primary-button"
+              :disabled="availableStates.length === 0" @click="openStateCreate">
               ＋ {{ t('workflow.addState') }}
             </button>
           </div>
@@ -522,20 +463,17 @@ onMounted(() => void load())
                 <td>{{ flag(membership.is_initial) ? t('workflow.yes') : t('workflow.no') }}</td>
                 <td>{{ flag(membership.is_final) ? t('workflow.yes') : t('workflow.no') }}</td>
                 <td>
-                  <span
-                    :class="[
-                      'state-note',
-                      {
-                        'state-note--inactive':
-                          stateById.get(String(membership.state_id))?.status !== 'ACTIVE',
-                      },
-                    ]"
-                    >{{
+                  <span :class="[
+                    'state-note',
+                    {
+                      'state-note--inactive':
+                        stateById.get(String(membership.state_id))?.status !== 'ACTIVE',
+                    },
+                  ]">{{
                       stateById.get(String(membership.state_id))?.status === 'ACTIVE'
                         ? t('status.active')
                         : t('status.inactive')
-                    }}</span
-                  >
+                    }}</span>
                 </td>
               </tr>
               <tr v-if="lifecycleStates.length === 0">
@@ -547,13 +485,8 @@ onMounted(() => void load())
         <div v-else class="workflow-tab-content">
           <div class="workflow-tab-toolbar">
             <p>{{ t('workflow.transitionsNote') }}</p>
-            <button
-              v-if="hasBasePermission('lifecycle', 'edit')"
-              type="button"
-              class="primary-button"
-              :disabled="memberStateOptions.length < 1"
-              @click="openTransitionCreate"
-            >
+            <button v-if="hasBasePermission('lifecycle', 'edit')" type="button" class="primary-button"
+              :disabled="memberStateOptions.length < 1" @click="openTransitionCreate">
               ＋ {{ t('workflow.addTransition') }}
             </button>
           </div>
@@ -591,6 +524,9 @@ onMounted(() => void load())
       </div>
       <footer class="modal-card__footer">
         <button type="button" class="secondary-button" @click="detailOpen = false">
+          <NIcon :size="20">
+            <Refresh />
+          </NIcon>
           {{ t('common.close') }}
         </button>
       </footer>
@@ -598,190 +534,45 @@ onMounted(() => void load())
   </div>
 
   <div v-if="modalOpen" class="modal-backdrop">
-    <section
-      class="modal-card workflow-form-modal"
-      role="dialog"
-      aria-modal="true"
-      :aria-label="t('workflow.lifecycleForm')"
-    >
+    <section class="modal-card" role="dialog" aria-modal="true" :aria-label="t('workflow.lifecycleForm')">
       <header class="modal-card__header">
-        <h2>
+        <h2 class="modal-card-title">
+          <NIcon :size="24">
+            <ContractOutline />
+          </NIcon>
           {{ editingId ? t('common.edit') : t('common.create') }} {{ t('workflow.lifecycle') }}
         </h2>
-        <button
-          type="button"
-          class="icon-button"
-          :aria-label="t('common.close')"
-          @click="closeForm"
-        >
-          ×
+        <button type="button" class="modal-card-button-close" :aria-label="t('common.close')" @click="closeForm">
         </button>
       </header>
-      <form class="modal-card__body" @submit.prevent="save">
-        <label
-          ><span>{{ t('workflow.code') }}</span
-          ><input v-model="form.code" required /></label
-        ><label
-          ><span>{{ t('workflow.name') }}</span
-          ><input v-model="form.name" required /></label
-        ><label
-          ><span>{{ t('workflow.description') }}</span
-          ><textarea v-model="form.description" rows="3" /></label
-        ><label
-          ><span>{{ t('workflow.status') }}</span
-          ><select v-model="form.status">
+      <form class="modal-card__body" id="lifecycle-form" @submit.prevent="save">
+        <label><span>{{ t('workflow.code') }}</span><input v-model="form.code" required /></label><label><span>{{
+          t('workflow.name') }}</span><input v-model="form.name" required /></label><label><span>{{
+              t('workflow.description') }}</span><textarea v-model="form.description" rows="3" /></label><label><span>{{
+              t('workflow.status') }}</span><select v-model="form.status">
             <option value="ACTIVE">{{ t('status.active') }}</option>
             <option value="INACTIVE">{{ t('status.inactive') }}</option>
-          </select></label
-        >
-        <footer class="modal-card__footer">
-          <button type="button" class="secondary-button" @click="closeForm">
-            {{ t('common.cancel') }}</button
-          ><button
-            type="submit"
-            class="primary-button"
-            :disabled="busy || !hasBasePermission('lifecycle', editingId ? 'edit' : 'create')"
-          >
-            {{ busy ? t('common.saving') : t('common.save') }}
-          </button>
-        </footer>
+          </select></label>
+
       </form>
-    </section>
-  </div>
-  <div v-if="stateModalOpen" class="modal-backdrop">
-    <section
-      class="modal-card workflow-form-modal"
-      role="dialog"
-      aria-modal="true"
-      :aria-label="t('workflow.stateMembershipForm')"
-    >
-      <header class="modal-card__header">
-        <h2>{{ t('workflow.addState') }}</h2>
-        <button
-          type="button"
-          class="icon-button"
-          :aria-label="t('common.close')"
-          @click="closeStateForm"
-        >
-          ×
+
+      <footer class="modal-card__footer">
+        <button type="button" class="secondary-button" @click="closeForm">
+          <NIcon :size="20">
+            <Refresh />
+          </NIcon>
+          {{ t('common.cancel') }}
+        </button><button type="submit" class="primary-button" form="lifecycle-form"
+          :disabled="busy || !hasBasePermission('lifecycle', editingId ? 'edit' : 'create')">
+          <NIcon :size="20">
+            <SaveOutline />
+          </NIcon>
+          {{ busy ? t('common.saving') : t('common.save') }}
         </button>
-      </header>
-      <form class="modal-card__body" @submit.prevent="saveState">
-        <label
-          ><span>{{ t('workflow.state') }}</span
-          ><select v-model="stateForm.state_id" required>
-            <option value="" disabled>{{ t('workflow.selectState') }}</option>
-            <option v-for="item in availableStates" :key="item.id" :value="String(item.id)">
-              {{ item.name }} ({{ item.code }})
-            </option>
-          </select></label
-        ><label
-          ><span>{{ t('workflow.sequence') }}</span
-          ><input
-            v-model.number="stateForm.sequence"
-            type="number"
-            min="1"
-            step="1"
-            required /></label
-        ><label class="checkbox-field"
-          ><input
-            v-model="stateForm.is_initial"
-            type="checkbox"
-            :disabled="initialAlreadySet"
-          /><span
-            >{{ t('workflow.initial')
-            }}<small v-if="initialAlreadySet">{{ t('workflow.initialAlreadySet') }}</small></span
-          ></label
-        ><label class="checkbox-field"
-          ><input v-model="stateForm.is_final" type="checkbox" /><span>{{
-            t('workflow.final')
-          }}</span></label
-        >
-        <footer class="modal-card__footer">
-          <button type="button" class="secondary-button" @click="closeStateForm">
-            {{ t('common.cancel') }}</button
-          ><button
-            type="submit"
-            class="primary-button"
-            :disabled="busy || !hasBasePermission('lifecycle', 'edit')"
-          >
-            {{ busy ? t('common.saving') : t('common.save') }}
-          </button>
-        </footer>
-      </form>
+      </footer>
     </section>
   </div>
-  <div v-if="transitionModalOpen" class="modal-backdrop">
-    <section
-      class="modal-card workflow-form-modal"
-      role="dialog"
-      aria-modal="true"
-      :aria-label="t('workflow.transitionForm')"
-    >
-      <header class="modal-card__header">
-        <h2>{{ t('workflow.addTransition') }}</h2>
-        <button
-          type="button"
-          class="icon-button"
-          :aria-label="t('common.close')"
-          @click="closeTransitionForm"
-        >
-          ×
-        </button>
-      </header>
-      <form class="modal-card__body" @submit.prevent="saveTransition">
-        <label
-          ><span>{{ t('workflow.fromState') }}</span
-          ><select v-model="transitionForm.from_state_id" required>
-            <option value="" disabled>{{ t('workflow.selectState') }}</option>
-            <option
-              v-for="item in memberStateOptions"
-              :key="item.membership.id"
-              :value="String(item.membership.state_id)"
-            >
-              {{ item.state?.name }} ({{ item.state?.code }})
-            </option>
-          </select></label
-        ><label
-          ><span>{{ t('workflow.action') }}</span
-          ><input v-model="transitionForm.action_code" required pattern="[a-zA-Z0-9_:\-]+" /><small
-            v-if="duplicateTransition"
-            class="field-error"
-            >{{ t('workflow.duplicateTransition') }}</small
-          ></label
-        ><label
-          ><span>{{ t('workflow.toState') }}</span
-          ><select v-model="transitionForm.to_state_id" required>
-            <option value="" disabled>{{ t('workflow.selectState') }}</option>
-            <option
-              v-for="item in memberStateOptions"
-              :key="`to-${item.membership.id}`"
-              :value="String(item.membership.state_id)"
-            >
-              {{ item.state?.name }} ({{ item.state?.code }})
-            </option>
-          </select></label
-        ><label
-          ><span>{{ t('workflow.status') }}</span
-          ><select v-model="transitionForm.status">
-            <option value="ACTIVE">{{ t('status.active') }}</option>
-            <option value="INACTIVE">{{ t('status.inactive') }}</option>
-          </select></label
-        >
-        <footer class="modal-card__footer">
-          <button type="button" class="secondary-button" @click="closeTransitionForm">
-            {{ t('common.cancel') }}</button
-          ><button
-            type="submit"
-            class="primary-button"
-            :disabled="busy || duplicateTransition || !hasBasePermission('lifecycle', 'edit')"
-          >
-            {{ busy ? t('common.saving') : t('common.save') }}
-          </button>
-        </footer>
-      </form>
-    </section>
-  </div>
+
 </template>
 
 <style scoped>
@@ -790,33 +581,27 @@ onMounted(() => void load())
   gap: 14px;
   padding: 18px 20px 20px;
 }
-.workflow-toolbar,
-.workflow-tab-toolbar,
-.workflow-detail-heading,
-.lifecycle-detail-modal__header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-  flex-wrap: wrap;
-}
+
 .workflow-tab-toolbar p {
   margin: 0;
   color: #536b7b;
   font-size: 13px;
 }
+
 .inline-error,
 .field-error {
   margin: 0;
   color: #b64444;
   font-size: 12px;
 }
+
 .workflow-tabs {
   display: flex;
   gap: 24px;
   padding: 0 24px;
   border-bottom: 1px solid #dbe5ea;
 }
+
 .workflow-tabs button {
   border: 0;
   border-bottom: 2px solid transparent;
@@ -826,38 +611,45 @@ onMounted(() => void load())
   cursor: pointer;
   font: inherit;
 }
+
 .workflow-tabs button.active,
 .workflow-tabs button:focus-visible {
   border-bottom-color: #1876a8;
   color: #1876a8;
 }
+
 .workflow-overview dl {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
   gap: 12px;
   margin: 0;
 }
+
 .workflow-overview dl div {
   padding: 12px;
   border: 1px solid #e2eaee;
   border-radius: 5px;
 }
+
 .workflow-overview dt {
   color: #536b7b;
   font-size: 11px;
   font-weight: 700;
   text-transform: uppercase;
 }
+
 .workflow-overview dd {
   margin: 5px 0 0;
   color: #183b57;
 }
+
 .workflow-table {
   width: 100%;
   border-collapse: collapse;
   color: #183b57;
   font-size: 13px;
 }
+
 .workflow-table th,
 .workflow-table td {
   padding: 10px 12px;
@@ -865,61 +657,46 @@ onMounted(() => void load())
   text-align: left;
   vertical-align: middle;
 }
+
 .workflow-table th {
   color: #536b7b;
   font-size: 12px;
 }
+
 .state-note--inactive {
   color: #a23a32;
 }
+
 .checkbox-field {
   display: flex !important;
   grid-template-columns: auto 1fr;
   align-items: start;
   gap: 8px !important;
 }
+
 .checkbox-field input {
   min-height: auto !important;
   margin-top: 2px;
 }
+
 .checkbox-field small {
   display: block;
   margin-top: 3px;
   font-weight: 400;
 }
-.modal-backdrop {
-  position: fixed;
-  inset: 0;
-  z-index: 40;
-  display: grid;
-  place-items: center;
-  padding: 20px;
-  background: rgb(18 38 54 / 45%);
-}
+
 .modal-card {
   width: min(100%, 680px);
   max-height: calc(100vh - 40px);
+  display: flex;
+  flex-direction: column;
   overflow: hidden;
   border-radius: 7px;
   background: #fff;
   box-shadow: 0 20px 60px rgb(18 42 62 / 24%);
 }
-.modal-card__header,
-.modal-card__footer {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-  padding: 16px 22px;
-  border-bottom: 1px solid #e4ebef;
-}
-.modal-card__body {
-  display: grid;
-  gap: 12px;
-  max-height: calc(100vh - 170px);
-  overflow: auto;
-  padding: 22px;
-}
+
+
 .modal-card__body label {
   display: grid;
   gap: 5px;
@@ -927,6 +704,7 @@ onMounted(() => void load())
   font-size: 12px;
   font-weight: 600;
 }
+
 .modal-card__body input,
 .modal-card__body select,
 .modal-card__body textarea {
@@ -937,74 +715,9 @@ onMounted(() => void load())
   color: #183b57;
   font: inherit;
 }
-.modal-card__footer {
-  justify-content: flex-end;
-  margin: 0;
-  padding: 14px 22px 18px;
-  border-top: 1px solid #e4ebef;
-  border-bottom: 0;
-}
-.workflow-form-modal .modal-card__body .modal-card__footer {
-  margin: 4px -22px -22px;
-  padding: 14px 22px 0;
-}
-.lifecycle-detail-modal {
-  display: flex;
-  flex-direction: column;
-}
-.lifecycle-detail-modal__header {
-  flex: 0 0 auto;
-  padding: 20px 24px 16px;
-  border-bottom: 0;
-}
-.lifecycle-detail-modal__identity {
-  min-width: 0;
-}
-.lifecycle-detail-modal__identity h2 {
-  margin: 0;
-  color: #153956;
-  font-size: 20px;
-  line-height: 1.25;
-}
-.lifecycle-detail-modal__identity small {
-  display: block;
-  margin-top: 6px;
-  color: #8191a0;
-  font-size: 12px;
-}
-.lifecycle-detail-modal__content {
-  display: block;
-  padding: 0;
-  min-height: 0;
-  overflow: auto;
-}
-.lifecycle-detail-modal__content > .inline-error,
-.lifecycle-detail-modal__content > .workflow-detail-state,
-.lifecycle-detail-modal__content > .workflow-overview,
-.lifecycle-detail-modal__content > .workflow-tab-content {
-  margin-right: 24px;
-  margin-left: 24px;
-}
-.lifecycle-detail-modal__content > .inline-error {
-  margin-top: 18px;
-}
-.lifecycle-detail-modal__content > .workflow-overview,
-.lifecycle-detail-modal__content > .workflow-tab-content {
-  padding: 22px 0;
-}
-.icon-button {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 32px;
-  height: 32px;
-  padding: 0;
-  border: 0;
-  background: transparent;
-  color: #536b7b;
-  font-size: 22px;
-  cursor: pointer;
-}
+
+
+
 .sr-only {
   position: absolute;
   width: 1px;
@@ -1015,23 +728,11 @@ onMounted(() => void load())
   clip: rect(0, 0, 0, 0);
   white-space: nowrap;
 }
+
 @media (max-width: 700px) {
   .workflow-tabs {
     gap: 14px;
     padding: 0 18px;
-  }
-  .lifecycle-detail-modal__header {
-    padding-right: 18px;
-    padding-left: 18px;
-  }
-  .lifecycle-detail-modal__content > .workflow-overview,
-  .lifecycle-detail-modal__content > .workflow-tab-content {
-    margin-right: 18px;
-    margin-left: 18px;
-  }
-  .lifecycle-detail-modal .modal-card__footer {
-    padding-right: 18px;
-    padding-left: 18px;
   }
 }
 </style>

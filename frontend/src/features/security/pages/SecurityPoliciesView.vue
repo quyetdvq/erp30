@@ -284,7 +284,7 @@ onMounted(async () => {
       :aria-label="t('security.policyForm')">
       <header class="modal-card__header">
         <h2 class="modal-card-title">
-          <NIcon :size="24">
+          <NIcon :size="24" aria-hidden="true">
             <ShieldCheckmarkOutline />
           </NIcon>
           {{ editingId ? t('common.edit') : t('common.create') }}
@@ -428,7 +428,7 @@ onMounted(async () => {
 
       <footer class="modal-card__footer">
         <button type="button" class="secondary-button" @click="closeForm">
-          <NIcon :size="20"> <Refresh /> </NIcon>
+          <NIcon :size="20" aria-hidden="true"> <Refresh /> </NIcon>
           {{ t('common.cancel') }}
         </button>
 
@@ -445,7 +445,7 @@ onMounted(async () => {
             editingId ? 'edit' : 'create'
           )
           ">
-          <NIcon :size="20"> <SaveOutline /> </NIcon>
+          <NIcon :size="20" aria-hidden="true"> <SaveOutline /> </NIcon>
           {{ busy ? t('common.saving') : t('common.save') }}
         </button>
       </footer>

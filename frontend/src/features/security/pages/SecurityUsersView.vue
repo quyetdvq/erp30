@@ -215,15 +215,15 @@ async function saveIdentity(): Promise<void> {
   try {
     const saved = editingId.value
       ? await saveSecurityUser(
-          { username: form.value.username, email: form.value.email },
-          editingId.value,
-        )
+        { username: form.value.username, email: form.value.email },
+        editingId.value,
+      )
       : await saveSecurityUser({
-          username: form.value.username,
-          email: form.value.email,
-          password: form.value.password,
-          state: form.value.state,
-        })
+        username: form.value.username,
+        email: form.value.email,
+        password: form.value.password,
+        state: form.value.state,
+      })
     formOpen.value = false
     selectedId.value = String(saved.id)
     await load()
@@ -333,122 +333,79 @@ onMounted(() => void load())
       <h1>{{ t('security.usersTitle') }}</h1>
       <p>{{ t('security.usersDescription') }}</p>
     </div>
-    <button
-      v-if="hasBasePermission('user', 'create')"
-      type="button"
-      class="primary-button"
-      :disabled="busy"
-      @click="openCreate"
-    >
+    <button v-if="hasBasePermission('user', 'create')" type="button" class="primary-button" :disabled="busy"
+      @click="openCreate">
       ＋ {{ t('common.create') }}
     </button>
   </div>
   <p v-if="error" class="inline-error" role="alert">{{ t('security.requestError') }}</p>
   <section class="content-panel security-list-panel">
     <div class="security-toolbar">
-      <ListQueryControls
-        :model-value="state.query"
-        :filters="filters"
-        :sort-options="sortOptions"
-        :disabled="busy"
-        @apply="applyQuery"
-        @reset="resetQuery"
-      />
+      <ListQueryControls :model-value="state.query" :filters="filters" :sort-options="sortOptions" :disabled="busy"
+        @apply="applyQuery" @reset="resetQuery" />
     </div>
-    <ListShell
-      :initial-loading="state.isInitialLoading.value"
-      :refreshing="state.isBackgroundRefreshing.value"
-      :has-data="state.queryState.hasData.value"
-      :empty-dataset="state.isEmptyDataset.value"
-      :empty-filtered-result="state.isEmptyFilteredResult.value"
-      :error="state.queryState.error.value"
-      ><ListTable
-        :rows="state.rows.value"
-        :columns="columns"
-        :sort="state.query.sort"
-        @sort-change="
-          (sort) => {
-            state.setSort(sort)
-            void load()
-          }
-        "
-        ><template #cell-username="{ row }"
-          ><strong>{{ row.username || t('list.noValue') }}</strong></template
-        ><template #cell-email="{ row }">{{ row.email || t('list.noValue') }}</template
-        ><template #cell-name="{ row }">{{ row.name || t('list.noValue') }}</template
-        ><template #cell-status="{ row }"
-          ><TableStatus :status="row.status || row.active" /></template
-        ><template #cell-groups="{ row }"
-          ><span class="group-summary">{{ groupLabel(row) }}</span></template
-        ><template #cell-actions="{ row }"
-          ><TableRowActions
-            :active="row.active"
-            :busy="busy"
-            :show-view="true"
-            :show-edit="true"
-            :show-toggle="true"
-            view-permission="user.view"
-            edit-permission="user.edit"
-            toggle-permission="user.setstate"
-            :view-label="t('security.viewDetails')"
-            :edit-label="t('common.edit')"
-            :activate-label="t('common.activate')"
-            :deactivate-label="t('security.inactivate')"
-            @view="openDetails(row)"
-            @edit="openEdit(row)"
-            @toggle="void setState(row)" /></template></ListTable
-      ><ListPagination
-        :page="state.query.page"
-        :page-size="state.query.page_size"
-        :total="state.total.value"
+    <ListShell :initial-loading="state.isInitialLoading.value" :refreshing="state.isBackgroundRefreshing.value"
+      :has-data="state.queryState.hasData.value" :empty-dataset="state.isEmptyDataset.value"
+      :empty-filtered-result="state.isEmptyFilteredResult.value" :error="state.queryState.error.value">
+      <ListTable :rows="state.rows.value" :columns="columns" :sort="state.query.sort" @sort-change="
+        (sort) => {
+          state.setSort(sort)
+          void load()
+        }
+      "><template #cell-username="{ row }"><strong>{{ row.username || t('list.noValue')
+            }}</strong></template><template #cell-email="{ row }">{{ row.email || t('list.noValue')
+            }}</template><template #cell-name="{ row }">{{ row.name || t('list.noValue') }}</template><template
+          #cell-status="{ row }">
+          <TableStatus :status="row.status || row.active" />
+        </template><template #cell-groups="{ row }"><span class="group-summary">{{ groupLabel(row)
+            }}</span></template><template #cell-actions="{ row }">
+          <TableRowActions :active="row.active" :busy="busy" :show-view="true" :show-edit="true" :show-toggle="true"
+            view-permission="user.view" edit-permission="user.edit" toggle-permission="user.setstate"
+            :view-label="t('security.viewDetails')" :edit-label="t('common.edit')"
+            :activate-label="t('common.activate')" :deactivate-label="t('security.inactivate')" @view="openDetails(row)"
+            @edit="openEdit(row)" @toggle="void setState(row)" />
+        </template></ListTable>
+      <ListPagination :page="state.query.page" :page-size="state.query.page_size" :total="state.total.value"
         @update:page="
           (page) => {
             state.setPage(page)
             void load()
           }
-        "
-        @update:page-size="
+        " @update:page-size="
           (size) => {
             state.setPageSize(size)
             void load()
           }
-        "
-    /></ListShell>
+        " />
+    </ListShell>
   </section>
+
+
   <div v-if="detailOpen && selected" class="modal-backdrop">
-    <section
-      class="modal-card modal-card--wide"
-      role="dialog"
-      aria-modal="true"
-      :aria-label="`${t('users.detailTitle')}: ${selected.username}`"
-    >
-      <header class="modal-card__header security-detail-heading">
-        <div>
-          <h2>{{ selected.username }}</h2>
-          <small>{{ selected.email }}</small>
-        </div>
-        <div class="detail-heading-actions">
-          <TableStatus :status="selected.status || selected.active" /><button
-            type="button"
-            class="icon-button"
-            :aria-label="t('common.close')"
-            @click="closeDetails"
-          >
-            ×
-          </button>
-        </div>
+    <section class="modal-card" role="dialog" aria-modal="true"
+      :aria-label="`${t('users.detailTitle')}: ${selected.username}`">
+      <header class="modal-card__header">
+        <h2 class="modal-card-title">
+          <NIcon :size="24">
+            <PeopleOutline />
+          </NIcon>
+          {{ selected.username }}
+
+          <TableStatus :status="selected.status || selected.active" />
+        </h2>
+        <small>{{ selected.email }}</small>
+
+        <button type="button" class="modal-card-button-close" :aria-label="t('common.close')" @click="closeDetails">
+        </button>
       </header>
+
       <nav class="security-tabs" :aria-label="t('security.userDetailTabs')">
-        <button
-          v-for="item in ['overview', 'groups', 'permissions'] as const"
-          :key="item"
-          type="button"
-          :class="{ active: tab === item }"
-          @click="selectTab(item)"
-        >
+        <button v-for="item in ['overview', 'groups', 'permissions'] as const" :key="item" type="button"
+          :class="{ active: tab === item }" @click="selectTab(item)">
           {{ t(`security.userTabs.${item}`) }}
         </button>
       </nav>
+
       <div v-if="tab === 'overview'" class="modal-card__body security-editor">
         <p>{{ t('security.userIdentitySourceNote') }}</p>
         <dl class="identity-summary">
@@ -460,17 +417,17 @@ onMounted(() => void load())
           <dd>{{ selected.direct_permission_count ?? 0 }}</dd>
         </dl>
       </div>
+
+
       <div v-else-if="tab === 'groups'" class="modal-card__body security-editor">
         <p class="security-note">{{ t('security.memberSourceNote') }}</p>
-        <label v-for="group in groups" :key="group.id" class="check-row"
-          ><input
-            type="checkbox"
+        <label v-for="group in groups" :key="group.id" class="check-row"><input type="checkbox"
             :checked="selectedGroups.some((item) => String(item.id) === String(group.id))"
             :disabled="busy || !hasBasePermission('authorization_group', 'assign_member')"
-            @change="toggleGroup(String(group.id))"
-          /><span>{{ group.name }} ({{ group.code }})</span></label
-        >
+            @change="toggleGroup(String(group.id))" /><span>{{ group.name }} ({{ group.code }})</span></label>
       </div>
+
+
       <div v-else class="modal-card__body security-editor">
         <p class="security-note">{{ t('security.permissionSourceNote') }}</p>
         <div class="permission-resource-list">
@@ -483,171 +440,130 @@ onMounted(() => void load())
               {{ t('common.loading') }}
             </div>
             <div v-else class="permission-grid">
-              <label
-                v-for="action in resourceActions[String(resource.id)] ?? []"
-                :key="action.id"
-                class="check-row"
-              >
-                <input
-                  v-model="permissionDraft"
-                  type="checkbox"
-                  :value="permissionKey(resource, action)"
-                  :disabled="busy || !hasBasePermission('user', 'assign_permission')"
-                />
+              <label v-for="action in resourceActions[String(resource.id)] ?? []" :key="action.id" class="check-row">
+                <input v-model="permissionDraft" type="checkbox" :value="permissionKey(resource, action)"
+                  :disabled="busy || !hasBasePermission('user', 'assign_permission')" />
                 <code>{{ permissionKey(resource, action) }}</code>
               </label>
-              <p
-                v-if="
-                  Object.prototype.hasOwnProperty.call(resourceActions, String(resource.id)) &&
-                  !(resourceActions[String(resource.id)] ?? []).length
-                "
-                class="security-note"
-              >
+              <p v-if="
+                Object.prototype.hasOwnProperty.call(resourceActions, String(resource.id)) &&
+                !(resourceActions[String(resource.id)] ?? []).length
+              " class="security-note">
                 {{ t('list.noValue') }}
               </p>
             </div>
           </details>
         </div>
       </div>
+
+
       <footer class="modal-card__footer">
         <template v-if="tab === 'overview'">
-          <button
-            v-if="hasBasePermission('user', 'edit')"
-            type="button"
-            class="secondary-button"
-            :disabled="busy"
-            @click="openEdit()"
-          >
+          <button v-if="hasBasePermission('user', 'edit')" type="button" class="secondary-button" :disabled="busy"
+            @click="openEdit()">
+            <NIcon :size="16">
+              <CreateOutline />
+            </NIcon>
             {{ t('common.edit') }}
           </button>
-          <button
-            v-if="hasBasePermission('user', 'setstate')"
-            type="button"
-            class="secondary-button"
-            :disabled="busy"
-            @click="void setState()"
-          >
+          <button v-if="hasBasePermission('user', 'setstate')" type="button" class="secondary-button" :disabled="busy"
+            @click="void setState()">
+            <NIcon :size="16">
+              <BanOutline />
+            </NIcon>
             {{ selected.active ? t('security.inactivate') : t('security.activate') }}
           </button>
-          <button
-            v-if="hasBasePermission('user', 'reset_password')"
-            type="button"
-            class="secondary-button"
-            :disabled="busy"
-            @click="passwordOpen = true"
-          >
+
+          <button v-if="hasBasePermission('user', 'reset_password')" type="button" class="secondary-button"
+            :disabled="busy" @click="passwordOpen = true">
+            <NIcon :size="16">
+              <Refresh />
+            </NIcon>
             {{ t('security.resetPassword') }}
           </button>
         </template>
-        <button
-          v-else-if="tab === 'groups'"
-          type="button"
-          class="primary-button"
-          :disabled="busy || !hasBasePermission('authorization_group', 'assign_member')"
-          @click="void saveMembership()"
-        >
+
+
+        <button v-else-if="tab === 'groups'" type="button" class="primary-button"
+          :disabled="busy || !hasBasePermission('authorization_group', 'assign_member')" @click="void saveMembership()">
+          <NIcon :size="16">
+            <SaveOutline />
+          </NIcon>
           {{ busy ? t('common.saving') : t('security.saveMembers') }}
         </button>
-        <button
-          v-else
-          type="button"
-          class="primary-button"
-          :disabled="busy || !hasBasePermission('user', 'assign_permission')"
-          @click="void savePermissions()"
-        >
+
+
+        <button v-else type="button" class="primary-button"
+          :disabled="busy || !hasBasePermission('user', 'assign_permission')" @click="void savePermissions()">
+          <NIcon :size="16">
+            <SaveOutline />
+          </NIcon>
           {{ busy ? t('common.saving') : t('security.savePermissions') }}
+        </button>
+      </footer>
+
+
+    </section>
+  </div>
+
+
+  <div v-if="formOpen" class="modal-backdrop">
+    <section class="modal-card" role="dialog" aria-modal="true" :aria-label="t('security.userForm')">
+      <header class="modal-card__header">
+        <h2 class="modal-card-title">
+          <NIcon :size="24"> <PeopleOutline /> </NIcon>   
+          {{ editingId ? t('common.edit') : t('common.create') }} {{ t('users.user') }}
+        </h2>
+        <button type="button" class="modal-card-button-close" :aria-label="t('common.close')" @click="formOpen = false">
+        </button>
+      </header>
+      <form class="modal-card__body" id="form-user" @submit.prevent="void saveIdentity">
+        <label><span>{{ t('users.username') }}</span><input v-model="form.username" class="field-input"
+            required /></label><label><span>{{ t('users.email') }}</span><input v-model="form.email" class="field-input"
+            type="email" required /></label><label v-if="!editingId"><span>{{ t('security.password') }}</span><input
+            v-model="form.password" class="field-input" type="password" required
+            autocomplete="new-password" /></label><label v-if="!editingId"><span>{{ t('users.status') }}</span><select
+            v-model="form.state" class="field-select">
+            <option v-for="item in userStates" :key="item" :value="item">
+              {{ t(`status.${item.toLowerCase()}`) }}
+            </option>
+          </select></label>
+
+      </form>
+
+      <footer class="modal-card__footer">
+        <button type="button" class="secondary-button" :disabled="busy" @click="formOpen = false">
+          <NIcon :size="16">
+            <Refresh />
+          </NIcon>
+          {{ t('common.cancel') }}
+        </button>
+        <button type="submit" class="primary-button" form="form-user" :disabled="busy">
+          <NIcon :size="16">
+            <SaveOutline />
+          </NIcon>
+          {{ busy ? t('common.saving') : t('common.save') }}
         </button>
       </footer>
     </section>
   </div>
-  <div v-if="formOpen" class="modal-backdrop">
-    <section
-      class="modal-card"
-      role="dialog"
-      aria-modal="true"
-      :aria-label="t('security.userForm')"
-    >
-      <header class="modal-card__header">
-        <h2>{{ editingId ? t('common.edit') : t('common.create') }} {{ t('users.user') }}</h2>
-        <button
-          type="button"
-          class="icon-button"
-          :aria-label="t('common.close')"
-          @click="formOpen = false"
-        >
-          ×
-        </button>
-      </header>
-      <form class="modal-card__body" @submit.prevent="void saveIdentity">
-        <label
-          ><span>{{ t('users.username') }}</span
-          ><input v-model="form.username" class="field-input" required /></label
-        ><label
-          ><span>{{ t('users.email') }}</span
-          ><input v-model="form.email" class="field-input" type="email" required /></label
-        ><label v-if="!editingId"
-          ><span>{{ t('security.password') }}</span
-          ><input
-            v-model="form.password"
-            class="field-input"
-            type="password"
-            required
-            autocomplete="new-password" /></label
-        ><label v-if="!editingId"
-          ><span>{{ t('users.status') }}</span
-          ><select v-model="form.state" class="field-select">
-            <option v-for="item in userStates" :key="item" :value="item">
-              {{ t(`status.${item.toLowerCase()}`) }}
-            </option>
-          </select></label
-        >
-        <footer class="modal-card__footer">
-          <button type="button" class="secondary-button" :disabled="busy" @click="formOpen = false">
-            {{ t('common.cancel') }}
-          </button>
-          <button type="submit" class="primary-button" :disabled="busy">
-            {{ busy ? t('common.saving') : t('common.save') }}
-          </button>
-        </footer>
-      </form>
-    </section>
-  </div>
+
+
+
   <div v-if="passwordOpen" class="modal-backdrop">
-    <section
-      class="modal-card"
-      role="dialog"
-      aria-modal="true"
-      :aria-label="t('security.resetPassword')"
-    >
+    <section class="modal-card" role="dialog" aria-modal="true" :aria-label="t('security.resetPassword')">
       <header class="modal-card__header">
         <h2>{{ t('security.resetPassword') }}</h2>
-        <button
-          type="button"
-          class="icon-button"
-          :aria-label="t('common.close')"
-          @click="passwordOpen = false"
-        >
-          ×
+        <button type="button" class="modal-card-button-close" :aria-label="t('common.close')"
+          @click="passwordOpen = false">
         </button>
       </header>
       <form class="modal-card__body" @submit.prevent="void savePassword">
-        <label
-          ><span>{{ t('security.newPassword') }}</span
-          ><input
-            v-model="resetPassword"
-            class="field-input"
-            type="password"
-            required
-            autocomplete="new-password"
-        /></label>
+        <label><span>{{ t('security.newPassword') }}</span><input v-model="resetPassword" class="field-input"
+            type="password" required autocomplete="new-password" /></label>
         <p class="security-note">{{ t('security.passwordResetNote') }}</p>
         <footer class="modal-card__footer">
-          <button
-            type="button"
-            class="secondary-button"
-            :disabled="busy"
-            @click="passwordOpen = false"
-          >
+          <button type="button" class="secondary-button" :disabled="busy" @click="passwordOpen = false">
             {{ t('common.cancel') }}
           </button>
           <button type="submit" class="primary-button" :disabled="busy">
@@ -665,6 +581,7 @@ onMounted(() => void load())
   gap: 14px;
   padding: 18px 20px 20px;
 }
+
 .security-toolbar {
   display: flex;
   align-items: end;
@@ -672,43 +589,25 @@ onMounted(() => void load())
   gap: 10px;
   flex-wrap: wrap;
 }
+
 .group-summary {
   color: #345f77;
   font-size: 12px;
 }
+
 .inline-error {
   margin: 0 0 12px;
   color: #b64444;
   font-size: 12px;
 }
-.security-detail-heading {
-  display: flex;
-  justify-content: space-between;
-  gap: 16px;
-  align-items: start;
-}
-.security-detail-heading h2 {
-  margin: 0;
-  color: #153956;
-  font-size: 18px;
-}
-.security-detail-heading small {
-  display: block;
-  margin-top: 5px;
-  color: #354f60;
-}
-.detail-heading-actions,
-.detail-actions {
-  display: flex;
-  gap: 8px;
-  align-items: center;
-  flex-wrap: wrap;
-}
+
+
 .security-tabs {
   display: flex;
   gap: 6px;
   border-bottom: 1px solid #e3ebef;
 }
+
 .security-tabs button {
   padding: 9px 12px;
   border: 0;
@@ -718,26 +617,31 @@ onMounted(() => void load())
   font-size: 12px;
   cursor: pointer;
 }
+
 .security-tabs button.active,
 .security-tabs button:focus-visible {
   border-bottom-color: #0873b8;
   color: #075f9b;
   font-weight: 700;
 }
+
 .security-editor {
   display: grid;
   gap: 12px;
 }
+
 .security-note {
   color: #587080;
   font-size: 13px;
 }
+
 .check-row {
   display: flex;
   gap: 9px;
   align-items: center;
-  padding: 6px 0;
+  padding: 0;
 }
+
 .permission-grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
@@ -745,15 +649,18 @@ onMounted(() => void load())
   max-height: 360px;
   overflow: auto;
 }
+
 .permission-resource-list {
   display: grid;
   gap: 8px;
 }
+
 .permission-resource {
   border: 1px solid #dbe5ea;
   border-radius: 5px;
   background: #fbfdfe;
 }
+
 .permission-resource__summary {
   display: flex;
   align-items: center;
@@ -765,111 +672,75 @@ onMounted(() => void load())
   font-size: 12px;
   font-weight: 700;
 }
+
 .permission-resource__summary code {
   color: #587080;
   font-size: 11px;
   font-weight: 500;
 }
+
 .permission-resource[open] .permission-resource__summary {
   border-bottom: 1px solid #dbe5ea;
 }
+
 .permission-resource .permission-grid,
-.permission-resource > .security-note {
+.permission-resource>.security-note {
   padding: 10px 12px;
 }
+
 .identity-summary {
   display: grid;
   grid-template-columns: 150px 1fr;
   gap: 8px 16px;
   margin: 8px 0;
 }
+
 .identity-summary dt {
   font-weight: 600;
   color: #587080;
 }
+
 .identity-summary dd {
   margin: 0;
 }
-.modal-backdrop {
-  position: fixed;
-  inset: 0;
-  z-index: 40;
-  display: grid;
-  place-items: center;
-  padding: 20px;
-  background: rgb(18 38 54 / 45%);
-}
+
 .modal-card {
+
   width: min(100%, 620px);
   max-height: calc(100vh - 40px);
-  overflow: auto;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
   border-radius: 7px;
   background: #fff;
   box-shadow: 0 20px 60px rgb(18 42 62 / 24%);
 }
-.modal-card--wide {
-  width: min(100%, 900px);
-}
-.modal-card__header,
-.modal-card__footer {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-  padding: 15px 18px;
-  border-bottom: 1px solid #e4ebef;
-}
-.modal-card__footer {
-  justify-content: flex-end;
-  border-top: 1px solid #e4ebef;
-  border-bottom: 0;
-}
-.modal-card__body > .modal-card__footer {
-  margin: 5px -18px -18px;
-}
-.modal-card__header h2 {
-  margin: 0;
-  color: #173c59;
-  font-size: 18px;
-}
-.modal-card__body {
-  display: grid;
-  gap: 12px;
-  padding: 18px;
-}
+
 .modal-card__body label {
-  display: grid;
   gap: 5px;
   color: #536b7b;
   font-size: 12px;
   font-weight: 600;
 }
+
 .modal-card__body input,
 .modal-card__body select {
-  min-height: 34px;
+  min-height: 24px;
   border: 1px solid #c7d6df;
   border-radius: 4px;
   padding: 7px 9px;
   color: #183b57;
   font: inherit;
 }
-.icon-button {
-  border: 0;
-  background: transparent;
-  color: #536b7b;
-  font-size: 22px;
-  cursor: pointer;
-}
+
 @media (max-width: 700px) {
   .security-list-panel {
     padding: 15px 12px;
   }
+
   .identity-summary {
     grid-template-columns: 1fr;
     gap: 2px;
-  }
-  .modal-backdrop {
-    padding: 10px;
   }
 }
 </style>

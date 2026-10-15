@@ -440,13 +440,8 @@ onMounted(() => {
       <h1>{{ t('numbering.title') }}</h1>
       <p>{{ t('numbering.description') }}</p>
     </div>
-    <button
-      v-if="canConfigure"
-      type="button"
-      class="primary-button"
-      :disabled="!selectedResourceId || loadingResources"
-      @click="openCreate"
-    >
+    <button v-if="canConfigure" type="button" class="primary-button" :disabled="!selectedResourceId || loadingResources"
+      @click="openCreate">
       {{ t('numbering.create') }}
     </button>
   </div>
@@ -455,22 +450,15 @@ onMounted(() => {
     <form class="numbering-query-controls" role="search" @submit.prevent="void loadSeries()">
       <label>
         <span>{{ t('numbering.resource') }}</span>
-        <select
-          v-model="selectedResourceId"
-          :disabled="!canConfigure || loadingResources"
-          :aria-label="t('numbering.selectResource')"
-        >
+        <select v-model="selectedResourceId" :disabled="!canConfigure || loadingResources"
+          :aria-label="t('numbering.selectResource')">
           <option value="">{{ t('numbering.selectResource') }}</option>
           <option v-for="item in resources" :key="String(item.id)" :value="String(item.id)">
             {{ item.type }} - {{ item.name }}
           </option>
         </select>
       </label>
-      <button
-        type="submit"
-        class="secondary-button"
-        :disabled="!selectedResourceId || loadingSeries"
-      >
+      <button type="submit" class="secondary-button" :disabled="!selectedResourceId || loadingSeries">
         <NIcon :component="RefreshOutline" aria-hidden="true" />
         {{ t('common.refresh') }}
       </button>
@@ -479,23 +467,12 @@ onMounted(() => {
     <p v-if="errorMessage" class="inline-error" role="alert">{{ errorMessage }}</p>
     <p v-if="!canConfigure" class="permission-note" role="status">{{ t('common.noPermission') }}</p>
 
-    <ListPagination
-      :aria-label="t('numbering.topPagination')"
-      :page="page"
-      :page-size="pageSize"
-      :total="rows.length"
-      :disabled="loadingSeries || !selectedResourceId"
-      @update:page="page = $event"
-      @update:page-size="applyPageSize"
-    />
+    <ListPagination :aria-label="t('numbering.topPagination')" :page="page" :page-size="pageSize" :total="rows.length"
+      :disabled="loadingSeries || !selectedResourceId" @update:page="page = $event" @update:page-size="applyPageSize" />
 
-    <ListShell
-      :initial-loading="loadingResources || loadingSeries"
-      :has-data="visibleRows.length > 0"
-      :empty-dataset="Boolean(selectedResourceId) && !loadingSeries && rows.length === 0"
-      :empty-filtered-result="false"
-      :error="error"
-    >
+    <ListShell :initial-loading="loadingResources || loadingSeries" :has-data="visibleRows.length > 0"
+      :empty-dataset="Boolean(selectedResourceId) && !loadingSeries && rows.length === 0" :empty-filtered-result="false"
+      :error="error">
       <template #empty>
         <p>{{ t('numbering.noSeries') }}</p>
       </template>
@@ -504,61 +481,36 @@ onMounted(() => {
         <template #cell-reset_policy="{ row }">{{ enumLabel('reset', row.reset_policy) }}</template>
         <template #cell-generation_mode="{ row }">{{
           enumLabel('mode', row.generation_mode)
-        }}</template>
+          }}</template>
         <template #cell-issued="{ row }">{{ issuedLabel(row) }}</template>
         <template #cell-actions="{ row }">
-          <TableRowActions
-            :active="row.status === 'ACTIVE'"
-            :busy="busy"
-            :show-view="canConfigure"
-            :show-edit="canConfigure"
-            :show-toggle="canConfigure"
-            view-permission="resource.configure_numbering"
-            edit-permission="resource.configure_numbering"
-            toggle-permission="resource.configure_numbering"
-            :view-label="t('common.view')"
-            :edit-label="t('common.edit')"
-            :activate-label="t('common.activate')"
-            :deactivate-label="t('common.deactivate')"
-            @view="void openView(row)"
-            @edit="openEdit(row)"
-            @toggle="void toggle(row)"
-          />
+          <TableRowActions :active="row.status === 'ACTIVE'" :busy="busy" :show-view="canConfigure"
+            :show-edit="canConfigure" :show-toggle="canConfigure" view-permission="resource.configure_numbering"
+            edit-permission="resource.configure_numbering" toggle-permission="resource.configure_numbering"
+            :view-label="t('common.view')" :edit-label="t('common.edit')" :activate-label="t('common.activate')"
+            :deactivate-label="t('common.deactivate')" @view="void openView(row)" @edit="openEdit(row)"
+            @toggle="void toggle(row)" />
         </template>
       </ListTable>
-      <ListPagination
-        :aria-label="t('numbering.bottomPagination')"
-        :page="page"
-        :page-size="pageSize"
-        :total="rows.length"
-        :disabled="loadingSeries"
-        @update:page="page = $event"
-        @update:page-size="applyPageSize"
-      />
+      <ListPagination :aria-label="t('numbering.bottomPagination')" :page="page" :page-size="pageSize"
+        :total="rows.length" :disabled="loadingSeries" @update:page="page = $event" @update:page-size="applyPageSize" />
     </ListShell>
   </section>
 
   <div v-if="modalOpen" class="modal-backdrop">
-    <section
-      ref="formCard"
-      class="modal-card numbering-form-modal"
-      role="dialog"
-      aria-modal="true"
-      :aria-label="t('numbering.form')"
-      tabindex="-1"
-    >
+    <section ref="formCard" class="modal-card" role="dialog" aria-modal="true" :aria-label="t('numbering.form')"
+      tabindex="-1">
       <header class="modal-card__header">
-        <h2>{{ editingId ? t('numbering.edit') : t('numbering.create') }}</h2>
-        <button
-          type="button"
-          class="icon-button"
-          :aria-label="t('common.close')"
-          @click="closeModal"
-        >
-          <NIcon :component="CloseOutline" aria-hidden="true" />
+        <h2 class="modal-card-title">
+          <NIcon :size="24">
+            <QrCodeOutline />
+          </NIcon>
+          {{ editingId ? t('numbering.edit') : t('numbering.create') }}
+        </h2>
+        <button type="button" class="modal-card-button-close" :aria-label="t('common.close')" @click="closeModal">
         </button>
       </header>
-      <form class="modal-card__body" @submit.prevent="void save()">
+      <form id="numbering-form" class="modal-card__body" @submit.prevent="void save()">
         <label>
           <span>{{ t('numbering.resource') }}</span>
           <select v-model="selectedResourceId" required :disabled="Boolean(editingId)">
@@ -595,14 +547,8 @@ onMounted(() => {
             <input v-model="seqWidth" type="number" min="1" max="18" inputmode="numeric" />
           </label>
           <div class="pattern-builder__tokens">
-            <button
-              v-for="token in tokens"
-              :key="token.value"
-              type="button"
-              class="token-button"
-              :aria-label="`${t('numbering.insertToken')}: ${t(token.labelKey)}`"
-              @click="insertToken(token.value)"
-            >
+            <button v-for="token in tokens" :key="token.value" type="button" class="token-button"
+              :aria-label="`${t('numbering.insertToken')}: ${t(token.labelKey)}`" @click="insertToken(token.value)">
               {{ token.value }}
             </button>
           </div>
@@ -647,12 +593,8 @@ onMounted(() => {
         <section class="validation-panel" aria-live="polite">
           <div class="validation-panel__header">
             <h3>{{ t('numbering.validationPreview') }}</h3>
-            <button
-              type="button"
-              class="secondary-button"
-              :disabled="validationBusy || !canConfigure"
-              @click="void validateConfig()"
-            >
+            <button type="button" class="secondary-button" :disabled="validationBusy || !canConfigure"
+              @click="void validateConfig()">
               {{ validationBusy ? t('common.loading') : t('numbering.validate') }}
             </button>
           </div>
@@ -676,24 +618,23 @@ onMounted(() => {
           {{ t('numbering.immutableDetected') }}
         </p>
         <p v-if="formError" class="inline-error" role="alert">{{ errorMessage }}</p>
-        <footer class="modal-card__footer">
-          <button type="button" class="secondary-button" @click="closeModal">
-            {{ t('common.cancel') }}
-          </button>
-          <button type="submit" class="primary-button" :disabled="busy || !canConfigure">
-            {{ busy ? t('common.saving') : t('common.save') }}
-          </button>
-        </footer>
+
       </form>
+      <footer class="modal-card__footer">
+        <button type="button" class="secondary-button" @click="closeModal">
+          <NIcon :size="24"> <Refresh /> </NIcon>
+          {{ t('common.cancel') }}
+        </button>
+        <button type="submit" class="primary-button" :disabled="busy || !canConfigure">
+          <NIcon :size="24"> <SaveOutline /> </NIcon>
+          {{ busy ? t('common.saving') : t('common.save') }}
+        </button>
+      </footer>
     </section>
   </div>
 
-  <TableDetailModal
-    :open="viewOpen"
-    :title="viewLoading ? t('common.loading') : t('numbering.view')"
-    :fields="detailFields"
-    @close="viewOpen = false"
-  />
+  <TableDetailModal :open="viewOpen" :title="viewLoading ? t('common.loading') : t('numbering.view')"
+    :fields="detailFields" @close="viewOpen = false" />
 </template>
 
 <style scoped>
@@ -702,12 +643,14 @@ onMounted(() => {
   gap: 16px;
   padding: 18px 20px 20px;
 }
+
 .numbering-query-controls {
   display: flex;
   align-items: end;
   gap: 10px;
   flex-wrap: wrap;
 }
+
 .numbering-query-controls label,
 .modal-card__body label {
   display: grid;
@@ -716,9 +659,11 @@ onMounted(() => {
   font-size: 12px;
   font-weight: 600;
 }
+
 .numbering-query-controls label {
   min-width: min(440px, 100%);
 }
+
 .numbering-query-controls select,
 .modal-card__body input,
 .modal-card__body select {
@@ -730,81 +675,42 @@ onMounted(() => {
   color: #183b57;
   font: inherit;
 }
+
 .inline-error {
   margin: 0;
   color: #a23a32;
   font-size: 12px;
 }
+
 .permission-note,
 .immutable-note {
   margin: 0;
   color: #536b7b;
   font-size: 12px;
 }
-.modal-backdrop {
-  position: fixed;
-  inset: 0;
-  z-index: 40;
-  display: grid;
-  place-items: center;
-  padding: 20px;
-  background: rgb(18 38 54 / 45%);
-}
+
 .modal-card {
   width: min(100%, 760px);
   max-height: calc(100vh - 40px);
+  display: flex;
+  flex-direction: column;
   overflow: hidden;
   border-radius: 7px;
   background: #fff;
   box-shadow: 0 20px 60px rgb(18 42 62 / 24%);
 }
-.modal-card__header,
-.modal-card__footer {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-  padding: 16px 22px;
-  border-bottom: 1px solid #e4ebef;
-}
-.modal-card__header h2,
-.validation-panel h3 {
-  margin: 0;
-}
-.modal-card__body {
-  display: grid;
-  gap: 12px;
-  max-height: calc(100vh - 130px);
-  overflow: auto;
-  padding: 22px;
-}
-.modal-card__footer {
-  justify-content: flex-end;
-  margin: 4px -22px -22px;
-  padding: 14px 22px 0;
-  border-top: 1px solid #e4ebef;
-  border-bottom: 0;
-}
-.icon-button {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 32px;
-  height: 32px;
-  padding: 0;
-  border: 0;
-  background: transparent;
-  color: #536b7b;
-  cursor: pointer;
-}
+
+
 .checkbox-field {
   display: flex !important;
   align-items: center;
   gap: 8px !important;
 }
+
 .checkbox-field input {
   min-height: auto;
 }
+
 .pattern-builder,
 .validation-panel {
   display: grid;
@@ -814,14 +720,17 @@ onMounted(() => {
   border-radius: 6px;
   background: #f8fbfc;
 }
+
 .pattern-builder__width {
   max-width: 180px;
 }
+
 .pattern-builder__tokens {
   display: flex;
   gap: 6px;
   flex-wrap: wrap;
 }
+
 .token-button {
   min-height: 30px;
   border: 1px solid #b8ccd8;
@@ -833,34 +742,41 @@ onMounted(() => {
   font: inherit;
   font-size: 12px;
 }
+
 .validation-panel__header {
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 12px;
 }
+
 .validation-results {
   display: grid;
   grid-template-columns: minmax(130px, 0.35fr) minmax(0, 1fr);
   gap: 6px 12px;
   margin: 0;
 }
+
 .validation-results dt {
   color: #536b7b;
   font-weight: 700;
 }
+
 .validation-results dd {
   margin: 0;
   overflow-wrap: anywhere;
 }
+
 .validation-ok {
   margin: 0;
   color: #15803d;
 }
+
 .validation-fail {
   margin: 0;
   color: #a23a32;
 }
+
 .validation-messages {
   margin: 0;
   padding-left: 20px;

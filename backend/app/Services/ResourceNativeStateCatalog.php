@@ -5,8 +5,8 @@ declare(strict_types=1);
 namespace App\Services;
 
 /**
- * Authoritative P1 native-status contracts. A resource may have states even
- * when it opts out of the Lifecycle/Transition engine.
+ * Authoritative ten native/All-States exceptions (business rule 2026-10-15).
+ * A resource may have states even when it opts out of Lifecycle/Transitions.
  *
  * Codes are business states, NOT workflow_states.status (the enable flag).
  * State-less capabilities cannot select a specific PBAC state.
@@ -30,8 +30,9 @@ final class ResourceNativeStateCatalog
         'user' => ['ACTIVE', 'INACTIVE'],
         'workflow_state' => ['ACTIVE', 'INACTIVE'],
         'resource' => ['ACTIVE', 'INACTIVE'],
-        // These resources may opt in to Lifecycle; without it their existing
-        // native business status remains valid and usable by state-aware PBAC.
+        // Compatibility vocabularies for business resources not yet bound to
+        // Lifecycle. They are NOT additional independent exceptions; use the
+        // workflow-state audit to find missing Lifecycle associations.
         'province' => ['ACTIVE', 'INACTIVE', 'CLOSED'],
         'ward' => ['ACTIVE', 'INACTIVE', 'CLOSED'],
         'organization' => ['ACTIVE', 'INACTIVE', 'CLOSED'],

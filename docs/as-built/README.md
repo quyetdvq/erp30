@@ -30,6 +30,7 @@
 | 17 | [17_FRONTEND_V2_2_PRODUCT_EDITOR_REFACTOR.md](17_FRONTEND_V2_2_PRODUCT_EDITOR_REFACTOR.md) | Feature architecture of Product Editor, owned form/payload/validation/lookup/feedback and V2.2 quality gates |
 | 18 | [18_FRONTEND_V2_3_EMPLOYEES_REFACTOR.md](18_FRONTEND_V2_3_EMPLOYEES_REFACTOR.md) | V2.3: People/Employees forms, payload, validation, lookups and assignments, with pinned DOM/CSS/AST and Windows verification gates |
 | 19 | [19_FRONTEND_V2_4_POLICIES_PBAC_REFACTOR.md](19_FRONTEND_V2_4_POLICIES_PBAC_REFACTOR.md) | V2.4: Security Policies/PBAC form, State, participant and catalog extraction; unchanged DOM/CSS and explicit Windows acceptance gates |
+| 20 | [20_RESOURCE_STATE_LIFECYCLE_CONTRACT.md](20_RESOURCE_STATE_LIFECYCLE_CONTRACT.md) | Quy tắc nghiệp vụ chính thức 2026-10-15: 10 Resource Native/All States, các Resource còn lại theo Lifecycle/Transition, runtime gap và lộ trình kiểm toán/chuyển đổi |
 
 ## Catalogue tự động từ source
 

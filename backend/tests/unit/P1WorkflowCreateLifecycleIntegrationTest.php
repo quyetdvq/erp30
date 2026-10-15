@@ -6,6 +6,7 @@ use App\Database\Seeds\ResourceActionSeeder;
 use App\Exceptions\DomainException;
 use App\Repositories\LifecycleRepository;
 use App\Services\InitialCreateStateNormalizer;
+use App\Services\BusinessWorkflowWriteBoundary;
 use App\Services\ResourceWorkflowStateResolver;
 use CodeIgniter\Test\CIUnitTestCase;
 use CodeIgniter\Test\DatabaseTestTrait;
@@ -16,6 +17,42 @@ final class P1WorkflowCreateLifecycleIntegrationTest extends CIUnitTestCase
     use DatabaseTestTrait;
 
     protected $namespace = null;
+
+    public function testUnknownResourceCannotBypassWorkflowWriteBoundary(): void
+    {
+        foreach ([
+            static fn ($db) => BusinessWorkflowWriteBoundary::create('unregistered_resource', ['status' => 'ACTIVE'], $db),
+            static fn ($db) => BusinessWorkflowWriteBoundary::assertNoDirectStateMutation(
+                'unregistered_resource', ['status' => 'ACTIVE'], ['status' => 'INACTIVE'], $db,
+            ),
+        ] as $operation) {
+            try {
+                $operation($this->db);
+                $this->fail('An unregistered Resource must not bypass Workflow validation.');
+            } catch (DomainException $exception) {
+                $this->assertSame(ResourceWorkflowStateResolver::ERROR_RESOURCE_LIFECYCLE_INVALID, $exception->getErrorCode());
+            }
+        }
+    }
+
+    public function testNativeResourceWithInvalidLifecycleCannotBypassWriteBoundary(): void
+    {
+        (new ResourceActionSeeder(new \Config\Database()))->run();
+        $lifecycleId = (new LifecycleRepository($this->db))->insertLifecycle([
+            'code' => 'WF-NATIVE-INVALID-' . uniqid(),
+            'name' => 'Invalid native association test',
+            'status' => 'ACTIVE',
+        ]);
+        $this->assertTrue($this->db->table('resources')->where('type', 'policy')
+            ->update(['lifecycle_id' => $lifecycleId]));
+
+        try {
+            BusinessWorkflowWriteBoundary::create('policy', ['status' => 'ACTIVE'], $this->db);
+            $this->fail('The ten independent Resources cannot carry a Lifecycle.');
+        } catch (DomainException $exception) {
+            $this->assertSame(ResourceWorkflowStateResolver::ERROR_LIFECYCLE_SELF_REFERENCE, $exception->getErrorCode());
+        }
+    }
 
     public function testConfiguredInitialStateComesFromPersistedLifecycle(): void
     {

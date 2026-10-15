@@ -18,6 +18,7 @@ Tôi xin cung cấp thêm thông tin như sau. Đây là thông tin quan trọng
 
 # Các Resource còn lại (Trừ 10 Resource trên) tuân theo Lifecycles và Transitions
 
+Hãy runtime làm chuẩn để chỉnh lại các file test (nếu test chưa cập nhật). Chỉnh lại runtime nếu runtime đang bị lỗi. (tài liệu P1 đã lạc hậu so với code hiện tại, nên không lấy tài liệu làm chuẩn)
 
 1. Các icon đã thay đổi
 Menu	Icon mới
@@ -49,7 +50,7 @@ Tổ chức BusinessOutline
 Còn lại 
 
 git add backend/ frontend/ contracts/ docs/ tools/
-git commit -m "Bo tri lai V2.1"
+git commit -m "Bo tri lai V2.4"
 git push
 
 
