@@ -53,7 +53,7 @@ Tổ chức BusinessOutline
 Còn lại 
 
 git add backend/ frontend/ contracts/ docs/ tools/
-git commit -m "before BE-REORG-008"
+git commit -m "BE-REORG-008"
 git push
 
 

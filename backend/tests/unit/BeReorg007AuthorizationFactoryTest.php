@@ -60,7 +60,8 @@ final class BeReorg007AuthorizationFactoryTest extends CIUnitTestCase
         $stateResources = $this->value($this->value($validator, 'workflowStates'), 'resources');
         $this->assertSame($this->db, $this->value($stateResources, 'db'));
         $authorization = $this->call($group, 'auth');
-        $authPolicy = $this->value($authorization, 'policies');
+        $engine = $this->value($authorization, 'engine');
+        $authPolicy = $this->value($engine, 'policies');
         $this->assertInstanceOf(PolicyRepository::class, $authPolicy);
         $this->assertSame($this->db, $this->value($this->value($authPolicy, 'delegate'), 'db'));
     }
