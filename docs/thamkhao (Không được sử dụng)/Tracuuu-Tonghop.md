@@ -53,7 +53,7 @@ Tổ chức BusinessOutline
 Còn lại 
 
 git add backend/ frontend/ contracts/ docs/ tools/
-git commit -m "Bo tri lai V2.4"
+git commit -m "up anh avartar"
 git push
 
 

@@ -1,0 +1,659 @@
+{
+    "App\\Services\\FoundationLocationService": {
+        "final": true,
+        "constants": {
+            "ERROR_CODE_DUPLICATE": "LOCATION_CODE_DUPLICATE",
+            "ERROR_PROVINCE_INACTIVE": "WARD_PROVINCE_INACTIVE",
+            "ERROR_PROVINCE_NOT_FOUND": "PROVINCE_NOT_FOUND",
+            "ERROR_PROVINCE_REFERENCE_INVALID": "WARD_PROVINCE_NOT_FOUND",
+            "ERROR_STATUS_INVALID": "LOCATION_STATUS_INVALID",
+            "ERROR_WARD_NOT_FOUND": "WARD_NOT_FOUND",
+            "ERROR_WARD_PROVINCE_MISMATCH": "WARD_PROVINCE_MISMATCH",
+            "ERROR_WARD_REFERENCED": "WARD_PROVINCE_REASSIGN_REFERENCED"
+        },
+        "methods": {
+            "__construct": {
+                "static": false,
+                "return_type": "",
+                "returns_reference": false,
+                "parameters": [
+                    {
+                        "name": "repository",
+                        "type": "?App\\Repositories\\FoundationLocationRepository",
+                        "optional": true,
+                        "has_default": true,
+                        "default": null,
+                        "by_reference": false,
+                        "variadic": false
+                    },
+                    {
+                        "name": "db",
+                        "type": "?CodeIgniter\\Database\\ConnectionInterface",
+                        "optional": true,
+                        "has_default": true,
+                        "default": null,
+                        "by_reference": false,
+                        "variadic": false
+                    },
+                    {
+                        "name": "mutationContext",
+                        "type": "?App\\Infrastructure\\Mutation\\MutationContext",
+                        "optional": true,
+                        "has_default": true,
+                        "default": null,
+                        "by_reference": false,
+                        "variadic": false
+                    },
+                    {
+                        "name": "clock",
+                        "type": "?App\\Infrastructure\\Time\\Clock",
+                        "optional": true,
+                        "has_default": true,
+                        "default": null,
+                        "by_reference": false,
+                        "variadic": false
+                    },
+                    {
+                        "name": "workflowStates",
+                        "type": "?App\\Services\\ResourceWorkflowStateResolver",
+                        "optional": true,
+                        "has_default": true,
+                        "default": null,
+                        "by_reference": false,
+                        "variadic": false
+                    }
+                ]
+            },
+            "createProvince": {
+                "static": false,
+                "return_type": "int",
+                "returns_reference": false,
+                "parameters": [
+                    {
+                        "name": "data",
+                        "type": "array",
+                        "optional": false,
+                        "has_default": false,
+                        "default": null,
+                        "by_reference": false,
+                        "variadic": false
+                    }
+                ]
+            },
+            "createWard": {
+                "static": false,
+                "return_type": "int",
+                "returns_reference": false,
+                "parameters": [
+                    {
+                        "name": "data",
+                        "type": "array",
+                        "optional": false,
+                        "has_default": false,
+                        "default": null,
+                        "by_reference": false,
+                        "variadic": false
+                    }
+                ]
+            },
+            "province": {
+                "static": false,
+                "return_type": "array",
+                "returns_reference": false,
+                "parameters": [
+                    {
+                        "name": "id",
+                        "type": "int",
+                        "optional": false,
+                        "has_default": false,
+                        "default": null,
+                        "by_reference": false,
+                        "variadic": false
+                    }
+                ]
+            },
+            "setProvinceState": {
+                "static": false,
+                "return_type": "bool",
+                "returns_reference": false,
+                "parameters": [
+                    {
+                        "name": "id",
+                        "type": "int",
+                        "optional": false,
+                        "has_default": false,
+                        "default": null,
+                        "by_reference": false,
+                        "variadic": false
+                    },
+                    {
+                        "name": "status",
+                        "type": "string",
+                        "optional": false,
+                        "has_default": false,
+                        "default": null,
+                        "by_reference": false,
+                        "variadic": false
+                    }
+                ]
+            },
+            "setWardState": {
+                "static": false,
+                "return_type": "bool",
+                "returns_reference": false,
+                "parameters": [
+                    {
+                        "name": "id",
+                        "type": "int",
+                        "optional": false,
+                        "has_default": false,
+                        "default": null,
+                        "by_reference": false,
+                        "variadic": false
+                    },
+                    {
+                        "name": "status",
+                        "type": "string",
+                        "optional": false,
+                        "has_default": false,
+                        "default": null,
+                        "by_reference": false,
+                        "variadic": false
+                    }
+                ]
+            },
+            "updateProvince": {
+                "static": false,
+                "return_type": "bool",
+                "returns_reference": false,
+                "parameters": [
+                    {
+                        "name": "id",
+                        "type": "int",
+                        "optional": false,
+                        "has_default": false,
+                        "default": null,
+                        "by_reference": false,
+                        "variadic": false
+                    },
+                    {
+                        "name": "data",
+                        "type": "array",
+                        "optional": false,
+                        "has_default": false,
+                        "default": null,
+                        "by_reference": false,
+                        "variadic": false
+                    }
+                ]
+            },
+            "updateWard": {
+                "static": false,
+                "return_type": "bool",
+                "returns_reference": false,
+                "parameters": [
+                    {
+                        "name": "id",
+                        "type": "int",
+                        "optional": false,
+                        "has_default": false,
+                        "default": null,
+                        "by_reference": false,
+                        "variadic": false
+                    },
+                    {
+                        "name": "data",
+                        "type": "array",
+                        "optional": false,
+                        "has_default": false,
+                        "default": null,
+                        "by_reference": false,
+                        "variadic": false
+                    }
+                ]
+            },
+            "ward": {
+                "static": false,
+                "return_type": "array",
+                "returns_reference": false,
+                "parameters": [
+                    {
+                        "name": "id",
+                        "type": "int",
+                        "optional": false,
+                        "has_default": false,
+                        "default": null,
+                        "by_reference": false,
+                        "variadic": false
+                    }
+                ]
+            }
+        }
+    },
+    "App\\Repositories\\FoundationLocationRepository": {
+        "final": true,
+        "constants": {
+            "ERROR_CONNECTION_INVALID": "LOCATION_CONNECTION_INVALID",
+            "ERROR_FIELD_REQUIRED": "LOCATION_FIELD_REQUIRED",
+            "ERROR_FIELD_UNSUPPORTED": "LOCATION_FIELD_UNSUPPORTED",
+            "ERROR_PERSISTENCE_FAILED": "LOCATION_PERSISTENCE_FAILED",
+            "ERROR_UPDATE_EMPTY": "LOCATION_UPDATE_EMPTY"
+        },
+        "methods": {
+            "__construct": {
+                "static": false,
+                "return_type": "",
+                "returns_reference": false,
+                "parameters": [
+                    {
+                        "name": "db",
+                        "type": "?CodeIgniter\\Database\\ConnectionInterface",
+                        "optional": true,
+                        "has_default": true,
+                        "default": null,
+                        "by_reference": false,
+                        "variadic": false
+                    }
+                ]
+            },
+            "find": {
+                "static": false,
+                "return_type": "?array",
+                "returns_reference": false,
+                "parameters": [
+                    {
+                        "name": "table",
+                        "type": "string",
+                        "optional": false,
+                        "has_default": false,
+                        "default": null,
+                        "by_reference": false,
+                        "variadic": false
+                    },
+                    {
+                        "name": "id",
+                        "type": "int",
+                        "optional": false,
+                        "has_default": false,
+                        "default": null,
+                        "by_reference": false,
+                        "variadic": false
+                    }
+                ]
+            },
+            "findAll": {
+                "static": false,
+                "return_type": "array",
+                "returns_reference": false,
+                "parameters": [
+                    {
+                        "name": "table",
+                        "type": "string",
+                        "optional": false,
+                        "has_default": false,
+                        "default": null,
+                        "by_reference": false,
+                        "variadic": false
+                    }
+                ]
+            },
+            "findByCode": {
+                "static": false,
+                "return_type": "?array",
+                "returns_reference": false,
+                "parameters": [
+                    {
+                        "name": "table",
+                        "type": "string",
+                        "optional": false,
+                        "has_default": false,
+                        "default": null,
+                        "by_reference": false,
+                        "variadic": false
+                    },
+                    {
+                        "name": "code",
+                        "type": "string",
+                        "optional": false,
+                        "has_default": false,
+                        "default": null,
+                        "by_reference": false,
+                        "variadic": false
+                    }
+                ]
+            },
+            "insert": {
+                "static": false,
+                "return_type": "int",
+                "returns_reference": false,
+                "parameters": [
+                    {
+                        "name": "table",
+                        "type": "string",
+                        "optional": false,
+                        "has_default": false,
+                        "default": null,
+                        "by_reference": false,
+                        "variadic": false
+                    },
+                    {
+                        "name": "data",
+                        "type": "array",
+                        "optional": false,
+                        "has_default": false,
+                        "default": null,
+                        "by_reference": false,
+                        "variadic": false
+                    },
+                    {
+                        "name": "required",
+                        "type": "array",
+                        "optional": false,
+                        "has_default": false,
+                        "default": null,
+                        "by_reference": false,
+                        "variadic": false
+                    },
+                    {
+                        "name": "operation",
+                        "type": "App\\Infrastructure\\Mutation\\OperationContext",
+                        "optional": false,
+                        "has_default": false,
+                        "default": null,
+                        "by_reference": false,
+                        "variadic": false
+                    }
+                ]
+            },
+            "lockWardForUpdate": {
+                "static": false,
+                "return_type": "?array",
+                "returns_reference": false,
+                "parameters": [
+                    {
+                        "name": "id",
+                        "type": "int",
+                        "optional": false,
+                        "has_default": false,
+                        "default": null,
+                        "by_reference": false,
+                        "variadic": false
+                    }
+                ]
+            },
+            "provinceExists": {
+                "static": false,
+                "return_type": "bool",
+                "returns_reference": false,
+                "parameters": [
+                    {
+                        "name": "id",
+                        "type": "int",
+                        "optional": false,
+                        "has_default": false,
+                        "default": null,
+                        "by_reference": false,
+                        "variadic": false
+                    }
+                ]
+            },
+            "update": {
+                "static": false,
+                "return_type": "bool",
+                "returns_reference": false,
+                "parameters": [
+                    {
+                        "name": "table",
+                        "type": "string",
+                        "optional": false,
+                        "has_default": false,
+                        "default": null,
+                        "by_reference": false,
+                        "variadic": false
+                    },
+                    {
+                        "name": "id",
+                        "type": "int",
+                        "optional": false,
+                        "has_default": false,
+                        "default": null,
+                        "by_reference": false,
+                        "variadic": false
+                    },
+                    {
+                        "name": "data",
+                        "type": "array",
+                        "optional": false,
+                        "has_default": false,
+                        "default": null,
+                        "by_reference": false,
+                        "variadic": false
+                    },
+                    {
+                        "name": "operation",
+                        "type": "App\\Infrastructure\\Mutation\\OperationContext",
+                        "optional": false,
+                        "has_default": false,
+                        "default": null,
+                        "by_reference": false,
+                        "variadic": false
+                    }
+                ]
+            },
+            "wardBelongsToProvince": {
+                "static": false,
+                "return_type": "bool",
+                "returns_reference": false,
+                "parameters": [
+                    {
+                        "name": "wardId",
+                        "type": "int",
+                        "optional": false,
+                        "has_default": false,
+                        "default": null,
+                        "by_reference": false,
+                        "variadic": false
+                    },
+                    {
+                        "name": "provinceId",
+                        "type": "int",
+                        "optional": false,
+                        "has_default": false,
+                        "default": null,
+                        "by_reference": false,
+                        "variadic": false
+                    }
+                ]
+            },
+            "wardHasConflictingAddress": {
+                "static": false,
+                "return_type": "bool",
+                "returns_reference": false,
+                "parameters": [
+                    {
+                        "name": "wardId",
+                        "type": "int",
+                        "optional": false,
+                        "has_default": false,
+                        "default": null,
+                        "by_reference": false,
+                        "variadic": false
+                    },
+                    {
+                        "name": "newProvinceId",
+                        "type": "int",
+                        "optional": false,
+                        "has_default": false,
+                        "default": null,
+                        "by_reference": false,
+                        "variadic": false
+                    }
+                ]
+            }
+        }
+    },
+    "App\\Services\\FoundationLocationLifecycleAdapter": {
+        "final": true,
+        "constants": [],
+        "methods": {
+            "__construct": {
+                "static": false,
+                "return_type": "",
+                "returns_reference": false,
+                "parameters": [
+                    {
+                        "name": "type",
+                        "type": "string",
+                        "optional": false,
+                        "has_default": false,
+                        "default": null,
+                        "by_reference": false,
+                        "variadic": false
+                    },
+                    {
+                        "name": "db",
+                        "type": "?CodeIgniter\\Database\\ConnectionInterface",
+                        "optional": true,
+                        "has_default": true,
+                        "default": null,
+                        "by_reference": false,
+                        "variadic": false
+                    },
+                    {
+                        "name": "repository",
+                        "type": "?App\\Repositories\\FoundationLocationRepository",
+                        "optional": true,
+                        "has_default": true,
+                        "default": null,
+                        "by_reference": false,
+                        "variadic": false
+                    },
+                    {
+                        "name": "states",
+                        "type": "?App\\Services\\ResourceWorkflowStateResolver",
+                        "optional": true,
+                        "has_default": true,
+                        "default": null,
+                        "by_reference": false,
+                        "variadic": false
+                    }
+                ]
+            },
+            "load": {
+                "static": false,
+                "return_type": "App\\Services\\LifecycleTargetSnapshot",
+                "returns_reference": false,
+                "parameters": [
+                    {
+                        "name": "targetId",
+                        "type": "mixed",
+                        "optional": false,
+                        "has_default": false,
+                        "default": null,
+                        "by_reference": false,
+                        "variadic": false
+                    },
+                    {
+                        "name": "operation",
+                        "type": "App\\Infrastructure\\Mutation\\OperationContext",
+                        "optional": false,
+                        "has_default": false,
+                        "default": null,
+                        "by_reference": false,
+                        "variadic": false
+                    }
+                ]
+            },
+            "lockAndReload": {
+                "static": false,
+                "return_type": "App\\Services\\LifecycleTargetSnapshot",
+                "returns_reference": false,
+                "parameters": [
+                    {
+                        "name": "authorizedTarget",
+                        "type": "App\\Services\\LifecycleTargetSnapshot",
+                        "optional": false,
+                        "has_default": false,
+                        "default": null,
+                        "by_reference": false,
+                        "variadic": false
+                    },
+                    {
+                        "name": "operation",
+                        "type": "App\\Infrastructure\\Mutation\\OperationContext",
+                        "optional": false,
+                        "has_default": false,
+                        "default": null,
+                        "by_reference": false,
+                        "variadic": false
+                    }
+                ]
+            },
+            "mutate": {
+                "static": false,
+                "return_type": "void",
+                "returns_reference": false,
+                "parameters": [
+                    {
+                        "name": "lockedTarget",
+                        "type": "App\\Services\\LifecycleTargetSnapshot",
+                        "optional": false,
+                        "has_default": false,
+                        "default": null,
+                        "by_reference": false,
+                        "variadic": false
+                    },
+                    {
+                        "name": "expectedCurrentStateId",
+                        "type": "int",
+                        "optional": false,
+                        "has_default": false,
+                        "default": null,
+                        "by_reference": false,
+                        "variadic": false
+                    },
+                    {
+                        "name": "destinationStateId",
+                        "type": "int",
+                        "optional": false,
+                        "has_default": false,
+                        "default": null,
+                        "by_reference": false,
+                        "variadic": false
+                    },
+                    {
+                        "name": "operation",
+                        "type": "App\\Infrastructure\\Mutation\\OperationContext",
+                        "optional": false,
+                        "has_default": false,
+                        "default": null,
+                        "by_reference": false,
+                        "variadic": false
+                    }
+                ]
+            },
+            "resourceType": {
+                "static": false,
+                "return_type": "string",
+                "returns_reference": false,
+                "parameters": []
+            },
+            "transactional": {
+                "static": false,
+                "return_type": "mixed",
+                "returns_reference": false,
+                "parameters": [
+                    {
+                        "name": "callback",
+                        "type": "callable",
+                        "optional": false,
+                        "has_default": false,
+                        "default": null,
+                        "by_reference": false,
+                        "variadic": false
+                    }
+                ]
+            }
+        }
+    }
+}

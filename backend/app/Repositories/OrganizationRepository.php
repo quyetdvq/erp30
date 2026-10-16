@@ -4,65 +4,39 @@ declare(strict_types=1);
 
 namespace App\Repositories;
 
-use App\Exceptions\DomainException;
-use App\Exceptions\PersistenceException;
+use App\Bootstrap\OrganizationFactory;
+use App\Modules\Organization\Application\Ports\OrganizationRepositoryInterface;
+use App\Modules\Organization\Contracts\OrganizationErrors;
+use App\Modules\Organization\Infrastructure\Persistence\SqlOrganizationRepository;
 use CodeIgniter\Database\ConnectionInterface;
-use CodeIgniter\Database\BaseConnection;
 
-final class OrganizationRepository
+/** Compatibility entrypoint; existing callers also satisfy the module port. */
+final class OrganizationRepository implements OrganizationRepositoryInterface
 {
-    public const ERROR_PERSISTENCE_FAILED = 'ORG_PERSISTENCE_FAILED';
-    public const ERROR_CONNECTION_INVALID = 'ORG_CONNECTION_INVALID';
-    public const ERROR_UPDATE_EMPTY = 'ORG_UPDATE_EMPTY';
-    public const ERROR_FIELD_UNSUPPORTED = 'ORG_FIELD_UNSUPPORTED';
-    public const ERROR_FIELD_REQUIRED = 'ORG_FIELD_REQUIRED';
+    public const ERROR_PERSISTENCE_FAILED = OrganizationErrors::ERROR_PERSISTENCE_FAILED;
+    public const ERROR_CONNECTION_INVALID = OrganizationErrors::ERROR_CONNECTION_INVALID;
+    public const ERROR_UPDATE_EMPTY = OrganizationErrors::ERROR_UPDATE_EMPTY;
+    public const ERROR_FIELD_UNSUPPORTED = OrganizationErrors::ERROR_FIELD_UNSUPPORTED;
+    public const ERROR_FIELD_REQUIRED = OrganizationErrors::ERROR_FIELD_REQUIRED;
 
-    /** @var list<string> */
-    private const FIELDS = [
-        'parent_id', 'type', 'code', 'name', 'legal_name', 'tax_code', 'address',
-        'province_id', 'ward_id', 'description', 'status', 'active_from', 'active_to',
-        'created_by', 'updated_by', 'created_at', 'updated_at',
-    ];
-
-    /** @var ConnectionInterface<mixed, mixed> */
-    private ConnectionInterface $db;
+    private readonly SqlOrganizationRepository $delegate;
 
     /** @param ConnectionInterface<mixed, mixed>|null $db */
     public function __construct(?ConnectionInterface $db = null)
     {
-        $this->db = $db ?? db_connect();
+        $this->delegate = OrganizationFactory::repository(db: $db);
     }
 
     /** @return array<string, mixed>|null */
     public function find(int $id): ?array
     {
-        try {
-            $result = $this->db->table('organizations')->where('id', $id)->get();
-        } catch (\Throwable $exception) {
-            throw new PersistenceException(self::ERROR_PERSISTENCE_FAILED, 'find', $exception);
-        }
-        if ($result === false) {
-            throw new PersistenceException(self::ERROR_PERSISTENCE_FAILED, 'find');
-        }
-        $row = $result->getRowArray();
-
-        return $row === null ? null : $row;
+        return $this->delegate->find($id);
     }
 
     /** @return array<string, mixed>|null */
     public function findByCode(string $code): ?array
     {
-        try {
-            $result = $this->db->table('organizations')->where('code', $code)->get();
-        } catch (\Throwable $exception) {
-            throw new PersistenceException(self::ERROR_PERSISTENCE_FAILED, 'findByCode', $exception);
-        }
-        if ($result === false) {
-            throw new PersistenceException(self::ERROR_PERSISTENCE_FAILED, 'findByCode');
-        }
-        $row = $result->getRowArray();
-
-        return $row === null ? null : $row;
+        return $this->delegate->findByCode($code);
     }
 
     /**
@@ -71,119 +45,33 @@ final class OrganizationRepository
      */
     public function findAll(array $filters = []): array
     {
-        try {
-            $builder = $this->db->table('organizations')->orderBy('id', 'ASC');
-            foreach (['parent_id', 'type', 'status'] as $field) {
-                if (array_key_exists($field, $filters)) {
-                    $builder->where($field, $filters[$field]);
-                }
-            }
-            $result = $builder->get();
-        } catch (\Throwable $exception) {
-            throw new PersistenceException(self::ERROR_PERSISTENCE_FAILED, 'findAll', $exception);
-        }
-        if ($result === false) {
-            throw new PersistenceException(self::ERROR_PERSISTENCE_FAILED, 'findAll');
-        }
-
-        return array_values($result->getResultArray());
+        return $this->delegate->findAll($filters);
     }
 
     public function provinceExists(int $provinceId): bool
     {
-        return $this->referenceExists('provinces', $provinceId, 'provinceExists');
+        return $this->delegate->provinceExists($provinceId);
     }
 
     public function wardExists(int $wardId): bool
     {
-        return $this->referenceExists('wards', $wardId, 'wardExists');
+        return $this->delegate->wardExists($wardId);
     }
 
     public function wardBelongsToProvince(int $wardId, int $provinceId): bool
     {
-        try {
-            $result = $this->db->table('wards')
-                ->select('id')
-                ->where('id', $wardId)
-                ->where('province_id', $provinceId)
-                ->get();
-        } catch (\Throwable $exception) {
-            throw new PersistenceException(self::ERROR_PERSISTENCE_FAILED, 'wardBelongsToProvince', $exception);
-        }
-        if ($result === false) {
-            throw new PersistenceException(self::ERROR_PERSISTENCE_FAILED, 'wardBelongsToProvince');
-        }
-
-        return $result->getRowArray() !== null;
+        return $this->delegate->wardBelongsToProvince($wardId, $provinceId);
     }
 
     /** @param array<string, mixed> $data */
     public function insert(array $data): int
     {
-        $payload = $this->payload($data, ['type', 'code', 'name', 'status']);
-        if (! $this->db->table('organizations')->insert($payload)) {
-            throw new DomainException(self::ERROR_PERSISTENCE_FAILED, ['operation' => 'insert']);
-        }
-
-        if (! $this->db instanceof BaseConnection) {
-            throw new DomainException(self::ERROR_CONNECTION_INVALID, ['operation' => 'insert']);
-        }
-
-        return (int) $this->db->insertID();
+        return $this->delegate->insert($data);
     }
 
     /** @param array<string, mixed> $data */
     public function update(int $id, array $data): bool
     {
-        $payload = $this->payload($data);
-        if ($payload === []) {
-            throw new DomainException(self::ERROR_UPDATE_EMPTY, ['operation' => 'update']);
-        }
-
-        try {
-            $updated = $this->db->table('organizations')->where('id', $id)->update($payload);
-        } catch (\Throwable $exception) {
-            throw new PersistenceException(self::ERROR_PERSISTENCE_FAILED, 'update', $exception);
-        }
-        if ($updated === false) {
-            throw new PersistenceException(self::ERROR_PERSISTENCE_FAILED, 'update');
-        }
-
-        return true;
-    }
-
-    private function referenceExists(string $table, int $id, string $operation): bool
-    {
-        try {
-            $result = $this->db->table($table)->select('id')->where('id', $id)->get();
-        } catch (\Throwable $exception) {
-            throw new PersistenceException(self::ERROR_PERSISTENCE_FAILED, $operation, $exception);
-        }
-        if ($result === false) {
-            throw new PersistenceException(self::ERROR_PERSISTENCE_FAILED, $operation);
-        }
-
-        return $result->getRowArray() !== null;
-    }
-
-    /**
-     * @param array<string, mixed> $data
-     * @param list<string> $required
-     * @return array<string, mixed>
-     */
-    private function payload(array $data, array $required = []): array
-    {
-        foreach ($data as $field => $_value) {
-            if (! in_array($field, self::FIELDS, true)) {
-                throw new DomainException(self::ERROR_FIELD_UNSUPPORTED, ['field' => $field]);
-            }
-        }
-        foreach ($required as $field) {
-            if (! array_key_exists($field, $data)) {
-                throw new DomainException(self::ERROR_FIELD_REQUIRED, ['field' => $field]);
-            }
-        }
-
-        return $data;
+        return $this->delegate->update($id, $data);
     }
 }

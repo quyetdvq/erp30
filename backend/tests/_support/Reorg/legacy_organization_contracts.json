@@ -1,0 +1,348 @@
+{
+    "App\\Services\\OrganizationService": {
+        "final": true,
+        "constants": {
+            "ERROR_ACTIVE_DATE_INVALID": "ORG_ACTIVE_DATE_INVALID",
+            "ERROR_COMPANY_RESOLUTION_FAILED": "ORG_COMPANY_RESOLUTION_FAILED",
+            "ERROR_HIERARCHY_CYCLE": "ORG_HIERARCHY_CYCLE",
+            "ERROR_INVALID_PARENT": "ORG_INVALID_PARENT",
+            "ERROR_MUTATION_FAILED": "ORG_MUTATION_FAILED",
+            "ERROR_REFERENCE_INVALID": "ORG_REFERENCE_INVALID",
+            "ERROR_SECOND_GROUP_ROOT": "ORG_SECOND_GROUP_ROOT",
+            "ERROR_WARD_PROVINCE_MISMATCH": "ORG_WARD_PROVINCE_MISMATCH"
+        },
+        "methods": {
+            "__construct": {
+                "static": false,
+                "return_type": "",
+                "returns_reference": false,
+                "parameters": [
+                    {
+                        "name": "repository",
+                        "type": "?App\\Repositories\\OrganizationRepository",
+                        "optional": true,
+                        "has_default": true,
+                        "default": null,
+                        "by_reference": false,
+                        "variadic": false
+                    },
+                    {
+                        "name": "db",
+                        "type": "?CodeIgniter\\Database\\ConnectionInterface",
+                        "optional": true,
+                        "has_default": true,
+                        "default": null,
+                        "by_reference": false,
+                        "variadic": false
+                    },
+                    {
+                        "name": "domainLock",
+                        "type": "?App\\Infrastructure\\Lock\\DomainLockService",
+                        "optional": true,
+                        "has_default": true,
+                        "default": null,
+                        "by_reference": false,
+                        "variadic": false
+                    },
+                    {
+                        "name": "mutationContext",
+                        "type": "?App\\Infrastructure\\Mutation\\MutationContext",
+                        "optional": true,
+                        "has_default": true,
+                        "default": null,
+                        "by_reference": false,
+                        "variadic": false
+                    },
+                    {
+                        "name": "clock",
+                        "type": "?App\\Infrastructure\\Time\\Clock",
+                        "optional": true,
+                        "has_default": true,
+                        "default": null,
+                        "by_reference": false,
+                        "variadic": false
+                    }
+                ]
+            },
+            "create": {
+                "static": false,
+                "return_type": "int",
+                "returns_reference": false,
+                "parameters": [
+                    {
+                        "name": "data",
+                        "type": "array",
+                        "optional": false,
+                        "has_default": false,
+                        "default": null,
+                        "by_reference": false,
+                        "variadic": false
+                    }
+                ]
+            },
+            "inactivate": {
+                "static": false,
+                "return_type": "bool",
+                "returns_reference": false,
+                "parameters": [
+                    {
+                        "name": "id",
+                        "type": "int",
+                        "optional": false,
+                        "has_default": false,
+                        "default": null,
+                        "by_reference": false,
+                        "variadic": false
+                    }
+                ]
+            },
+            "resolveAncestorChain": {
+                "static": false,
+                "return_type": "array",
+                "returns_reference": false,
+                "parameters": [
+                    {
+                        "name": "organizationId",
+                        "type": "int",
+                        "optional": false,
+                        "has_default": false,
+                        "default": null,
+                        "by_reference": false,
+                        "variadic": false
+                    }
+                ]
+            },
+            "resolveCompanyAncestor": {
+                "static": false,
+                "return_type": "?array",
+                "returns_reference": false,
+                "parameters": [
+                    {
+                        "name": "organizationId",
+                        "type": "int",
+                        "optional": false,
+                        "has_default": false,
+                        "default": null,
+                        "by_reference": false,
+                        "variadic": false
+                    }
+                ]
+            },
+            "resolveCompanyOwner": {
+                "static": false,
+                "return_type": "array",
+                "returns_reference": false,
+                "parameters": [
+                    {
+                        "name": "organizationId",
+                        "type": "mixed",
+                        "optional": false,
+                        "has_default": false,
+                        "default": null,
+                        "by_reference": false,
+                        "variadic": false
+                    }
+                ]
+            },
+            "update": {
+                "static": false,
+                "return_type": "bool",
+                "returns_reference": false,
+                "parameters": [
+                    {
+                        "name": "id",
+                        "type": "int",
+                        "optional": false,
+                        "has_default": false,
+                        "default": null,
+                        "by_reference": false,
+                        "variadic": false
+                    },
+                    {
+                        "name": "data",
+                        "type": "array",
+                        "optional": false,
+                        "has_default": false,
+                        "default": null,
+                        "by_reference": false,
+                        "variadic": false
+                    }
+                ]
+            }
+        }
+    },
+    "App\\Repositories\\OrganizationRepository": {
+        "final": true,
+        "constants": {
+            "ERROR_CONNECTION_INVALID": "ORG_CONNECTION_INVALID",
+            "ERROR_FIELD_REQUIRED": "ORG_FIELD_REQUIRED",
+            "ERROR_FIELD_UNSUPPORTED": "ORG_FIELD_UNSUPPORTED",
+            "ERROR_PERSISTENCE_FAILED": "ORG_PERSISTENCE_FAILED",
+            "ERROR_UPDATE_EMPTY": "ORG_UPDATE_EMPTY"
+        },
+        "methods": {
+            "__construct": {
+                "static": false,
+                "return_type": "",
+                "returns_reference": false,
+                "parameters": [
+                    {
+                        "name": "db",
+                        "type": "?CodeIgniter\\Database\\ConnectionInterface",
+                        "optional": true,
+                        "has_default": true,
+                        "default": null,
+                        "by_reference": false,
+                        "variadic": false
+                    }
+                ]
+            },
+            "find": {
+                "static": false,
+                "return_type": "?array",
+                "returns_reference": false,
+                "parameters": [
+                    {
+                        "name": "id",
+                        "type": "int",
+                        "optional": false,
+                        "has_default": false,
+                        "default": null,
+                        "by_reference": false,
+                        "variadic": false
+                    }
+                ]
+            },
+            "findAll": {
+                "static": false,
+                "return_type": "array",
+                "returns_reference": false,
+                "parameters": [
+                    {
+                        "name": "filters",
+                        "type": "array",
+                        "optional": true,
+                        "has_default": true,
+                        "default": [],
+                        "by_reference": false,
+                        "variadic": false
+                    }
+                ]
+            },
+            "findByCode": {
+                "static": false,
+                "return_type": "?array",
+                "returns_reference": false,
+                "parameters": [
+                    {
+                        "name": "code",
+                        "type": "string",
+                        "optional": false,
+                        "has_default": false,
+                        "default": null,
+                        "by_reference": false,
+                        "variadic": false
+                    }
+                ]
+            },
+            "insert": {
+                "static": false,
+                "return_type": "int",
+                "returns_reference": false,
+                "parameters": [
+                    {
+                        "name": "data",
+                        "type": "array",
+                        "optional": false,
+                        "has_default": false,
+                        "default": null,
+                        "by_reference": false,
+                        "variadic": false
+                    }
+                ]
+            },
+            "provinceExists": {
+                "static": false,
+                "return_type": "bool",
+                "returns_reference": false,
+                "parameters": [
+                    {
+                        "name": "provinceId",
+                        "type": "int",
+                        "optional": false,
+                        "has_default": false,
+                        "default": null,
+                        "by_reference": false,
+                        "variadic": false
+                    }
+                ]
+            },
+            "update": {
+                "static": false,
+                "return_type": "bool",
+                "returns_reference": false,
+                "parameters": [
+                    {
+                        "name": "id",
+                        "type": "int",
+                        "optional": false,
+                        "has_default": false,
+                        "default": null,
+                        "by_reference": false,
+                        "variadic": false
+                    },
+                    {
+                        "name": "data",
+                        "type": "array",
+                        "optional": false,
+                        "has_default": false,
+                        "default": null,
+                        "by_reference": false,
+                        "variadic": false
+                    }
+                ]
+            },
+            "wardBelongsToProvince": {
+                "static": false,
+                "return_type": "bool",
+                "returns_reference": false,
+                "parameters": [
+                    {
+                        "name": "wardId",
+                        "type": "int",
+                        "optional": false,
+                        "has_default": false,
+                        "default": null,
+                        "by_reference": false,
+                        "variadic": false
+                    },
+                    {
+                        "name": "provinceId",
+                        "type": "int",
+                        "optional": false,
+                        "has_default": false,
+                        "default": null,
+                        "by_reference": false,
+                        "variadic": false
+                    }
+                ]
+            },
+            "wardExists": {
+                "static": false,
+                "return_type": "bool",
+                "returns_reference": false,
+                "parameters": [
+                    {
+                        "name": "wardId",
+                        "type": "int",
+                        "optional": false,
+                        "has_default": false,
+                        "default": null,
+                        "by_reference": false,
+                        "variadic": false
+                    }
+                ]
+            }
+        }
+    }
+}

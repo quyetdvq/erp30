@@ -1,0 +1,396 @@
+<?php
+
+declare(strict_types=1);
+
+namespace App\Modules\Organization\Application;
+
+use App\Exceptions\DomainException;
+use App\Infrastructure\Id\PositiveId;
+use App\Infrastructure\Lock\DomainLockService;
+use App\Infrastructure\Lock\MariaDbDomainLockService;
+use App\Infrastructure\Mutation\MutationContext;
+use App\Infrastructure\Mutation\OperationContext;
+use App\Infrastructure\Time\Clock;
+use App\Modules\Organization\Application\Ports\OrganizationRepositoryInterface;
+use App\Modules\Organization\Contracts\OrganizationErrors;
+use App\Services\BusinessWorkflowWriteBoundary;
+use CodeIgniter\Database\BaseConnection;
+use CodeIgniter\Database\ConnectionInterface;
+use DateTimeImmutable;
+
+final class OrganizationService
+{
+    public const ERROR_SECOND_GROUP_ROOT = OrganizationErrors::ERROR_SECOND_GROUP_ROOT;
+    public const ERROR_INVALID_PARENT = OrganizationErrors::ERROR_INVALID_PARENT;
+    public const ERROR_HIERARCHY_CYCLE = OrganizationErrors::ERROR_HIERARCHY_CYCLE;
+    public const ERROR_COMPANY_RESOLUTION_FAILED = OrganizationErrors::ERROR_COMPANY_RESOLUTION_FAILED;
+    public const ERROR_ACTIVE_DATE_INVALID = OrganizationErrors::ERROR_ACTIVE_DATE_INVALID;
+    public const ERROR_WARD_PROVINCE_MISMATCH = OrganizationErrors::ERROR_WARD_PROVINCE_MISMATCH;
+    public const ERROR_REFERENCE_INVALID = OrganizationErrors::ERROR_REFERENCE_INVALID;
+    public const ERROR_MUTATION_FAILED = OrganizationErrors::ERROR_MUTATION_FAILED;
+
+    /** @var list<string> */
+    private const TYPES = ['GROUP', 'COMPANY', 'BRANCH', 'PLANT', 'WAREHOUSE'];
+
+    /** @var array<string, list<string>> */
+    private const ALLOWED_CHILDREN = [
+        'GROUP' => ['COMPANY'],
+        'COMPANY' => ['BRANCH', 'PLANT', 'WAREHOUSE'],
+        'BRANCH' => ['PLANT', 'WAREHOUSE'],
+        'PLANT' => ['WAREHOUSE'],
+        'WAREHOUSE' => [],
+    ];
+
+    /** @param ConnectionInterface<mixed, mixed> $db */
+    public function __construct(
+        private readonly OrganizationRepositoryInterface $repository,
+        private readonly ConnectionInterface $db,
+        private readonly ?DomainLockService $domainLock = null,
+        private readonly ?MutationContext $mutationContext = null,
+        private readonly ?Clock $clock = null,
+    ) {
+    }
+
+    /** @param array<string, mixed> $data */
+    public function create(array $data): int
+    {
+        $operation = $this->operation();
+        $data = BusinessWorkflowWriteBoundary::create('organization', $data, $this->db);
+        $payload = $this->prepareCreate($data, $operation);
+
+        return $this->withTreeLock(function () use ($payload): int {
+            $this->assertHierarchyCandidate(null, $payload['type'], $payload['parent_id']);
+            $this->assertDates($payload);
+            $this->assertLocation($payload);
+
+            return $this->repo()->insert($payload);
+        });
+    }
+
+    /** @param array<string, mixed> $data */
+    public function update(int $id, array $data): bool
+    {
+        $operation = $this->operation();
+        $current = $this->repo()->find($id);
+        if ($current === null) {
+            throw new DomainException(self::ERROR_REFERENCE_INVALID, ['organization_id' => $id]);
+        }
+
+        $payload = $this->withoutAuditFields($data);
+        BusinessWorkflowWriteBoundary::assertNoDirectStateMutation('organization', $current, $payload, $this->db);
+        if (array_key_exists('type', $payload)) {
+            $payload['type'] = $this->normalizeType($payload['type']);
+        }
+        if (array_key_exists('parent_id', $payload)) {
+            $payload['parent_id'] = $this->normalizeParentId($payload['parent_id']);
+        }
+
+        $candidate = array_merge($current, $payload);
+        $currentType = (string) $current['type'];
+        $this->assertDates($candidate);
+        $this->assertLocation($candidate);
+        $payload = array_merge($payload, $operation->updatedAudit());
+
+        if (! array_key_exists('parent_id', $data) && ! array_key_exists('type', $data)) {
+            return $this->repo()->update($id, $payload);
+        }
+
+        return $this->withTreeLock(function () use ($id, $payload, $candidate, $currentType): bool {
+            $this->assertHierarchyCandidate($id, (string) $candidate['type'], $candidate['parent_id']);
+            if ((string) $candidate['type'] !== $currentType) {
+                $this->assertChildrenCompatible($id, (string) $candidate['type']);
+            }
+
+            return $this->repo()->update($id, $payload);
+        });
+    }
+
+    public function inactivate(int $id): bool
+    {
+        return $this->update($id, [
+            'status' => 'INACTIVE',
+        ]);
+    }
+
+    /** @return list<array<string, mixed>> */
+    public function resolveAncestorChain(int $organizationId): array
+    {
+        $current = $this->repo()->find($organizationId);
+        if ($current === null) {
+            throw new DomainException(self::ERROR_REFERENCE_INVALID, ['organization_id' => $organizationId]);
+        }
+
+        $chain = [];
+        $visited = [];
+        while (true) {
+            $currentId = (int) ($current['id'] ?? 0);
+            if ($currentId < 1 || isset($visited[$currentId])) {
+                throw new DomainException(self::ERROR_HIERARCHY_CYCLE, ['organization_id' => $organizationId]);
+            }
+            $visited[$currentId] = true;
+            array_unshift($chain, $current);
+
+            $parentId = $current['parent_id'] ?? null;
+            if ($parentId === null) {
+                return $chain;
+            }
+
+            $current = $this->repo()->find((int) $parentId);
+            if ($current === null) {
+                throw new DomainException(self::ERROR_REFERENCE_INVALID, ['parent_id' => $parentId]);
+            }
+        }
+    }
+
+    /** @return array<string, mixed>|null */
+    public function resolveCompanyAncestor(int $organizationId): ?array
+    {
+        foreach (array_reverse($this->resolveAncestorChain($organizationId)) as $organization) {
+            if ((string) $organization['type'] === 'COMPANY') {
+                return $organization;
+            }
+        }
+
+        return null;
+    }
+
+    /** @return array<string, mixed> */
+    public function resolveCompanyOwner(mixed $organizationId): array
+    {
+        $normalizedId = PositiveId::normalize(
+            $organizationId,
+            'organization_id',
+            self::ERROR_COMPANY_RESOLUTION_FAILED,
+        );
+        $company = $this->resolveCompanyAncestor($normalizedId);
+        if ($company === null) {
+            throw new DomainException(self::ERROR_COMPANY_RESOLUTION_FAILED, [
+                'organization_id' => $normalizedId,
+            ]);
+        }
+
+        return $company;
+    }
+
+    /** @param array<string, mixed> $data
+     *  @return array<string, mixed>
+     */
+    private function prepareCreate(array $data, OperationContext $operation): array
+    {
+        $payload = $this->withoutAuditFields($data);
+        $payload['type'] = $this->normalizeType($data['type'] ?? null);
+        $payload['parent_id'] = $this->normalizeParentId($data['parent_id'] ?? null);
+        $payload = array_merge($payload, $operation->createdAudit());
+
+        return $payload;
+    }
+
+    private function repo(): OrganizationRepositoryInterface
+    {
+        return $this->repository;
+    }
+
+    private function normalizeType(mixed $value): string
+    {
+        if (! is_string($value)) {
+            throw new DomainException(self::ERROR_INVALID_PARENT, ['field' => 'type']);
+        }
+        $type = strtoupper(trim($value));
+        if (! in_array($type, self::TYPES, true)) {
+            throw new DomainException(self::ERROR_INVALID_PARENT, ['type' => $type]);
+        }
+
+        return $type;
+    }
+
+    private function normalizeParentId(mixed $value): ?int
+    {
+        if ($value === null) {
+            return null;
+        }
+        return PositiveId::normalize($value, 'parent_id', self::ERROR_INVALID_PARENT);
+    }
+
+    private function assertHierarchyCandidate(?int $organizationId, string $type, mixed $parentId): void
+    {
+        $normalizedParentId = $this->normalizeParentId($parentId);
+        if ($type === 'GROUP') {
+            if ($normalizedParentId !== null) {
+                throw new DomainException(self::ERROR_INVALID_PARENT, ['type' => $type]);
+            }
+            $this->assertSingleGroupRoot($organizationId);
+
+            return;
+        }
+        if ($normalizedParentId === null) {
+            throw new DomainException(self::ERROR_INVALID_PARENT, ['type' => $type]);
+        }
+
+        $parent = $this->repo()->find($normalizedParentId);
+        if ($parent === null) {
+            throw new DomainException(self::ERROR_INVALID_PARENT, ['parent_id' => $normalizedParentId]);
+        }
+        $parentType = (string) ($parent['type'] ?? '');
+        if (! in_array($type, self::ALLOWED_CHILDREN[$parentType] ?? [], true)) {
+            throw new DomainException(self::ERROR_INVALID_PARENT, [
+                'parent_id' => $normalizedParentId,
+                'parent_type' => $parentType,
+                'child_type' => $type,
+            ]);
+        }
+        $this->assertNoCycle($organizationId, $normalizedParentId);
+    }
+
+    private function assertSingleGroupRoot(?int $excludeId): void
+    {
+        foreach ($this->repo()->findAll(['type' => 'GROUP', 'parent_id' => null]) as $root) {
+            if ($excludeId === null || (int) $root['id'] !== $excludeId) {
+                throw new DomainException(self::ERROR_SECOND_GROUP_ROOT, ['organization_id' => $root['id']]);
+            }
+        }
+    }
+
+    private function assertNoCycle(?int $organizationId, int $parentId): void
+    {
+        if ($organizationId !== null && $organizationId === $parentId) {
+            throw new DomainException(self::ERROR_HIERARCHY_CYCLE, ['organization_id' => $organizationId]);
+        }
+
+        $visited = [];
+        $currentId = $parentId;
+        while (true) {
+            if (isset($visited[$currentId])) {
+                throw new DomainException(self::ERROR_HIERARCHY_CYCLE, ['organization_id' => $organizationId]);
+            }
+            $visited[$currentId] = true;
+            if ($organizationId !== null && $currentId === $organizationId) {
+                throw new DomainException(self::ERROR_HIERARCHY_CYCLE, ['organization_id' => $organizationId]);
+            }
+
+            $current = $this->repo()->find($currentId);
+            if ($current === null) {
+                throw new DomainException(self::ERROR_REFERENCE_INVALID, ['parent_id' => $currentId]);
+            }
+            if (($current['parent_id'] ?? null) === null) {
+                return;
+            }
+            $currentId = (int) $current['parent_id'];
+        }
+    }
+
+    private function assertChildrenCompatible(int $organizationId, string $type): void
+    {
+        foreach ($this->repo()->findAll(['parent_id' => $organizationId]) as $child) {
+            if (! in_array((string) $child['type'], self::ALLOWED_CHILDREN[$type] ?? [], true)) {
+                throw new DomainException(self::ERROR_INVALID_PARENT, [
+                    'organization_id' => $organizationId,
+                    'child_type' => $child['type'],
+                ]);
+            }
+        }
+    }
+
+    /** @param array<string, mixed> $data */
+    private function assertDates(array $data): void
+    {
+        foreach (['active_from', 'active_to'] as $field) {
+            if (($data[$field] ?? null) !== null && ! $this->isDate((string) $data[$field])) {
+                throw new DomainException(self::ERROR_ACTIVE_DATE_INVALID, ['field' => $field]);
+            }
+        }
+        $from = $data['active_from'] ?? null;
+        $to = $data['active_to'] ?? null;
+        if ($from !== null && $to !== null && (string) $to < (string) $from) {
+            throw new DomainException(self::ERROR_ACTIVE_DATE_INVALID, ['field' => 'active_to']);
+        }
+    }
+
+    private function isDate(string $value): bool
+    {
+        $date = DateTimeImmutable::createFromFormat('!Y-m-d', $value);
+        $errors = DateTimeImmutable::getLastErrors();
+
+        return $date !== false
+            && $date->format('Y-m-d') === $value
+            && ($errors === false || ($errors['warning_count'] === 0 && $errors['error_count'] === 0));
+    }
+
+    /** @param array<string, mixed> $data */
+    private function assertLocation(array $data): void
+    {
+        $provinceId = $this->referenceId($data['province_id'] ?? null, 'province_id');
+        $wardId = $this->referenceId($data['ward_id'] ?? null, 'ward_id');
+        if ($provinceId !== null && ! $this->repo()->provinceExists($provinceId)) {
+            throw new DomainException(self::ERROR_REFERENCE_INVALID, ['province_id' => $provinceId]);
+        }
+        if ($wardId !== null && ! $this->repo()->wardExists($wardId)) {
+            throw new DomainException(self::ERROR_REFERENCE_INVALID, ['ward_id' => $wardId]);
+        }
+        if ($provinceId !== null && $wardId !== null) {
+            if (! $this->repo()->wardBelongsToProvince($wardId, $provinceId)) {
+                throw new DomainException(self::ERROR_WARD_PROVINCE_MISMATCH, [
+                    'province_id' => $provinceId,
+                    'ward_id' => $wardId,
+                ]);
+            }
+        }
+    }
+
+    private function referenceId(mixed $value, string $field): ?int
+    {
+        if ($value === null) {
+            return null;
+        }
+        return PositiveId::normalize($value, $field, self::ERROR_REFERENCE_INVALID);
+    }
+
+    private function operation(): OperationContext
+    {
+        $context = $this->mutationContext ?? MutationContext::system($this->clock ?? service('clock'));
+
+        return $context->begin();
+    }
+
+    /**
+     * @param array<string, mixed> $data
+     * @return array<string, mixed>
+     */
+    private function withoutAuditFields(array $data): array
+    {
+        unset($data['created_by'], $data['updated_by'], $data['created_at'], $data['updated_at']);
+
+        return $data;
+    }
+
+    /** @param callable(): mixed $callback */
+    private function withTreeLock(callable $callback): mixed
+    {
+        if (! $this->db instanceof BaseConnection) {
+            throw new DomainException(self::ERROR_MUTATION_FAILED, ['operation' => 'organization_mutation']);
+        }
+        $db = $this->db;
+        $lock = $this->domainLock ?? new MariaDbDomainLockService($db);
+
+        try {
+            return $lock->synchronized('organization-tree', function () use ($callback, $db): mixed {
+                $db->transBegin();
+                try {
+                    $result = $callback();
+                    if (! $db->transStatus()) {
+                        throw new DomainException(self::ERROR_MUTATION_FAILED, ['operation' => 'organization_mutation']);
+                    }
+                    $db->transCommit();
+
+                    return $result;
+                } catch (\Throwable $exception) {
+                    $db->transRollback();
+                    throw $exception;
+                }
+            });
+        } catch (DomainException $exception) {
+            throw $exception;
+        } catch (\Throwable $exception) {
+            throw new DomainException(self::ERROR_MUTATION_FAILED, ['operation' => 'organization_mutation'], $exception);
+        }
+    }
+}
