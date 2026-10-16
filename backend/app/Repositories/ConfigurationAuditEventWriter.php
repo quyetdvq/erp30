@@ -4,8 +4,8 @@ declare(strict_types=1);
 
 namespace App\Repositories;
 
-interface ConfigurationAuditEventWriter
+use App\Modules\Settings\Display\Application\Ports\ConfigurationAuditEventWriterInterface;
+
+interface ConfigurationAuditEventWriter extends ConfigurationAuditEventWriterInterface
 {
-    /** @param array<string, mixed> $event */
-    public function insert(array $event): int;
 }

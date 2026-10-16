@@ -53,12 +53,12 @@ Tổ chức BusinessOutline
 Còn lại 
 
 git add backend/ frontend/ contracts/ docs/ tools/
-git commit -m "up anh avartar"
+git commit -m "before ORG006"
 git push
 
 
 
-git commit -m "Sua loi combo va san pham con"
+git commit -m "BE-REORG-002"
 git push
 
 git log --oneline -5

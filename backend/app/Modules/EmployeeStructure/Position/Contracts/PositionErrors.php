@@ -1,0 +1,17 @@
+<?php
+
+declare(strict_types=1);
+
+namespace App\Modules\EmployeeStructure\Position\Contracts;
+
+final class PositionErrors
+{
+    public const ERROR_CODE_DUPLICATE = 'POSITION_CODE_DUPLICATE';
+    public const ERROR_REFERENCE_INVALID = 'POSITION_REFERENCE_INVALID';
+    public const ERROR_STATUS_INVALID = 'POSITION_STATUS_INVALID';
+    public const ERROR_PERSISTENCE_FAILED = 'POSITION_PERSISTENCE_FAILED';
+    public const ERROR_CONNECTION_INVALID = 'POSITION_CONNECTION_INVALID';
+    public const ERROR_UPDATE_EMPTY = 'POSITION_UPDATE_EMPTY';
+    public const ERROR_FIELD_UNSUPPORTED = 'POSITION_FIELD_UNSUPPORTED';
+    public const ERROR_FIELD_REQUIRED = 'POSITION_FIELD_REQUIRED';
+}
