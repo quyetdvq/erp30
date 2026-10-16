@@ -4,48 +4,25 @@ declare(strict_types=1);
 
 namespace App\Authorization;
 
-use App\Exceptions\DomainException;
-use App\Infrastructure\Id\PositiveId;
+use App\Modules\Authorization\Administration\Policies\Validation\PolicyParticipantValidator as CanonicalPolicyParticipantValidator;
 use App\Repositories\PolicyRepository;
 
-/** Validates only the canonical Policy participant dimension. */
+/** Legacy participant validator; calls the canonical validation owner. */
 final class PolicyParticipantValidator
 {
-    public const ERROR_INVALID_PARTICIPANT = 'POLICY_INVALID_PARTICIPANT';
+    public const ERROR_INVALID_PARTICIPANT = CanonicalPolicyParticipantValidator::ERROR_INVALID_PARTICIPANT;
 
-    /** @var list<string> */
-    private const TYPES = ['USER', 'GROUP', 'POSITION', 'DEPARTMENT', 'ORGANIZATION'];
+    private readonly CanonicalPolicyParticipantValidator $delegate;
 
     public function __construct(private readonly PolicyRepository $repository)
     {
+        $this->delegate = new CanonicalPolicyParticipantValidator($repository);
     }
 
     /** @return array{participant_type: string, participant_ref_id: int} */
     public function validate(mixed $participantType, mixed $participantRefId): array
     {
-        if (! is_string($participantType)) {
-            throw new DomainException(self::ERROR_INVALID_PARTICIPANT, ['field' => 'participant_type']);
-        }
-
-        $type = strtoupper(trim($participantType));
-        if (! in_array($type, self::TYPES, true)) {
-            throw new DomainException(self::ERROR_INVALID_PARTICIPANT, [
-                'participant_type' => $participantType,
-            ]);
-        }
-
-        $refId = PositiveId::normalize($participantRefId, 'participant_ref_id', self::ERROR_INVALID_PARTICIPANT);
-        if (! $this->repository->participantTargetExists($type, $refId)) {
-            throw new DomainException(self::ERROR_INVALID_PARTICIPANT, [
-                'participant_type' => $type,
-                'participant_ref_id' => $refId,
-            ]);
-        }
-
-        return [
-            'participant_type' => $type,
-            'participant_ref_id' => $refId,
-        ];
+        return $this->delegate->validate($participantType, $participantRefId);
     }
 
     /**
@@ -54,10 +31,6 @@ final class PolicyParticipantValidator
      */
     public function validatePolicy(array $policy): array
     {
-        if (! array_key_exists('participant_type', $policy) || ! array_key_exists('participant_ref_id', $policy)) {
-            throw new DomainException(self::ERROR_INVALID_PARTICIPANT, ['field' => 'participant']);
-        }
-
-        return array_merge($policy, $this->validate($policy['participant_type'], $policy['participant_ref_id']));
+        return $this->delegate->validatePolicy($policy);
     }
 }

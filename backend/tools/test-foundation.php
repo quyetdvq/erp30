@@ -34,10 +34,12 @@ try {
         fwrite($log, $text);
         fflush($log);
     };
-    $label = defined('BE_REORG_SETTINGS_CASES') ? 'BE-REORG-005'
-        : (defined('BE_REORG_EMPLOYEE_STRUCTURE_CASES') ? 'BE-REORG-004'
-            : (defined('BE_REORG_CONTACT_CASES') ? 'BE-REORG-003'
-                : (defined('BE_REORG_ORGANIZATION_CASES') ? 'BE-REORG-002' : 'BE-REORG-001A')));
+    $label = defined('BE_REORG_AUTHORIZATION_ADMIN_CASES') ? 'BE-REORG-007'
+        : (defined('BE_REORG_NUMBERING_CASES') ? 'BE-REORG-006'
+        : (defined('BE_REORG_SETTINGS_CASES') ? 'BE-REORG-005'
+            : (defined('BE_REORG_EMPLOYEE_STRUCTURE_CASES') ? 'BE-REORG-004'
+                : (defined('BE_REORG_CONTACT_CASES') ? 'BE-REORG-003'
+                    : (defined('BE_REORG_ORGANIZATION_CASES') ? 'BE-REORG-002' : 'BE-REORG-001A')))));
     $write($label . ' verification - ' . gmdate('c') . PHP_EOL . 'PHP ' . PHP_VERSION . PHP_EOL);
     $write("Scope: full backend tests + in-process HTTP + real DB locking; NOT browser/Apache UAT.\n");
     foreach (['app/Bootstrap/FoundationFactory.php',
@@ -103,6 +105,42 @@ try {
             }
         }
     }
+    if (defined('BE_REORG_NUMBERING_CASES')) {
+        foreach (['app/Bootstrap/NumberingFactory.php',
+            'app/Modules/Numbering/Configuration/Application/AutoNumberingConfigurationService.php',
+            'app/Modules/Numbering/Allocation/Application/AutoNumberingCounterAllocator.php',
+            'app/Modules/Numbering/Issuance/Application/AutoNumberService.php',
+            'app/Modules/Numbering/Scope/Application/AutoNumberingScopePeriodResolver.php',
+            'app/Modules/Numbering/Pattern/Application/CanonicalNumberingPatternValidator.php',
+            'tests/unit/BeReorg006NumberingBoundaryTest.php',
+            'tests/unit/BeReorg006NumberingCompatibilityTest.php',
+            'tests/unit/BeReorg006NumberingFactoryTest.php',
+            'tests/database/BeReorg006NumberingHttpTest.php'] as $prerequisite) {
+            if (! is_file($prerequisite)) {
+                throw new RuntimeException('Incomplete BE-REORG-006 checkpoint; missing ' . $prerequisite);
+            }
+        }
+    }
+    if (defined('BE_REORG_AUTHORIZATION_ADMIN_CASES')) {
+        foreach (['app/Bootstrap/AuthorizationAdministrationFactory.php',
+            'app/Modules/Authorization/Administration/Groups/Application/Ports/GroupRepositoryPort.php',
+            'app/Modules/Authorization/Administration/Policies/Application/Ports/PolicyAdministrationRepositoryPort.php',
+            'app/Modules/Authorization/Administration/Groups/Infrastructure/Persistence/SqlAuthorizationGroupRepository.php',
+            'app/Modules/Authorization/Administration/Policies/Infrastructure/Persistence/SqlPolicyRepository.php',
+            'app/Modules/Authorization/Administration/Policies/Validation/PolicyValidator.php',
+            'app/Modules/Authorization/Administration/Policies/Validation/PolicyParticipantValidator.php',
+            'app/Modules/Authorization/Administration/Groups/Application/AuthorizationGroupService.php',
+            'app/Modules/Authorization/Administration/Policies/Application/PolicyAdministrationService.php',
+            'tests/unit/BeReorg007AuthorizationBoundaryTest.php',
+            'tests/unit/BeReorg007AuthorizationCompatibilityTest.php',
+            'tests/database/BeReorg007AuthorizationPolicySqlParityTest.php',
+            'tests/unit/BeReorg007AuthorizationFactoryTest.php',
+            'tests/database/BeReorg007AuthorizationHttpTest.php'] as $prerequisite) {
+            if (! is_file($prerequisite)) {
+                throw new RuntimeException('Incomplete BE-REORG-007 checkpoint; missing ' . $prerequisite);
+            }
+        }
+    }
     $required = ['mysqli', 'intl', 'mbstring', 'dom', 'xml', 'xmlwriter', 'bcmath'];
     $missing = array_values(array_filter($required, static fn (string $name): bool => ! extension_loaded($name)));
     if ($missing !== []) { throw new RuntimeException('Missing PHP extensions: ' . implode(', ', $missing)); }
@@ -148,15 +186,19 @@ try {
         throw new RuntimeException('Cannot create build/logs.');
     }
     if (is_file($junit) && ! unlink($junit)) { throw new RuntimeException('Cannot remove stale JUnit result.'); }
-    $write(defined('BE_REORG_SETTINGS_CASES')
-        ? "\n--- Full PHPUnit (includes 39 Settings cases, 64 Employee Structure cases, 32 Contact cases, 37 Organization cases and the existing Foundation runtime tests) ---\n"
-        : (defined('BE_REORG_EMPLOYEE_STRUCTURE_CASES')
-            ? "\n--- Full PHPUnit (includes 64 Employee Structure cases, 32 Contact cases, 37 Organization cases and the existing Foundation runtime tests) ---\n"
-            : (defined('BE_REORG_CONTACT_CASES')
-                ? "\n--- Full PHPUnit (includes 32 Contact cases, 37 Organization cases and the existing Foundation runtime tests) ---\n"
-                : (defined('BE_REORG_ORGANIZATION_CASES')
-                    ? "\n--- Full PHPUnit (includes 37 Organization cases and the existing Foundation runtime tests) ---\n"
-                    : "\n--- Full PHPUnit (includes the 13 new Foundation runtime tests) ---\n"))));
+    $write(defined('BE_REORG_AUTHORIZATION_ADMIN_CASES')
+        ? "\n--- Full PHPUnit (includes 24 Authorization Administration cases, 91 existing PBAC authority cases, 20 Numbering cases, 39 Settings cases, 64 Employee Structure cases, 32 Contact cases, 37 Organization cases and Foundation runtime tests) ---\n"
+        : (defined('BE_REORG_NUMBERING_CASES')
+        ? "\n--- Full PHPUnit (includes 20 Numbering reorganization cases, 68 existing Numbering cases, 39 Settings cases, 64 Employee Structure cases, 32 Contact cases, 37 Organization cases and the existing Foundation runtime tests) ---\n"
+        : (defined('BE_REORG_SETTINGS_CASES')
+            ? "\n--- Full PHPUnit (includes 39 Settings cases, 64 Employee Structure cases, 32 Contact cases, 37 Organization cases and the existing Foundation runtime tests) ---\n"
+            : (defined('BE_REORG_EMPLOYEE_STRUCTURE_CASES')
+                ? "\n--- Full PHPUnit (includes 64 Employee Structure cases, 32 Contact cases, 37 Organization cases and the existing Foundation runtime tests) ---\n"
+                : (defined('BE_REORG_CONTACT_CASES')
+                    ? "\n--- Full PHPUnit (includes 32 Contact cases, 37 Organization cases and the existing Foundation runtime tests) ---\n"
+                    : (defined('BE_REORG_ORGANIZATION_CASES')
+                        ? "\n--- Full PHPUnit (includes 37 Organization cases and the existing Foundation runtime tests) ---\n"
+                        : "\n--- Full PHPUnit (includes the 13 new Foundation runtime tests) ---\n"))))));
     $unitExit = foundationRun([PHP_BINARY, 'vendor/bin/phpunit', '--configuration', $xmlPath,
         '--bootstrap', 'tests/_support/Foundation/guarded_bootstrap.php', '--no-coverage', '--colors=never',
         '--log-junit', $junit], $backend, $write);
@@ -183,6 +225,16 @@ try {
             foundationCheckJUnit($junit, BE_REORG_SETTINGS_CASES);
             foundationCheckJUnit($junit, BE_REORG_SETTINGS_EXISTING_CASES);
             $write("Settings coverage gate: all 39 new cases executed, none skipped (5 HTTP; no new lock). Existing Settings gate: all 29 cases executed, none skipped.\n");
+        }
+        if (defined('BE_REORG_NUMBERING_CASES')) {
+            foundationCheckJUnit($junit, BE_REORG_NUMBERING_CASES);
+            foundationCheckJUnit($junit, BE_REORG_NUMBERING_EXISTING_CASES);
+            $write("Numbering coverage gate: all 20 new cases executed, none skipped (6 HTTP; no new lock). Existing Numbering gate: all 68 cases executed, none skipped.\n");
+        }
+        if (defined('BE_REORG_AUTHORIZATION_ADMIN_CASES')) {
+            foundationCheckJUnit($junit, BE_REORG_AUTHORIZATION_ADMIN_CASES);
+            foundationCheckJUnit($junit, BE_REORG_AUTHORIZATION_EXISTING_CASES);
+            $write("Authorization Administration coverage gate: all 24 new cases executed, none skipped (6 HTTP). Existing Authorization/PBAC gate: all 91 authority cases executed, none skipped.\n");
         }
         $write("\n--- PHPStan (report existing diagnostics honestly; no ignore/baseline changes) ---\n");
         $stanExit = foundationRun([PHP_BINARY, 'vendor/bin/phpstan', 'analyse', '-c', 'phpstan.neon',
