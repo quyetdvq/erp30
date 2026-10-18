@@ -4,52 +4,33 @@ declare(strict_types=1);
 
 namespace App\Services;
 
-use App\Exceptions\DomainException;
+use App\Bootstrap\WorkflowWriteBoundaryFactory;
 use CodeIgniter\Database\ConnectionInterface;
 
-/**
- * Guard domain-service entry points, not only HTTP controllers: background
- * imports and internal callers must never bypass a bound Resource Lifecycle.
- */
+/** Compatibility entrypoint for business CRUD/import service state boundaries. */
 final class BusinessWorkflowWriteBoundary
 {
-    /** @param array<string,mixed> $data @return array<string,mixed> */
+    /**
+     * @param array<string,mixed> $data
+     * @param ConnectionInterface<mixed,mixed> $db
+     * @return array<string,mixed>
+     */
     public static function create(string $resource, array $data, ConnectionInterface $db): array
     {
-        if (! self::isLifecycleBound($resource, $db)) {
-            return $data;
-        }
-        return (new InitialCreateStateNormalizer(new ResourceWorkflowStateResolver($db)))
-            ->normalize($resource, $data);
+        return WorkflowWriteBoundaryFactory::create(db: $db)->create($resource, $data);
     }
 
-    /** @param array<string,mixed> $current @param array<string,mixed> $changes */
+    /**
+     * @param array<string,mixed> $current
+     * @param array<string,mixed> $changes
+     * @param ConnectionInterface<mixed,mixed> $db
+     */
     public static function assertNoDirectStateMutation(
         string $resource,
         array $current,
         array $changes,
         ConnectionInterface $db,
     ): void {
-        if (! array_key_exists('status', $changes)) {
-            return;
-        }
-        if (is_string($changes['status'])
-            && strtoupper(trim($changes['status'])) === strtoupper((string) ($current['status'] ?? ''))) {
-            return;
-        }
-        if (self::isLifecycleBound($resource, $db)) {
-            throw new DomainException(ResourceWorkflowStateResolver::ERROR_TRANSITION_REQUIRED, [
-                'resource' => $resource,
-            ]);
-        }
-    }
-
-    private static function isLifecycleBound(string $resource, ConnectionInterface $db): bool
-    {
-        // Use the same authoritative Resource validation as the rest of the
-        // Workflow engine. A missing catalog entry must never be interpreted
-        // as a legitimate unbound Resource (fail open), and the ten native
-        // exceptions must not carry a Lifecycle association.
-        return (new ResourceWorkflowStateResolver($db))->lifecycleId($resource) !== null;
+        WorkflowWriteBoundaryFactory::create(db: $db)->assertNoDirectStateMutation($resource, $current, $changes);
     }
 }

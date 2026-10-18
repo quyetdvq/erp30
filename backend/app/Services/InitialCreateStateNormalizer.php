@@ -4,16 +4,14 @@ declare(strict_types=1);
 
 namespace App\Services;
 
-use App\Exceptions\DomainException;
+use App\Bootstrap\WorkflowWriteBoundaryFactory;
+use App\Modules\Workflow\WriteBoundary\Application\InitialStateRules;
+use App\Modules\Workflow\WriteBoundary\Contracts\WorkflowWriteBoundaryErrors;
 
-/**
- * The persisted Resource Lifecycle, not a form's default value, owns the
- * initial business State. Native (Lifecycle-free) resources keep their domain
- * defaults; a client-provided Lifecycle State can only corroborate the initial.
- */
+/** Original constructor and pure static API retained for all existing consumers. */
 final class InitialCreateStateNormalizer
 {
-    public const ERROR_UNSUPPORTED_INITIAL = 'WF_INITIAL_STATE_UNSUPPORTED_FOR_RESOURCE';
+    public const ERROR_UNSUPPORTED_INITIAL = WorkflowWriteBoundaryErrors::ERROR_UNSUPPORTED_INITIAL;
 
     public function __construct(private readonly ?ResourceWorkflowStateResolver $states = null)
     {
@@ -25,44 +23,15 @@ final class InitialCreateStateNormalizer
      */
     public function normalize(string $resource, array $payload): array
     {
-        $initial = ($this->states ?? new ResourceWorkflowStateResolver())->initialCode($resource);
-
-        return self::withInitial($resource, $payload, $initial);
+        return WorkflowWriteBoundaryFactory::create(states: $this->states)->normalizeInitial($resource, $payload);
     }
 
     /**
-     * Pure validation path for the creation contract; also regression-tested
-     * without needing a database connection. Native resources default ACTIVE
-     * when the request does not explicitly supply a valid native State.
-     *
      * @param array<string,mixed> $payload
      * @return array<string,mixed>
      */
     public static function withInitial(string $resource, array $payload, ?string $initial): array
     {
-        if ($initial === null) {
-            if (! array_key_exists('status', $payload)
-                && in_array('ACTIVE', ResourceNativeStateCatalog::codes($resource), true)) {
-                $payload['status'] = 'ACTIVE';
-            }
-            return $payload;
-        }
-        // Lifecycle membership, not a resource-specific native status list,
-        // is authoritative. The resolver already verifies the active member.
-        // Persisted workflow codes are VARCHAR(50) (widened by migration).
-        if (preg_match('/\A[A-Z][A-Z0-9_:-]{0,49}\z/D', $initial) !== 1) {
-            throw new DomainException(self::ERROR_UNSUPPORTED_INITIAL, [
-                'resource' => $resource, 'initial_status' => $initial,
-            ]);
-        }
-        if (array_key_exists('status', $payload)
-            && (! is_string($payload['status']) || strtoupper(trim($payload['status'])) !== $initial)) {
-            throw new DomainException(ResourceWorkflowStateResolver::ERROR_INITIAL_STATE_INVALID, [
-                'resource' => $resource, 'initial_status' => $initial,
-            ]);
-        }
-
-        $payload['status'] = $initial;
-        return $payload;
+        return InitialStateRules::withInitial($resource, $payload, $initial);
     }
 }
