@@ -80,7 +80,7 @@ final class BeReorg008DecisionFactoryTest extends CIUnitTestCase
         $this->assertSame($this->db, $this->property($this->property($policies, 'delegate'), 'db'));
         $this->assertSame($this->db, $this->property($this->property($this->property($engine, 'profiles'), 'identityAdapter'), 'db'));
         $this->assertSame($this->db, $this->property($this->property($this->property($engine, 'employees'), 'delegate'), 'db'));
-        $this->assertSame($this->db, $this->property($this->property($this->property($engine, 'workflowStates'), 'resources'), 'db'));
+        $this->assertSame($this->db, $this->property($this->property($this->property($this->property($this->property($engine, 'workflowStates'), 'engine'), 'reader'), 'resources'), 'db'));
         $names = array_map(static fn (ReflectionParameter $p): string => $p->getName(),
             (new ReflectionClass(PbacDecisionEngine::class))->getConstructor()->getParameters());
         $this->assertSame(['profiles', 'contexts', 'policies', 'employees', 'assignments',
