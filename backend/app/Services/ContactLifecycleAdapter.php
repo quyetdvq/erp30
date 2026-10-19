@@ -80,7 +80,7 @@ final class ContactLifecycleAdapter implements LifecycleTargetAdapter
         }
         $table = $this->db->prefixTable('contacts');
         $result = $this->db->query("SELECT * FROM `{$table}` WHERE id = ? FOR UPDATE", [$authorizedTarget->targetId]);
-        if ($result === false) {
+        if (! $result instanceof \CodeIgniter\Database\ResultInterface) {
             throw new PersistenceException(ContactRepository::ERROR_PERSISTENCE_FAILED, 'workflowLock');
         }
         $row = $result->getRowArray();
@@ -112,7 +112,7 @@ final class ContactLifecycleAdapter implements LifecycleTargetAdapter
         } catch (\Throwable $exception) {
             throw new PersistenceException(ContactRepository::ERROR_PERSISTENCE_FAILED, 'workflowMutate', $exception);
         }
-        if ($updated === false || $this->db->affectedRows() !== 1) {
+        if ($updated === false || ! $this->db instanceof BaseConnection || $this->db->affectedRows() !== 1) {
             throw new ConcurrencyException('lifecycle.state_change');
         }
     }

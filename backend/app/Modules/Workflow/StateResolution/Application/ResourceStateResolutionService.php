@@ -93,7 +93,7 @@ final class ResourceStateResolutionService implements ResourceStateResolutionPor
         return $this->stateIdForCode($type, $row['status']);
     }
 
-    public function stateIdForCode(string $type, mixed $code): ?int
+    public function stateIdForCode(string $type, mixed $code): int
     {
         if (! is_string($code) || trim($code) === '') {
             throw new DomainException(ResourceStateResolutionErrors::ERROR_STATE_NOT_MAPPED, ['resource' => $type]);

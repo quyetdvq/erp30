@@ -19,10 +19,15 @@ final class SqlPriceListListSource implements AuthorizedListSource
 {
     private ?bool $nonNegativePriorities = null;
 
-    /** @param list<array{organization_id:int,status:string}> $approved */
+    /** @var list<array{organization_id:int,status:string}> */
+    private readonly array $approved;
+
+    /** @param list<array<string,mixed>> $approved
+     *  @param ConnectionInterface<mixed, mixed> $db
+     */
     public function __construct(
         private readonly ConnectionInterface $db,
-        private readonly array $approved,
+        array $approved,
     ) {
         if (count($approved) > 256) {
             throw new \InvalidArgumentException('Excessive Price List authorization buckets.');
@@ -33,6 +38,8 @@ final class SqlPriceListListSource implements AuthorizedListSource
                 throw new \InvalidArgumentException('Malformed Price List authorization bucket.');
             }
         }
+        /** @var list<array{organization_id:int,status:string}> $approved */
+        $this->approved = $approved;
     }
 
     public static function supports(CommonListQuery $query): bool

@@ -208,6 +208,7 @@ final class ProductRoleService
     /**
      * @param array<int, array<string,mixed>>|null $byId
      * @param array<int, list<array<string,mixed>>>|null $childrenByParent
+     * @param array<int,true>|null $hasChildrenIds
      * @return array{row:array<string,mixed>,role:string,parent?:array<string,mixed>}
      */
     private function resolve(mixed $product, ?array $byId = null, ?array $childrenByParent = null, ?array $hasChildrenIds = null): array
@@ -264,7 +265,9 @@ final class ProductRoleService
         return ['row' => $row, 'role' => $children === [] ? self::ROLE_SIMPLE : self::ROLE_PARENT];
     }
 
-    /** @param array<int, list<array<string,mixed>>>|null $childrenByParent */
+    /** @param array<int, list<array<string,mixed>>>|null $childrenByParent
+     *  @param array<int,true>|null $hasChildrenIds
+     */
     private function hasChildren(mixed $id, ?array $childrenByParent, ?array $hasChildrenIds = null): bool
     {
         if ($hasChildrenIds !== null) {

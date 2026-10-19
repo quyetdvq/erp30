@@ -35,6 +35,7 @@ final class EffectiveOrganizationScopeIndex
     }
 
     /**
+     * @param ConnectionInterface<mixed, mixed> $db
      * @param list<string> $resourceTypes Only Resource Types actually listed.
      * @return self|null null = conservative legacy per-row authorization.
      */
@@ -58,11 +59,17 @@ final class EffectiveOrganizationScopeIndex
         foreach ($rows as $row) {
             $id = filter_var($row['id'] ?? null, FILTER_VALIDATE_INT, ['options' => ['min_range' => 1]]);
             $parent = $row['parent_id'] ?? null;
-            $parentId = $parent === null ? null : filter_var($parent, FILTER_VALIDATE_INT, ['options' => ['min_range' => 1]]);
+            $parentId = null;
+            if ($parent !== null) {
+                $validatedParent = filter_var($parent, FILTER_VALIDATE_INT, ['options' => ['min_range' => 1]]);
+                if (! is_int($validatedParent)) {
+                    return null;
+                }
+                $parentId = $validatedParent;
+            }
             $type = strtoupper((string) ($row['type'] ?? ''));
             $status = $row['status'] ?? null;
-            if (! is_int($id) || ($parent !== null && ! is_int($parentId))
-                || ! in_array($type, self::TYPES, true) || ! is_string($status)) {
+            if (! is_int($id) || ! in_array($type, self::TYPES, true) || ! is_string($status)) {
                 return null;
             }
             if (isset($nodes[$id])) {

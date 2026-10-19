@@ -33,6 +33,7 @@ final class EffectiveListBucketCompiler
 
     public const MAX_BUCKETS = 64;
 
+    /** @param ConnectionInterface<mixed, mixed> $db */
     public function __construct(
         private readonly ConnectionInterface $db,
         private readonly AuthorizationService $authorization,

@@ -1,17 +1,18 @@
 {
   "kind": "PM3_01_GUARDED_WIRE_CHECKPOINT",
-  "upstream_pm2_01_manifest_sha256": "71bc7c3cd0048043cb83b1bf67bda5e5bb45f1cbff5642c0f0d888b4b3800722",
+  "upstream_pm2_01_manifest_sha256": "48caa99d43c839d04adfe6bcaf965c7d98072a903da64ea883a6ffc6dd0ac8e1",
   "removed_paths": [
     "backend/app/Modules/Product/Media/Infrastructure/Access/Api050MediaAccessAdapter.php"
   ],
   "pm3_files": {
     "backend/tests/_support/ProductMedia/pm3-wire-router.php": "b2bfdcadaf26085b2e953d0ed0b43fe935de909ef5f8015cbe0201e4023dc226",
     "backend/tests/_support/ProductMedia/Pm3WireHttpClient.php": "e60992f6657bae4717876eeb40c4b5b5cfd7e0396b29cdcb2ef4b6ce273422ef",
-    "backend/tests/_support/ProductMedia/Pm3FixtureLedger.php": "31d8c70886a64ff6228586601633b62bc724791ded41f5c48e4ce32567a13c4a",
-    "backend/tests/product-media/ProductMediaPm3WireHttpTest.php": "cb72d2e6ca3d6c2459dd6fe0a5beaff5842d386e4cc776e2a0e52e7629d25ed9",
+    "backend/tests/_support/ProductMedia/Pm3FixtureLedger.php": "14e1fe464a127f7daf6d41cc49f4de13451b7bac50904d6dce9aa2f31060fdc6",
+    "backend/tests/product-media/ProductMediaPm3WireHttpTest.php": "6c11a77f65a2de88bc2ca6ad292bc0aec0ec183d3e63b222a7bfb6a1fa2f9f46",
     "backend/tools/test-product-media-pm3-01-recover.php": "e23929cd00df56dc1caea219e4c6b16d4c306ad0a9ae0f642bc2854136bfff76",
     "backend/tests/_support/ProductMedia/Pm3WireBoot.php": "cb812d010ab65c7f682ee528e7a32d16817ee62945817d172640706c6d843ded",
-    "backend/tests/_support/ProductMedia/Pm3RealHttpSession.php": "917c3ca8e6462e2f78c8212fb11d34d30dc49a8daf0dca0175ad664cc6bc91d6"
+    "backend/tests/_support/ProductMedia/Pm3RealHttpSession.php": "917c3ca8e6462e2f78c8212fb11d34d30dc49a8daf0dca0175ad664cc6bc91d6",
+    "backend/tests/_support/ProductMedia/Pm3CommittedFixture.php": "30ff2dd870a870d829ab2b00edeca3a38c722e8b66db6b18603c0da7bc0e4304"
   },
   "pm3_01_methods": [
     "ProductMediaPm3WireHttpTest::testRealMultipartFormatsBinaryPrivateAndDelete",

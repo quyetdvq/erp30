@@ -46,6 +46,15 @@ final class BusinessLifecycleTargetAdapter implements LifecycleTargetAdapter
         $this->states = $states ?? new ResourceWorkflowStateResolver($this->db);
     }
 
+    /** @return BaseConnection<mixed,mixed> */
+    private function connection(): BaseConnection
+    {
+        if (! $this->db instanceof BaseConnection) {
+            throw new PersistenceException('WF_TARGET_PERSISTENCE_FAILED', 'workflowConnection');
+        }
+        return $this->db;
+    }
+
     public static function supports(string $resource): bool
     {
         return isset(self::TABLES[$resource]);
@@ -59,7 +68,11 @@ final class BusinessLifecycleTargetAdapter implements LifecycleTargetAdapter
     public function load(mixed $targetId, OperationContext $operation): LifecycleTargetSnapshot
     {
         $id = PositiveId::normalize($targetId, 'target_id', LifecycleService::ERROR_TARGET_NOT_FOUND);
-        $row = $this->db->table($this->table())->where('id', $id)->get()->getRowArray();
+        $result = $this->db->table($this->table())->where('id', $id)->get();
+        if ($result === false) {
+            throw new PersistenceException('WF_TARGET_PERSISTENCE_FAILED', 'workflowLoad');
+        }
+        $row = $result->getRowArray();
         if ($row === null) {
             throw new DomainException(LifecycleService::ERROR_TARGET_NOT_FOUND, ['target_id' => $id]);
         }
@@ -85,9 +98,9 @@ final class BusinessLifecycleTargetAdapter implements LifecycleTargetAdapter
 
     public function lockAndReload(LifecycleTargetSnapshot $authorizedTarget, OperationContext $operation): LifecycleTargetSnapshot
     {
-        $table = str_replace('`', '``', $this->db->prefixTable($this->table()));
-        $result = $this->db->query("SELECT * FROM `{$table}` WHERE id = ? FOR UPDATE", [$authorizedTarget->targetId]);
-        if ($result === false) {
+        $table = str_replace('`', '``', $this->connection()->prefixTable($this->table()));
+        $result = $this->connection()->query("SELECT * FROM `{$table}` WHERE id = ? FOR UPDATE", [$authorizedTarget->targetId]);
+        if (! $result instanceof \CodeIgniter\Database\ResultInterface) {
             throw new PersistenceException('WF_TARGET_PERSISTENCE_FAILED', 'workflowLock');
         }
         $row = $result->getRowArray();
@@ -116,7 +129,7 @@ final class BusinessLifecycleTargetAdapter implements LifecycleTargetAdapter
         } catch (\Throwable $exception) {
             throw new PersistenceException('WF_TARGET_PERSISTENCE_FAILED', 'workflowMutate', $exception);
         }
-        if ($result === false || $this->db->affectedRows() !== 1) {
+        if ($result === false || $this->connection()->affectedRows() !== 1) {
             throw new ConcurrencyException('lifecycle.state_change');
         }
     }

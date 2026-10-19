@@ -83,9 +83,7 @@ final class ShieldUserIdentityService
         $user->setPassword($password);
 
         $this->transaction(function () use ($users, $user, $groups, $groupIds, $operation): void {
-            if (! $users->save($user)) {
-                throw new DomainException('IAM_PERSISTENCE_FAILED');
-            }
+            $users->save($user);
             // Shield's UserModel inserts a clone of the entity. The original
             // User does not receive an ID from save(); the model holds it.
             $insertedId = (int) $users->getInsertID();
@@ -149,9 +147,7 @@ final class ShieldUserIdentityService
             $user->full_name = $changes['full_name'];
         }
         $this->transaction(function () use ($user): void {
-            if (! $this->users()->save($user)) {
-                throw new DomainException('IAM_PERSISTENCE_FAILED');
-            }
+            $this->users()->save($user);
         });
 
         return $this->output($id);
@@ -440,7 +436,10 @@ final class ShieldUserIdentityService
 
     private function users(): UserModel
     {
-        return new UserModel($this->db);
+        // CI4 model() takes the connection by reference. A local variable
+        // keeps its nullable parameter contract from widening $this->db.
+        $connection = $this->db;
+        return model(UserModel::class, false, $connection);
     }
 
     private function identity(): ShieldIdentityAdapter

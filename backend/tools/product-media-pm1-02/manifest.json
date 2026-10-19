@@ -25,7 +25,7 @@
     "backend/app/Modules/Product/Media/Ports/ProductImageMetadataPort.php": "386c9735690facb0bc97cfdb0f490cd92490821c8d04658fde2f76cc6ba1b09f",
     "backend/app/Modules/Product/Media/Ports/ProductImageStoragePort.php": "576e96b57098ec18a71863512819abba3ad0ab96edcfa4192f99c742c6479b49",
     "backend/app/Modules/Product/Media/Ports/ProductMediaAccessPort.php": "8cc2794e42d334fbd7f1269430f87491ec8e4469dec2d34449e7703afeadb64e",
-    "backend/app/Modules/Product/Media/Infrastructure/Storage/LocalProductImageStorage.php": "db9b0ef580ccd2079110fc4f1290421afdfd4c2e83c95bc984a42dfb362c819c"
+    "backend/app/Modules/Product/Media/Infrastructure/Storage/LocalProductImageStorage.php": "a2cf3837067409f846a4c4cfb460106f780987423f1086c4655537d7b719b581"
   },
   "pm1_02_methods": [
     "ProductMediaPm1StorageTest::testCanonicalStorageImplementsPortAndLegacySurfacePreservesSignatures",

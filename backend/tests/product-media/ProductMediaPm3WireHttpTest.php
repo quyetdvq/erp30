@@ -11,7 +11,7 @@ use Config\Database;
 use Tests\Support\Foundation\RuntimeGuard;
 use Tests\Support\ProductMedia\Pm3WireHttpClient;
 use Tests\Support\ProductMedia\Pm3FixtureLedger;
-use Tests\Support\ProductMedia\ProductMediaFixture;
+use Tests\Support\ProductMedia\Pm3CommittedFixture;
 use Tests\Support\Workflow\BeReorg011BusinessActionsFixture;
 
 /**
@@ -24,16 +24,12 @@ use Tests\Support\Workflow\BeReorg011BusinessActionsFixture;
 final class ProductMediaPm3WireHttpTest extends CIUnitTestCase
 {
     private BaseConnection $wireDb;
-    private ?ProductMediaFixture $fixture = null;
+    private ?Pm3CommittedFixture $fixture = null;
     private int $productId = 0;
     private string $password = '';
     private string $prefix = '';
     private ?int $lifecycleId = null;
     private ?int $rootIdBeforeFixture = null;
-    /** @var array<string, array{id:int,status:string,lifecycle_id:mixed}> */
-    private array $originalResources = [];
-    /** @var array<string, array{id:int,status:string}> */
-    private array $originalWorkflowStates = [];
     /** @var resource|false|null */
     private $serverProcess = null;
     /** @var list<Pm3WireHttpClient> */
@@ -59,34 +55,26 @@ final class ProductMediaPm3WireHttpTest extends CIUnitTestCase
         if (($actual['db'] ?? '') !== 'erp_test' || (int) ($actual['port'] ?? 0) !== 3306) {
             throw new RuntimeException('PM-3 wire fixture refuses unexpected database.');
         }
-        $this->assertSeedPrerequisites();
+        $this->assertPrewritePrerequisites();
         $this->seedCommittedFixture();
         $this->startServer();
     }
 
-    private function assertSeedPrerequisites(): void
+    private function assertPrewritePrerequisites(): void
     {
-        foreach (['product', 'province', 'ward'] as $type) {
-            $row = $this->wireDb->table('resources')->where('type', $type)->get()->getRowArray();
-            if (! is_array($row) || (int) ($row['id'] ?? 0) < 1) {
-                throw new RuntimeException('Missing expected seeded PM-3 resource ' . $type . '. No writes performed.');
+        // Product/Province/Ward resources and ACTIVE/INACTIVE/CLOSED states are
+        // NOT prerequisites: prior suites may have rolled back their seeds.
+        // Pm3CommittedFixture creates only the missing rows transactionally and
+        // records verified ownership in the crash-recovery ledger.
+        foreach (['resources', 'resource_actions', 'workflow_states'] as $table) {
+            if (! $this->wireDb->tableExists($table)) {
+                throw new RuntimeException('PM-3 requires migrated test schema: ' . $table . '. No writes performed.');
             }
-            $this->originalResources[$type] = [
-                'id' => (int) $row['id'], 'status' => (string) $row['status'],
-                'lifecycle_id' => $row['lifecycle_id'] ?? null,
-            ];
         }
-        foreach (['ACTIVE', 'INACTIVE', 'CLOSED'] as $code) {
-            $row = $this->wireDb->table('workflow_states')->where('code', $code)->get()->getRowArray();
-            if (! is_array($row) || (int) ($row['id'] ?? 0) < 1) {
-                throw new RuntimeException('PM-3 wire test requires seeded workflow state ' . $code . '.');
-            }
-            $this->originalWorkflowStates[$code] = ['id' => (int) $row['id'], 'status' => (string) $row['status']];
-        }
-        // An empty disposable erp_test may legitimately have NO GROUP root.
-        // ProductMediaFixture creates one with a random PM0-* code in that case.
-        // Never tolerate multiple roots, and NEVER delete a pre-existing one.
-        $roots = $this->wireDb->table('organizations')->where('type', 'GROUP')->where('parent_id', null)->get()->getResultArray();
+        // Enforce root cardinality BEFORE any fixture writes. A disposable DB
+        // may legitimately have zero roots; never create a second canonical one.
+        $roots = $this->wireDb->table('organizations')->where('type', 'GROUP')
+            ->where('parent_id', null)->get()->getResultArray();
         if (count($roots) > 1) {
             throw new RuntimeException('PM-3 wire test refuses multiple GROUP roots. No fixture writes performed.');
         }
@@ -94,14 +82,6 @@ final class ProductMediaPm3WireHttpTest extends CIUnitTestCase
             $this->rootIdBeforeFixture = (int) ($roots[0]['id'] ?? 0);
             if ($this->rootIdBeforeFixture < 1) {
                 throw new RuntimeException('PM-3 wire test refuses malformed pre-existing GROUP root.');
-            }
-        }
-        foreach (['view', 'edit'] as $action) {
-            $found = $this->wireDb->table('resource_actions ra')->select('ra.id')
-                ->join('resources r', 'ra.resource_id = r.id')
-                ->where('r.type', 'product')->where('ra.code', $action)->get()->getRowArray();
-            if ($found === null) {
-                throw new RuntimeException('PM-3 wire test requires product.' . $action . ' resource action.');
             }
         }
     }
@@ -113,7 +93,7 @@ final class ProductMediaPm3WireHttpTest extends CIUnitTestCase
         }
         $committed = false;
         try {
-            $this->fixture = new ProductMediaFixture($this->wireDb);
+            $this->fixture = new Pm3CommittedFixture($this->wireDb);
             foreach ([$this->fixture->writer, $this->fixture->reader] as $actor) {
                 BeReorg011BusinessActionsFixture::rootActor($this->wireDb, $actor, $this->fixture->group);
             }
@@ -162,7 +142,7 @@ final class ProductMediaPm3WireHttpTest extends CIUnitTestCase
             }
             $productRow = $this->wireDb->table('products')->select('code')->where('id', $this->productId)->get()->getRowArray();
             Pm3FixtureLedger::save($this->ledgerPath, [
-                'version' => 2, 'status' => 'PENDING', 'run_token' => (string) getenv('ERP_PM_RUN_TOKEN'),
+                'version' => 3, 'status' => 'PENDING', 'run_token' => (string) getenv('ERP_PM_RUN_TOKEN'),
                 'rows' => [
                     'product' => ['id' => $this->productId, 'code' => (string) $productRow['code']],
                     'company' => ['id' => $this->fixture->company, 'code' => $this->prefix . '-C'],
@@ -177,8 +157,9 @@ final class ProductMediaPm3WireHttpTest extends CIUnitTestCase
                     'groups' => array_map(static fn (array $row): array => [
                         'id' => (int) $row['id'], 'code' => (string) $row['code'],
                     ], $groupRows),
-                    'resources' => $this->originalResources,
-                    'workflow_states' => $this->originalWorkflowStates,
+                    'resources' => $this->fixture->resourceSnapshots,
+                    'workflow_states' => $this->fixture->workflowSnapshots,
+                    'resource_actions' => $this->fixture->createdActions,
                 ],
             ]);
             if ($this->wireDb->transStatus() === false || ! $this->wireDb->transCommit()) {

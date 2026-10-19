@@ -116,9 +116,8 @@ final class Auth extends ApiController
             if ($password !== '') {
                 $user->setPassword($password);
             }
-            if (! model(UserModel::class)->save($user)) {
-                return $this->respondError('PROFILE_UPDATE_FAILED', 422);
-            }
+            // Shield's save() either succeeds (true) or throws.
+            model(UserModel::class)->save($user);
         } catch (\App\Exceptions\DomainException $exception) {
             return $this->respondError('INVALID_PROFILE', 422);
         } catch (\Throwable $exception) {

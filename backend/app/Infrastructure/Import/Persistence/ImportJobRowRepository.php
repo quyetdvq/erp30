@@ -184,7 +184,7 @@ final class ImportJobRowRepository
                 $query->whereIn('row_status', $statuses);
                 $this->whereExactStatuses($query, $statuses);
             }
-            return $query->countAllResults();
+            return (int) $query->countAllResults();
         } catch (\Throwable $exception) {
             throw new PersistenceException(self::ERROR_PERSISTENCE_FAILED, 'countPageRows', $exception);
         }

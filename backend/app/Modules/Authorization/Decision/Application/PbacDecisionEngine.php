@@ -372,7 +372,7 @@ final class PbacDecisionEngine implements PbacDecisionPort
     {
         $rows = $this->policies->findApplicablePolicyRows(
             $resourceId,
-            $scopeIds,
+            array_values($scopeIds),
             $resourceActionId,
             $stateId,
         );

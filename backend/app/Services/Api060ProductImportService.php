@@ -101,12 +101,12 @@ final class Api060ProductImportService
             array_values(array_filter(
                 $this->jobs()->findAll(),
                 fn (array $row): bool => $this->isVisibleJob($row, $dateFilters)
-                    && (! $stateAware || $this->authorization()->authorize(
+                    && (! $stateAware || ($operation !== null && $this->authorization()->authorize(
                         $operation,
                         'import_job',
                         'view',
                         new EvaluationOrganizationRequest(persistedTarget: $row),
-                    )->isAllowed()),
+                    )->isAllowed())),
             )),
         );
 

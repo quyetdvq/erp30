@@ -7,6 +7,8 @@ namespace App\Commands;
 use App\Services\ResourceNativeStateCatalog;
 use CodeIgniter\CLI\BaseCommand;
 use CodeIgniter\CLI\CLI;
+use CodeIgniter\Database\BaseBuilder;
+use CodeIgniter\Database\ResultInterface;
 
 /** Read-only inventory under the unified ten-exception Lifecycle rule. */
 final class WorkflowStateAudit extends BaseCommand
@@ -14,6 +16,16 @@ final class WorkflowStateAudit extends BaseCommand
     protected $group = 'DinkERP';
     protected $name = 'erp:workflow-state-audit';
     protected $description = 'Read-only audit of Lifecycle membership and business record state consistency.';
+
+    /** @return ResultInterface<mixed,mixed> */
+    private function result(BaseBuilder $builder): ResultInterface
+    {
+        $result = $builder->get();
+        if ($result === false) {
+            throw new \RuntimeException('Workflow State audit database read failed.');
+        }
+        return $result;
+    }
 
     /** @var array<string,string> */
     private const TABLES = [
@@ -30,9 +42,9 @@ final class WorkflowStateAudit extends BaseCommand
         $db = db_connect();
         // Audit ALL registered Resources, not just those already bound to a
         // Lifecycle. Otherwise missing bindings are invisible to operators.
-        $resources = $db->table('resources')
+        $resources = $this->result($db->table('resources')
             ->select('id, type, lifecycle_id')
-            ->orderBy('type', 'ASC')->get()->getResultArray();
+            ->orderBy('type', 'ASC'))->getResultArray();
         CLI::write('Lifecycle authority audit (READ ONLY)');
         $failures = 0;
         $bound = 0;
@@ -56,12 +68,12 @@ final class WorkflowStateAudit extends BaseCommand
                 continue;
             }
             $bound++;
-            $lifecycle = $db->table('lifecycles')->where('id', $lifecycleId)->get()->getRowArray();
-            $members = $db->table('lifecycle_states ls')
+            $lifecycle = $this->result($db->table('lifecycles')->where('id', $lifecycleId))->getRowArray();
+            $members = $this->result($db->table('lifecycle_states ls')
                 ->select('ls.is_initial, ws.code, ws.status AS state_status')
                 ->join('workflow_states ws', 'ws.id = ls.state_id', 'left')
                 ->where('ls.lifecycle_id', $lifecycleId)
-                ->orderBy('ls.sequence', 'ASC')->get()->getResultArray();
+                ->orderBy('ls.sequence', 'ASC'))->getResultArray();
             $initials = [];
             $codes = [];
             $issues = [];
@@ -103,7 +115,7 @@ final class WorkflowStateAudit extends BaseCommand
                     $query = null;
                 }
                 if ($query !== null) {
-                    foreach ($query->get()->getResultArray() as $row) {
+                    foreach ($this->result($query)->getResultArray() as $row) {
                         if (! in_array(strtoupper((string) $row['status']), $codes, true)) {
                             $outside[] = (string) $row['status'] . ':' . (int) $row['row_count'];
                         }

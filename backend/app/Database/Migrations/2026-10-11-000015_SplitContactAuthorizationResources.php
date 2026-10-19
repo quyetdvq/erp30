@@ -5,6 +5,8 @@ declare(strict_types=1);
 namespace App\Database\Migrations;
 
 use CodeIgniter\Database\Migration;
+use CodeIgniter\Database\BaseConnection;
+use CodeIgniter\Database\BaseBuilder;
 use RuntimeException;
 
 /**
@@ -21,15 +23,44 @@ final class SplitContactAuthorizationResources extends Migration
     /** @var list<string> */
     private const NEW_TYPES = ['organization_contact', 'employee_contact'];
 
+    /** @return BaseConnection<mixed,mixed> */
+    private function connection(): BaseConnection
+    {
+        if (! $this->db instanceof BaseConnection) {
+            throw new RuntimeException('Contact authorization migration requires a CodeIgniter database connection.');
+        }
+        return $this->db;
+    }
+
+    /** @return array<string,mixed>|null */
+    private function first(BaseBuilder $builder): ?array
+    {
+        $result = $builder->get();
+        if ($result === false) {
+            throw new RuntimeException('CONTACT_AUTH_MIGRATION_BLOCKED: read query failed.');
+        }
+        return $result->getRowArray();
+    }
+
+    /** @return list<array<string,mixed>> */
+    private function all(BaseBuilder $builder): array
+    {
+        $result = $builder->get();
+        if ($result === false) {
+            throw new RuntimeException('CONTACT_AUTH_MIGRATION_BLOCKED: read query failed.');
+        }
+        return array_values($result->getResultArray());
+    }
+
     public function up(): void
     {
-        $this->db->transBegin();
+        $this->connection()->transBegin();
         try {
             // Preserve an opt-in legacy Contact Lifecycle across the split.
             // Both new Resource types reuse its State/transition definitions;
             // executing transitions still requires a registered target adapter.
             // Dropping this link would silently weaken State-scoped DENYs.
-            $legacy = $this->db->table('resources')->where('type', 'contact')->get()->getRowArray();
+            $legacy = $this->first($this->connection()->table('resources')->where('type', 'contact'));
             $legacyLifecycleId = $legacy === null || $legacy['lifecycle_id'] === null
                 ? null : (int) $legacy['lifecycle_id'];
             if ($legacyLifecycleId !== null) {
@@ -43,14 +74,14 @@ final class SplitContactAuthorizationResources extends Migration
                 $this->copyRestrictivePolicies((int) $legacy['id'], $targets);
                 // Existing group/direct-user grants remain in the database for
                 // audit, but cannot authorize any real Contact API operation.
-                $this->db->table('resources')->where('id', (int) $legacy['id'])
+                $this->connection()->table('resources')->where('id', (int) $legacy['id'])
                     ->update(['status' => 'INACTIVE']);
             }
-            if (! $this->db->transStatus() || ! $this->db->transCommit()) {
+            if (! $this->connection()->transStatus() || ! $this->connection()->transCommit()) {
                 throw new RuntimeException('CONTACT_AUTH_MIGRATION_BLOCKED: transaction failed.');
             }
         } catch (\Throwable $exception) {
-            $this->db->transRollback();
+            $this->connection()->transRollback();
             throw $exception;
         }
     }
@@ -60,56 +91,56 @@ final class SplitContactAuthorizationResources extends Migration
         // Allow empty database/test rebuilds. Refuse rollback as soon as any
         // Contact grant, policy, or audit record exists: broad legacy access
         // MUST NOT be re-enabled automatically on a populated installation.
-        $resourceRows = $this->db->table('resources')
-            ->whereIn('type', [...self::NEW_TYPES, 'contact'])->get()->getResultArray();
+        $resourceRows = $this->all($this->connection()->table('resources')
+            ->whereIn('type', [...self::NEW_TYPES, 'contact']));
         $byType = [];
         foreach ($resourceRows as $row) {
             $byType[(string) $row['type']] = (int) $row['id'];
         }
         $ids = array_values($byType);
         if ($ids !== []) {
-            $actions = $this->db->table('resource_actions')->select('id')
-                ->whereIn('resource_id', $ids)->get()->getResultArray();
+            $actions = $this->all($this->connection()->table('resource_actions')->select('id')
+                ->whereIn('resource_id', $ids));
             $actionIds = array_map(static fn (array $row): int => (int) $row['id'], $actions);
-            if ($this->db->table('policies')->whereIn('resource_id', $ids)->countAllResults() > 0
-                || $this->db->table('authorization_logs')->whereIn('resource_id', $ids)->countAllResults() > 0
-                || ($actionIds !== [] && $this->db->table('group_permissions')
+            if ($this->connection()->table('policies')->whereIn('resource_id', $ids)->countAllResults() > 0
+                || $this->connection()->table('authorization_logs')->whereIn('resource_id', $ids)->countAllResults() > 0
+                || ($actionIds !== [] && $this->connection()->table('group_permissions')
                     ->whereIn('resource_action_id', $actionIds)->countAllResults() > 0)
-                || $this->db->table('auth_permissions_users')
+                || $this->connection()->table('auth_permissions_users')
                     ->like('permission', 'contact.', 'before')->countAllResults() > 0
-                || $this->db->table('auth_permissions_users')
+                || $this->connection()->table('auth_permissions_users')
                     ->like('permission', '_contact.', 'both')->countAllResults() > 0
             ) {
                 throw new RuntimeException('CONTACT_AUTH_ROLLBACK_REQUIRES_REVIEW');
             }
         }
-        $this->db->transBegin();
+        $this->connection()->transBegin();
         try {
             foreach (self::NEW_TYPES as $type) {
                 if (! isset($byType[$type])) {
                     continue;
                 }
                 $id = $byType[$type];
-                $this->db->table('resource_actions')->where('resource_id', $id)->delete();
-                $this->db->table('resources')->where('id', $id)->delete();
+                $this->connection()->table('resource_actions')->where('resource_id', $id)->delete();
+                $this->connection()->table('resources')->where('id', $id)->delete();
             }
             if (isset($byType['contact'])) {
-                $this->db->table('resources')->where('id', $byType['contact'])->update(['status' => 'ACTIVE']);
+                $this->connection()->table('resources')->where('id', $byType['contact'])->update(['status' => 'ACTIVE']);
             }
-            if (! $this->db->transStatus() || ! $this->db->transCommit()) {
+            if (! $this->connection()->transStatus() || ! $this->connection()->transCommit()) {
                 throw new RuntimeException('CONTACT_AUTH_ROLLBACK_REQUIRES_REVIEW');
             }
         } catch (\Throwable $exception) {
-            $this->db->transRollback();
+            $this->connection()->transRollback();
             throw $exception;
         }
     }
 
     private function ensureResource(string $type, ?int $legacyLifecycleId): int
     {
-        $row = $this->db->table('resources')->where('type', $type)->get()->getRowArray();
+        $row = $this->first($this->connection()->table('resources')->where('type', $type));
         if ($row === null) {
-            $this->db->table('resources')->insert([
+            $this->connection()->table('resources')->insert([
                 'type' => $type,
                 'name' => $type,
                 'domain' => 'ORGANIZATION',
@@ -117,7 +148,7 @@ final class SplitContactAuthorizationResources extends Migration
                 'status' => 'ACTIVE',
                 'created_at' => date('Y-m-d H:i:s'),
             ]);
-            $id = (int) $this->db->insertID();
+            $id = (int) $this->connection()->insertID();
         } else {
             if (($row['domain'] ?? null) !== 'ORGANIZATION') {
                 throw new RuntimeException('CONTACT_AUTH_MIGRATION_BLOCKED: invalid target Resource domain.');
@@ -130,17 +161,17 @@ final class SplitContactAuthorizationResources extends Migration
             if ($existingLifecycleId === null && $legacyLifecycleId !== null) {
                 // A previously provisioned target may already have policies;
                 // silently attaching a Lifecycle could change their meaning.
-                if ($this->db->table('policies')->where('resource_id', $id)->countAllResults() > 0) {
+                if ($this->connection()->table('policies')->where('resource_id', $id)->countAllResults() > 0) {
                     throw new RuntimeException('CONTACT_AUTH_MIGRATION_BLOCKED: target Resource Policies require Lifecycle review.');
                 }
-                $this->db->table('resources')->where('id', $id)
+                $this->connection()->table('resources')->where('id', $id)
                     ->update(['lifecycle_id' => $legacyLifecycleId]);
             }
         }
         foreach (self::ACTIONS as $action) {
-            if ($this->db->table('resource_actions')->where('resource_id', $id)
+            if ($this->connection()->table('resource_actions')->where('resource_id', $id)
                 ->where('code', $action)->countAllResults() === 0) {
-                $this->db->table('resource_actions')->insert([
+                $this->connection()->table('resource_actions')->insert([
                     'resource_id' => $id, 'code' => $action,
                     'created_at' => date('Y-m-d H:i:s'),
                 ]);
@@ -158,14 +189,14 @@ final class SplitContactAuthorizationResources extends Migration
      */
     private function assertLegacyLifecycleUsable(int $lifecycleId): void
     {
-        $lifecycle = $this->db->table('lifecycles')->where('id', $lifecycleId)->get()->getRowArray();
+        $lifecycle = $this->first($this->connection()->table('lifecycles')->where('id', $lifecycleId));
         if ($lifecycle === null || strtoupper((string) ($lifecycle['status'] ?? '')) !== 'ACTIVE') {
             throw new RuntimeException('CONTACT_AUTH_MIGRATION_BLOCKED: legacy Lifecycle is missing/inactive.');
         }
-        $members = $this->db->table('lifecycle_states ls')
+        $members = $this->all($this->connection()->table('lifecycle_states ls')
             ->select('ls.state_id, ls.is_initial, ws.code, ws.status')
             ->join('workflow_states ws', 'ws.id = ls.state_id')
-            ->where('ls.lifecycle_id', $lifecycleId)->get()->getResultArray();
+            ->where('ls.lifecycle_id', $lifecycleId));
         if ($members === []) {
             throw new RuntimeException('CONTACT_AUTH_MIGRATION_BLOCKED: legacy Lifecycle has no States.');
         }
@@ -189,9 +220,8 @@ final class SplitContactAuthorizationResources extends Migration
 
         // HEX enforces byte-exact status comparison even with a case-insensitive
         // MariaDB collation. Never silently map invalid persisted Contacts.
-        $stored = $this->db->table('contacts')->distinct()
-            ->select('HEX(contact_type) AS owner_hex, HEX(status) AS status_hex', false)
-            ->get()->getResultArray();
+        $stored = $this->all($this->connection()->table('contacts')->distinct()
+            ->select('HEX(contact_type) AS owner_hex, HEX(status) AS status_hex', false));
         foreach ($stored as $row) {
             $owner = hex2bin((string) ($row['owner_hex'] ?? ''));
             $status = hex2bin((string) ($row['status_hex'] ?? ''));
@@ -204,13 +234,13 @@ final class SplitContactAuthorizationResources extends Migration
             if (! isset($codes['ACTIVE'])) {
                 throw new RuntimeException('CONTACT_AUTH_MIGRATION_BLOCKED: DRAFT Lifecycle missing ACTIVE State.');
             }
-            $activation = $this->db->table('lifecycle_transitions')
+            $activation = $this->first($this->connection()->table('lifecycle_transitions')
                 ->select('action_code, status')
                 ->where('lifecycle_id', $lifecycleId)
                 ->where('from_state_id', $codes['DRAFT'])
                 ->where('to_state_id', $codes['ACTIVE'])
                 ->where('action_code', 'setstate')
-                ->where('status', 'ACTIVE')->get()->getRowArray();
+                ->where('status', 'ACTIVE'));
             if ($activation === null || ($activation['action_code'] ?? null) !== 'setstate'
                 || ($activation['status'] ?? null) !== 'ACTIVE') {
                 throw new RuntimeException('CONTACT_AUTH_MIGRATION_BLOCKED: DRAFT to ACTIVE transition missing.');
@@ -221,13 +251,13 @@ final class SplitContactAuthorizationResources extends Migration
     /** @param array<string,int> $targets */
     private function copyRestrictivePolicies(int $legacyResourceId, array $targets): void
     {
-        $policies = $this->db->table('policies')
-            ->where('resource_id', $legacyResourceId)->orderBy('id', 'ASC')->get()->getResultArray();
+        $policies = $this->all($this->connection()->table('policies')
+            ->where('resource_id', $legacyResourceId)->orderBy('id', 'ASC'));
         foreach ($policies as $source) {
-            $rows = $this->db->table('policy_actions pa')
+            $rows = $this->all($this->connection()->table('policy_actions pa')
                 ->select('pa.effect, ra.code, ra.resource_id')
                 ->join('resource_actions ra', 'ra.id = pa.resource_action_id')
-                ->where('pa.policy_id', (int) $source['id'])->get()->getResultArray();
+                ->where('pa.policy_id', (int) $source['id']));
             $restrictive = [];
             foreach ($rows as $row) {
                 if ((int) $row['resource_id'] !== $legacyResourceId
@@ -252,29 +282,28 @@ final class SplitContactAuthorizationResources extends Migration
                     'participant_type' => (string) $source['participant_type'],
                     'participant_ref_id' => (int) $source['participant_ref_id'],
                 ];
-                $builder = $this->db->table('policies');
+                $builder = $this->connection()->table('policies');
                 foreach ($identity as $key => $value) {
                     $builder->where($key, $value);
                 }
-                $existing = $builder->get()->getRowArray();
+                $existing = $this->first($builder);
                 if ($existing !== null) {
                     throw new RuntimeException('CONTACT_AUTH_MIGRATION_BLOCKED: target Policy scope already exists.');
                 }
-                $this->db->table('policies')->insert([
+                $this->connection()->table('policies')->insert([
                     ...$identity,
                     'status' => (string) $source['status'],
                     'created_by' => $source['created_by'],
                     'created_at' => $source['created_at'],
                 ]);
-                $newPolicyId = (int) $this->db->insertID();
+                $newPolicyId = (int) $this->connection()->insertID();
                 foreach ($restrictive as $action => $effect) {
-                    $actionRow = $this->db->table('resource_actions')
-                        ->where('resource_id', $targetId)->where('code', $action)
-                        ->get()->getRowArray();
+                    $actionRow = $this->first($this->connection()->table('resource_actions')
+                        ->where('resource_id', $targetId)->where('code', $action));
                     if ($actionRow === null) {
                         throw new RuntimeException('CONTACT_AUTH_MIGRATION_BLOCKED: target Action missing.');
                     }
-                    $this->db->table('policy_actions')->insert([
+                    $this->connection()->table('policy_actions')->insert([
                         'policy_id' => $newPolicyId,
                         'resource_action_id' => (int) $actionRow['id'],
                         'effect' => $effect,

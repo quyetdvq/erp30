@@ -164,7 +164,7 @@ final class ResourceCatalogRepository
         if ($updated === false) {
             throw new PersistenceException(self::ERROR_PERSISTENCE_FAILED, 'setResourceStatus');
         }
-        if ($this->db->affectedRows() === 0) {
+        if (! $this->db instanceof BaseConnection || $this->db->affectedRows() === 0) {
             throw new ConcurrencyException('resource.setstate');
         }
         return true;

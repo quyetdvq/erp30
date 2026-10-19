@@ -72,6 +72,7 @@ final class EvaluationOrganizationResolver
         return $this->validatedContext($resolution->organizationId, $resolution->source);
     }
 
+    /** @param ConnectionInterface<mixed, mixed> $db */
     private function defaultRegistry(OrganizationRepository $organizations, EmployeeRepository $employees, ConnectionInterface $db): OrganizationScopeResolverRegistry
     {
         $groupResolver = fn (): int => $this->groupId();

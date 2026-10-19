@@ -164,6 +164,9 @@ final class ProductRepository
      */
     public function firstInvalidListStructure(): ?array
     {
+        if (! $this->db instanceof BaseConnection) {
+            throw new DomainException(self::ERROR_CONNECTION_INVALID, ['operation' => 'firstInvalidListStructure']);
+        }
         $table = '`' . str_replace('`', '``', $this->db->prefixTable('products')) . '`';
         $sql = <<<SQL
 SELECT violations.id, violations.reason
@@ -309,6 +312,7 @@ SQL;
     }
 
     /** Count after the same SQL predicates that will be used for the page. */
+    /** @param list<string>|null $authorizedStatuses */
     public function countListMatching(CommonListQuery $query, ?array $authorizedStatuses = null): int
     {
         $this->assertSupportedSqlList($query);
@@ -319,7 +323,9 @@ SQL;
         }
     }
 
-    /** @return list<array<string, mixed>> */
+    /** @param list<string>|null $authorizedStatuses
+     *  @return list<array<string, mixed>>
+     */
     public function listPageMatching(CommonListQuery $query, ?array $authorizedStatuses = null): array
     {
         $this->assertSupportedSqlList($query);
@@ -344,6 +350,7 @@ SQL;
      * Initial code/id ordering matches listAll() exactly: PHP's usort may
      * otherwise behave differently for mixed numeric and textual codes.
      *
+     * @param list<string>|null $authorizedStatuses
      * @return list<array<string, mixed>>
      */
     public function listProjectedKeys(CommonListQuery $query, ?array $authorizedStatuses = null): array
@@ -372,13 +379,17 @@ SQL;
         return $keys;
     }
 
-    /** @return list<array<string, mixed>> */
+    /** @param list<int> $ids
+     *  @return list<array<string, mixed>>
+     */
     public function findByIds(array $ids): array
     {
         return $this->findByIn('id', $ids, 'findByIds');
     }
 
-    /** @return list<array<string, mixed>> */
+    /** @param list<int> $ids
+     *  @return list<array<string, mixed>>
+     */
     public function listByParentIds(array $ids): array
     {
         // Relationship validation only needs these three fields, even when a
@@ -386,7 +397,9 @@ SQL;
         return $this->findByIn('parent_product_id', $ids, 'listByParentIds', ['id', 'parent_product_id', 'product_type']);
     }
 
-    /** @return list<int> */
+    /** @param list<int> $ids
+     *  @return list<int>
+     */
     public function parentIdsWithChildren(array $ids): array
     {
         $ids = array_values(array_unique(array_map('intval', $ids)));
@@ -455,7 +468,9 @@ SQL;
         }
     }
 
-    /** @return \CodeIgniter\Database\BaseBuilder */
+    /** @param list<string>|null $authorizedStatuses
+     *  @return \CodeIgniter\Database\BaseBuilder
+     */
     private function listBuilder(CommonListQuery $query, ?array $authorizedStatuses = null): \CodeIgniter\Database\BaseBuilder
     {
         $builder = $this->db->table('products');
@@ -468,7 +483,7 @@ SQL;
             } else {
                 $builder->whereIn('status', $authorizedStatuses);
                 $quoted = array_map(
-                    fn (string $status): string => $this->db->escape(strtoupper(bin2hex($status))),
+                    fn (string $status): string => (string) $this->db->escape(strtoupper(bin2hex($status))),
                     $authorizedStatuses,
                 );
                 $builder->where('HEX(status) IN (' . implode(', ', $quoted) . ')', null, false);
@@ -478,7 +493,7 @@ SQL;
             if (in_array($field, ['product_type', 'status'], true)) {
                 // PHP's strict string comparison is byte-exact; avoid the
                 // database's potentially accent/case-insensitive collation.
-                $quoted = array_map(fn (string $value): string => $this->db->escape($value), $values);
+                $quoted = array_map(fn (string $value): string => (string) $this->db->escape($value), $values);
                 // Ordinary equality can use an index; the additional BINARY
                 // predicate restores the PHP source's exact string match.
                 $builder->whereIn($field, $values);

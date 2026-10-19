@@ -22,6 +22,7 @@ final class PriceListAuthorizedBucketCompiler
 {
     public const MAX_BUCKETS = 256;
 
+    /** @param ConnectionInterface<mixed, mixed> $db */
     public function __construct(
         private readonly ConnectionInterface $db,
         private readonly AuthorizationService $authorization,

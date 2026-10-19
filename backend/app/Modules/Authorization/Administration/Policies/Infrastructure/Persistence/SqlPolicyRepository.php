@@ -394,7 +394,7 @@ final class SqlPolicyRepository implements PolicyAdministrationRepositoryPort
         if ($updated === false) {
             throw new PersistenceException(self::ERROR_PERSISTENCE_FAILED, 'setStatus');
         }
-        if ($expectedStatus !== null && $this->db->affectedRows() === 0) {
+        if ($expectedStatus !== null && (! $this->db instanceof BaseConnection || $this->db->affectedRows() === 0)) {
             throw new ConcurrencyException('policy.setstate');
         }
         return true;

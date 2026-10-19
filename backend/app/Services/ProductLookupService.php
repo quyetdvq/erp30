@@ -261,7 +261,7 @@ final class ProductLookupService
             $conversions = $this->lookup()->conversions(array_keys($visible));
             $uomIds = [];
             foreach ($visible as $row) {
-                if (isset($row['base_uom_id']) && $row['base_uom_id'] !== null) {
+                if (isset($row['base_uom_id'])) {
                     $uomIds[] = (int) $row['base_uom_id'];
                 }
             }
@@ -306,7 +306,9 @@ final class ProductLookupService
         });
     }
 
-    /** @return array<string,mixed> */
+    /** @param array<string,mixed> $row
+     *  @return array<string,mixed>
+     */
     private function option(array $row): array
     {
         return [
@@ -320,7 +322,9 @@ final class ProductLookupService
         ];
     }
 
-    /** @return array<string,mixed> */
+    /** @param array<string,mixed> $row
+     *  @return array<string,mixed>
+     */
     private function productForApi(array $row): array
     {
         if (array_key_exists('image_filename', $row)) {
@@ -359,7 +363,11 @@ final class ProductLookupService
         }
     }
 
-    /** @template T @param callable(OperationContext):T $callback @return T */
+    /**
+     * @template T
+     * @param callable(OperationContext):T $callback
+     * @return T
+     */
     private function read(callable $callback): mixed
     {
         $operation = $this->operation();

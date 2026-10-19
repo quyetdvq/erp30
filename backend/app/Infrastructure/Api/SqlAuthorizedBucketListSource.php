@@ -31,21 +31,28 @@ final class SqlAuthorizedBucketListSource implements AuthorizedListSource
         ],
     ];
 
-    /** @param list<array{status:string, organization_id?:int}> $allowedBuckets */
+    /** @var list<array{status:string,organization_id?:int}> */
+    private readonly array $allowedBuckets;
+
+    /** @param list<array<string,mixed>> $allowedBuckets
+     *  @param ConnectionInterface<mixed, mixed> $db
+     */
     public function __construct(
         private readonly ConnectionInterface $db,
         private readonly string $resource,
-        private readonly array $allowedBuckets,
+        array $allowedBuckets,
     ) {
         if (! isset(self::RESOURCES[$resource])) {
             throw new \InvalidArgumentException('Unsupported PBAC SQL list resource.');
         }
         foreach ($allowedBuckets as $bucket) {
-            if (! isset($bucket['status']) || ! is_string($bucket['status'])
-                || (self::RESOURCES[$resource]['scope'] && (! isset($bucket['organization_id']) || $bucket['organization_id'] < 1))) {
+            if (! is_string($bucket['status'] ?? null)
+                || (self::RESOURCES[$resource]['scope'] && (! is_int($bucket['organization_id'] ?? null) || $bucket['organization_id'] < 1))) {
                 throw new \InvalidArgumentException('Malformed authorized PBAC SQL bucket.');
             }
         }
+        /** @var list<array{status:string,organization_id?:int}> $allowedBuckets */
+        $this->allowedBuckets = $allowedBuckets;
     }
 
     /**
@@ -148,7 +155,8 @@ final class SqlAuthorizedBucketListSource implements AuthorizedListSource
             $method = $index === 0 ? 'groupStart' : 'orGroupStart';
             $builder->{$method}();
             if ($config['scope']) {
-                $builder->where('organization_id', $bucket['organization_id']);
+                $organizationId = $bucket['organization_id'] ?? throw new \LogicException('Malformed authorized PBAC SQL bucket.');
+                $builder->where('organization_id', $organizationId);
             }
             $builder->where('HEX(status) = ' . $this->db->escape(strtoupper(bin2hex($bucket['status']))), null, false);
             $builder->groupEnd();

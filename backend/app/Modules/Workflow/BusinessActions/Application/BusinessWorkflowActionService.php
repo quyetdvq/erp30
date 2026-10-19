@@ -50,7 +50,7 @@ final class BusinessWorkflowActionService implements BusinessWorkflowActionPort
         return [
             'mode' => $lifecycleId === null ? 'NATIVE' : 'LIFECYCLE',
             'initial' => $this->states->initialCode($resource) ?? (in_array('ACTIVE', $codes, true) ? 'ACTIVE' : null),
-            'states' => array_values($codes),
+            'states' => $codes,
         ];
     }
 

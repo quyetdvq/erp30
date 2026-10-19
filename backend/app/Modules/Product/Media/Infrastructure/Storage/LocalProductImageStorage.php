@@ -21,7 +21,7 @@ final class LocalProductImageStorage implements ProductImageStoragePort
             throw new DomainException('PRODUCT_IMAGE_INVALID_SIZE', ['field' => 'image']);
         }
         $dimensions = @getimagesize($temporaryFile);
-        if (! is_array($dimensions) || ! isset($dimensions[0], $dimensions[1], $dimensions['mime'])
+        if (! is_array($dimensions) || ! self::hasRequiredImageMetadata($dimensions)
             || $dimensions[0] < 1 || $dimensions[1] < 1
             || $dimensions[0] > self::MAX_DIMENSION || $dimensions[1] > self::MAX_DIMENSION) {
             throw new DomainException('PRODUCT_IMAGE_INVALID_CONTENT', ['field' => 'image']);
@@ -78,6 +78,12 @@ final class LocalProductImageStorage implements ProductImageStoragePort
         if (is_file($path) && ! @unlink($path)) {
             log_message('error', 'Cannot remove obsolete Product image');
         }
+    }
+
+    /** @param array<array-key, mixed> $dimensions */
+    private static function hasRequiredImageMetadata(array $dimensions): bool
+    {
+        return isset($dimensions[0], $dimensions[1], $dimensions['mime']);
     }
 
     private function directory(): string

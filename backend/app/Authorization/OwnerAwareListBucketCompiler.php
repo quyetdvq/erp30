@@ -22,6 +22,7 @@ final class OwnerAwareListBucketCompiler
     public const MAX_CONTACT_OWNER_BUCKETS = 1024;
     public const MAX_SQL_MEMBERS = 12000;
 
+    /** @param ConnectionInterface<mixed, mixed> $db */
     public function __construct(
         private readonly ConnectionInterface $db,
         private readonly AuthorizationService $authorization,

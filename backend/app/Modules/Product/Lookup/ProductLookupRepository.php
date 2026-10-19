@@ -106,14 +106,14 @@ ORDER BY ranked.owner_id, ranked.product_id
 SQL;
         try {
             $result = $this->db->query($sql, [...$ownerIds, ...$ownerIds, ...$allowedStatusHex, $limit]);
-            if ($result === false) {
+            if (! $result instanceof \CodeIgniter\Database\ResultInterface) {
                 throw new PersistenceException('PRODUCT_PERSISTENCE_FAILED', 'relationPreview');
             }
-            return array_map(static fn (array $row): array => [
+            return array_values(array_map(static fn (array $row): array => [
                 'owner_id' => (string) $row['owner_id'],
                 'product_id' => (string) $row['product_id'],
                 'total' => (string) $row['total'],
-            ], $result->getResultArray());
+            ], $result->getResultArray()));
         } catch (PersistenceException $exception) {
             throw $exception;
         } catch (\Throwable $exception) {
@@ -121,7 +121,10 @@ SQL;
         }
     }
 
-    /** @param list<int> $ids @return list<array<string,mixed>> */
+    /**
+     * @param list<int> $ids
+     * @return list<array<string,mixed>>
+     */
     public function uoms(array $ids): array
     {
         if ($ids === []) {
@@ -130,7 +133,10 @@ SQL;
         return $this->read('product_uoms', fn () => $this->db->table('product_uoms')->whereIn('id', $ids)->get());
     }
 
-    /** @param list<int> $ids @return list<array<string,mixed>> */
+    /**
+     * @param list<int> $ids
+     * @return list<array<string,mixed>>
+     */
     public function conversions(array $ids): array
     {
         if ($ids === []) {
@@ -157,6 +163,9 @@ SQL;
 
     private function quoted(string $table): string
     {
+        if (! $this->db instanceof \CodeIgniter\Database\BaseConnection) {
+            throw new PersistenceException('PRODUCT_PERSISTENCE_FAILED', 'lookupQuoted');
+        }
         return '`' . str_replace('`', '``', $this->db->prefixTable($table)) . '`';
     }
 }

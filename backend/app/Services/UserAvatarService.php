@@ -117,7 +117,11 @@ final class UserAvatarService
             $user = $this->db->table(config('Auth')->tables['users'])
                 ->select('id, active, status, deleted_at, avatar_filename')
                 ->where('id', $userId)->where('deleted_at', null)
-                ->get()->getRowArray();
+                ->get();
+            if ($user === false) {
+                throw new \RuntimeException('User avatar lookup query failed.');
+            }
+            $user = $user->getRowArray();
         } catch (Throwable $exception) {
             throw new DomainException('USER_AVATAR_STORAGE_FAILED', [], $exception);
         }

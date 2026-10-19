@@ -35,8 +35,9 @@ final class UserAvatarStorage
         }
 
         $info = @getimagesize($temporaryFile);
-        if (! is_array($info) || ! isset($info[0], $info[1], $info['mime'])
-            || ! is_int($info[0]) || ! is_int($info[1])
+        // Successful getimagesize() guarantees integer dimensions and a MIME
+        // entry; the false check must precede all array reads.
+        if ($info === false
             || $info[0] < 1 || $info[1] < 1
             || $info[0] > self::MAX_DIMENSION || $info[1] > self::MAX_DIMENSION) {
             throw new DomainException('USER_AVATAR_INVALID_CONTENT', ['field' => 'image']);
@@ -180,7 +181,11 @@ final class UserAvatarStorage
             $offset = 8;
             $total = strlen($bytes);
             while ($offset + 12 <= $total) {
-                $length = unpack('N', substr($bytes, $offset, 4))[1];
+                $parsed = unpack('N', substr($bytes, $offset, 4));
+                if ($parsed === false || ! isset($parsed[1])) {
+                    return true; // Malformed container: reject as unsafe.
+                }
+                $length = $parsed[1];
                 if ($length > $total - $offset - 12) {
                     break;
                 }
@@ -196,7 +201,11 @@ final class UserAvatarStorage
             $total = strlen($bytes);
             while ($offset + 8 <= $total) {
                 $type = substr($bytes, $offset, 4);
-                $length = unpack('V', substr($bytes, $offset + 4, 4))[1];
+                $parsed = unpack('V', substr($bytes, $offset + 4, 4));
+                if ($parsed === false || ! isset($parsed[1])) {
+                    return true; // Malformed container: reject as unsafe.
+                }
+                $length = $parsed[1];
                 if ($length > $total - $offset - 8) {
                     break;
                 }

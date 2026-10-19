@@ -5,10 +5,30 @@ declare(strict_types=1);
 namespace App\Database\Migrations;
 
 use CodeIgniter\Database\Migration;
+use CodeIgniter\Database\BaseConnection;
+use CodeIgniter\Database\ResultInterface;
 
 /** One optional representative image per Product, regardless of its role/type. */
 final class AddProductRepresentativeImage extends Migration
 {
+    /** @return BaseConnection<mixed,mixed> */
+    private function connection(): BaseConnection
+    {
+        if (! $this->db instanceof BaseConnection) {
+            throw new \RuntimeException('Migration requires a CodeIgniter database connection.');
+        }
+        return $this->db;
+    }
+
+    /** @return ResultInterface<mixed,mixed> */
+    private function requireResult(mixed $result): ResultInterface
+    {
+        if (! $result instanceof ResultInterface) {
+            throw new \RuntimeException('Migration database query failed.');
+        }
+        return $result;
+    }
+
     public function up(): void
     {
         $this->forge->addColumn('products', [
@@ -20,9 +40,9 @@ final class AddProductRepresentativeImage extends Migration
 
     public function down(): void
     {
-        $table = str_replace('`', '``', $this->db->prefixTable('products'));
-        $result = $this->db->query("SELECT COUNT(*) AS total FROM `{$table}` WHERE image_filename IS NOT NULL");
-        if ((int) ($result->getRowArray()['total'] ?? 0) > 0) {
+        $table = str_replace('`', '``', $this->connection()->prefixTable('products'));
+        $result = $this->connection()->query("SELECT COUNT(*) AS total FROM `{$table}` WHERE image_filename IS NOT NULL");
+        if ((int) ($this->requireResult($result)->getRowArray()['total'] ?? 0) > 0) {
             throw new \RuntimeException('Refusing downgrade: Product image data still exists.');
         }
         $this->forge->dropColumn('products', ['image_filename', 'image_mime', 'image_size_bytes']);

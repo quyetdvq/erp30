@@ -41,7 +41,11 @@ final class SqlBusinessWorkflowRecordReader implements BusinessWorkflowRecordPor
     {
         $this->assertBusinessResource($resource);
         $id = PositiveId::normalize($id, 'target_id', Errors::ERROR_TARGET_NOT_FOUND);
-        $row = $this->db->table(self::TABLES[$resource])->where('id', $id)->get()->getRowArray();
+        $result = $this->db->table(self::TABLES[$resource])->where('id', $id)->get();
+        if ($result === false) {
+            throw new \RuntimeException('Business workflow target query failed.');
+        }
+        $row = $result->getRowArray();
         if ($row === null || (str_ends_with($resource, '_contact') && ContactAuthorizationRegistry::resourceFor($row) !== $resource)) {
             throw new DomainException(Errors::ERROR_TARGET_NOT_FOUND, ['target_id' => $id]);
         }

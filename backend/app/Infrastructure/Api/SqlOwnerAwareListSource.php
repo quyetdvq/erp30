@@ -14,7 +14,9 @@ use CodeIgniter\Database\ConnectionInterface;
  */
 final class SqlOwnerAwareListSource implements AuthorizedListSource
 {
-    /** @param list<array<string,mixed>> $approved */
+    /** @param list<array<string,mixed>> $approved
+     *  @param ConnectionInterface<mixed, mixed> $db
+     */
     public function __construct(
         private readonly ConnectionInterface $db,
         private readonly string $resource,
