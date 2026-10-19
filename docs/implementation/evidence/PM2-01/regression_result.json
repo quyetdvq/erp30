@@ -1,0 +1,56 @@
+{
+    "phase": "PM2_01",
+    "status": "NOT_CLEAN",
+    "suite": "regression",
+    "token": "878bc456e95b8ac4e2f65a48dad1ed83",
+    "discovered_cases": 1112,
+    "phpunit_exit": 0,
+    "junit_identity_error": null,
+    "phpstan_exit": 1,
+    "baseline_files_preserved": 26,
+    "test_files_preserved": 2,
+    "reviewed_files_unchanged": 28,
+    "pm0_baseline_delta": [
+        "backend\/app\/Services\/ProductImageService.php"
+    ],
+    "pm1_01_baseline_delta": [
+        "backend\/app\/Services\/ProductImageStorage.php",
+        "backend\/app\/Bootstrap\/ProductMediaFactory.php"
+    ],
+    "pm1_02_baseline_delta": [
+        "backend\/app\/Services\/Api050ProductCatalogService.php",
+        "backend\/app\/Bootstrap\/ProductMediaFactory.php",
+        "backend\/app\/Modules\/Product\/Media\/Ports\/ProductMediaAccessPort.php",
+        "backend\/app\/Modules\/Product\/Media\/Infrastructure\/Access\/Api050MediaAccessAdapter.php"
+    ],
+    "baseline_status": "MATCH",
+    "baseline_drift": [],
+    "baseline_line_ending_only": [
+        "backend\/app\/Controllers\/Api\/ProductImages.php",
+        "backend\/app\/Services\/ProductImageService.php",
+        "backend\/app\/Services\/ProductImageStorage.php",
+        "backend\/app\/Services\/Api050ProductCatalogService.php",
+        "backend\/app\/Infrastructure\/Api\/ApiErrorMapper.php",
+        "backend\/app\/Models\/UserModel.php",
+        "backend\/app\/Config\/Routes.php",
+        "backend\/phpunit.dist.xml",
+        "backend\/app\/Bootstrap\/ProductMediaFactory.php",
+        "backend\/app\/Modules\/Product\/Media\/Application\/ProductImageApplicationService.php",
+        "backend\/app\/Modules\/Product\/Media\/Infrastructure\/Persistence\/SqlProductImageMetadataRepository.php",
+        "backend\/app\/Modules\/Product\/Media\/Infrastructure\/Storage\/LegacyProductImageStorageAdapter.php",
+        "backend\/app\/Modules\/Product\/Media\/Ports\/ProductImageMetadataPort.php",
+        "backend\/app\/Modules\/Product\/Media\/Ports\/ProductImageStoragePort.php",
+        "backend\/app\/Modules\/Product\/Media\/Ports\/ProductMediaAccessPort.php",
+        "backend\/app\/Modules\/Product\/Media\/Infrastructure\/Storage\/LocalProductImageStorage.php",
+        "backend\/app\/Bootstrap\/ProductReadAccessFactory.php",
+        "backend\/app\/Modules\/Product\/Product\/Application\/AuthorizedProductReadService.php",
+        "backend\/app\/Modules\/Product\/Media\/Infrastructure\/Access\/ProductReadMediaAccessAdapter.php"
+    ],
+    "source_implementation_changed_during_run": false,
+    "not_covered": [
+        "wire-level multipart",
+        "secure browser CSRF",
+        "deployment checkpoint",
+        "independent review"
+    ]
+}

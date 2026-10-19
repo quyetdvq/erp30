@@ -20,6 +20,7 @@ use App\Infrastructure\RequestContext;
 use App\Modules\Pricing\PriceList\PriceListService;
 use App\Modules\Pricing\PriceList\PriceListRepository;
 use App\Modules\Product\Combo\ComboCompositionService;
+use App\Modules\Product\Product\Application\AuthorizedProductReadService;
 use App\Modules\Product\Product\ProductMasterService;
 use App\Modules\Product\Product\ProductRepository;
 use App\Repositories\PolicyRepository;
@@ -310,28 +311,38 @@ final class Api050ProductCatalogService
         }
     }
 
+    /**
+     * Shared Product read capability. When the catalog was injected with an
+     * authorization service, mutation context, or Product collaborators, the
+     * returned reader uses those exact objects and the same lazy operation.
+     *
+     * This is a narrow composition seam, not a new HTTP operation.
+     */
+    public function productReadAccess(): AuthorizedProductReadService
+    {
+        return new AuthorizedProductReadService(
+            $this->products(),
+            $this->roles(),
+            $this->authorization(),
+            fn (): OperationContext => $this->operation(),
+        );
+    }
+
     /** @return array<string,mixed> */
     public function getProduct(int $id): array
     {
-        $row = $this->requireRow($this->products()->findById($id), ProductMasterService::ERROR_NOT_FOUND);
-        $this->authorize('product', 'view', $row);
-        return $this->decorateProduct($row);
+        // Keep API-050's established Product output decoration while sharing
+        // the same persisted-row PBAC reader with Product Media.
+        return $this->decorateProduct($this->productReadAccess()->authorizedRow($id, 'view'));
     }
 
     /**
-     * Image reads and mutations follow the same row-State PBAC as Product
-     * GET/PATCH. The supplied ID and State are read from persistence, never
-     * trusted from a multipart form.
+     * Authorizes the persisted row; never trusts multipart status/owner hints.
      * @return array<string,mixed>
      */
     public function productForImage(int $id, string $action): array
     {
-        if (! in_array($action, ['view', 'edit'], true)) {
-            throw new DomainException('PRODUCT_INVALID_ACTION');
-        }
-        $row = $this->requireRow($this->products()->findById($id), ProductMasterService::ERROR_NOT_FOUND);
-        $this->authorize('product', $action, $row);
-        return $row;
+        return $this->productReadAccess()->authorizedRow($id, $action);
     }
 
     /** @param array<string,mixed> $payload

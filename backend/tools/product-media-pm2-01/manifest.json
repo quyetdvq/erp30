@@ -1,0 +1,55 @@
+{
+  "kind": "PM2_01_REVIEWED_SOURCE_CHECKPOINT",
+  "upstream_pm1_02_manifest_sha256": "aea03be6c9a136e7e9cc07c1848a90ed3380efa45fdc5c1b04669e55841f3246",
+  "baseline_files": {
+    "backend/app/Controllers/Api/ProductImages.php": "0a25206ed20d186de4919044b7f698a98cd62d19c0d2fd638151b3500ea8ba3c",
+    "backend/app/Services/ProductImageService.php": "058864ab5996e330abdd6bb9f3521c6ad81d57e313cee5d5b6fcee04325de514",
+    "backend/app/Services/ProductImageStorage.php": "8b52a968b13e0b66c42f8be7fddb04701fa00c83d5d0d96d6ed2fbecc6408bdf",
+    "backend/app/Services/Api050ProductCatalogService.php": "fb1ae35f83372def71498204b193846bf7580113a043b03a3b33c91c62aa6884",
+    "backend/app/Infrastructure/Api/ApiErrorMapper.php": "de2731e05e8e2b75dab3300244303dc18a5989a926f5a3ce9de6af1710d7d908",
+    "backend/app/Infrastructure/Mutation/MutationContext.php": "33427e748b6e2cd922d291a6d0d93bd907c93ff78ea07501e5ff858602baa9b2",
+    "backend/app/Infrastructure/RequestContext.php": "41df319448c9c3360973ecfd3c7cbfdca07f08bd998afdb06e87d324dde1c33b",
+    "backend/app/Exceptions/DomainException.php": "5dc547fa25cf241391f3f166facf2dd7c197a2dc2d8c2b500c34c8dfb1c7839c",
+    "backend/app/Exceptions/PersistenceException.php": "95c33994d9f6c0a135f33c4e98da84d2286d5bc9bd2c3846976b7e8fb5c080a8",
+    "backend/app/Debug/ApiExceptionHandler.php": "897e858a6c47a1d124a9e315ea67ec40a56645fde5f552f33332a13da3259978",
+    "backend/app/Models/UserModel.php": "7886846b595e193b5765515d8b43d6461a003b99682ae9c765429cba4b9a0cad",
+    "backend/app/Config/Routes.php": "517fc95799d7588ec70acb0eebe429dd78e34ca43fb93ee36202befd71a5609b",
+    "backend/composer.json": "23cb63c60c02c0df820fec8e9793ec5830ff12f77f896a8294600954196b054c",
+    "backend/composer.lock": "68213e064c214e8b41e29c216a6285edbe2bd5a585d711e62b0129ad8b6daf8a",
+    "backend/phpunit.dist.xml": "ebf37a882a5a8ca530bdfdf9c5a8741e409233ccba01b170ccf0c3f9de07fee3",
+    "backend/app/Bootstrap/ProductMediaFactory.php": "d0b608b2440e994a9e9d831696baef6587de1c207865160b98eac1c0e030d0dd",
+    "backend/app/Modules/Product/Media/Application/ProductImageApplicationService.php": "e897fa4745d72b0e9d3aa35312e7e0dc2d3058a995c8fd8d990405532df8f52f",
+    "backend/app/Modules/Product/Media/Infrastructure/Persistence/SqlProductImageMetadataRepository.php": "89e8697e89363aed7ceb4c332efacf28e0d6e43f5d95f74ddee1a39fa3c856a3",
+    "backend/app/Modules/Product/Media/Infrastructure/Storage/LegacyProductImageStorageAdapter.php": "058a0f7fa359613ff06a7258617b398d66d25f1cdd21964724a1ea713af78efc",
+    "backend/app/Modules/Product/Media/Ports/ProductImageMetadataPort.php": "386c9735690facb0bc97cfdb0f490cd92490821c8d04658fde2f76cc6ba1b09f",
+    "backend/app/Modules/Product/Media/Ports/ProductImageStoragePort.php": "576e96b57098ec18a71863512819abba3ad0ab96edcfa4192f99c742c6479b49",
+    "backend/app/Modules/Product/Media/Ports/ProductMediaAccessPort.php": "9cc8dbd4acb122cca00bea849c015620edb3f1ba76178b13bbbe96234d893c3f",
+    "backend/app/Modules/Product/Media/Infrastructure/Storage/LocalProductImageStorage.php": "db9b0ef580ccd2079110fc4f1290421afdfd4c2e83c95bc984a42dfb362c819c",
+    "backend/app/Bootstrap/ProductReadAccessFactory.php": "20c8e9b63c3a1001d23c57db1b674e881f5fa246cafa87d415195dc74d4580e9",
+    "backend/app/Modules/Product/Product/Application/AuthorizedProductReadService.php": "bbfc03d3c8810dc09f07bdbd62d9a11dbd327d860e12376a0fa0c20aadd3e3de",
+    "backend/app/Modules/Product/Media/Infrastructure/Access/ProductReadMediaAccessAdapter.php": "6a945d3b785b88ea60222a13d78badc6210bb17b2abf2feaaffcd98a3d4c9fc8"
+  },
+  "removed_paths": [
+    "backend/app/Modules/Product/Media/Infrastructure/Access/Api050MediaAccessAdapter.php"
+  ],
+  "test_files": {
+    "backend/tests/product-media/ProductMediaPm2AccessTest.php": "4793a2ccf2e9891bbbb822e995513ccb3cc34de6469a046b06e8cc583fc2ab14",
+    "backend/tests/product-media/ProductMediaPm2BoundaryTest.php": "8a0c4c2f8e969f1c11b6d5c978ffdbefe7ce1a13e8b5aeaa08c0a0d1355d8f55"
+  },
+  "pm2_01_methods": [
+    "ProductMediaPm2AccessTest::testApi050AndSharedReadUseSamePersistedRowAndPublicDto",
+    "ProductMediaPm2AccessTest::testMediaFactoryUsesNewProductBoundaryForDefaultAndInjectedCatalog",
+    "ProductMediaPm2AccessTest::testInvalidActionPrecedesMissingProductAndMissingProductPrecedesAuthorization",
+    "ProductMediaPm2AccessTest::testNativeStatePolicyUsesActualRowForBothSharedAndApi050",
+    "ProductMediaPm2AccessTest::testDefaultCompositionRequiresIndependentViewAfterSuccessfulEdit",
+    "ProductMediaPm2AccessTest::testInjectedCatalogMutationContextRetainsAuthorityWhenAmbientActorChanges",
+    "ProductMediaPm2AccessTest::testProjectionRedactsMediaAndCoercesDriverVariantsWithoutChangingNames",
+    "ProductMediaPm2BoundaryTest::testCanonicalProductMediaHasNoApi050OrTransitionalAdapter"
+  ],
+  "pm1_02_baseline_delta": [
+    "backend/app/Services/Api050ProductCatalogService.php",
+    "backend/app/Bootstrap/ProductMediaFactory.php",
+    "backend/app/Modules/Product/Media/Ports/ProductMediaAccessPort.php",
+    "backend/app/Modules/Product/Media/Infrastructure/Access/Api050MediaAccessAdapter.php"
+  ]
+}
