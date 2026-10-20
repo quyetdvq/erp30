@@ -6,12 +6,12 @@ use App\Exceptions\DomainException;
 use App\Repositories\ContactRepository;
 use App\Services\ContactService;
 use CodeIgniter\Test\CIUnitTestCase;
-use CodeIgniter\Test\DatabaseTestTrait;
+use Tests\Support\Performance\TransactionalDatabaseTestTrait;
 
 /** @internal */
 final class P1Con001ContactServiceTest extends CIUnitTestCase
 {
-    use DatabaseTestTrait;
+    use TransactionalDatabaseTestTrait;
 
     protected $namespace = null;
 

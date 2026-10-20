@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Modules\Numbering\Configuration\Infrastructure\Persistence;
 
+use App\Infrastructure\Persistence\FindsRepositoryRow;
 use App\Exceptions\DomainException;
 use App\Exceptions\PersistenceException;
 use App\Infrastructure\Id\PositiveId;
@@ -22,6 +23,8 @@ use CodeIgniter\Database\ConnectionInterface;
  */
 final class SqlNumberingSeriesRepository implements NumberingSeriesRepositoryInterface
 {
+    use FindsRepositoryRow;
+
     public const ERROR_PERSISTENCE_FAILED = 'NUM_SERIES_PERSISTENCE_FAILED';
     public const ERROR_CONNECTION_INVALID = 'NUM_SERIES_CONNECTION_INVALID';
     public const ERROR_UPDATE_EMPTY = 'NUM_SERIES_UPDATE_EMPTY';
@@ -325,22 +328,6 @@ final class SqlNumberingSeriesRepository implements NumberingSeriesRepositoryInt
     private function updatedAudit(?OperationContext $operation): array
     {
         return ($operation ?? MutationContext::system(service('clock'))->begin())->updatedAudit();
-    }
-
-    /** @return array<string, mixed>|null */
-    private function findRow(string $operation, callable $query): ?array
-    {
-        try {
-            $result = $query();
-        } catch (\Throwable $exception) {
-            throw new PersistenceException(self::ERROR_PERSISTENCE_FAILED, $operation, $exception);
-        }
-        if ($result === false) {
-            throw new PersistenceException(self::ERROR_PERSISTENCE_FAILED, $operation);
-        }
-        $row = $result->getRowArray();
-
-        return $row === null ? null : $row;
     }
 
     /** @return array<string, mixed>|null */

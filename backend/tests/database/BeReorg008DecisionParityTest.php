@@ -13,7 +13,7 @@ use App\Modules\Authorization\Decision\Application\PbacDecisionEngine;
 use App\Repositories\PolicyRepository;
 use CodeIgniter\Database\ConnectionInterface;
 use CodeIgniter\Test\CIUnitTestCase;
-use CodeIgniter\Test\DatabaseTestTrait;
+use Tests\Support\Performance\TransactionalDatabaseTestTrait;
 use Config\Database;
 use Tests\Support\Authorization\BeReorg008DecisionFixture;
 use Tests\Support\Foundation\RuntimeGuard;
@@ -21,7 +21,7 @@ use Tests\Support\Foundation\RuntimeGuard;
 /** @internal Independent BE007 oracle versus canonical BE008 engine on the same real DB fixtures. */
 final class BeReorg008DecisionParityTest extends CIUnitTestCase
 {
-    use DatabaseTestTrait;
+    use TransactionalDatabaseTestTrait;
 
     protected $namespace = null;
     private BeReorg008DecisionFixture $fixture;

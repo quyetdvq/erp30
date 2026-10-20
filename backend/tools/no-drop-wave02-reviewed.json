@@ -1,0 +1,51 @@
+{
+  "batch": "TST-PERF-003D Wave 02 Candidate",
+  "base_approved_classes": 30,
+  "base_test_methods": 157,
+  "new_approved_class_candidates": 5,
+  "new_test_methods": 34,
+  "target_approved_classes": 35,
+  "target_test_methods": 191,
+  "status": "STATIC_CANDIDATE_NOT_XAMPP_ACCEPTED",
+  "classes": [
+    {
+      "module": "contact",
+      "class": "BeReorg003ContactCharacterizationTest",
+      "test_methods": 9,
+      "path": "backend/tests/database/BeReorg003ContactCharacterizationTest.php"
+    },
+    {
+      "module": "organization",
+      "class": "BeReorg002OrganizationCharacterizationTest",
+      "test_methods": 8,
+      "path": "backend/tests/database/BeReorg002OrganizationCharacterizationTest.php"
+    },
+    {
+      "module": "organization",
+      "class": "P1Org002OrganizationServiceTest",
+      "test_methods": 7,
+      "path": "backend/tests/unit/P1Org002OrganizationServiceTest.php"
+    },
+    {
+      "module": "workflow",
+      "class": "BeReorg011BusinessActionsDatabaseTest",
+      "test_methods": 5,
+      "path": "backend/tests/database/BeReorg011BusinessActionsDatabaseTest.php"
+    },
+    {
+      "module": "workflow",
+      "class": "BeReorg012WriteBoundaryDatabaseTest",
+      "test_methods": 5,
+      "path": "backend/tests/database/BeReorg012WriteBoundaryDatabaseTest.php"
+    }
+  ],
+  "exclusions": [
+    "P1Prd002ProductUomMasterServiceTest",
+    "AutoNumbering self-managed transaction",
+    "SQL duplicate and foreign-key error semantics",
+    "second DB connection / HTTP subprocess / real concurrency",
+    "Settings::set/forget via shared Settings service (unverified DB connection)",
+    "P1Wf002LifecycleServiceTest: explicit nested SQL transaction and rollback behavior"
+  ],
+  "expected_executed_cohort_cases": 199
+}

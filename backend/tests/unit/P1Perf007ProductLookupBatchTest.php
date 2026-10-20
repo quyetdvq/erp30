@@ -6,12 +6,12 @@ use App\Modules\Product\Lookup\ProductLookupRepository;
 use App\Services\ProductLookupService;
 use CodeIgniter\HTTP\Exceptions\BadRequestException;
 use CodeIgniter\Test\CIUnitTestCase;
-use CodeIgniter\Test\DatabaseTestTrait;
+use Tests\Support\Performance\TransactionalDatabaseTestTrait;
 
 /** @internal Frontend API lookup/batch contract regression on real MariaDB. */
 final class P1Perf007ProductLookupBatchTest extends CIUnitTestCase
 {
-    use DatabaseTestTrait;
+    use TransactionalDatabaseTestTrait;
 
     protected $namespace = null;
 

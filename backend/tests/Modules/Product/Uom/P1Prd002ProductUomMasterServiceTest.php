@@ -9,13 +9,13 @@ use App\Infrastructure\Time\EvaluationTime;
 use App\Modules\Product\Uom\ProductUomMasterService;
 use App\Modules\Product\Uom\ProductUomRepository;
 use CodeIgniter\Test\CIUnitTestCase;
-use CodeIgniter\Test\DatabaseTestTrait;
+use Tests\Support\Performance\TransactionalDatabaseTestTrait;
 use Tests\Support\Authorization\EligibleActorFixture;
 
 /** @internal */
 final class P1Prd002ProductUomMasterServiceTest extends CIUnitTestCase
 {
-    use DatabaseTestTrait;
+    use TransactionalDatabaseTestTrait;
 
     protected $namespace = null;
 

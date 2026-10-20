@@ -9,12 +9,12 @@ use App\Infrastructure\Mutation\OperationContext;
 use App\Infrastructure\Time\EvaluationTime;
 use App\Modules\Product\Import\ProductImportJobService;
 use CodeIgniter\Test\CIUnitTestCase;
-use CodeIgniter\Test\DatabaseTestTrait;
+use Tests\Support\Performance\TransactionalDatabaseTestTrait;
 
 /** @internal */
 final class P1Imp001ProductImportJobServiceTest extends CIUnitTestCase
 {
-    use DatabaseTestTrait;
+    use TransactionalDatabaseTestTrait;
 
     protected $namespace = null;
 

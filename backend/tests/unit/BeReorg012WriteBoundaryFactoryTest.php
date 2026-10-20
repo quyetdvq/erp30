@@ -10,7 +10,7 @@ use App\Modules\Workflow\WriteBoundary\Infrastructure\Adapters\ExistingStateReso
 use App\Services\InitialCreateStateNormalizer;
 use App\Services\ResourceWorkflowStateResolver;
 use CodeIgniter\Test\CIUnitTestCase;
-use CodeIgniter\Test\DatabaseTestTrait;
+use Tests\Support\Performance\TransactionalDatabaseTestTrait;
 use Config\Database;
 use Tests\Support\Foundation\RuntimeFixture;
 use Tests\Support\Foundation\RuntimeGuard;
@@ -18,7 +18,7 @@ use Tests\Support\Foundation\RuntimeGuard;
 /** @internal Factory identity, per-call isolation and adapter dataflow on guarded erp_test. */
 final class BeReorg012WriteBoundaryFactoryTest extends CIUnitTestCase
 {
-    use DatabaseTestTrait;
+    use TransactionalDatabaseTestTrait;
     protected $namespace = null;
 
     protected function setUp(): void

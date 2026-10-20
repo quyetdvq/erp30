@@ -10,13 +10,13 @@ use App\Exceptions\DomainException;
 use App\Services\OrganizationService;
 use CodeIgniter\Settings\Settings;
 use CodeIgniter\Test\CIUnitTestCase;
-use CodeIgniter\Test\DatabaseTestTrait;
+use Tests\Support\Performance\TransactionalDatabaseTestTrait;
 use Tests\Support\Database\WorkflowLifecycleFixture;
 
 /** @internal */
 final class P1Dsp002DisplaySettingsResolverTest extends CIUnitTestCase
 {
-    use DatabaseTestTrait;
+    use TransactionalDatabaseTestTrait;
 
     protected $namespace = null;
 

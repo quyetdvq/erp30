@@ -10,7 +10,7 @@ use App\Repositories\LifecycleRepository;
 use App\Repositories\PolicyRepository;
 use App\Repositories\ResourceCatalogRepository;
 use CodeIgniter\Test\CIUnitTestCase;
-use CodeIgniter\Test\DatabaseTestTrait;
+use Tests\Support\Performance\TransactionalDatabaseTestTrait;
 use Config\Database;
 use Tests\Support\Foundation\RuntimeGuard;
 use Tests\Support\Foundation\RuntimeFixture;
@@ -21,7 +21,7 @@ require_once __DIR__ . '/../_support/Workflow/BeReorg009LifecycleFixture.php';
 /** @internal BE010 factory and typed legacy persistence adapter on guarded DB. */
 final class BeReorg010StateResolutionFactoryTest extends CIUnitTestCase
 {
-    use DatabaseTestTrait;
+    use TransactionalDatabaseTestTrait;
     protected $namespace = null;
 
     protected function setUp(): void

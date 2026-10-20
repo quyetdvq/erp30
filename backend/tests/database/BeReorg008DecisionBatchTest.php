@@ -8,7 +8,7 @@ use App\Infrastructure\Mutation\OperationContext;
 use App\Infrastructure\Time\EvaluationTime;
 use CodeIgniter\Events\Events;
 use CodeIgniter\Test\CIUnitTestCase;
-use CodeIgniter\Test\DatabaseTestTrait;
+use Tests\Support\Performance\TransactionalDatabaseTestTrait;
 use Config\Database;
 use Tests\Support\Authorization\BeReorg008DecisionFixture;
 use Tests\Support\Foundation\RuntimeGuard;
@@ -16,7 +16,7 @@ use Tests\Support\Foundation\RuntimeGuard;
 /** @internal Read-only batches must use the facade's one canonical engine, never a second snapshot. */
 final class BeReorg008DecisionBatchTest extends CIUnitTestCase
 {
-    use DatabaseTestTrait;
+    use TransactionalDatabaseTestTrait;
     protected $namespace = null;
     private BeReorg008DecisionFixture $fixture;
 

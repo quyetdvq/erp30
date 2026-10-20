@@ -7,7 +7,7 @@ use App\Modules\Workflow\BusinessActions\Infrastructure\Persistence\SqlBusinessW
 use App\Services\BusinessLifecycleTransitions;
 use App\Services\BusinessWorkflowActions;
 use CodeIgniter\Test\CIUnitTestCase;
-use CodeIgniter\Test\DatabaseTestTrait;
+use Tests\Support\Performance\TransactionalDatabaseTestTrait;
 use Config\Database;
 use Tests\Support\Foundation\RuntimeFixture;
 use Tests\Support\Foundation\RuntimeGuard;
@@ -18,7 +18,7 @@ require_once __DIR__ . '/../_support/Workflow/BeReorg011BusinessActionsFixture.p
 /** @internal Real guarded SQL record ownership and fallback parity. */
 final class BeReorg011BusinessActionsDatabaseTest extends CIUnitTestCase
 {
-    use DatabaseTestTrait;
+    use TransactionalDatabaseTestTrait;
     protected $namespace = null;
     private RuntimeFixture $fixture;
 

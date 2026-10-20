@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Modules\Organization\Infrastructure\Persistence;
 
+use App\Infrastructure\Persistence\ValidatesRepositoryPayload;
 use App\Exceptions\DomainException;
 use App\Exceptions\PersistenceException;
 use App\Modules\Organization\Application\Ports\OrganizationRepositoryInterface;
@@ -13,6 +14,8 @@ use CodeIgniter\Database\BaseConnection;
 
 final class SqlOrganizationRepository implements OrganizationRepositoryInterface
 {
+    use ValidatesRepositoryPayload;
+
     public const ERROR_PERSISTENCE_FAILED = OrganizationErrors::ERROR_PERSISTENCE_FAILED;
     public const ERROR_CONNECTION_INVALID = OrganizationErrors::ERROR_CONNECTION_INVALID;
     public const ERROR_UPDATE_EMPTY = OrganizationErrors::ERROR_UPDATE_EMPTY;
@@ -166,26 +169,5 @@ final class SqlOrganizationRepository implements OrganizationRepositoryInterface
         }
 
         return $result->getRowArray() !== null;
-    }
-
-    /**
-     * @param array<string, mixed> $data
-     * @param list<string> $required
-     * @return array<string, mixed>
-     */
-    private function payload(array $data, array $required = []): array
-    {
-        foreach ($data as $field => $_value) {
-            if (! in_array($field, self::FIELDS, true)) {
-                throw new DomainException(self::ERROR_FIELD_UNSUPPORTED, ['field' => $field]);
-            }
-        }
-        foreach ($required as $field) {
-            if (! array_key_exists($field, $data)) {
-                throw new DomainException(self::ERROR_FIELD_REQUIRED, ['field' => $field]);
-            }
-        }
-
-        return $data;
     }
 }

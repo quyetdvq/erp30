@@ -12,7 +12,7 @@ use App\Modules\Authorization\Decision\Application\Ports\PbacDecisionPort;
 use App\Repositories\PolicyRepository;
 use App\Repositories\ResourceCatalogRepository;
 use CodeIgniter\Test\CIUnitTestCase;
-use CodeIgniter\Test\DatabaseTestTrait;
+use Tests\Support\Performance\TransactionalDatabaseTestTrait;
 use Config\Database;
 use Tests\Support\Authorization\BeReorg008DecisionFixture;
 use Tests\Support\Foundation\RuntimeGuard;
@@ -20,7 +20,7 @@ use Tests\Support\Foundation\RuntimeGuard;
 /** @internal Ensures one canonical engine and explicit connection/collaborator ownership. */
 final class BeReorg008DecisionFactoryTest extends CIUnitTestCase
 {
-    use DatabaseTestTrait;
+    use TransactionalDatabaseTestTrait;
     protected $namespace = null;
     private BeReorg008DecisionFixture $fixture;
 

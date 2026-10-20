@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Modules\Product\Uom;
 
+use App\Infrastructure\Persistence\FindsRepositoryRow;
 use App\Exceptions\DomainException;
 use App\Exceptions\PersistenceException;
 use App\Infrastructure\Id\PositiveId;
@@ -16,6 +17,8 @@ use CodeIgniter\Database\ConnectionInterface;
 /** Persistence-only primitives for Product-specific UOM conversions. */
 final class ProductUomConversionRepository
 {
+    use FindsRepositoryRow;
+
     public const ERROR_PERSISTENCE_FAILED = 'PRODUCT_UOM_CONVERSION_PERSISTENCE_FAILED';
     public const ERROR_UPDATE_EMPTY = 'PRODUCT_UOM_CONVERSION_UPDATE_EMPTY';
     public const ERROR_FIELD_UNSUPPORTED = 'PRODUCT_UOM_CONVERSION_FIELD_UNSUPPORTED';
@@ -205,23 +208,6 @@ final class ProductUomConversionRepository
         }
 
         return $deleted > 0;
-    }
-
-    /** @return array<string, mixed>|null */
-    private function findRow(string $operation, callable $query): ?array
-    {
-        try {
-            $result = $query();
-        } catch (\Throwable $exception) {
-            throw new PersistenceException(self::ERROR_PERSISTENCE_FAILED, $operation, $exception);
-        }
-        if ($result === false) {
-            throw new PersistenceException(self::ERROR_PERSISTENCE_FAILED, $operation);
-        }
-
-        $row = $result->getRowArray();
-
-        return $row === null ? null : $row;
     }
 
     /** @param array<string, mixed> $data

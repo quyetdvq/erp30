@@ -5,12 +5,12 @@ declare(strict_types=1);
 use App\Exceptions\DomainException;
 use App\Modules\Product\Product\ProductRoleService;
 use CodeIgniter\Test\CIUnitTestCase;
-use CodeIgniter\Test\DatabaseTestTrait;
+use Tests\Support\Performance\TransactionalDatabaseTestTrait;
 
 /** @internal */
 final class P1Prd004ProductRoleServiceTest extends CIUnitTestCase
 {
-    use DatabaseTestTrait;
+    use TransactionalDatabaseTestTrait;
 
     protected $namespace = null;
 

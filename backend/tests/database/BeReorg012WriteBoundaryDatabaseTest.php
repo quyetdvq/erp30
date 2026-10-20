@@ -11,7 +11,7 @@ use App\Services\ResourceNativeStateCatalog;
 use App\Services\ResourceWorkflowStateResolver;
 use App\Services\WorkflowBusinessStatus;
 use CodeIgniter\Test\CIUnitTestCase;
-use CodeIgniter\Test\DatabaseTestTrait;
+use Tests\Support\Performance\TransactionalDatabaseTestTrait;
 use Config\Database;
 use Tests\Support\Foundation\RuntimeFixture;
 use Tests\Support\Foundation\RuntimeGuard;
@@ -22,7 +22,7 @@ require_once __DIR__ . '/../_support/Workflow/BeReorg011BusinessActionsFixture.p
 /** @internal Legacy service-level characterization against a disposable database. */
 final class BeReorg012WriteBoundaryDatabaseTest extends CIUnitTestCase
 {
-    use DatabaseTestTrait;
+    use TransactionalDatabaseTestTrait;
 
     protected $namespace = null;
     private RuntimeFixture $fixture;

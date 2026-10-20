@@ -11,14 +11,26 @@ $arguments = array_slice($argv, 1);
 if ($arguments === [] || $arguments === ['--help']) {
     echo "PM-3/01 real HTTP loopback and CSRF runner (not Apache/HTTPS/browser acceptance).\n"
         . "Usage: php tools/test-product-media-pm3-01.php --preflight\n"
-        . "       php tools/test-product-media-pm3-01.php --confirm-test-db --target=127.0.0.1:3306/erp_test --prefix=dinktech_ [--suite=pilot|regression]\n"
+        . "       php tools/test-product-media-pm3-01.php --confirm-test-db --target=127.0.0.1:3306/erp_test --prefix=dinktech_ [--suite=pilot|regression] [--matrix=current]\n"
         . "Only a disposable test checkout/DB. Stop all other DB test runners. No production credentials.\n"
         . "Does not install dependencies, edit .env, create DBs, or hide PHPUnit/PHPStan raw exits.\n";
     exit(0);
 }
 $runDirectory = null; $sandbox = null;
+// Opt-in current matrix excludes only proven duplicates/examples, not security boundaries.
+if (count(array_filter($arguments, static fn (string $argument): bool => $argument === '--matrix=current')) > 1) {
+    fwrite(STDERR, "PM-3 STOP: Duplicate --matrix=current.\n");
+    exit(2);
+}
+$currentMatrix = in_array('--matrix=current', $arguments, true);
+if ($currentMatrix) {
+    $arguments = array_values(array_filter($arguments, static fn (string $arg): bool => $arg !== '--matrix=current'));
+}
 try {
     $options = Gate::arguments($arguments);
+    if ($currentMatrix && $options['mode'] === 'run' && $options['suite'] !== 'regression') {
+        throw new RuntimeException('Current matrix is regression-only; use the guarded PM-3 pilot as-is.');
+    }
     $manifest = json_decode((string) file_get_contents(__DIR__ . '/product-media-pm3-01/manifest.json'), true, 512, JSON_THROW_ON_ERROR);
     // Pin PM-2/01, which in turn pins PM-1/02 and PM-1/01. Never
     // silently regenerate inherited manifests from the current checkout.
@@ -89,7 +101,7 @@ try {
     if ($preflight['status'] === 'BLOCKED') { throw new RuntimeException('Runtime prerequisites missing. No database connected.'); }
     if (! function_exists('proc_open')) { throw new RuntimeException('proc_open is required.'); }
     chdir($backend);
-    $configuration = is_file('phpunit.xml') ? 'phpunit.xml' : 'phpunit.dist.xml';
+    $configuration = $currentMatrix ? 'phpunit.current.xml' : (is_file('phpunit.xml') ? 'phpunit.xml' : 'phpunit.dist.xml');
     $xml = new DOMDocument();
     if (! $xml->load($configuration, LIBXML_NONET) || $xml->documentElement === null
         || realpath($xml->documentElement->getAttribute('bootstrap')) !== realpath('vendor/codeigniter4/framework/system/Test/bootstrap.php')) {
@@ -116,13 +128,37 @@ try {
     foreach ($env as $key => $value) { putenv($key . '=' . $value); }
     $base = [PHP_BINARY, 'vendor/bin/phpunit', '--configuration', $configuration,
         '--bootstrap', 'tests/_support/ProductMedia/guarded_bootstrap.php', '--no-coverage', '--colors=never'];
-    $path = $options['suite'] === 'pilot' ? 'tests/product-media' : 'tests';
+    // The current XML suite owns discovery/exclusions; passing a path would bypass its excludes.
+    $paths = $currentMatrix ? [] : [$options['suite'] === 'pilot' ? 'tests/product-media' : 'tests'];
     putenv('ERP_PM_ATTESTATION=' . $runDirectory . '/discovery-target.json');
-    $listExit = pmProcess([...$base, '--list-tests', $path], $backend, $runDirectory . '/discovery.log');
+    $listExit = pmProcess([...$base, '--list-tests', ...$paths], $backend, $runDirectory . '/discovery.log');
     if ($listExit !== 0) { throw new RuntimeException('PHPUnit discovery failed; see raw log.'); }
     $identities = Gate::discovery((string) file_get_contents($runDirectory . '/discovery.log'));
     $required = array_merge($pm101['pilot_methods'], $pm101['pm1_methods'], $previousManifest['pm1_02_methods'], $pm201['pm2_01_methods'], $manifest['pm3_01_methods']);
     if ($options['suite'] === 'regression') { $required = array_merge($required, $pm101['inherited_methods']); }
+    $retired = [
+        'P1Dsp003DisplaySettingsMutationServiceTest::testAuthorizedSetResetWritesCanonicalAuditAndLeavesAuthorizationLogsUntouched',
+        'P1Dsp003DisplaySettingsMutationServiceTest::testMissingBasePermissionAndInvalidBatchDoNotMutate',
+        'P1Dsp003DisplaySettingsMutationServiceTest::testAuditFailureRollsBackEverySettingsOverrideInTheBatch',
+        'P1Dsp003DisplaySettingsMutationServiceTest::testSystemContextEvaluatesAtTheCanonicalGroupAndMissingOrganizationFailsClosed',
+        'P1Dsp003DisplaySettingsMutationServiceTest::testDenyAndAbsoluteDenyAreEnforcedByCanonicalPbacBeforeMutation',
+        'ExampleDatabaseTest::testModelFindAll',
+        'ExampleDatabaseTest::testSoftDeleteLeavesRow',
+        'ExampleSessionTest::testSessionSimple',
+    ];
+    if ($currentMatrix) {
+        // Fail closed: only these eight explicitly retired IDs may disappear.
+        $required = array_values(array_diff($required, $retired));
+        $required = array_merge($required, [
+            'CanonicalRepositoryHelperTest::testPayloadPreservesAllowedNullAndOriginalKeys',
+            'CanonicalRepositoryHelperTest::testPayloadValidatesUnexpectedBeforeMissingFields',
+            'CanonicalRepositoryHelperTest::testRowReaderPreservesFoundAndMissingSemantics',
+            'CanonicalRepositoryHelperTest::testRowReaderPreservesFalseAndThrownErrorMapping',
+        ]);
+        if ($options['suite'] === 'regression' && count($identities) !== (int) $manifest['expected_regression_cases'] - count($retired) + 4) {
+            throw new RuntimeException('Current test matrix discovery count mismatch. Review changes explicitly.');
+        }
+    }
     Gate::assertRequiredMethods($identities, $required);
     file_put_contents($runDirectory . '/discovered-cases.json', json_encode($identities, JSON_PRETTY_PRINT | JSON_THROW_ON_ERROR));
     $targetRecord = json_decode((string) file_get_contents($runDirectory . '/discovery-target.json'), true, 512, JSON_THROW_ON_ERROR);
@@ -132,7 +168,7 @@ try {
     pmAssertSnapshotUnchanged($repository, $sourceSnapshot);
     putenv('ERP_PM_ATTESTATION=' . $runDirectory . '/execution-target.json');
     $junit = $runDirectory . '/phpunit.xml';
-    $unitExit = pmProcess([...$base, '--log-junit', $junit, $path], $backend, $runDirectory . '/phpunit.log');
+    $unitExit = pmProcess([...$base, '--log-junit', $junit, ...$paths], $backend, $runDirectory . '/phpunit.log');
     $junitError = null;
     try { Gate::assertCases(Gate::readJUnit($junit), $identities); }
     catch (Throwable $error) { $junitError = $error->getMessage(); }
@@ -150,7 +186,7 @@ try {
         $backend, $runDirectory . '/phpstan.log');
     $preserved = pmAssertSnapshotUnchanged($repository, $sourceSnapshot);
     $report = ['phase' => 'PM3_01', 'status' => $unitExit === 0 && $junitError === null && $dirtyFixtures === [] && $stanExit === 0 ? 'CHECKS_PASS_NOT_RELEASE_ACCEPTANCE' : 'NOT_CLEAN',
-        'suite' => $options['suite'], 'token' => $token, 'discovered_cases' => count($identities),
+        'suite' => $options['suite'], 'matrix' => $currentMatrix ? 'current' : 'historical', 'retired_duplicate_or_example_cases' => $currentMatrix ? 8 : 0, 'token' => $token, 'discovered_cases' => count($identities),
         'phpunit_exit' => $unitExit, 'junit_identity_error' => $junitError, 'phpstan_exit' => $stanExit,
         'baseline_files_preserved' => $count, 'test_files_preserved' => $testBaseline['matched'], 'pm3_files_preserved' => $pm3TestBaseline['matched'], 'reviewed_files_unchanged' => $preserved, 'pm0_baseline_delta' => $pm101['pm0_baseline_delta'],
         'pm1_01_baseline_delta' => $previousManifest['pm1_01_baseline_delta'], 'pm1_02_baseline_delta' => $pm201['pm1_02_baseline_delta'], 'baseline_status' => $baseline['status'],

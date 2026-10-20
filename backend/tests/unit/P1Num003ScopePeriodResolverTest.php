@@ -10,12 +10,12 @@ use App\Infrastructure\Time\EvaluationTime;
 use App\Services\AutoNumberingScopePeriodResolver;
 use App\Services\CanonicalNumberingPatternValidator;
 use CodeIgniter\Test\CIUnitTestCase;
-use CodeIgniter\Test\DatabaseTestTrait;
+use Tests\Support\Performance\TransactionalDatabaseTestTrait;
 
 /** @internal */
 final class P1Num003ScopePeriodResolverTest extends CIUnitTestCase
 {
-    use DatabaseTestTrait;
+    use TransactionalDatabaseTestTrait;
 
     protected $namespace = null;
 

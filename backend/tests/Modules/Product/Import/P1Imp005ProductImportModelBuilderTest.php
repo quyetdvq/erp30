@@ -10,12 +10,12 @@ use App\Modules\Product\Import\ProductImportPlan;
 use App\Modules\Product\Import\ProductImportTemplateValidator;
 use App\Modules\Product\Import\ProductImportValidationResult;
 use CodeIgniter\Test\CIUnitTestCase;
-use CodeIgniter\Test\DatabaseTestTrait;
+use Tests\Support\Performance\TransactionalDatabaseTestTrait;
 
 /** @internal */
 final class P1Imp005ProductImportModelBuilderTest extends CIUnitTestCase
 {
-    use DatabaseTestTrait;
+    use TransactionalDatabaseTestTrait;
 
     protected $namespace = null;
 

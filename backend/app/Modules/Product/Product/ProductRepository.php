@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace App\Modules\Product\Product;
 
+use App\Infrastructure\Persistence\ValidatesRepositoryPayload;
+use App\Infrastructure\Persistence\FindsRepositoryRow;
 use App\Exceptions\DomainException;
 use App\Exceptions\PersistenceException;
 use App\Infrastructure\Id\PositiveId;
@@ -17,6 +19,9 @@ use CodeIgniter\Database\ConnectionInterface;
 /** Persistence-only primitives for the canonical Product entity. */
 final class ProductRepository
 {
+    use FindsRepositoryRow;
+    use ValidatesRepositoryPayload;
+
     public const ERROR_PERSISTENCE_FAILED = 'PRODUCT_PERSISTENCE_FAILED';
     public const ERROR_CONNECTION_INVALID = 'PRODUCT_CONNECTION_INVALID';
     public const ERROR_UPDATE_EMPTY = 'PRODUCT_UPDATE_EMPTY';
@@ -619,42 +624,6 @@ SQL;
     public function updateStatus(mixed $id, string $status, ?OperationContext $operation = null): bool
     {
         return $this->update($id, ['status' => $status], $operation);
-    }
-
-    /** @return array<string, mixed>|null */
-    private function findRow(string $operation, callable $query): ?array
-    {
-        try {
-            $result = $query();
-        } catch (\Throwable $exception) {
-            throw new PersistenceException(self::ERROR_PERSISTENCE_FAILED, $operation, $exception);
-        }
-        if ($result === false) {
-            throw new PersistenceException(self::ERROR_PERSISTENCE_FAILED, $operation);
-        }
-        $row = $result->getRowArray();
-
-        return $row === null ? null : $row;
-    }
-
-    /** @param array<string, mixed> $data
-     *  @param list<string> $required
-     *  @return array<string, mixed>
-     */
-    private function payload(array $data, array $required = []): array
-    {
-        foreach ($data as $field => $_value) {
-            if (! in_array($field, self::FIELDS, true)) {
-                throw new DomainException(self::ERROR_FIELD_UNSUPPORTED, ['field' => $field]);
-            }
-        }
-        foreach ($required as $field) {
-            if (! array_key_exists($field, $data)) {
-                throw new DomainException(self::ERROR_FIELD_REQUIRED, ['field' => $field]);
-            }
-        }
-
-        return $data;
     }
 
     private function id(mixed $value, string $field): int

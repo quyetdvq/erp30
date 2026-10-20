@@ -7,12 +7,12 @@ use App\Authorization\EvaluationOrganizationResolver;
 use App\Authorization\ResourceDomain;
 use App\Exceptions\DomainException;
 use CodeIgniter\Test\CIUnitTestCase;
-use CodeIgniter\Test\DatabaseTestTrait;
+use Tests\Support\Performance\TransactionalDatabaseTestTrait;
 
 /** @internal */
 final class ChangeAuthDomain001AuthorizationTest extends CIUnitTestCase
 {
-    use DatabaseTestTrait;
+    use TransactionalDatabaseTestTrait;
 
     protected $namespace = null;
 

@@ -12,14 +12,14 @@ use App\Repositories\ContactRepository;
 use App\Repositories\LifecycleRepository;
 use App\Services\ContactService;
 use CodeIgniter\Test\CIUnitTestCase;
-use CodeIgniter\Test\DatabaseTestTrait;
+use Tests\Support\Performance\TransactionalDatabaseTestTrait;
 use Config\Database;
 use Tests\Support\Foundation\RuntimeGuard;
 
 /** @internal Fixed Contact business expectations across legacy and module entrypoints. */
 final class BeReorg003ContactCharacterizationTest extends CIUnitTestCase
 {
-    use DatabaseTestTrait;
+    use TransactionalDatabaseTestTrait;
 
     protected $namespace = null;
     private int $sequence = 0;

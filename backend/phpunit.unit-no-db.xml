@@ -1,0 +1,35 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<phpunit xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:noNamespaceSchemaLocation="vendor/phpunit/phpunit/phpunit.xsd"
+         bootstrap="tests/_support/UnitNoDb/bootstrap.php"
+         backupGlobals="false"
+         beStrictAboutOutputDuringTests="true"
+         colors="false"
+         failOnRisky="true"
+         failOnWarning="true"
+         columns="max">
+  <testsuites>
+    <testsuite name="AuditedUnitNoDb">
+      <file>tests/unit/BeReorg004EmployeeStructureCompatibilityTest.php</file>
+      <file>tests/database/BeReorg004AssignmentCharacterizationTest.php</file>
+      <file>tests/database/BeReorg004DepartmentPositionCharacterizationTest.php</file>
+      <file>tests/database/BeReorg004EmployeeCharacterizationTest.php</file>
+      <file>tests/unit/BeReorg010StateResolutionDomainTest.php</file>
+      <file>tests/Infrastructure/Import/Reader/CsvImportReaderTest.php</file>
+      <file>tests/unit/BeReorg002OrganizationCompatibilityTest.php</file>
+      <file>tests/unit/BeReorg012InitialStateRulesTest.php</file>
+      <file>tests/unit/BeReorg012WriteBoundaryDomainTest.php</file>
+      <file>tests/unit/BeReorg006NumberingCompatibilityTest.php</file>
+      <file>tests/unit/BeReorg010StateResolutionCompatibilityTest.php</file>
+      <file>tests/unit/BeReorg010StateResolutionCacheTest.php</file>
+      <file>tests/unit/BusinessWorkflowTenNativeBoundaryTest.php</file>
+    </testsuite>
+  </testsuites>
+  <php>
+    <server name="app.baseURL" value="http://example.com/"/>
+    <server name="CODEIGNITER_SCREAM_DEPRECATIONS" value="0"/>
+    <const name="HOMEPATH" value="./"/>
+    <const name="CONFIGPATH" value="./app/Config/"/>
+    <const name="PUBLICPATH" value="./public/"/>
+  </php>
+</phpunit>

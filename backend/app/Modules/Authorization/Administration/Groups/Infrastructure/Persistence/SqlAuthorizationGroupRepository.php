@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Modules\Authorization\Administration\Groups\Infrastructure\Persistence;
 
+use App\Infrastructure\Persistence\FindsRepositoryRow;
 use App\Modules\Authorization\Administration\Groups\Application\Ports\GroupRepositoryPort;
 use App\Exceptions\DomainException;
 use App\Exceptions\PersistenceException;
@@ -16,6 +17,8 @@ use CodeIgniter\Database\ConnectionInterface;
 /** Persistence primitives for Authorization Groups and group permissions. */
 final class SqlAuthorizationGroupRepository implements GroupRepositoryPort
 {
+    use FindsRepositoryRow;
+
     public const ERROR_PERSISTENCE_FAILED = 'AUTH_GROUP_PERSISTENCE_FAILED';
     public const ERROR_CONNECTION_INVALID = 'AUTH_GROUP_CONNECTION_INVALID';
     public const ERROR_FIELD_UNSUPPORTED = 'AUTH_GROUP_FIELD_UNSUPPORTED';
@@ -291,22 +294,6 @@ final class SqlAuthorizationGroupRepository implements GroupRepositoryPort
             }
             throw new PersistenceException(self::ERROR_MUTATION_FAILED, 'replacePermissions', $exception);
         }
-    }
-
-    /** @return array<string, mixed>|null */
-    private function findRow(string $operation, callable $query): ?array
-    {
-        try {
-            $result = $query();
-        } catch (\Throwable $exception) {
-            throw new PersistenceException(self::ERROR_PERSISTENCE_FAILED, $operation, $exception);
-        }
-        if ($result === false) {
-            throw new PersistenceException(self::ERROR_PERSISTENCE_FAILED, $operation);
-        }
-        $row = $result->getRowArray();
-
-        return $row === null ? null : $row;
     }
 
     /** @param array<string, mixed> $data

@@ -5,12 +5,12 @@ declare(strict_types=1);
 use App\Exceptions\DomainException;
 use App\Repositories\OrganizationRepository;
 use CodeIgniter\Test\CIUnitTestCase;
-use CodeIgniter\Test\DatabaseTestTrait;
+use Tests\Support\Performance\TransactionalDatabaseTestTrait;
 
 /** @internal */
 final class P1Org001OrganizationRepositoryTest extends CIUnitTestCase
 {
-    use DatabaseTestTrait;
+    use TransactionalDatabaseTestTrait;
 
     protected $namespace = null;
 

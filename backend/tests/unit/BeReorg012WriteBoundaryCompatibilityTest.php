@@ -8,7 +8,7 @@ use App\Services\InitialCreateStateNormalizer;
 use App\Services\ResourceWorkflowStateResolver;
 use App\Services\WorkflowBusinessStatus;
 use CodeIgniter\Test\CIUnitTestCase;
-use CodeIgniter\Test\DatabaseTestTrait;
+use Tests\Support\Performance\TransactionalDatabaseTestTrait;
 use Config\Database;
 use Tests\Support\Foundation\RuntimeFixture;
 use Tests\Support\Foundation\RuntimeGuard;
@@ -16,7 +16,7 @@ use Tests\Support\Foundation\RuntimeGuard;
 /** @internal Legacy class public reflection contract plus guarded real-runtime parity. */
 final class BeReorg012WriteBoundaryCompatibilityTest extends CIUnitTestCase
 {
-    use DatabaseTestTrait;
+    use TransactionalDatabaseTestTrait;
     protected $namespace = null;
     private RuntimeFixture $fixture;
 

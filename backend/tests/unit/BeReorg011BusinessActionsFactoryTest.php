@@ -10,14 +10,14 @@ use App\Services\BusinessLifecycleTargetAdapter;
 use App\Services\ContactLifecycleAdapter;
 use App\Services\FoundationLocationLifecycleAdapter;
 use CodeIgniter\Test\CIUnitTestCase;
-use CodeIgniter\Test\DatabaseTestTrait;
+use Tests\Support\Performance\TransactionalDatabaseTestTrait;
 use Config\Database;
 use Tests\Support\Foundation\RuntimeGuard;
 
 /** @internal Guarded real connection; factory itself must not start a transaction. */
 final class BeReorg011BusinessActionsFactoryTest extends CIUnitTestCase
 {
-    use DatabaseTestTrait;
+    use TransactionalDatabaseTestTrait;
     protected $namespace = null;
 
     protected function setUp(): void

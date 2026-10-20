@@ -39,6 +39,7 @@ final class BeReorg002OrganizationBoundaryTest extends TestCase
             'App\\Modules\\Organization\\Application\\Ports\\OrganizationRepositoryInterface',
             'App\\Modules\\Organization\\Contracts\\OrganizationErrors',
             'App\\Exceptions\\DomainException', 'App\\Exceptions\\PersistenceException',
+            'App\\Infrastructure\\Persistence\\ValidatesRepositoryPayload',
         ]);
         $this->assertAllowed('Modules/Organization/Contracts/OrganizationErrors.php', [
             'App\\Modules\\Organization\\Contracts',

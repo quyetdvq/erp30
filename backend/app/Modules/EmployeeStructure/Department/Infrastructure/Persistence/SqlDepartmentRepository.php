@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Modules\EmployeeStructure\Department\Infrastructure\Persistence;
 
+use App\Infrastructure\Persistence\ValidatesRepositoryPayload;
 use App\Exceptions\DomainException;
 use App\Modules\EmployeeStructure\Department\Application\Ports\DepartmentRepositoryInterface;
 use App\Modules\EmployeeStructure\Department\Contracts\DepartmentErrors;
@@ -13,6 +14,8 @@ use CodeIgniter\Database\ConnectionInterface;
 
 final class SqlDepartmentRepository implements DepartmentRepositoryInterface
 {
+    use ValidatesRepositoryPayload;
+
     public const ERROR_PERSISTENCE_FAILED = DepartmentErrors::ERROR_PERSISTENCE_FAILED;
     public const ERROR_CONNECTION_INVALID = DepartmentErrors::ERROR_CONNECTION_INVALID;
     public const ERROR_UPDATE_EMPTY = DepartmentErrors::ERROR_UPDATE_EMPTY;
@@ -119,26 +122,5 @@ final class SqlDepartmentRepository implements DepartmentRepositoryInterface
         }
 
         return true;
-    }
-
-    /**
-     * @param array<string, mixed> $data
-     * @param list<string> $required
-     * @return array<string, mixed>
-     */
-    private function payload(array $data, array $required = []): array
-    {
-        foreach ($data as $field => $_value) {
-            if (! in_array($field, self::FIELDS, true)) {
-                throw new DomainException(self::ERROR_FIELD_UNSUPPORTED, ['field' => $field]);
-            }
-        }
-        foreach ($required as $field) {
-            if (! array_key_exists($field, $data)) {
-                throw new DomainException(self::ERROR_FIELD_REQUIRED, ['field' => $field]);
-            }
-        }
-
-        return $data;
     }
 }

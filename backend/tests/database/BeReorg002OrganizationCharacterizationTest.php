@@ -12,7 +12,7 @@ use App\Modules\Organization\Application\OrganizationService as ModuleOrganizati
 use App\Repositories\OrganizationRepository;
 use App\Services\OrganizationService;
 use CodeIgniter\Test\CIUnitTestCase;
-use CodeIgniter\Test\DatabaseTestTrait;
+use Tests\Support\Performance\TransactionalDatabaseTestTrait;
 use Config\Database;
 use PHPUnit\Framework\Attributes\DataProvider;
 use Tests\Support\Database\WorkflowLifecycleFixture;
@@ -21,7 +21,7 @@ use Tests\Support\Foundation\RuntimeGuard;
 /** @internal Fixed expected business results for BOTH public entrypoints. */
 final class BeReorg002OrganizationCharacterizationTest extends CIUnitTestCase
 {
-    use DatabaseTestTrait;
+    use TransactionalDatabaseTestTrait;
 
     protected $namespace = null;
     private int $sequence = 0;

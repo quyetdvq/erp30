@@ -15,14 +15,14 @@ use App\Services\LifecycleAuthorizationPort;
 use App\Services\NumberingAuthorizationPort;
 use CodeIgniter\Database\ConnectionInterface;
 use CodeIgniter\Test\CIUnitTestCase;
-use CodeIgniter\Test\DatabaseTestTrait;
+use Tests\Support\Performance\TransactionalDatabaseTestTrait;
 use Config\Database;
 use Tests\Support\Foundation\RuntimeGuard;
 
 /** @internal Exact existing entrypoint contract: consumers do not change. */
 final class BeReorg008DecisionCompatibilityTest extends CIUnitTestCase
 {
-    use DatabaseTestTrait;
+    use TransactionalDatabaseTestTrait;
     protected $namespace = null;
 
     protected function setUp(): void

@@ -13,12 +13,12 @@ use App\Modules\Product\Product\ProductRoleService;
 use App\Modules\Product\Uom\ProductUomService;
 use App\Services\OrganizationService;
 use CodeIgniter\Test\CIUnitTestCase;
-use CodeIgniter\Test\DatabaseTestTrait;
+use Tests\Support\Performance\TransactionalDatabaseTestTrait;
 
 /** @internal */
 final class P1Cmb003ComboAllocationServiceTest extends CIUnitTestCase
 {
-    use DatabaseTestTrait;
+    use TransactionalDatabaseTestTrait;
 
     protected $namespace = null;
 

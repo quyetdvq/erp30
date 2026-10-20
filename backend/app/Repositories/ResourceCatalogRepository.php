@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Repositories;
 
+use App\Infrastructure\Persistence\FindsRepositoryRow;
 use App\Exceptions\ConcurrencyException;
 use App\Exceptions\DomainException;
 use App\Exceptions\PersistenceException;
@@ -13,6 +14,8 @@ use CodeIgniter\Database\ConnectionInterface;
 
 final class ResourceCatalogRepository
 {
+    use FindsRepositoryRow;
+
     public const ERROR_PERSISTENCE_FAILED = 'RESOURCE_CATALOG_PERSISTENCE_FAILED';
 
     /** @var ConnectionInterface<mixed, mixed> */
@@ -234,25 +237,6 @@ final class ResourceCatalogRepository
         }
 
         return true;
-    }
-
-    /** @param callable(): mixed $query
-     *  @return array<string, mixed>|null
-     */
-    private function findRow(string $operation, callable $query): ?array
-    {
-        try {
-            $result = $query();
-        } catch (\Throwable $exception) {
-            throw new PersistenceException(self::ERROR_PERSISTENCE_FAILED, $operation, $exception);
-        }
-        if ($result === false) {
-            throw new PersistenceException(self::ERROR_PERSISTENCE_FAILED, $operation);
-        }
-
-        $row = $result->getRowArray();
-
-        return $row === null ? null : $row;
     }
 
     /** @param callable(): mixed $query

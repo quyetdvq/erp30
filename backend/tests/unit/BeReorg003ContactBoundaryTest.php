@@ -37,6 +37,7 @@ final class BeReorg003ContactBoundaryTest extends TestCase
             'App\\Modules\\Contact\\Application\\Ports\\ContactRepositoryInterface',
             'App\\Modules\\Contact\\Contracts\\ContactErrors',
             'App\\Exceptions\\DomainException', 'App\\Exceptions\\PersistenceException',
+            'App\\Infrastructure\\Persistence\\ValidatesRepositoryPayload',
         ]);
         $this->assertAllowed('Modules/Contact/Contracts/ContactErrors.php', [
             'App\\Modules\\Contact\\Contracts',

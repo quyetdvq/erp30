@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Modules\Workflow\Lifecycle\Infrastructure\Persistence;
 
+use App\Infrastructure\Persistence\FindsRepositoryRow;
 use App\Exceptions\DomainException;
 use App\Exceptions\PersistenceException;
 use App\Infrastructure\Id\PositiveId;
@@ -23,6 +24,8 @@ use CodeIgniter\Database\ConnectionInterface;
  */
 final class SqlLifecycleRepository implements LifecycleRepositoryPort
 {
+    use FindsRepositoryRow;
+
     public const ERROR_PERSISTENCE_FAILED = 'LIFECYCLE_PERSISTENCE_FAILED';
     public const ERROR_CONNECTION_INVALID = 'LIFECYCLE_CONNECTION_INVALID';
     public const ERROR_UPDATE_EMPTY = 'LIFECYCLE_UPDATE_EMPTY';
@@ -499,25 +502,6 @@ final class SqlLifecycleRepository implements LifecycleRepositoryPort
         }
 
         return true;
-    }
-
-    /** @param callable(): mixed $query
-     *  @return array<string, mixed>|null
-     */
-    private function findRow(string $operation, callable $query): ?array
-    {
-        try {
-            $result = $query();
-        } catch (\Throwable $exception) {
-            throw new PersistenceException(self::ERROR_PERSISTENCE_FAILED, $operation, $exception);
-        }
-        if ($result === false) {
-            throw new PersistenceException(self::ERROR_PERSISTENCE_FAILED, $operation);
-        }
-
-        $row = $result->getRowArray();
-
-        return $row === null ? null : $row;
     }
 
     /** @return array<string, mixed>|null */

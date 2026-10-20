@@ -10,12 +10,12 @@ use App\Infrastructure\Mutation\OperationContext;
 use App\Infrastructure\Time\EvaluationTime;
 use App\Repositories\PolicyRepository;
 use CodeIgniter\Test\CIUnitTestCase;
-use CodeIgniter\Test\DatabaseTestTrait;
+use Tests\Support\Performance\TransactionalDatabaseTestTrait;
 
 /** @internal Mandatory Employee/Organization eligibility at the PBAC boundary. */
 final class P1Auth004AssignmentEligibilityTest extends CIUnitTestCase
 {
-    use DatabaseTestTrait;
+    use TransactionalDatabaseTestTrait;
 
     protected $namespace = null;
 
@@ -177,7 +177,7 @@ final class P1Auth004AssignmentEligibilityTest extends CIUnitTestCase
     public function testSystemAdminMembershipCannotBypassEmploymentEligibility(): void
     {
         $f = $this->fixture();
-        (new PrivilegedAuthorizationGroupSeeder(new Config\Database()))->run();
+        (new PrivilegedAuthorizationGroupSeeder(new Config\Database(), $this->db))->run();
         $this->db->table('auth_groups_users')->insert([
             'user_id' => $f['user'], 'group' => 'system_admin',
             'created_at' => '2026-10-06 00:00:00',
@@ -195,7 +195,7 @@ final class P1Auth004AssignmentEligibilityTest extends CIUnitTestCase
     /** @return array{user:int,group:int,auth_group:int,company_a:int,company_b:int,branch_a:int,plant_a:int,warehouse_a:int} */
     private function fixture(): array
     {
-        (new ResourceActionSeeder(new Config\Database()))->run();
+        (new ResourceActionSeeder(new Config\Database(), $this->db))->run();
         $group = $this->organization('GROUP');
         $companyA = $this->organization('COMPANY', $group);
         $branchA = $this->organization('BRANCH', $companyA);
