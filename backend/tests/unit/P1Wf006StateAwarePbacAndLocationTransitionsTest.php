@@ -36,6 +36,12 @@ final class P1Wf006StateAwarePbacAndLocationTransitionsTest extends CIUnitTestCa
 
     protected $namespace = null;
 
+    protected function setUp(): void
+    {
+        \Tests\Support\Standard\StandardRuntimeGuard::assertReady();
+        parent::setUp();
+    }
+
     public function testProvinceInactivePolicyDeniesOnlyInactiveAndListTotalExcludesIt(): void
     {
         $f = $this->fixture();
@@ -432,7 +438,7 @@ final class P1Wf006StateAwarePbacAndLocationTransitionsTest extends CIUnitTestCa
     /** @return array{user:int,group:int,company:int,auth_group:int,states:array<string,int>} */
     private function fixture(bool $withAssignment = true): array
     {
-        (new ResourceActionSeeder(new Config\Database()))->run();
+        (new ResourceActionSeeder(new Config\Database(), $this->db))->run();
         $this->db->table('organizations')->insert([
             'type' => 'GROUP', 'parent_id' => null, 'code' => 'WF006-G-' . uniqid(),
             'name' => 'Workflow Group', 'status' => 'ACTIVE', 'created_at' => '2026-10-06 00:00:00',

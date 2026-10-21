@@ -17,14 +17,16 @@ final class P1Org001OrganizationRepositoryTest extends CIUnitTestCase
     public function testOrganizationCrudAndLookup(): void
     {
         $repository = new OrganizationRepository($this->db);
+        $previousGroupCount = count($repository->findAll(['type' => 'GROUP', 'status' => 'ACTIVE']));
+        $code = 'ORG-REPO-' . uniqid();
         $id = $repository->insert([
-            'type' => 'GROUP', 'code' => 'ORG-REPO-001', 'name' => 'Repository Group',
+            'type' => 'GROUP', 'code' => $code, 'name' => 'Repository Group',
             'status' => 'ACTIVE', 'created_at' => '2026-10-05 00:00:00',
         ]);
 
-        $this->assertSame('ORG-REPO-001', $repository->find($id)['code']);
-        $this->assertSame($id, (int) $repository->findByCode('ORG-REPO-001')['id']);
-        $this->assertCount(1, $repository->findAll(['type' => 'GROUP', 'status' => 'ACTIVE']));
+        $this->assertSame($code, $repository->find($id)['code']);
+        $this->assertSame($id, (int) $repository->findByCode($code)['id']);
+        $this->assertCount($previousGroupCount + 1, $repository->findAll(['type' => 'GROUP', 'status' => 'ACTIVE']));
         $this->assertTrue($repository->update($id, ['name' => 'Updated Group']));
         $this->assertSame('Updated Group', $repository->find($id)['name']);
     }

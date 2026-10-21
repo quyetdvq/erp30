@@ -17,6 +17,7 @@ final class P1Emp001EmployeeRepositoryTest extends CIUnitTestCase
 
     protected function setUp(): void
     {
+        \Tests\Support\Standard\StandardRuntimeGuard::assertReady();
         parent::setUp();
 
         // A dedicated non-persistent connection is essential here: MySQL

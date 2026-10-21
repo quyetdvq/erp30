@@ -10,6 +10,7 @@ use App\Infrastructure\Mutation\OperationContext;
 use App\Infrastructure\Time\EvaluationTime;
 use App\Repositories\PolicyRepository;
 use CodeIgniter\Test\CIUnitTestCase;
+use Tests\Support\Database\CanonicalGroupRootFixture;
 use Tests\Support\Performance\TransactionalDatabaseTestTrait;
 
 /** @internal Mandatory Employee/Organization eligibility at the PBAC boundary. */
@@ -196,7 +197,7 @@ final class P1Auth004AssignmentEligibilityTest extends CIUnitTestCase
     private function fixture(): array
     {
         (new ResourceActionSeeder(new Config\Database(), $this->db))->run();
-        $group = $this->organization('GROUP');
+        $group = CanonicalGroupRootFixture::findOrCreate($this->db, fn (): int => $this->organization('GROUP'));
         $companyA = $this->organization('COMPANY', $group);
         $branchA = $this->organization('BRANCH', $companyA);
         $plantA = $this->organization('PLANT', $branchA);

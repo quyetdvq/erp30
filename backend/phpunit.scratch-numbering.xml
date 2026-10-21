@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- 03C-04B: never invoke directly. The scratch runner owns SQL attestation. -->
+<phpunit xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:noNamespaceSchemaLocation="vendor/phpunit/phpunit/phpunit.xsd"
+         bootstrap="tests/_support/Scratch/guarded_numbering_bootstrap.php"
+         backupGlobals="false"
+         beStrictAboutOutputDuringTests="true"
+         failOnRisky="true"
+         failOnWarning="true"
+         colors="false"
+         columns="max">
+    <testsuites>
+        <testsuite name="ScratchNumberingFiveOriginalMethods">
+            <file>tests/unit/P1AutoNumberingMandatoryRegressionTest.php</file>
+            <file>tests/unit/P1Num005ResourceIdentifierAdapterTest.php</file>
+            <file>tests/unit/P1Num006ProductIdentifierAdapterTest.php</file>
+        </testsuite>
+    </testsuites>
+    <php>
+        <server name="app.baseURL" value="http://example.com/"/>
+        <server name="CODEIGNITER_SCREAM_DEPRECATIONS" value="0"/>
+        <env name="ERP_PHPUNIT_ALLOW_DISPLAY_FIELD_RESET" value="0"/>
+        <const name="HOMEPATH" value="./"/>
+        <const name="CONFIGPATH" value="./app/Config/"/>
+        <const name="PUBLICPATH" value="./public/"/>
+    </php>
+</phpunit>

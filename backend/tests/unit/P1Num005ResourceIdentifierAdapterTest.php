@@ -24,6 +24,12 @@ final class P1Num005ResourceIdentifierAdapterTest extends CIUnitTestCase
 
     protected $namespace = null;
 
+    protected function setUp(): void
+    {
+        \Tests\Support\Standard\StandardRuntimeGuard::assertReady();
+        parent::setUp();
+    }
+
     public function testMetadataAcceptsEveryCanonicalNamespaceAndRejectsUnsafeValues(): void
     {
         foreach (['GLOBAL', 'COMPANY', 'ORGANIZATION'] as $scope) {
@@ -80,11 +86,11 @@ final class P1Num005ResourceIdentifierAdapterTest extends CIUnitTestCase
     public function testFacadeUsesCanonicalSeriesAndManualAutoIfEmptyWithoutCounter(): void
     {
         $resourceType = 'num005_' . strtolower(bin2hex(random_bytes(4)));
-        $this->db->table('resources')->insert(['type' => $resourceType, 'name' => 'NUM005', 'domain' => 'SYSTEM', 'created_at' => '2026-10-06 04:05:06']);
+        $this->db->table('resources')->insert(['type' => $resourceType, 'name' => \Tests\Support\Scratch\NumberingMarker::tag('NUM005'), 'domain' => 'SYSTEM', 'created_at' => '2026-10-06 04:05:06']);
         $resourceId = (int) $this->db->insertID();
         $group = $this->groupRoot();
         $seriesId = (new AutoNumberingSeriesRepository($this->db))->insert([
-            'resource_id' => $resourceId, 'series_code' => 'DEFAULT', 'name' => 'Default',
+            'resource_id' => $resourceId, 'series_code' => \Tests\Support\Scratch\NumberingMarker::tag('DEFAULT'), 'name' => 'Default',
             'scope_type' => 'GROUP', 'pattern' => '{SEQ:3}', 'reset_policy' => 'NEVER',
             'generation_mode' => 'AUTO_IF_EMPTY', 'start_number' => 1, 'increment_by' => 1,
             'is_default' => 1, 'status' => 'ACTIVE',
@@ -107,12 +113,12 @@ final class P1Num005ResourceIdentifierAdapterTest extends CIUnitTestCase
 
     public function testFacadeRejectsOversizedGeneratedCandidateBeforeMutation(): void
     {
-        $resourceType = 'num005_length_' . strtolower(bin2hex(random_bytes(4)));
-        $this->db->table('resources')->insert(['type' => $resourceType, 'name' => 'NUM005', 'domain' => 'SYSTEM', 'created_at' => '2026-10-06 04:05:06']);
+        $resourceType = \Tests\Support\Scratch\NumberingMarker::resourceType('num005_length_' . strtolower(bin2hex(random_bytes(4))));
+        $this->db->table('resources')->insert(['type' => $resourceType, 'name' => \Tests\Support\Scratch\NumberingMarker::tag('NUM005'), 'domain' => 'SYSTEM', 'created_at' => '2026-10-06 04:05:06']);
         $resourceId = (int) $this->db->insertID();
         $group = $this->groupRoot();
         $seriesId = (new AutoNumberingSeriesRepository($this->db))->insert([
-            'resource_id' => $resourceId, 'series_code' => 'DEFAULT', 'name' => 'Default',
+            'resource_id' => $resourceId, 'series_code' => \Tests\Support\Scratch\NumberingMarker::tag('DEFAULT'), 'name' => 'Default',
             'scope_type' => 'GROUP', 'pattern' => 'X{SEQ:3}', 'reset_policy' => 'NEVER',
             'generation_mode' => 'AUTO_REQUIRED', 'start_number' => 10000, 'increment_by' => 1,
             'is_default' => 1, 'status' => 'ACTIVE',
@@ -133,12 +139,12 @@ final class P1Num005ResourceIdentifierAdapterTest extends CIUnitTestCase
 
     public function testFacadeDelegatesGeneratedCandidateAndAuthoritativeScopeToAdapter(): void
     {
-        $resourceType = 'num005_generated_' . strtolower(bin2hex(random_bytes(4)));
-        $this->db->table('resources')->insert(['type' => $resourceType, 'name' => 'NUM005', 'domain' => 'SYSTEM', 'created_at' => '2026-10-06 04:05:06']);
+        $resourceType = \Tests\Support\Scratch\NumberingMarker::resourceType('num005_generated_' . strtolower(bin2hex(random_bytes(4))));
+        $this->db->table('resources')->insert(['type' => $resourceType, 'name' => \Tests\Support\Scratch\NumberingMarker::tag('NUM005'), 'domain' => 'SYSTEM', 'created_at' => '2026-10-06 04:05:06']);
         $resourceId = (int) $this->db->insertID();
         $group = $this->groupRoot();
         (new AutoNumberingSeriesRepository($this->db))->insert([
-            'resource_id' => $resourceId, 'series_code' => 'DEFAULT', 'name' => 'Default',
+            'resource_id' => $resourceId, 'series_code' => \Tests\Support\Scratch\NumberingMarker::tag('DEFAULT'), 'name' => 'Default',
             'scope_type' => 'GROUP', 'pattern' => '{SEQ:3}', 'reset_policy' => 'NEVER',
             'generation_mode' => 'AUTO_REQUIRED', 'start_number' => 7, 'increment_by' => 1,
             'is_default' => 1, 'status' => 'ACTIVE',
@@ -166,7 +172,7 @@ final class P1Num005ResourceIdentifierAdapterTest extends CIUnitTestCase
             return $group;
         }
         $this->db->table('organizations')->insert([
-            'type' => 'GROUP', 'code' => 'NUM005-GROUP-' . uniqid(), 'name' => 'NUM005 Group',
+            'type' => 'GROUP', 'code' => \Tests\Support\Scratch\NumberingMarker::tag('NUM005-GROUP-' . uniqid()), 'name' => 'NUM005 Group',
             'status' => 'ACTIVE', 'created_at' => '2026-10-06 04:05:06',
         ]);
         $group = $this->db->table('organizations')->where('id', $this->db->insertID())->get()->getRowArray();

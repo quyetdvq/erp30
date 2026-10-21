@@ -37,8 +37,17 @@ final class UserDisplayMetadataResetPolicyTest extends CIUnitTestCase
     public function testPhpUnitDatabaseIsTheDisposableErpTestDatabase(): void
     {
         self::assertSame('testing', ENVIRONMENT);
-        self::assertSame('1', $_ENV['ERP_PHPUNIT_ALLOW_DISPLAY_FIELD_RESET'] ?? null);
         self::assertSame('tests', config('Database')->defaultGroup);
+
+        // The NO-DROP bootstrap deliberately disables the destructive metadata
+        // migration opt-in. Legacy migration tests retain their existing policy.
+        $noDropGuarded = defined('ERP_NO_DROP_DB_GUARDED') && ERP_NO_DROP_DB_GUARDED === true;
+        $resetOptIn = $_ENV['ERP_PHPUNIT_ALLOW_DISPLAY_FIELD_RESET'] ?? null;
+        self::assertSame($noDropGuarded ? '0' : '1', $resetOptIn);
+        self::assertSame(
+            ! $noDropGuarded,
+            UserDisplayMetadataResetPolicy::allows(ENVIRONMENT, 'erp_test', $resetOptIn),
+        );
 
         // Read-only preflight. Unlike DatabaseTestTrait this does not migrate.
         $db = db_connect('tests');

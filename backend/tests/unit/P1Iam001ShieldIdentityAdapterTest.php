@@ -9,12 +9,12 @@ use App\Exceptions\PersistenceException;
 use CodeIgniter\Shield\Entities\User;
 use CodeIgniter\Shield\Models\UserModel;
 use CodeIgniter\Test\CIUnitTestCase;
-use CodeIgniter\Test\DatabaseTestTrait;
+use Tests\Support\Performance\TransactionalDatabaseTestTrait;
 
 /** @internal */
 final class P1Iam001ShieldIdentityAdapterTest extends CIUnitTestCase
 {
-    use DatabaseTestTrait;
+    use TransactionalDatabaseTestTrait;
 
     protected $namespace = null;
 
@@ -120,7 +120,7 @@ final class P1Iam001ShieldIdentityAdapterTest extends CIUnitTestCase
     public function testSystemAdminGetsOnlyExplicitCurrentMatrix(): void
     {
         $this->seedCatalog();
-        (new App\Database\Seeds\PrivilegedAuthorizationGroupSeeder(new Config\Database()))->run();
+        (new App\Database\Seeds\PrivilegedAuthorizationGroupSeeder(new Config\Database(), $this->db))->run();
         $resource = $this->db->table('resources')->where('type', 'product')->get()->getRowArray();
         $this->db->table('resource_actions')->insert([
             'resource_id' => (int) $resource['id'], 'code' => 'future_action', 'created_at' => '2026-10-05 00:00:00',
@@ -156,7 +156,7 @@ final class P1Iam001ShieldIdentityAdapterTest extends CIUnitTestCase
 
     private function seedCatalog(): void
     {
-        (new App\Database\Seeds\ResourceActionSeeder(new Config\Database()))->run();
+        (new App\Database\Seeds\ResourceActionSeeder(new Config\Database(), $this->db))->run();
     }
 
     private function createUser(string $username): int

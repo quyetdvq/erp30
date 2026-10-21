@@ -26,12 +26,13 @@ use App\Services\LifecycleTargetAdapter;
 use App\Services\LifecycleTargetSnapshot;
 use CodeIgniter\Database\ConnectionInterface;
 use CodeIgniter\Test\CIUnitTestCase;
-use CodeIgniter\Test\DatabaseTestTrait;
+use Tests\Support\Database\CanonicalGroupRootFixture;
+use Tests\Support\Performance\TransactionalDatabaseTestTrait;
 
 /** @internal Gate 3 release guard for P1-AUTH-090. */
 final class P1AuthorizationMandatoryRegressionTest extends CIUnitTestCase
 {
-    use DatabaseTestTrait;
+    use TransactionalDatabaseTestTrait;
 
     protected $namespace = null;
 
@@ -281,9 +282,9 @@ final class P1AuthorizationMandatoryRegressionTest extends CIUnitTestCase
 
     public function testMandatorySystemAdminUsesNormalBasePolicyAndSecurityPaths(): void
     {
-        (new ResourceActionSeeder(new Config\Database()))->run();
-        (new PrivilegedAuthorizationGroupSeeder(new Config\Database()))->run();
-        $rootId = $this->organization('GROUP');
+        (new ResourceActionSeeder(new Config\Database(), $this->db))->run();
+        (new PrivilegedAuthorizationGroupSeeder(new Config\Database(), $this->db))->run();
+        $rootId = $this->canonicalGroup();
         $systemAdmin = $this->insertUser('auth090-system-admin');
         $this->assignment($this->employee($systemAdmin), $this->organization('COMPANY', $rootId), $this->department(), false);
         $this->db->table('auth_groups_users')->insert(['user_id' => $systemAdmin, 'group' => 'system_admin', 'created_at' => '2026-10-05 00:00:00']);
@@ -358,7 +359,7 @@ final class P1AuthorizationMandatoryRegressionTest extends CIUnitTestCase
 
     public function testMandatoryAuditIsInsertOnlyAndTrusted(): void
     {
-        (new ResourceActionSeeder(new Config\Database()))->run();
+        (new ResourceActionSeeder(new Config\Database(), $this->db))->run();
         $organizationId = $this->organization('COMPANY');
         $decision = new AuthorizationDecision(
             'DENY', AuthorizationService::REASON_POLICY_DENIED, 55, 'product', 'setstate', $organizationId, null,
@@ -427,8 +428,8 @@ final class P1AuthorizationMandatoryRegressionTest extends CIUnitTestCase
     /** @param list<string> $permissions */
     private function actorFixture(array $permissions, bool $withGroupAssignment = true): array
     {
-        (new ResourceActionSeeder(new Config\Database()))->run();
-        $rootId = $this->organization('GROUP');
+        (new ResourceActionSeeder(new Config\Database(), $this->db))->run();
+        $rootId = $this->canonicalGroup();
         $userId = $this->insertUser('auth090-actor');
         $this->db->table('groups')->insert(['code' => 'AUTH090-G-' . uniqid(), 'name' => 'Auth 090', 'status' => 'ACTIVE', 'created_at' => '2026-10-05 00:00:00']);
         $groupId = (int) $this->db->insertID();
@@ -447,8 +448,8 @@ final class P1AuthorizationMandatoryRegressionTest extends CIUnitTestCase
 
     private function adminFixture(): array
     {
-        (new ResourceActionSeeder(new Config\Database()))->run();
-        $rootId = $this->organization('GROUP');
+        (new ResourceActionSeeder(new Config\Database(), $this->db))->run();
+        $rootId = $this->canonicalGroup();
         $actorId = $this->insertUser('auth090-admin');
         $this->db->table('groups')->insert(['code' => 'AUTH090-ADMIN-' . uniqid(), 'name' => 'Admin', 'status' => 'ACTIVE', 'created_at' => '2026-10-05 00:00:00']);
         $groupId = (int) $this->db->insertID();
@@ -472,6 +473,11 @@ final class P1AuthorizationMandatoryRegressionTest extends CIUnitTestCase
         };
 
         return new MutationContext($clock, $actorId, 'auth-090-test', false);
+    }
+
+    private function canonicalGroup(): int
+    {
+        return CanonicalGroupRootFixture::findOrCreate($this->db, fn (): int => $this->organization('GROUP'));
     }
 
     private function organization(string $type, ?int $parentId = null): int

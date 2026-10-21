@@ -12,12 +12,12 @@ use App\Infrastructure\Mutation\OperationContext;
 use App\Infrastructure\Time\EvaluationTime;
 use App\Repositories\PolicyRepository;
 use CodeIgniter\Test\CIUnitTestCase;
-use CodeIgniter\Test\DatabaseTestTrait;
+use Tests\Support\Performance\TransactionalDatabaseTestTrait;
 
 /** @internal CHANGE-CONTACT-AUTH-001: owner Resource is a security boundary. */
 final class P1ContactAuth001OwnerAwareAuthorizationTest extends CIUnitTestCase
 {
-    use DatabaseTestTrait;
+    use TransactionalDatabaseTestTrait;
 
     protected $namespace = null;
 
@@ -180,7 +180,7 @@ final class P1ContactAuth001OwnerAwareAuthorizationTest extends CIUnitTestCase
     /** @return array{int,int,int,int,int,int} */
     private function fixture(bool $sibling = false): array
     {
-        (new ResourceActionSeeder(new Config\Database()))->run();
+        (new ResourceActionSeeder(new Config\Database(), $this->db))->run();
         $rootId = $this->organization('GROUP');
         $companyId = $this->organization('COMPANY', $rootId);
         $siblingId = $sibling ? $this->organization('COMPANY', $rootId) : $companyId;

@@ -26,6 +26,12 @@ final class P1Wf007NativeStateContractTest extends CIUnitTestCase
 
     protected $namespace = null;
 
+    protected function setUp(): void
+    {
+        \Tests\Support\Standard\StandardRuntimeGuard::assertReady();
+        parent::setUp();
+    }
+
     protected function tearDown(): void
     {
         try {
@@ -336,7 +342,7 @@ final class P1Wf007NativeStateContractTest extends CIUnitTestCase
      */
     private function fixture(array $permissions): array
     {
-        (new ResourceActionSeeder(new Config\Database()))->run();
+        (new ResourceActionSeeder(new Config\Database(), $this->db))->run();
         $this->db->table('organizations')->insert([
             'type' => 'GROUP', 'parent_id' => null, 'code' => 'WF007-G-' . uniqid(),
             'name' => 'Native State Group', 'status' => 'ACTIVE', 'created_at' => '2026-10-06 00:00:00',

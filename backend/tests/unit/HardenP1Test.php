@@ -15,12 +15,12 @@ use CodeIgniter\Database\BaseConnection;
 use CodeIgniter\Database\ResultInterface;
 use App\Services\ContactService;
 use CodeIgniter\Test\CIUnitTestCase;
-use CodeIgniter\Test\DatabaseTestTrait;
+use Tests\Support\Performance\TransactionalDatabaseTestTrait;
 
 /** @internal */
 final class HardenP1Test extends CIUnitTestCase
 {
-    use DatabaseTestTrait;
+    use TransactionalDatabaseTestTrait;
 
     protected $namespace = null;
 

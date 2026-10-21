@@ -59,6 +59,20 @@ try {
             throw new RuntimeException('Invalid quarantine entry or quarantined class was approved: ' . $name);
         }
     }
+    // Candidate conversions are source-pinned for opt-in validation only.
+    // A scanner status is NEVER a NO-DROP approval.
+    $unitCandidates = (require __DIR__ . '/unit-no-drop-inventory.php')['candidates_unverified'];
+    if (! is_array($unitCandidates)) {
+        throw new RuntimeException('Invalid unit NO-DROP candidate inventory.');
+    }
+    $seenCandidates = [];
+    foreach ($unitCandidates as $name => $sha256) {
+        if (! is_string($name) || ! is_string($sha256)
+            || preg_match('/\A[a-f0-9]{64}\z/D', $sha256) !== 1
+            || isset($approvedByName[$name]) || isset($quarantined[$name])) {
+            throw new RuntimeException('Invalid or already approved unit candidate: ' . $name);
+        }
+    }
     $seenQuarantined = [];
 
     $rules = [
@@ -113,6 +127,14 @@ try {
                 && hash_equals($quarantine['sha256_lf'], hash('sha256', $lfSource))
                 ? 'QUARANTINED_UNSAFE'
                 : 'QUARANTINE_SOURCE_MISMATCH';
+        } elseif (isset($unitCandidates[$name])) {
+            $seenCandidates[$name] = ($seenCandidates[$name] ?? 0) + 1;
+            $lfSource = str_replace("\r", "\n", str_replace("\r\n", "\n", $source));
+            $status = $relativePath === 'backend/tests/unit/' . $name . '.php'
+                && $isTransactional && ! $isLegacy
+                && hash_equals($unitCandidates[$name], hash('sha256', $lfSource))
+                ? 'CANDIDATE_UNVERIFIED'
+                : 'CANDIDATE_SOURCE_MISMATCH';
         } elseif ($isTransactional) {
             $status = 'UNAPPROVED_TRANSACTION_TRAIT';
         } elseif ($isLegacy) {
@@ -144,9 +166,15 @@ try {
             throw new RuntimeException('Quarantined test class missing or duplicated: ' . $name);
         }
     }
+    foreach ($unitCandidates as $name => $_sha256) {
+        if (($seenCandidates[$name] ?? 0) !== 1) {
+            throw new RuntimeException('NO-DROP unit candidate missing or duplicated: ' . $name);
+        }
+    }
     usort($rows, static function (array $a, array $b): int {
         $priority = ['QUARANTINE_SOURCE_MISMATCH' => -3, 'APPROVED_SOURCE_MISMATCH' => -2,
-            'UNAPPROVED_TRANSACTION_TRAIT' => -1, 'QUARANTINED_UNSAFE' => 1,
+            'CANDIDATE_SOURCE_MISMATCH' => -3, 'UNAPPROVED_TRANSACTION_TRAIT' => -1,
+            'CANDIDATE_UNVERIFIED' => 0, 'QUARANTINED_UNSAFE' => 1,
             'REVIEW_CANDIDATE' => 0, 'SPECIAL_REVIEW' => 1, 'APPROVED' => 2, 'OTHER_TEST' => 3];
         return ($priority[$a['status']] <=> $priority[$b['status']])
             ?: ($b['test_methods'] <=> $a['test_methods'])

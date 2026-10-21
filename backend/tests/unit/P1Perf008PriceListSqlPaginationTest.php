@@ -16,13 +16,13 @@ use App\Infrastructure\Time\EvaluationTime;
 use App\Repositories\PolicyRepository;
 use App\Services\Api050ProductCatalogService;
 use CodeIgniter\Test\CIUnitTestCase;
-use CodeIgniter\Test\DatabaseTestTrait;
+use Tests\Support\Performance\TransactionalDatabaseTestTrait;
 use Tests\Support\Authorization\EligibleActorFixture;
 
 /** @internal Price List SQL pagination: exact Owner/State PBAC differential. */
 final class P1Perf008PriceListSqlPaginationTest extends CIUnitTestCase
 {
-    use DatabaseTestTrait;
+    use TransactionalDatabaseTestTrait;
 
     protected $namespace = null;
 
@@ -105,7 +105,7 @@ final class P1Perf008PriceListSqlPaginationTest extends CIUnitTestCase
 
     public function testStateScopedAbsoluteDenyAndOwnerScopeMatchLegacyEngine(): void
     {
-        (new ResourceActionSeeder(new Config\Database()))->run();
+        (new ResourceActionSeeder(new Config\Database(), $this->db))->run();
         $root = $this->root();
         $company = $this->organization('COMPANY', $root);
         $sibling = $this->organization('COMPANY', $root);
@@ -189,7 +189,7 @@ final class P1Perf008PriceListSqlPaginationTest extends CIUnitTestCase
 
     public function testApiUsesLegacyOrderingWhenAnyPriorityIsNegative(): void
     {
-        (new ResourceActionSeeder(new Config\Database()))->run();
+        (new ResourceActionSeeder(new Config\Database(), $this->db))->run();
         $owner = $this->organization('COMPANY', $this->root());
         $actor = $this->actorAt($owner);
         $this->priceList($owner, 'ACTIVE', -2);

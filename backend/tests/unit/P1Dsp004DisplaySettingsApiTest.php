@@ -11,13 +11,14 @@ use App\Infrastructure\Time\EvaluationTime;
 use App\Services\ApiDisplaySettingsService;
 use CodeIgniter\Settings\Settings;
 use CodeIgniter\Test\CIUnitTestCase;
-use CodeIgniter\Test\DatabaseTestTrait;
+use Tests\Support\Database\CanonicalGroupRootFixture;
+use Tests\Support\Performance\TransactionalDatabaseTestTrait;
 use Tests\Support\Authorization\EligibleActorFixture;
 
 /** @internal */
 final class P1Dsp004DisplaySettingsApiTest extends CIUnitTestCase
 {
-    use DatabaseTestTrait;
+    use TransactionalDatabaseTestTrait;
 
     protected $namespace = null;
 
@@ -152,8 +153,8 @@ final class P1Dsp004DisplaySettingsApiTest extends CIUnitTestCase
     /** @return array{int, int, int} */
     private function fixture(bool $displayPermission, bool $organizationPermission): array
     {
-        (new ResourceActionSeeder(new Config\Database()))->run();
-        $groupId = $this->insertOrganization('GROUP');
+        (new ResourceActionSeeder(new Config\Database(), $this->db))->run();
+        $groupId = CanonicalGroupRootFixture::findOrCreate($this->db, fn (): int => $this->insertOrganization('GROUP'));
         $companyId = $this->insertOrganization('COMPANY', $groupId);
         $this->db->table('users')->insert([
             'username' => 'dsp004-' . uniqid(), 'status' => 'active', 'active' => 1,

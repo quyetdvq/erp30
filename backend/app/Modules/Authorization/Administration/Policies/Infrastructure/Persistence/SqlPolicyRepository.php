@@ -752,6 +752,14 @@ final class SqlPolicyRepository implements PolicyAdministrationRepositoryPort
             throw new DomainException(self::ERROR_CONNECTION_INVALID, ['operation' => $operation]);
         }
 
+        // CodeIgniter only increments transDepth for nested transactions. Its
+        // inner transRollback() does NOT undo SQL. Without a real savepoint,
+        // a failed action insert can leave a new policy inside the caller's
+        // outer transaction, violating insertWithActions() atomicity.
+        if ($this->db->transDepth > 0) {
+            return $this->transactionalWithSavepoint($callback, $operation);
+        }
+
         $this->db->transBegin();
         try {
             $result = $callback();
@@ -763,6 +771,62 @@ final class SqlPolicyRepository implements PolicyAdministrationRepositoryPort
             return $result;
         } catch (\Throwable $exception) {
             $this->db->transRollback();
+            $this->db->resetTransStatus();
+            if ($exception instanceof DomainException) {
+                throw $exception;
+            }
+            throw new PersistenceException(self::ERROR_MUTATION_FAILED, $operation, $exception);
+        }
+    }
+
+    /**
+     * Isolate one repository mutation without committing or rolling back the
+     * caller's transaction. MySQL/MariaDB SAVEPOINT uses no schema DDL.
+     *
+     * @param callable(): mixed $callback
+     * @return mixed
+     */
+    private function transactionalWithSavepoint(callable $callback, string $operation): mixed
+    {
+        // Never clear a failure that occurred before this repository call.
+        if (! $this->db->transStatus()) {
+            throw new PersistenceException(self::ERROR_MUTATION_FAILED, $operation);
+        }
+
+        // Unique, server-safe identifier; no caller-supplied SQL identifiers.
+        $savepoint = 'erp_policy_' . bin2hex(random_bytes(8));
+        try {
+            $created = $this->db->query('SAVEPOINT ' . $savepoint);
+        } catch (\Throwable $exception) {
+            throw new PersistenceException(self::ERROR_MUTATION_FAILED, $operation, $exception);
+        }
+        if ($created === false) {
+            throw new PersistenceException(self::ERROR_MUTATION_FAILED, $operation);
+        }
+
+        try {
+            $result = $callback();
+            if (! $this->db->transStatus()) {
+                throw new PersistenceException(self::ERROR_PERSISTENCE_FAILED, $operation);
+            }
+            if ($this->db->query('RELEASE SAVEPOINT ' . $savepoint) === false) {
+                throw new PersistenceException(self::ERROR_PERSISTENCE_FAILED, $operation);
+            }
+
+            return $result;
+        } catch (\Throwable $exception) {
+            try {
+                if ($this->db->query('ROLLBACK TO SAVEPOINT ' . $savepoint) === false
+                    || $this->db->query('RELEASE SAVEPOINT ' . $savepoint) === false) {
+                    throw new PersistenceException(self::ERROR_PERSISTENCE_FAILED, $operation);
+                }
+            } catch (\Throwable $rollbackFailure) {
+                // Do not mark a possibly corrupt outer transaction healthy.
+                throw new PersistenceException(self::ERROR_MUTATION_FAILED, $operation, $rollbackFailure);
+            }
+
+            // CI4 marks the transaction failed after a duplicate-key error.
+            // Clear that status only AFTER the partial writes were undone.
             $this->db->resetTransStatus();
             if ($exception instanceof DomainException) {
                 throw $exception;

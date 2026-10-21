@@ -75,20 +75,31 @@ final class NoDropSchemaGuard
             || (int) ($identity[0]['server_port'] ?? 0) !== $expectedPort) {
             throw new RuntimeException('NO-DROP: connected database/port differs from confirmed erp_test target.');
         }
-        $role = $identity[0]['active_role'] ?? null;
-        if ($role !== null && ! in_array(strtoupper((string) $role), ['', 'NONE'], true)) {
-            throw new RuntimeException('NO-DROP: active MySQL roles are not permitted.');
-        }
         $account = (string) ($identity[0]['account'] ?? '');
-        $grants = [];
-        foreach (self::rows($db, 'SHOW GRANTS') as $row) {
-            $value = reset($row);
-            if (! is_string($value)) {
-                throw new RuntimeException('NO-DROP: invalid SHOW GRANTS row.');
+        if (getenv('ERP_NO_DROP_SKIP_GRANTS') === '1') {
+            // Explicit, per-process opt-in for test environments with a DDL-capable
+            // account. Database identity and schema/data fingerprints still apply.
+            // This removes preventive DDL protection; it is NOT equivalent to
+            // running with a least-privilege MySQL account.
+            if ($account === '') {
+                throw new RuntimeException('NO-DROP: CURRENT_USER() returned an empty account.');
             }
-            $grants[] = $value;
+            fwrite(STDERR, 'NO-DROP WARNING: MySQL grant check skipped; DDL is not prevented by database privileges.' . PHP_EOL);
+        } else {
+            $role = $identity[0]['active_role'] ?? null;
+            if ($role !== null && ! in_array(strtoupper((string) $role), ['', 'NONE'], true)) {
+                throw new RuntimeException('NO-DROP: active MySQL roles are not permitted.');
+            }
+            $grants = [];
+            foreach (self::rows($db, 'SHOW GRANTS') as $row) {
+                $value = reset($row);
+                if (! is_string($value)) {
+                    throw new RuntimeException('NO-DROP: invalid SHOW GRANTS row.');
+                }
+                $grants[] = $value;
+            }
+            self::assertLeastPrivilege($grants, $account);
         }
-        self::assertLeastPrivilege($grants, $account);
         $snapshot = self::schemaFingerprint($db, $prefix);
         return ['account' => $account, 'schema_sha256' => $snapshot['sha256'], 'table_count' => $snapshot['table_count']];
     }

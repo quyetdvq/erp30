@@ -27,6 +27,12 @@ final class P1Auth005SecurityAdministrationTest extends CIUnitTestCase
 
     protected $namespace = null;
 
+    protected function setUp(): void
+    {
+        \Tests\Support\Standard\StandardRuntimeGuard::assertReady();
+        parent::setUp();
+    }
+
     public function testAuthorizationGroupCreateMembershipAndDirectPermissionUseShield(): void
     {
         [$actorId, $groupId] = $this->adminFixture();

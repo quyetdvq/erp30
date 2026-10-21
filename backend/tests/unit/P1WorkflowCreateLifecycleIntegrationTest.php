@@ -9,12 +9,12 @@ use App\Services\InitialCreateStateNormalizer;
 use App\Services\BusinessWorkflowWriteBoundary;
 use App\Services\ResourceWorkflowStateResolver;
 use CodeIgniter\Test\CIUnitTestCase;
-use CodeIgniter\Test\DatabaseTestTrait;
+use Tests\Support\Performance\TransactionalDatabaseTestTrait;
 
 /** @internal Exercises persisted Resource/Lifecycle metadata on a disposable test database. */
 final class P1WorkflowCreateLifecycleIntegrationTest extends CIUnitTestCase
 {
-    use DatabaseTestTrait;
+    use TransactionalDatabaseTestTrait;
 
     protected $namespace = null;
 
@@ -37,7 +37,7 @@ final class P1WorkflowCreateLifecycleIntegrationTest extends CIUnitTestCase
 
     public function testNativeResourceWithInvalidLifecycleCannotBypassWriteBoundary(): void
     {
-        (new ResourceActionSeeder(new \Config\Database()))->run();
+        (new ResourceActionSeeder(new \Config\Database(), $this->db))->run();
         $lifecycleId = (new LifecycleRepository($this->db))->insertLifecycle([
             'code' => 'WF-NATIVE-INVALID-' . uniqid(),
             'name' => 'Invalid native association test',
@@ -56,7 +56,7 @@ final class P1WorkflowCreateLifecycleIntegrationTest extends CIUnitTestCase
 
     public function testConfiguredInitialStateComesFromPersistedLifecycle(): void
     {
-        (new ResourceActionSeeder(new \Config\Database()))->run();
+        (new ResourceActionSeeder(new \Config\Database(), $this->db))->run();
         $repo = new LifecycleRepository($this->db);
         $initial = $this->activeWorkflowStateId('INACTIVE');
         $other = $this->activeWorkflowStateId('ACTIVE');
@@ -93,7 +93,7 @@ final class P1WorkflowCreateLifecycleIntegrationTest extends CIUnitTestCase
 
     public function testArbitraryActiveLifecycleMembersCanBeAssignedToAnyBusinessMaster(): void
     {
-        (new ResourceActionSeeder(new \Config\Database()))->run();
+        (new ResourceActionSeeder(new \Config\Database(), $this->db))->run();
         $repo = new LifecycleRepository($this->db);
         $draft = $this->activeWorkflowStateId('DRAFT');
         $lifecycleId = $repo->insertLifecycle([

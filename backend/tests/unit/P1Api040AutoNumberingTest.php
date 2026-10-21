@@ -15,12 +15,12 @@ use App\Services\AutoNumberingConfigurationService;
 use App\Services\CanonicalNumberingPatternValidator;
 use App\Services\NumberingAuthorizationPort;
 use CodeIgniter\Test\CIUnitTestCase;
-use CodeIgniter\Test\DatabaseTestTrait;
+use Tests\Support\Performance\TransactionalDatabaseTestTrait;
 
 /** @internal */
 final class P1Api040AutoNumberingTest extends CIUnitTestCase
 {
-    use DatabaseTestTrait;
+    use TransactionalDatabaseTestTrait;
 
     protected $namespace = null;
 

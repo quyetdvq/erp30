@@ -29,6 +29,12 @@ final class P1AutoNumberingMandatoryRegressionTest extends CIUnitTestCase
 
     protected $namespace = null;
 
+    protected function setUp(): void
+    {
+        \Tests\Support\Standard\StandardRuntimeGuard::assertReady();
+        parent::setUp();
+    }
+
     public function testConfigurationDefaultsIssuedIdentityAndNoAutoFallback(): void
     {
         $resourceId = $this->resource('mandatory-config');
@@ -126,7 +132,7 @@ final class P1AutoNumberingMandatoryRegressionTest extends CIUnitTestCase
         $this->insertProduct($code, 'INACTIVE');
         $resourceId = $this->productResource();
         $seriesId = (new AutoNumberingSeriesRepository($this->db))->insert([
-            'resource_id' => $resourceId, 'series_code' => 'MANDATORY-' . uniqid(), 'name' => 'Mandatory',
+            'resource_id' => $resourceId, 'series_code' => \Tests\Support\Scratch\NumberingMarker::tag('MANDATORY-' . uniqid()), 'name' => 'Mandatory',
             'scope_type' => 'GROUP', 'pattern' => '{SEQ:3}', 'reset_policy' => 'NEVER',
             'generation_mode' => 'AUTO_REQUIRED', 'start_number' => 100, 'increment_by' => 5,
             'is_default' => 1, 'status' => 'ACTIVE',
@@ -139,7 +145,7 @@ final class P1AutoNumberingMandatoryRegressionTest extends CIUnitTestCase
         $this->assertSame(105, (int) $this->db->table('auto_numbering_counters')->where('numbering_series_id', $seriesId)->get()->getRowArray()['last_value']);
 
         $manualSeriesId = (new AutoNumberingSeriesRepository($this->db))->insert([
-            'resource_id' => $resourceId, 'series_code' => 'MANDATORY-MANUAL-' . uniqid(), 'name' => 'Mandatory manual',
+            'resource_id' => $resourceId, 'series_code' => \Tests\Support\Scratch\NumberingMarker::tag('MANDATORY-MANUAL-' . uniqid()), 'name' => 'Mandatory manual',
             'scope_type' => 'GROUP', 'pattern' => 'M{SEQ:3}', 'reset_policy' => 'NEVER',
             'generation_mode' => 'AUTO_IF_EMPTY', 'start_number' => 1, 'increment_by' => 1,
             'is_default' => 0, 'status' => 'ACTIVE',
@@ -231,20 +237,20 @@ final class P1AutoNumberingMandatoryRegressionTest extends CIUnitTestCase
         if ($row !== null) {
             return (int) $row['id'];
         }
-        $this->db->table('resources')->insert(['type' => 'product', 'name' => 'Product', 'domain' => 'MASTER', 'created_at' => '2026-10-06 04:05:06']);
+        $this->db->table('resources')->insert(['type' => 'product', 'name' => \Tests\Support\Scratch\NumberingMarker::tag('Product'), 'domain' => 'MASTER', 'created_at' => '2026-10-06 04:05:06']);
         return (int) $this->db->insertID();
     }
 
     private function insertProduct(string $code, string $status): void
     {
-        $this->db->table('products')->insert(['code' => $code, 'product_type' => 'STANDARD', 'serial_management_enabled' => 0, 'status' => $status, 'created_at' => '2026-10-06 04:05:06']);
+        $this->db->table('products')->insert(\Tests\Support\Scratch\NumberingMarker::product(['code' => $code, 'product_type' => 'STANDARD', 'serial_management_enabled' => 0, 'status' => $status, 'created_at' => '2026-10-06 04:05:06'], $code));
     }
 
     private function groupRootId(): int
     {
         $row = $this->db->table('organizations')->where('type', 'GROUP')->where('parent_id', null)->get()->getRowArray();
         if ($row === null) {
-            $this->db->table('organizations')->insert(['type' => 'GROUP', 'code' => 'MANDATORY-' . uniqid(), 'name' => 'Mandatory', 'status' => 'ACTIVE', 'created_at' => '2026-10-06 04:05:06']);
+            $this->db->table('organizations')->insert(['type' => 'GROUP', 'code' => \Tests\Support\Scratch\NumberingMarker::tag('MANDATORY-' . uniqid()), 'name' => 'Mandatory', 'status' => 'ACTIVE', 'created_at' => '2026-10-06 04:05:06']);
             return (int) $this->db->insertID();
         }
         return (int) $row['id'];
@@ -269,7 +275,7 @@ final class MandatoryProductMutation implements AutoNumberingBusinessMutation
     public function isIdentifierOccupied(string $identifier): bool { return false; }
     public function persist(string $identifier): void
     {
-        $this->db->table('products')->insert(['code' => $identifier, 'product_type' => 'STANDARD', 'serial_management_enabled' => 0, 'status' => 'ACTIVE', 'created_at' => '2026-10-06 04:05:06']);
+        $this->db->table('products')->insert(\Tests\Support\Scratch\NumberingMarker::product(['code' => $identifier, 'product_type' => 'STANDARD', 'serial_management_enabled' => 0, 'status' => 'ACTIVE', 'created_at' => '2026-10-06 04:05:06'], $identifier));
         $this->persisted[] = $identifier;
     }
 }

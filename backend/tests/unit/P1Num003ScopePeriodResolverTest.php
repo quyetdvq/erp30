@@ -10,6 +10,7 @@ use App\Infrastructure\Time\EvaluationTime;
 use App\Services\AutoNumberingScopePeriodResolver;
 use App\Services\CanonicalNumberingPatternValidator;
 use CodeIgniter\Test\CIUnitTestCase;
+use Tests\Support\Database\CanonicalGroupRootFixture;
 use Tests\Support\Performance\TransactionalDatabaseTestTrait;
 
 /** @internal */
@@ -34,7 +35,7 @@ final class P1Num003ScopePeriodResolverTest extends CIUnitTestCase
         $this->assertSame('ALL', $context->periodKey);
         $this->assertNull($context->companyId);
         $this->assertNull($context->businessTimezone);
-        $this->assertSame('GROUP-ROOT', $context->organizationCode);
+        $this->assertSame((string) $this->db->table('organizations')->select('code')->where('id', $groupId)->get()->getRow('code'), $context->organizationCode);
     }
 
     public function testGroupRootMustBeUniqueAndActive(): void
@@ -73,7 +74,7 @@ final class P1Num003ScopePeriodResolverTest extends CIUnitTestCase
 
     public function testCompanyScopeFromGroupAndMissingContextFailClosed(): void
     {
-        $groupId = $this->insertOrganization('GROUP', null, 'ROOT');
+        $groupId = $this->canonicalGroup('ROOT');
         foreach ([
             [null, AutoNumberingScopePeriodResolver::ERROR_CONTEXT_REQUIRED],
             [new EvaluationOrganizationContext($groupId, 'GROUP', 'AUTHORITATIVE'), AutoNumberingScopePeriodResolver::ERROR_COMPANY_REQUIRED],
@@ -228,7 +229,7 @@ final class P1Num003ScopePeriodResolverTest extends CIUnitTestCase
 
     public function testOrganizationCompanyCodeWithoutOwnerFailsAndInvalidScopeMetadataFails(): void
     {
-        $groupId = $this->insertOrganization('GROUP', null, 'ROOT');
+        $groupId = $this->canonicalGroup('ROOT');
         $validator = new CanonicalNumberingPatternValidator();
         $pattern = $validator->parse('{COMPANY_CODE}{SEQ:4}');
         try {
@@ -281,7 +282,7 @@ final class P1Num003ScopePeriodResolverTest extends CIUnitTestCase
     /** @return array{int, int, int} */
     private function tree(): array
     {
-        $groupId = $this->insertOrganization('GROUP', null, 'GROUP-ROOT');
+        $groupId = $this->canonicalGroup('GROUP-ROOT');
         $companyId = $this->insertOrganization('COMPANY', $groupId, 'COMPANY-A');
         $branchId = $this->insertOrganization('BRANCH', $companyId, 'BRANCH-A');
 
@@ -297,6 +298,14 @@ final class P1Num003ScopePeriodResolverTest extends CIUnitTestCase
         $companyB = $this->insertOrganization('COMPANY', $groupId, 'COMPANY-B');
 
         return [$groupId, $companyA, $branchA, $plantA, $warehouseA, $companyB];
+    }
+
+    private function canonicalGroup(string $fixtureCode): int
+    {
+        return CanonicalGroupRootFixture::findOrCreate(
+            $this->db,
+            fn (): int => $this->insertOrganization('GROUP', null, $fixtureCode),
+        );
     }
 
     private function insertOrganization(string $type, ?int $parentId, string $code): int

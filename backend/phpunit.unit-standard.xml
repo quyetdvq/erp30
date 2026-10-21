@@ -1,0 +1,38 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- UNIT-STANDARD suite: 13 explicit classes using the verified tests/erp_test connection. -->
+<phpunit xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:noNamespaceSchemaLocation="vendor/phpunit/phpunit/phpunit.xsd"
+         bootstrap="tests/_support/Standard/guarded_bootstrap.php"
+         backupGlobals="false"
+         beStrictAboutOutputDuringTests="true"
+         failOnRisky="true"
+         failOnWarning="true"
+         colors="true"
+         columns="max">
+    <testsuites>
+        <testsuite name="UnitStandardOnly">
+            <file>./tests/unit/P1Api050ProductSqlPaginationTest.php</file>
+            <file>./tests/unit/P1Auth005SecurityAdministrationTest.php</file>
+            <file>./tests/unit/P1AutoNumberingMandatoryRegressionTest.php</file>
+            <file>./tests/unit/P1Dsp003DisplaySettingsMutationServiceTest.php</file>
+            <file>./tests/unit/P1Emp001EmployeeRepositoryTest.php</file>
+            <file>./tests/unit/P1Emp003EmployeeAssignmentServiceTest.php</file>
+            <file>./tests/unit/P1Num001AutoNumberingTest.php</file>
+            <file>./tests/unit/P1Num004CounterAllocatorTest.php</file>
+            <file>./tests/unit/P1Num005ResourceIdentifierAdapterTest.php</file>
+            <file>./tests/unit/P1Num006ProductIdentifierAdapterTest.php</file>
+            <file>./tests/unit/P1Wf001LifecycleRepositoryTest.php</file>
+            <file>./tests/unit/P1Wf006StateAwarePbacAndLocationTransitionsTest.php</file>
+            <file>./tests/unit/P1Wf007NativeStateContractTest.php</file>
+        </testsuite>
+    </testsuites>
+    <php>
+        <server name="app.baseURL" value="http://example.com/"/>
+        <server name="CODEIGNITER_SCREAM_DEPRECATIONS" value="0"/>
+        <!-- CI4 DatabaseTestTrait is unchanged; migration/refresh can affect erp_test. -->
+        <env name="ERP_PHPUNIT_ALLOW_DISPLAY_FIELD_RESET" value="1"/>
+        <const name="HOMEPATH" value="./"/>
+        <const name="CONFIGPATH" value="./app/Config/"/>
+        <const name="PUBLICPATH" value="./public/"/>
+    </php>
+</phpunit>

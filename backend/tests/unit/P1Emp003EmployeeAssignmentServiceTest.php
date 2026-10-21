@@ -19,6 +19,12 @@ final class P1Emp003EmployeeAssignmentServiceTest extends CIUnitTestCase
 
     protected $namespace = null;
 
+    protected function setUp(): void
+    {
+        \Tests\Support\Standard\StandardRuntimeGuard::assertReady();
+        parent::setUp();
+    }
+
     public function testCreateValidatesDateReferencesAndCallerAuditFields(): void
     {
         [$employeeId, $organizationId, $departmentId, $positionId] = $this->references();

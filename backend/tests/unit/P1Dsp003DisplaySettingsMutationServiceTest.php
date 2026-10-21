@@ -26,6 +26,12 @@ final class P1Dsp003DisplaySettingsMutationServiceTest extends CIUnitTestCase
 
     protected $namespace = null;
 
+    protected function setUp(): void
+    {
+        \Tests\Support\Standard\StandardRuntimeGuard::assertReady();
+        parent::setUp();
+    }
+
     public function testAuthorizedSetResetWritesCanonicalAuditAndLeavesAuthorizationLogsUntouched(): void
     {
         [$userId, $groupId, $companyId] = $this->fixture(true);

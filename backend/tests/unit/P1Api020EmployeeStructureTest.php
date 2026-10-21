@@ -14,13 +14,13 @@ use App\Services\DepartmentService;
 use App\Services\EmployeeService;
 use App\Services\PositionService;
 use CodeIgniter\Test\CIUnitTestCase;
-use CodeIgniter\Test\DatabaseTestTrait;
+use Tests\Support\Performance\TransactionalDatabaseTestTrait;
 use Tests\Support\Database\WorkflowLifecycleFixture;
 
 /** @internal */
 final class P1Api020EmployeeStructureTest extends CIUnitTestCase
 {
-    use DatabaseTestTrait;
+    use TransactionalDatabaseTestTrait;
 
     protected $namespace = null;
 

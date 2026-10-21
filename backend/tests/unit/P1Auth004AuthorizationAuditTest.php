@@ -10,12 +10,12 @@ use App\Repositories\AuthorizationLogRepository;
 use App\Repositories\PolicyRepository;
 use CodeIgniter\Database\ConnectionInterface;
 use CodeIgniter\Test\CIUnitTestCase;
-use CodeIgniter\Test\DatabaseTestTrait;
+use Tests\Support\Performance\TransactionalDatabaseTestTrait;
 
 /** @internal */
 final class P1Auth004AuthorizationAuditTest extends CIUnitTestCase
 {
-    use DatabaseTestTrait;
+    use TransactionalDatabaseTestTrait;
 
     protected $namespace = null;
 
@@ -149,7 +149,7 @@ final class P1Auth004AuthorizationAuditTest extends CIUnitTestCase
 
     private function seedCatalog(): void
     {
-        (new App\Database\Seeds\ResourceActionSeeder(new Config\Database()))->run();
+        (new App\Database\Seeds\ResourceActionSeeder(new Config\Database(), $this->db))->run();
     }
 
     private function insertOrganization(): int

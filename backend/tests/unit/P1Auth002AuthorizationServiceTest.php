@@ -19,12 +19,13 @@ use App\Repositories\PolicyRepository;
 use App\Services\Api020EmployeeStructureService;
 use CodeIgniter\Events\Events;
 use CodeIgniter\Test\CIUnitTestCase;
-use CodeIgniter\Test\DatabaseTestTrait;
+use Tests\Support\Database\CanonicalGroupRootFixture;
+use Tests\Support\Performance\TransactionalDatabaseTestTrait;
 
 /** @internal */
 final class P1Auth002AuthorizationServiceTest extends CIUnitTestCase
 {
-    use DatabaseTestTrait;
+    use TransactionalDatabaseTestTrait;
 
     protected $namespace = null;
 
@@ -659,8 +660,8 @@ final class P1Auth002AuthorizationServiceTest extends CIUnitTestCase
     /** @return array{int,int,int,int,?int} */
     private function fixture(bool $basePermission, bool $secondCompany = false, bool $withAssignment = true): array
     {
-        (new ResourceActionSeeder(new Config\Database()))->run();
-        $rootId = $this->insertOrganization('GROUP');
+        (new ResourceActionSeeder(new Config\Database(), $this->db))->run();
+        $rootId = CanonicalGroupRootFixture::findOrCreate($this->db, fn (): int => $this->insertOrganization('GROUP'));
         $companyId = $this->insertOrganization('COMPANY', $rootId);
         $siblingId = $secondCompany ? $this->insertOrganization('COMPANY', $rootId) : null;
         $this->db->table('users')->insert([

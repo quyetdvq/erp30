@@ -24,6 +24,7 @@ trait TransactionalDatabaseTestTrait
     }
 
     private bool $erpIsolationTransactionStarted = false;
+    private bool $erpScratchNumberingStandalone = false;
 
     protected function setUpDatabase(): void
     {
@@ -37,7 +38,41 @@ trait TransactionalDatabaseTestTrait
         $this->migrate = false;
         $this->migrateOnce = true;
         $this->refresh = false;
+        $scratchWorker = defined('ERP_SCRATCH_NUMBERING_BOOTSTRAPPED')
+            && ERP_SCRATCH_NUMBERING_BOOTSTRAPPED === true;
+        if ($scratchWorker) {
+            // This check MUST precede the framework trait setup. A cached
+            // 'tests' connection can point to erp_test even when a new probe
+            // connection in the bootstrap correctly points to scratch.
+            \Tests\Support\Scratch\NumberingMethodGate::assertWorker(static::class, $this->name());
+            $config = config(\Config\Database::class);
+            \Tests\Support\Scratch\ScratchConnectionGuard::assertConfiguration(
+                $config, (string) getenv('ERP_SCRATCH_DB_USER'), (string) getenv('ERP_SCRATCH_DB_PASSWORD'),
+            );
+            \Tests\Support\Scratch\ScratchConnectionGuard::assertSharedConnections();
+            if ($this->db !== null) {
+                // Do not silently replace a wrong-target connection provided
+                // by CIUnitTestCase: it must be investigated and held.
+                \Tests\Support\Scratch\ScratchConnectionGuard::assertEffective($this->db);
+            }
+            // Bind the test's real write connection explicitly: NO shared
+            // group cache, not merely a disposable read-only bootstrap probe.
+            $this->db = \Config\Database::connect($config->tests, false);
+            \Tests\Support\Scratch\ScratchConnectionGuard::assertEffective($this->db);
+        }
         $this->setUpFrameworkDatabase();
+
+        // The ONLY approved exception to the outer transaction is one exact,
+        // source-pinned Numbering method under the dedicated scratch bootstrap.
+        // Never accept a bare environment flag, class-only match, or erp_test.
+        if ($scratchWorker) {
+            \Tests\Support\Scratch\ScratchConnectionGuard::assertEffective($this->db);
+            if ($this->db->transDepth !== 0) {
+                throw new RuntimeException('03C-04B STOP: scratch method entered with an open transaction.');
+            }
+            $this->erpScratchNumberingStandalone = true;
+            return;
+        }
 
         if ($this->db->transDepth !== 0 || ! $this->db->transBegin()) {
             throw new RuntimeException('Cannot begin an isolated test transaction.');
@@ -52,6 +87,13 @@ trait TransactionalDatabaseTestTrait
             // transaction still protects any resulting DELETE statements.
             $this->tearDownFrameworkDatabase();
         } finally {
+            if ($this->erpScratchNumberingStandalone) {
+                $this->erpScratchNumberingStandalone = false;
+                if ($this->db->transDepth !== 0) {
+                    throw new RuntimeException('03C-04B STOP: scratch method left its transaction open.');
+                }
+                $this->db->resetTransStatus();
+            }
             if ($this->erpIsolationTransactionStarted) {
                 $depth = $this->db->transDepth;
                 try {

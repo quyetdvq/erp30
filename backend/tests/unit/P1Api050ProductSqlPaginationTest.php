@@ -28,6 +28,12 @@ final class P1Api050ProductSqlPaginationTest extends CIUnitTestCase
 
     protected $namespace = null;
 
+    protected function setUp(): void
+    {
+        \Tests\Support\Standard\StandardRuntimeGuard::assertReady();
+        parent::setUp();
+    }
+
     public function testPageCountLastPageDescendingOrderAndCrossPageProductRoles(): void
     {
         $this->insertProducts(242);

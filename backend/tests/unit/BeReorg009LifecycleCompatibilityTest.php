@@ -6,12 +6,12 @@ use App\Modules\Workflow\Lifecycle\Infrastructure\Persistence\SqlLifecycleReposi
 use App\Repositories\LifecycleRepository;
 use App\Services\LifecycleService;
 use CodeIgniter\Test\CIUnitTestCase;
-use CodeIgniter\Test\DatabaseTestTrait;
+use Tests\Support\Performance\TransactionalDatabaseTestTrait;
 
 /** @internal */
 final class BeReorg009LifecycleCompatibilityTest extends CIUnitTestCase
 {
-    use DatabaseTestTrait;
+    use TransactionalDatabaseTestTrait;
 
     protected $namespace = null;
 

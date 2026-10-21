@@ -7,6 +7,7 @@ use App\Authorization\EvaluationOrganizationResolver;
 use App\Authorization\ResourceDomain;
 use App\Exceptions\DomainException;
 use CodeIgniter\Test\CIUnitTestCase;
+use Tests\Support\Database\CanonicalGroupRootFixture;
 use Tests\Support\Performance\TransactionalDatabaseTestTrait;
 
 /** @internal */
@@ -20,7 +21,7 @@ final class ChangeAuthDomain001AuthorizationTest extends CIUnitTestCase
     {
         $this->assertSame(['SYSTEM', 'MASTER', 'ORGANIZATION'], array_map(static fn (ResourceDomain $domain): string => $domain->value, ResourceDomain::cases()));
         $resolver = new EvaluationOrganizationResolver(null, null, null, $this->db);
-        $this->insertOrganization('GROUP');
+        $this->canonicalGroup();
 
         foreach ([[], ['domain' => ''], ['domain' => 'COMPANY'], ['domain' => 'UNKNOWN']] as $resource) {
             try {
@@ -79,7 +80,7 @@ final class ChangeAuthDomain001AuthorizationTest extends CIUnitTestCase
 
     public function testAllSystemAndMasterDomainsResolveGroupWithoutResourceNameRules(): void
     {
-        $groupId = $this->insertOrganization('GROUP');
+        $groupId = $this->canonicalGroup();
         $resolver = new EvaluationOrganizationResolver(null, null, null, $this->db);
 
         foreach ([
@@ -101,7 +102,7 @@ final class ChangeAuthDomain001AuthorizationTest extends CIUnitTestCase
 
     public function testInactiveOrganizationRemainsValidHistoricalContextIdentity(): void
     {
-        $this->insertOrganization('GROUP');
+        $this->canonicalGroup();
         $inactiveId = $this->insertOrganization('COMPANY', null, 'INACTIVE');
         $resolver = new EvaluationOrganizationResolver(null, null, null, $this->db);
 
@@ -120,10 +121,15 @@ final class ChangeAuthDomain001AuthorizationTest extends CIUnitTestCase
     /** @return array{int, int} */
     private function organizationTree(): array
     {
-        $group = $this->insertOrganization('GROUP');
+        $group = $this->canonicalGroup();
         $company = $this->insertOrganization('COMPANY', $group);
 
         return [$group, $company];
+    }
+
+    private function canonicalGroup(): int
+    {
+        return CanonicalGroupRootFixture::findOrCreate($this->db, fn (): int => $this->insertOrganization('GROUP'));
     }
 
     private function insertOrganization(string $type, ?int $parentId = null, string $status = 'ACTIVE'): int

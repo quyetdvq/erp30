@@ -17,12 +17,13 @@ use App\Infrastructure\Mutation\OperationContext;
 use App\Infrastructure\Time\EvaluationTime;
 use App\Repositories\PolicyRepository;
 use CodeIgniter\Test\CIUnitTestCase;
-use CodeIgniter\Test\DatabaseTestTrait;
+use Tests\Support\Database\CanonicalGroupRootFixture;
+use Tests\Support\Performance\TransactionalDatabaseTestTrait;
 
 /** @internal Increment 2C2: differential owner-aware PBAC SQL pagination. */
 final class P1Perf006OwnerAwareSqlPaginationTest extends CIUnitTestCase
 {
-    use DatabaseTestTrait;
+    use TransactionalDatabaseTestTrait;
 
     protected $namespace = null;
 
@@ -282,8 +283,8 @@ final class P1Perf006OwnerAwareSqlPaginationTest extends CIUnitTestCase
 
     private function fixture(): array
     {
-        (new ResourceActionSeeder(new Config\Database()))->run();
-        $root = $this->organization('GROUP');
+        (new ResourceActionSeeder(new Config\Database(), $this->db))->run();
+        $root = CanonicalGroupRootFixture::findOrCreate($this->db, fn (): int => $this->organization('GROUP'));
         $company = $this->organization('COMPANY', $root);
         $branch = $this->organization('BRANCH', $company);
         $sibling = $this->organization('COMPANY', $root);

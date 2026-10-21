@@ -32,6 +32,12 @@ final class P1Num006ProductIdentifierAdapterTest extends CIUnitTestCase
 
     protected $namespace = null;
 
+    protected function setUp(): void
+    {
+        \Tests\Support\Standard\StandardRuntimeGuard::assertReady();
+        parent::setUp();
+    }
+
     public function testCanonicalMetadataAndExplicitRegistryRegistration(): void
     {
         $adapter = new ProductIdentifierAdapter($this->db);
@@ -93,35 +99,27 @@ final class P1Num006ProductIdentifierAdapterTest extends CIUnitTestCase
 
         $code = 'NUM006-COLL-' . strtoupper(bin2hex(random_bytes(4)));
         $this->insertProduct($code, 'ACTIVE');
-        try {
-            $this->db->table('products')->insert($this->product($code));
-            $this->fail('Expected products.code unique violation.');
-        } catch (DatabaseException $exception) {
-            $this->assertTrue($adapter->isIdentifierCollision($exception), $exception->getMessage());
-        }
+        $codeError = $this->duplicateUniqueKeyError($this->product($code));
+        $this->assertTrue($adapter->isIdentifierCollision($codeError), $codeError->getMessage());
 
         $sku = 'NUM006-SKU-' . strtoupper(bin2hex(random_bytes(3)));
         $barcode = 'NUM006-BAR-' . strtoupper(bin2hex(random_bytes(3)));
         $this->db->table('products')->insert($this->product('NUM006-SKU-OWNER-' . strtoupper(bin2hex(random_bytes(3))), 'ACTIVE', $sku, $barcode));
-        try {
-            $this->db->table('products')->insert($this->product('NUM006-SKU-DUP-' . strtoupper(bin2hex(random_bytes(3))), 'ACTIVE', $sku, null));
-            $this->fail('Expected products.sku unique violation.');
-        } catch (DatabaseException $exception) {
-            $this->assertFalse($adapter->isIdentifierCollision($exception), $exception->getMessage());
-        }
-        try {
-            $this->db->table('products')->insert($this->product('NUM006-BAR-DUP-' . strtoupper(bin2hex(random_bytes(3))), 'ACTIVE', null, $barcode));
-            $this->fail('Expected products.barcode unique violation.');
-        } catch (DatabaseException $exception) {
-            $this->assertFalse($adapter->isIdentifierCollision($exception), $exception->getMessage());
-        }
+        $skuError = $this->duplicateUniqueKeyError(
+            $this->product('NUM006-SKU-DUP-' . strtoupper(bin2hex(random_bytes(3))), 'ACTIVE', $sku, null),
+        );
+        $this->assertFalse($adapter->isIdentifierCollision($skuError), $skuError->getMessage());
+        $barcodeError = $this->duplicateUniqueKeyError(
+            $this->product('NUM006-BAR-DUP-' . strtoupper(bin2hex(random_bytes(3))), 'ACTIVE', null, $barcode),
+        );
+        $this->assertFalse($adapter->isIdentifierCollision($barcodeError), $barcodeError->getMessage());
     }
 
     public function testProductAdapterUsesGlobalOccupancyInsideAutoNumberTransaction(): void
     {
         $resource = $this->productResource();
         $seriesId = (new AutoNumberingSeriesRepository($this->db))->insert([
-            'resource_id' => $resource, 'series_code' => 'NUM006-' . strtoupper(bin2hex(random_bytes(3))),
+            'resource_id' => $resource, 'series_code' => \Tests\Support\Scratch\NumberingMarker::tag('NUM006-' . strtoupper(bin2hex(random_bytes(3)))),
             'name' => 'Product test', 'scope_type' => 'GROUP', 'pattern' => '{SEQ:3}',
             'reset_policy' => 'NEVER', 'generation_mode' => 'AUTO_REQUIRED', 'start_number' => 1,
             'increment_by' => 1, 'is_default' => 0, 'status' => 'ACTIVE',
@@ -176,7 +174,7 @@ final class P1Num006ProductIdentifierAdapterTest extends CIUnitTestCase
     {
         $resource = $this->productResource();
         $seriesId = (new AutoNumberingSeriesRepository($this->db))->insert([
-            'resource_id' => $resource, 'series_code' => 'NUM006-ROLL-' . strtoupper(bin2hex(random_bytes(3))),
+            'resource_id' => $resource, 'series_code' => \Tests\Support\Scratch\NumberingMarker::tag('NUM006-ROLL-' . strtoupper(bin2hex(random_bytes(3)))),
             'name' => 'Product rollback', 'scope_type' => 'GROUP', 'pattern' => '{SEQ:3}',
             'reset_policy' => 'NEVER', 'generation_mode' => 'AUTO_REQUIRED', 'start_number' => 10,
             'increment_by' => 1, 'is_default' => 0, 'status' => 'ACTIVE',
@@ -196,6 +194,35 @@ final class P1Num006ProductIdentifierAdapterTest extends CIUnitTestCase
         $this->assertSame(0, (int) $this->db->table('auto_numbering_counters')->where('numbering_series_id', $seriesId)->countAllResults());
     }
 
+    /**
+     * CI4 reports a failed INSERT as false inside a transaction, but may throw
+     * DatabaseException when DBDebug is enabled outside a transaction.
+     * Preserve the real MySQL duplicate-key diagnostic in either case.
+     *
+     * @param array<string,int|string> $product
+     */
+    private function duplicateUniqueKeyError(array $product): DatabaseException
+    {
+        try {
+            try {
+                $inserted = $this->db->table('products')->insert($product);
+            } catch (DatabaseException $exception) {
+                $this->assertSame(1062, (int) $exception->getCode(), 'Expected MySQL duplicate-key error 1062.');
+                $this->assertNotEmpty($exception->getMessage(), 'Missing duplicate-key diagnostic.');
+                return $exception;
+            }
+
+            $this->assertFalse($inserted, 'Expected a SQL uniqueness violation.');
+            $error = $this->db->error();
+            $this->assertSame(1062, (int) ($error['code'] ?? 0), 'Expected MySQL duplicate-key error 1062.');
+            $this->assertNotEmpty($error['message'] ?? '', 'Missing duplicate-key diagnostic.');
+            return new DatabaseException((string) $error['message'], 1062);
+        } finally {
+            // Keep later test statements independent of this expected error.
+            $this->db->resetTransStatus();
+        }
+    }
+
     private function insertProduct(string $code, string $status): int
     {
         $this->db->table('products')->insert($this->product($code, $status));
@@ -209,6 +236,7 @@ final class P1Num006ProductIdentifierAdapterTest extends CIUnitTestCase
             'code' => $code, 'product_type' => 'STANDARD', 'serial_management_enabled' => 0,
             'status' => $status, 'created_at' => '2026-10-06 04:05:06',
         ];
+        $product = \Tests\Support\Scratch\NumberingMarker::product($product, $code);
         if ($sku !== null) {
             $product['sku'] = $sku;
         }
@@ -224,7 +252,7 @@ final class P1Num006ProductIdentifierAdapterTest extends CIUnitTestCase
         if ($row !== null) {
             return (int) $row['id'];
         }
-        $this->db->table('resources')->insert(['type' => 'product', 'name' => 'Product', 'domain' => 'MASTER', 'created_at' => '2026-10-06 04:05:06']);
+        $this->db->table('resources')->insert(['type' => 'product', 'name' => \Tests\Support\Scratch\NumberingMarker::tag('Product'), 'domain' => 'MASTER', 'created_at' => '2026-10-06 04:05:06']);
         return (int) $this->db->insertID();
     }
 
@@ -244,7 +272,7 @@ final class P1Num006ProductIdentifierAdapterTest extends CIUnitTestCase
     {
         $row = $this->db->table('organizations')->where('type', 'GROUP')->where('parent_id', null)->get()->getRowArray();
         if ($row === null) {
-            $this->db->table('organizations')->insert(['type' => 'GROUP', 'code' => 'NUM006-GROUP-' . uniqid(), 'name' => 'NUM006', 'status' => 'ACTIVE', 'created_at' => '2026-10-06 04:05:06']);
+            $this->db->table('organizations')->insert(['type' => 'GROUP', 'code' => \Tests\Support\Scratch\NumberingMarker::tag('NUM006-GROUP-' . uniqid()), 'name' => 'NUM006', 'status' => 'ACTIVE', 'created_at' => '2026-10-06 04:05:06']);
             $row = $this->db->table('organizations')->where('id', $this->db->insertID())->get()->getRowArray();
         }
         if ($row === null) {
@@ -272,7 +300,7 @@ final class Num006ProductMutation implements AutoNumberingBusinessMutation
     }
     public function persist(string $identifier): void
     {
-        $this->db->table('products')->insert(['code' => $identifier, 'product_type' => 'STANDARD', 'serial_management_enabled' => 0, 'status' => 'ACTIVE', 'created_at' => '2026-10-06 04:05:06']);
+        $this->db->table('products')->insert(\Tests\Support\Scratch\NumberingMarker::product(['code' => $identifier, 'product_type' => 'STANDARD', 'serial_management_enabled' => 0, 'status' => 'ACTIVE', 'created_at' => '2026-10-06 04:05:06'], $identifier));
         $this->persisted[] = $identifier;
     }
 }
@@ -288,7 +316,7 @@ final class Num006FailingProductMutation implements AutoNumberingBusinessMutatio
     }
     public function persist(string $identifier): void
     {
-        $this->db->table('products')->insert(['code' => $identifier, 'product_type' => 'STANDARD', 'serial_management_enabled' => 0, 'status' => 'ACTIVE', 'created_at' => '2026-10-06 04:05:06']);
+        $this->db->table('products')->insert(\Tests\Support\Scratch\NumberingMarker::product(['code' => $identifier, 'product_type' => 'STANDARD', 'serial_management_enabled' => 0, 'status' => 'ACTIVE', 'created_at' => '2026-10-06 04:05:06'], $identifier));
         throw new RuntimeException('forced product rollback');
     }
 }

@@ -11,12 +11,12 @@ use App\Infrastructure\Api\SqlAuthorizedBucketListSource;
 use App\Repositories\FoundationLocationRepository;
 use App\Services\FoundationLocationService;
 use CodeIgniter\Test\CIUnitTestCase;
-use CodeIgniter\Test\DatabaseTestTrait;
+use Tests\Support\Performance\TransactionalDatabaseTestTrait;
 
 /** @internal DB-backed regression for location lookups, history and address integrity. */
 final class P1Loc010OptimizationTest extends CIUnitTestCase
 {
-    use DatabaseTestTrait;
+    use TransactionalDatabaseTestTrait;
 
     protected $namespace = null;
 
@@ -104,7 +104,7 @@ final class P1Loc010OptimizationTest extends CIUnitTestCase
     {
         // Location creation resolves the canonical Resource Lifecycle first.
         // Seed the same catalog used by the application before exercising the service.
-        (new ResourceActionSeeder(new \Config\Database()))->run();
+        (new ResourceActionSeeder(new \Config\Database(), $this->db))->run();
 
         return new FoundationLocationService(new FoundationLocationRepository($this->db), $this->db);
     }

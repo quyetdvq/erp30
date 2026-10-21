@@ -8,6 +8,7 @@ use App\Repositories\OrganizationRepository;
 use App\Services\OrganizationService;
 use App\Services\ResourceWorkflowStateResolver;
 use CodeIgniter\Test\CIUnitTestCase;
+use Tests\Support\Database\CanonicalGroupRootFixture;
 use Tests\Support\Performance\TransactionalDatabaseTestTrait;
 use Tests\Support\Database\WorkflowLifecycleFixture;
 
@@ -27,7 +28,7 @@ final class P1Org002OrganizationServiceTest extends CIUnitTestCase
     public function testValidHierarchyAncestorChainAndCompanyResolution(): void
     {
         $service = new OrganizationService(null, $this->db);
-        $groupId = $service->create($this->organization('GROUP'));
+        $groupId = $this->canonicalGroup($service);
         $companyId = $service->create($this->organization('COMPANY', $groupId));
         $warehouseId = $service->create($this->organization('WAREHOUSE', $companyId));
 
@@ -43,7 +44,7 @@ final class P1Org002OrganizationServiceTest extends CIUnitTestCase
     public function testSecondRootAndInvalidParentMatrixAreRejected(): void
     {
         $service = new OrganizationService(null, $this->db);
-        $groupId = $service->create($this->organization('GROUP'));
+        $groupId = $this->canonicalGroup($service);
 
         try {
             $service->create($this->organization('GROUP'));
@@ -64,7 +65,7 @@ final class P1Org002OrganizationServiceTest extends CIUnitTestCase
     public function testReparentCycleAndInactivationPreserveStableErrors(): void
     {
         $service = new OrganizationService(null, $this->db);
-        $groupId = $service->create($this->organization('GROUP'));
+        $groupId = $this->canonicalGroup($service);
         $companyId = $service->create($this->organization('COMPANY', $groupId));
         $branchId = $service->create($this->organization('BRANCH', $companyId));
         $warehouseId = $service->create($this->organization('WAREHOUSE', $branchId));
@@ -121,12 +122,13 @@ final class P1Org002OrganizationServiceTest extends CIUnitTestCase
             }
         };
         $service = new OrganizationService(null, $this->db, $lock);
-        $groupId = $service->create($this->organization('GROUP'));
+        $groupId = $this->canonicalGroup($service);
+        $expectedLockCount = count($keys) + 2;
         $companyId = $service->create($this->organization('COMPANY', $groupId));
         $service->update($companyId, ['name' => 'Updated Company', 'parent_id' => $groupId]);
 
         $this->assertNotEmpty($keys);
-        $this->assertSame(['organization-tree', 'organization-tree', 'organization-tree'], $keys);
+        $this->assertSame(array_fill(0, $expectedLockCount, 'organization-tree'), $keys);
     }
 
     public function testLockFailureExposesStableMutationCode(): void
@@ -172,7 +174,7 @@ final class P1Org002OrganizationServiceTest extends CIUnitTestCase
     public function testInvariantCodeIsIndependentOfRequestLocale(): void
     {
         $service = new OrganizationService(null, $this->db);
-        $groupId = $service->create($this->organization('GROUP'));
+        $groupId = $this->canonicalGroup($service);
         $codes = [];
 
         foreach (['vi', 'en'] as $locale) {
@@ -191,6 +193,14 @@ final class P1Org002OrganizationServiceTest extends CIUnitTestCase
             OrganizationService::ERROR_INVALID_PARENT,
             OrganizationService::ERROR_INVALID_PARENT,
         ], $codes);
+    }
+
+    private function canonicalGroup(OrganizationService $service): int
+    {
+        return CanonicalGroupRootFixture::findOrCreate(
+            $this->db,
+            fn (): int => $service->create($this->organization('GROUP')),
+        );
     }
 
     /** @return array<string, mixed> */

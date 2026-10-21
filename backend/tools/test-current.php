@@ -18,6 +18,8 @@ Current ERP test entrypoint
 
   php tools/test-current.php --mode=fast
   php tools/test-current.php --mode=unit-cohort
+  php tools/test-current.php --mode=unit-safe --confirm-test-db --target=127.0.0.1:3306/erp_test --prefix=dinktech_
+  php tools/test-current.php --mode=unit-candidates --class=P1Num006ProductIdentifierAdapterTest --method=testOnlyProductsCodeUniqueConflictIsClassified --confirm-test-db --target=127.0.0.1:3306/erp_test --prefix=dinktech_
   php tools/test-current.php --mode=unit-cohort --order=random --seed=17
   php tools/test-current.php --mode=unit-cohort --class=CsvImportReaderTest
   php tools/test-current.php --mode=module --module=settings --confirm-test-db --target=127.0.0.1:3306/erp_test --prefix=dinktech_
@@ -34,6 +36,16 @@ fast: unchanged legacy database-free boundary contracts (one PHPUnit pass).
 unit-cohort: source-hash-pinned 13-class / 104-method No-DB lane; exact-file suite,
         CI4 default/tests DB groups disabled. No DB target/confirmation args accepted.
         --class optionally isolates one audited class; random order needs seed.
+unit-safe: 53 source-pinned no-DB-trait + 20 reviewed rollback + 18 verified converted classes,
+        one guarded PHPUnit process; schema/data pre/post audit, NO migrations.
+unit-candidates: 5 converted unit classes NOT YET APPROVED; opt-in diagnostic lane.
+        Use --class for an isolated check, --class with --method for a single
+        public test method, or --classes=A,B for a deliberate batch.
+        --rollback-subset=1 selects exactly 47 audited rollback-compatible
+        methods from all five candidates; excludes the 7 scratch-only methods.
+        This diagnostic DOES NOT promote any class to unit-safe.
+        Every batch runs in ONE process under the same DB lock and fingerprint audit.
+        Eight unsafe unit classes remain excluded from BOTH NO-DROP lanes.
 module: only relevant module tests; --class selects one whitelisted module test class.
         --order=random --seed=N shuffles a single class under the same DB guard.
         NO-DROP: only individually verified class allowlist is enabled. No automatic migrations.
@@ -65,7 +77,7 @@ function currentOptions(array $args): array
 {
     $options = [];
     foreach ($args as $arg) {
-        if (! preg_match('/\A--(mode|module|target|prefix|junit|class|order|seed)(?:=(.*))?\z/D', $arg, $parts)
+        if (! preg_match('/\A--(mode|module|target|prefix|junit|class|classes|method|order|seed|rollback-subset)(?:=(.*))?\z/D', $arg, $parts)
             && $arg !== '--confirm-test-db') {
             throw new InvalidArgumentException('Unknown argument: ' . $arg);
         }
@@ -341,8 +353,11 @@ try {
     }
     $options = currentOptions($args);
     $mode = $options['mode'] ?? '';
-    if (! in_array($mode, ['fast', 'unit-cohort', 'module', 'cohort', 'full', 'profile'], true)) {
-        throw new InvalidArgumentException('Use --mode=fast|unit-cohort|module|cohort|full|profile.');
+    if ($mode === 'unit-candidates') {
+        throw new RuntimeException('UNIT CANDIDATES retired: the 13 remaining classes use the separate unit-standard PHPUnit suite.');
+    }
+    if (! in_array($mode, ['fast', 'unit-cohort', 'unit-safe', 'unit-candidates', 'module', 'cohort', 'full', 'profile'], true)) {
+        throw new InvalidArgumentException('Use --mode=fast|unit-cohort|unit-safe|unit-candidates|module|cohort|full|profile.');
     }
     if ($mode === 'profile') {
         if (array_diff(array_keys($options), ['mode', 'junit']) !== [] || ($options['junit'] ?? '') === '') {
@@ -352,11 +367,11 @@ try {
         exit(0);
     }
     if (isset($options['order']) || isset($options['seed'])) {
-        if (! (in_array($mode, ['cohort', 'unit-cohort'], true) || ($mode === 'module' && isset($options['class'])))
+        if (! (in_array($mode, ['cohort', 'unit-cohort', 'unit-safe', 'unit-candidates'], true) || ($mode === 'module' && isset($options['class'])))
             || ($options['order'] ?? '') !== 'random'
             || preg_match('/\A(?:0|[1-9][0-9]{0,9})\z/D', $options['seed'] ?? '') !== 1
             || (int) ($options['seed'] ?? 0) > 2147483647) {
-            throw new InvalidArgumentException('Random order requires cohort, unit-cohort or module + --class, and --order=random --seed=0..2147483647.');
+            throw new InvalidArgumentException('Random order requires cohort, unit-cohort, unit-safe, unit-candidates or module + --class; use --order=random --seed=0..2147483647.');
         }
     }
     if ($mode === 'full') {
@@ -413,12 +428,33 @@ try {
     }
     if (! isset($options['confirm-test-db'], $options['target'], $options['prefix'])
         || $options['confirm-test-db'] !== '1'
-        || array_diff(array_keys($options), ['mode', 'module', 'class', 'order', 'seed', 'confirm-test-db', 'target', 'prefix']) !== []) {
+        || array_diff(array_keys($options), ['mode', 'module', 'class', 'classes', 'method', 'order', 'seed', 'rollback-subset', 'confirm-test-db', 'target', 'prefix']) !== []) {
         throw new InvalidArgumentException('DB mode requires --confirm-test-db --target=loopback:port/erp_test --prefix=<prefix>.');
     }
     if ($mode === 'cohort' && array_diff(array_keys($options),
         ['mode', 'order', 'seed', 'confirm-test-db', 'target', 'prefix']) !== []) {
         throw new InvalidArgumentException('Cohort does not accept --module, --class, or unknown options.');
+    }
+    $unitNoDrop = in_array($mode, ['unit-safe', 'unit-candidates'], true);
+    if ($unitNoDrop && array_diff(array_keys($options),
+        ['mode', 'class', 'classes', 'method', 'order', 'seed', 'rollback-subset', 'confirm-test-db', 'target', 'prefix']) !== []) {
+        throw new InvalidArgumentException('UNIT NO-DROP cannot accept --module or unknown options.');
+    }
+    if (isset($options['rollback-subset'])
+        && ($mode !== 'unit-candidates' || $options['rollback-subset'] !== '1'
+            || isset($options['class']) || isset($options['classes']) || isset($options['method']))) {
+        throw new InvalidArgumentException('03C-03: rollback subset must be a standalone candidate selection.');
+    }
+    if ($mode === 'unit-candidates' && ! isset($options['class']) && ! isset($options['classes'])
+        && ! isset($options['rollback-subset'])) {
+        throw new InvalidArgumentException('UNIT CANDIDATES: specify --class, --classes, or --rollback-subset=1.');
+    }
+    if (isset($options['classes']) && ($mode !== 'unit-candidates' || isset($options['class']))) {
+        throw new InvalidArgumentException('UNIT NO-DROP: --classes is candidate-only and cannot be combined with --class.');
+    }
+    if (isset($options['method']) && ($mode !== 'unit-candidates'
+        || ! isset($options['class']) || isset($options['classes']))) {
+        throw new InvalidArgumentException('UNIT NO-DROP: --method requires one named candidate --class.');
     }
     require_once $backend . '/tools/product-media/Gate.php';
     \DinkERP\ProductMediaTools\Gate::target($options['target'], $options['prefix']);
@@ -431,7 +467,7 @@ try {
     $module = $options['module'] ?? '';
     $modules = currentModules();
     $class = $options['class'] ?? '';
-    if (! $cohort) {
+    if (! $cohort && ! $unitNoDrop) {
         if (! isset($modules[$module])) {
             throw new InvalidArgumentException('Unknown module: ' . $module . '. Available: ' . implode(', ', array_keys($modules)) . ', media');
         }
@@ -440,7 +476,41 @@ try {
         }
     }
     // Fully resolve and verify cohort files before opening the DB or PHPUnit.
-    $cohortClasses = $cohort ? currentNoDropCohortClasses($backend) : [];
+    $cohortClasses = ($cohort || $unitNoDrop) ? currentNoDropCohortClasses($backend) : [];
+    $unitSelection = null;
+    $unitClasses = [];
+    $rollbackSubset = null;
+    if ($unitNoDrop) {
+        require_once __DIR__ . '/UnitNoDropSelection.php';
+        $unitSelection = \DinkERP\TestTools\UnitNoDropSelection::resolve($backend, $cohortClasses);
+        $unitClasses = $mode === 'unit-safe' ? $unitSelection['ready'] : $unitSelection['candidates'];
+        if (isset($options['class'])) {
+            if (! in_array($options['class'], $unitClasses, true)) {
+                throw new RuntimeException('UNIT NO-DROP: class is not in the selected reviewed/candidate lane.');
+            }
+            $unitClasses = [$options['class']];
+        } elseif (isset($options['classes'])) {
+            $unitClasses = \DinkERP\TestTools\UnitNoDropSelection::candidateBatch(
+                $options['classes'], $unitSelection['candidates'],
+            );
+        }
+        if (isset($options['rollback-subset'])) {
+            // Resolve() already pinned all five candidate source hashes.
+            require_once __DIR__ . '/UnitNoDropRollbackSubset.php';
+            $rollbackSubset = \DinkERP\TestTools\UnitNoDropRollbackSubset::plan(
+                $backend, $unitSelection['candidates'],
+            );
+        }
+        if (isset($options['method'])) {
+            // Resolve() already checked the entire candidate file's source
+            // hash. The method must be declared PUBLIC inside that file.
+            $candidateSource = file_get_contents($backend . '/tests/unit/' . $unitClasses[0] . '.php');
+            if (! is_string($candidateSource)) {
+                throw new RuntimeException('UNIT NO-DROP: selected candidate file is unreadable.');
+            }
+            \DinkERP\TestTools\UnitNoDropSelection::candidateMethod($options['method'], $candidateSource);
+        }
+    }
     $lockPath = $backend . '/writable/be-reorg-001a-run.lock';
     $lock = fopen($lockPath, 'c');
     if ($lock === false || ! flock($lock, LOCK_EX | LOCK_NB)) {
@@ -453,15 +523,24 @@ try {
             'ERP_FOUNDATION_EXPECTED_PREFIX' => $options['prefix']] as $key => $value) {
             putenv($key . '=' . $value);
         }
-        if ($cohort) {
-            // Exact tested class basenames, never module prefix, DBTestTrait glob,
-            // or a full regression selection.
-            $filter = currentClassFilter($cohortClasses);
+        if ($cohort || $unitNoDrop) {
+            // Exact reviewed class names. The unit lane uses a unit-only XML suite.
+            // Neither lane can select legacy DatabaseTestTrait files.
+            $filter = currentClassFilter($unitNoDrop ? $unitClasses : $cohortClasses);
+            if ($unitNoDrop && $rollbackSubset !== null) {
+                $filter = $rollbackSubset['filter'];
+            }
+            if ($unitNoDrop && isset($options['method'])) {
+                $filter = '/(?:^|\\\\)' . preg_quote($unitClasses[0], '/') . '::'
+                    . preg_quote($options['method'], '/') . '(?:$|[ #])/';
+            }
         } else {
             $prefixes = array_map(static fn (string $value): string => preg_quote($value, '/'), $modules[$module]);
             $filter = '/(?:^|\\\\)(?:' . implode('|', $prefixes) . ')[A-Za-z0-9_]*::/';
         }
-        if (! $cohort && isset($options['class'])) {
+        // Unit lanes already validated --class against their exact allowlists.
+        // Only the module lane has a module prefix; unit lanes have module=''.
+        if (! $cohort && ! $unitNoDrop && isset($options['class'])) {
             $class = $options['class'];
             if (preg_match('/\A[A-Za-z][A-Za-z0-9_]*Test\z/D', $class) !== 1
                 || ! currentClassInModule($class, $modules[$module])) {
@@ -473,14 +552,33 @@ try {
         if ($cohort) {
             fwrite(STDOUT, 'NO-DROP approved cohort=' . count($cohortClasses)
                 . ' classes; immutable schema=' . $beforeSchema['schema_sha256'] . PHP_EOL);
+        } elseif ($unitNoDrop) {
+            fwrite(STDOUT, 'NO-DROP ' . $mode . ': selected=' . count($unitClasses)
+                . ', reviewed=' . count($unitSelection['ready']) . ', UNVERIFIED candidates='
+                . count($unitSelection['candidates']) . ', blocked=' . count($unitSelection['blocked'])
+                . ' (excluded); immutable schema=' . $beforeSchema['schema_sha256'] . PHP_EOL);
+            if ($mode === 'unit-candidates') {
+                fwrite(STDOUT, 'CANDIDATES REQUIRE REAL MYSQL VERIFICATION. Running here does not promote them.' . PHP_EOL);
+                if ($rollbackSubset !== null) {
+                    fwrite(STDOUT, '03C-03 ROLLBACK-METHOD DIAGNOSTIC: exactly '
+                        . count($rollbackSubset['selected']) . ' methods selected; '
+                        . count($rollbackSubset['scratch_only'])
+                        . ' transaction-owned methods excluded; no candidate class promoted.' . PHP_EOL);
+                }
+                if (isset($options['method'])) {
+                    fwrite(STDOUT, 'DIAGNOSTIC METHOD ONLY: ' . $unitClasses[0] . '::' . $options['method']
+                        . ' (the remainder of this class is NOT verified).' . PHP_EOL);
+                }
+            }
         } else {
             fwrite(STDOUT, 'NO-DROP module=' . $module . '; class=' . $class
                 . '; immutable schema=' . $beforeSchema['schema_sha256'] . PHP_EOL);
         }
-        $command = [PHP_BINARY, 'vendor/bin/phpunit', '--configuration', 'phpunit.current.xml',
+        $command = [PHP_BINARY, 'vendor/bin/phpunit', '--configuration',
+            $unitNoDrop ? 'phpunit.unit-no-drop.xml' : 'phpunit.current.xml',
             '--bootstrap', 'tests/_support/Current/guarded_bootstrap.php', '--no-coverage',
             '--colors=never', '--filter', $filter];
-        if ($cohort) {
+        if ($cohort || $unitNoDrop) {
             $command[] = '--fail-on-empty-test-suite';
         }
         if (($options['order'] ?? '') === 'random') {
@@ -509,7 +607,7 @@ try {
         }
         fwrite(STDOUT, 'NO-DROP: data unchanged (' . $afterSchema['row_count'] . ' rows across '
             . $afterSchema['table_count'] . ' tables)'
-            . ($cohort ? ' [cohort-level attestation].' : '.') . PHP_EOL);
+            . (($cohort || $unitNoDrop) ? ' [cohort-level attestation].' : '.') . PHP_EOL);
     } finally {
         flock($lock, LOCK_UN);
         fclose($lock);

@@ -18,6 +18,12 @@ final class P1Wf001LifecycleRepositoryTest extends CIUnitTestCase
 
     protected $namespace = null;
 
+    protected function setUp(): void
+    {
+        \Tests\Support\Standard\StandardRuntimeGuard::assertReady();
+        parent::setUp();
+    }
+
     public function testLifecycleCrudUsesTrustedAuditAndCanonicalPositiveIds(): void
     {
         $repository = new LifecycleRepository($this->db);

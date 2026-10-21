@@ -25,6 +25,12 @@ final class P1Num001AutoNumberingTest extends CIUnitTestCase
 
     protected $namespace = null;
 
+    protected function setUp(): void
+    {
+        \Tests\Support\Standard\StandardRuntimeGuard::assertReady();
+        parent::setUp();
+    }
+
     public function testRepositoryAllowsZeroAndMultipleSeriesAndUsesTrustedAudit(): void
     {
         $resourceId = $this->resource('num001-zero');

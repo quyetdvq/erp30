@@ -9,6 +9,7 @@ use App\Exceptions\PersistenceException;
 use App\Repositories\OrganizationRepository;
 use CodeIgniter\Database\ConnectionInterface;
 use CodeIgniter\Test\CIUnitTestCase;
+use Tests\Support\Database\CanonicalGroupRootFixture;
 use Tests\Support\Performance\TransactionalDatabaseTestTrait;
 
 /** @internal */
@@ -121,7 +122,7 @@ final class P1Ctx001EvaluationOrganizationResolverTest extends CIUnitTestCase
     /** @return array{int, int, int} */
     private function organizationTree(): array
     {
-        $groupId = $this->insertOrganization('GROUP');
+        $groupId = CanonicalGroupRootFixture::findOrCreate($this->db, fn (): int => $this->insertOrganization('GROUP'));
         $companyId = $this->insertOrganization('COMPANY', $groupId);
         $branchId = $this->insertOrganization('BRANCH', $companyId);
 
@@ -131,7 +132,7 @@ final class P1Ctx001EvaluationOrganizationResolverTest extends CIUnitTestCase
     /** @return array{int, int, int} */
     private function organizationTreeWithSecondCompany(): array
     {
-        $groupId = $this->insertOrganization('GROUP');
+        $groupId = CanonicalGroupRootFixture::findOrCreate($this->db, fn (): int => $this->insertOrganization('GROUP'));
         $companyId = $this->insertOrganization('COMPANY', $groupId);
         $otherCompanyId = $this->insertOrganization('COMPANY', $groupId);
 

@@ -16,7 +16,8 @@ use App\Modules\Authorization\Administration\Policies\Infrastructure\Persistence
 use App\Repositories\AuthorizationGroupRepository;
 use App\Repositories\PolicyRepository;
 use CodeIgniter\Test\CIUnitTestCase;
-use CodeIgniter\Test\DatabaseTestTrait;
+use Tests\Support\Database\CanonicalGroupRootFixture;
+use Tests\Support\Performance\TransactionalDatabaseTestTrait;
 use Config\Database;
 use Tests\Support\Authorization\EligibleActorFixture;
 use Tests\Support\Foundation\RuntimeGuard;
@@ -24,7 +25,7 @@ use Tests\Support\Foundation\RuntimeGuard;
 /** @internal BE007 factory ownership; behavior authority remains P1Auth. */
 final class BeReorg007AuthorizationFactoryTest extends CIUnitTestCase
 {
-    use DatabaseTestTrait;
+    use TransactionalDatabaseTestTrait;
     protected $namespace = null;
 
     protected function setUp(): void
@@ -88,9 +89,15 @@ final class BeReorg007AuthorizationFactoryTest extends CIUnitTestCase
 
     public function testFactoryDefaultsAreLazyAndFailClosed(): void
     {
-        (new ResourceActionSeeder(new Database()))->run();
-        $this->db->table('organizations')->insert(['code' => 'BE007-FACTORY-' . uniqid(), 'name' => 'Factory root', 'type' => 'GROUP', 'status' => 'ACTIVE', 'created_at' => '2026-10-16 00:00:00']);
-        $organization = (int) $this->db->insertID();
+        (new ResourceActionSeeder(new Database(), $this->db))->run();
+        $organization = CanonicalGroupRootFixture::findOrCreate($this->db, function (): int {
+            $this->db->table('organizations')->insert([
+                'code' => 'BE007-FACTORY-' . uniqid(), 'name' => 'Factory root',
+                'type' => 'GROUP', 'status' => 'ACTIVE', 'created_at' => '2026-10-16 00:00:00',
+            ]);
+
+            return (int) $this->db->insertID();
+        });
         $this->db->table('users')->insert(['username' => 'be007-denied-' . uniqid(), 'status' => 'active', 'active' => 1, 'created_at' => '2026-10-16 00:00:00']);
         $actor = (int) $this->db->insertID();
         EligibleActorFixture::assignAtOrganization($this->db, $actor, $organization);

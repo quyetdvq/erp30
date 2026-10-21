@@ -25,6 +25,12 @@ final class P1Num004CounterAllocatorTest extends CIUnitTestCase
 
     protected $namespace = null;
 
+    protected function setUp(): void
+    {
+        \Tests\Support\Standard\StandardRuntimeGuard::assertReady();
+        parent::setUp();
+    }
+
     public function testRepositoryIdentityLockCreateUpdateAndTransactionGuard(): void
     {
         [$seriesId, $scopeId] = $this->fixture('repo', 10, 5);

@@ -10,6 +10,7 @@ use App\Exceptions\DomainException;
 use App\Services\OrganizationService;
 use CodeIgniter\Settings\Settings;
 use CodeIgniter\Test\CIUnitTestCase;
+use Tests\Support\Database\CanonicalGroupRootFixture;
 use Tests\Support\Performance\TransactionalDatabaseTestTrait;
 use Tests\Support\Database\WorkflowLifecycleFixture;
 
@@ -115,7 +116,7 @@ final class P1Dsp002DisplaySettingsResolverTest extends CIUnitTestCase
     public function testReparentingChangesTheCanonicalRuntimePath(): void
     {
         $service = new OrganizationService(null, $this->db);
-        $groupId = $service->create($this->organization('GROUP'));
+        $groupId = CanonicalGroupRootFixture::findOrCreate($this->db, fn (): int => $service->create($this->organization('GROUP')));
         $companyA = $service->create($this->organization('COMPANY', $groupId));
         $companyB = $service->create($this->organization('COMPANY', $groupId));
         $branchId = $service->create($this->organization('BRANCH', $companyA));
@@ -177,7 +178,7 @@ final class P1Dsp002DisplaySettingsResolverTest extends CIUnitTestCase
     /** @return array{int, int, int, int, int} */
     private function tree(): array
     {
-        $groupId = $this->insertOrganization('GROUP');
+        $groupId = CanonicalGroupRootFixture::findOrCreate($this->db, fn (): int => $this->insertOrganization('GROUP'));
         $companyId = $this->insertOrganization('COMPANY', $groupId);
         $branchId = $this->insertOrganization('BRANCH', $companyId);
         $plantId = $this->insertOrganization('PLANT', $branchId);
