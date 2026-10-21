@@ -15,9 +15,10 @@ use CodeIgniter\Database\BaseResult;
 use CodeIgniter\Database\ConnectionInterface;
 use App\Modules\Authorization\Administration\Policies\Infrastructure\Persistence\SqlPolicyRepository;
 use App\Modules\Authorization\Administration\Policies\Application\Ports\PolicyAdministrationRepositoryPort;
+use App\Modules\Authorization\Administration\Policies\Application\Ports\PolicyPageReadRepositoryPort;
 
 /** Compatibility entrypoint; SQL is owned by the canonical administration module. */
-final class PolicyRepository implements PolicyAdministrationRepositoryPort
+final class PolicyRepository implements PolicyAdministrationRepositoryPort, PolicyPageReadRepositoryPort
 {
     public const ERROR_PERSISTENCE_FAILED = 'POLICY_PERSISTENCE_FAILED';
     public const ERROR_CONNECTION_INVALID = 'POLICY_CONNECTION_INVALID';

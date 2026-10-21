@@ -18,8 +18,9 @@ use App\Infrastructure\RequestContext;
 use App\Modules\Product\Import\ProductImportAuthorizationService;
 use App\Modules\Product\Import\ProductImportJobService;
 use App\Modules\Product\Import\ProductImportRowMutationService;
+use App\Modules\Product\Import\ProductImportReadQueryPolicy;
+use App\Modules\Product\Import\ProductImportResponsePresenter;
 use CodeIgniter\Database\ConnectionInterface;
-use CodeIgniter\HTTP\Exceptions\BadRequestException;
 use CodeIgniter\Shield\Entities\User;
 
 /** Application boundary for the four CONTRACT_READY P1-API-060 operations. */
@@ -183,27 +184,7 @@ final class Api060ProductImportService
      */
     private function canPageImportRowsInSql(array $job, \App\Infrastructure\Api\CommonListQuery $query): bool
     {
-        if (! in_array(strtoupper((string) ($job['status'] ?? '')), [
-            ProductImportJobService::STATUS_COMPLETED,
-            ProductImportJobService::STATUS_COMPLETED_WITH_ERRORS,
-            ProductImportJobService::STATUS_FAILED,
-        ], true) || $query->search() !== null) {
-            return false;
-        }
-        if (array_diff(array_keys($query->filters), ['row_status']) !== []) {
-            return false;
-        }
-        foreach ($query->filterValues('row_status') as $status) {
-            if (! in_array($status, ['SUCCESS', 'ERROR', 'SKIPPED'], true)) {
-                // Case-insensitive SQL collation cannot replace the existing
-                // case-sensitive PHP match for malformed-but-accepted tokens.
-                return false;
-            }
-        }
-        $terms = $query->sortTerms();
-        return count($terms) === 2
-            && $terms[0]->field === 'row_number'
-            && $terms[1]->field === 'id';
+        return $this->readQueryPolicy()->canPageImportRowsInSql($job, $query);
     }
 
     /** @return array<string, mixed> */
@@ -236,44 +217,7 @@ final class Api060ProductImportService
      */
     private function normalizeJobQuery(array $query): array
     {
-        $rawFilters = $query['filter'] ?? null;
-        if ($rawFilters !== null && ! is_array($rawFilters)) {
-            throw new BadRequestException('Malformed list query: filter.');
-        }
-        $filters = $rawFilters ?? [];
-        $from = $this->dateFilter($filters, 'created_from');
-        $to = $this->dateFilter($filters, 'created_to');
-        if ($from !== null && $to !== null && $from > $to) {
-            throw new BadRequestException('Malformed list query: filter.created_from.');
-        }
-        unset($filters['created_from'], $filters['created_to']);
-        if ($filters === []) {
-            unset($query['filter']);
-        } else {
-            $query['filter'] = $filters;
-        }
-
-        return [$query, ['from' => $from, 'to' => $to]];
-    }
-
-    /** @param array<string,mixed> $filters */
-    private function dateFilter(array $filters, string $field): ?string
-    {
-        if (! array_key_exists($field, $filters)) {
-            return null;
-        }
-        $value = $filters[$field];
-        if (is_array($value)) {
-            if (count($value) !== 1) {
-                throw new BadRequestException('Malformed list query: filter.' . $field . '.');
-            }
-            $value = array_values($value)[0];
-        }
-        if (! is_scalar($value) || preg_match('/\A\d{4}-\d{2}-\d{2}\z/', (string) $value) !== 1) {
-            throw new BadRequestException('Malformed list query: filter.' . $field . '.');
-        }
-
-        return (string) $value;
+        return $this->readQueryPolicy()->normalizeJobQuery($query);
     }
 
     /** @param array<string,mixed> $query
@@ -281,16 +225,7 @@ final class Api060ProductImportService
      */
     private function validateFilterEnum(array $query, string $field, array $allowed): void
     {
-        $filters = $query['filter'] ?? null;
-        if (! is_array($filters) || ! array_key_exists($field, $filters)) {
-            return;
-        }
-        $values = is_array($filters[$field]) ? $filters[$field] : [$filters[$field]];
-        foreach ($values as $value) {
-            if (! is_scalar($value) || ! in_array(strtoupper((string) $value), $allowed, true)) {
-                throw new BadRequestException('Malformed list query: filter.' . $field . '.');
-            }
-        }
+        $this->readQueryPolicy()->validateFilterEnum($query, $field, $allowed);
     }
 
     /** @param array<string,mixed> $row
@@ -298,18 +233,7 @@ final class Api060ProductImportService
      */
     private function isVisibleJob(array $row, array $dateFilters): bool
     {
-        if (strtoupper((string) ($row['entity_type'] ?? '')) !== ProductImportJobService::ENTITY_PRODUCT) {
-            return false;
-        }
-        $created = substr((string) ($row['created_at'] ?? ''), 0, 10);
-        if ($dateFilters['from'] !== null && $created < $dateFilters['from']) {
-            return false;
-        }
-        if ($dateFilters['to'] !== null && $created > $dateFilters['to']) {
-            return false;
-        }
-
-        return true;
+        return $this->readQueryPolicy()->isVisibleJob($row, $dateFilters);
     }
 
     /** @param array<string,mixed> $row
@@ -317,18 +241,7 @@ final class Api060ProductImportService
      */
     private function jobOutput(array $row): array
     {
-        foreach (['id', 'created_by', 'updated_by'] as $field) {
-            if (array_key_exists($field, $row) && $row[$field] !== null) {
-                $row[$field] = (string) $row[$field];
-            }
-        }
-        foreach (['total_rows', 'success_rows', 'error_rows'] as $field) {
-            if (array_key_exists($field, $row)) {
-                $row[$field] = (int) $row[$field];
-            }
-        }
-
-        return $row;
+        return $this->presenter()->jobOutput($row);
     }
 
     /** @param array<string,mixed> $row
@@ -336,15 +249,7 @@ final class Api060ProductImportService
      */
     private function rowOutput(array $row): array
     {
-        return [
-            'row_number' => (int) ($row['row_number'] ?? 0),
-            'row_status' => (string) ($row['row_status'] ?? ''),
-            'entity_key' => $row['entity_key'] ?? null,
-            'target_ref_id' => ($row['target_ref_id'] ?? null) === null ? null : (string) $row['target_ref_id'],
-            'error_code' => $row['error_code'] ?? null,
-            'error_message' => $row['error_message'] ?? null,
-            'created_at' => $row['created_at'] ?? null,
-        ];
+        return $this->presenter()->rowOutput($row);
     }
 
     /** @param list<array<string,mixed>> $rows
@@ -376,6 +281,16 @@ final class Api060ProductImportService
             'xlsx' => ProductImportJobService::FORMAT_XLSX,
             default => throw new DomainException(ProductImportJobService::ERROR_INVALID_FORMAT, ['field' => 'file']),
         };
+    }
+
+    private function readQueryPolicy(): ProductImportReadQueryPolicy
+    {
+        return new ProductImportReadQueryPolicy();
+    }
+
+    private function presenter(): ProductImportResponsePresenter
+    {
+        return new ProductImportResponsePresenter();
     }
 
     /** @return ConnectionInterface<mixed,mixed> */

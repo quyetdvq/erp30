@@ -1,0 +1,23 @@
+{
+  "AuthorizationGroupService": "App\\Modules\\Authorization\\Compatibility\\AuthorizationGroupService",
+  "AutoNumberingConfigurationService": "App\\Modules\\Numbering\\Configuration\\Compatibility\\AutoNumberingConfigurationService",
+  "AutoNumberingCounterAllocator": "App\\Modules\\Numbering\\Allocation\\Compatibility\\AutoNumberingCounterAllocator",
+  "AutoNumberingScopePeriodResolver": "App\\Modules\\Numbering\\Scope\\Compatibility\\AutoNumberingScopePeriodResolver",
+  "BusinessLifecycleTargetAdapter": "App\\Modules\\Workflow\\Lifecycle\\Infrastructure\\Adapters\\BusinessLifecycleTargetAdapter",
+  "BusinessLifecycleTransitions": "App\\Modules\\Workflow\\BusinessActions\\Compatibility\\BusinessLifecycleTransitions",
+  "BusinessWorkflowActions": "App\\Modules\\Workflow\\BusinessActions\\Compatibility\\BusinessWorkflowActions",
+  "BusinessWorkflowWriteBoundary": "App\\Modules\\Workflow\\WriteBoundary\\Compatibility\\BusinessWorkflowWriteBoundary",
+  "CanonicalNumberingPatternValidator": "App\\Modules\\Numbering\\Pattern\\Compatibility\\CanonicalNumberingPatternValidator",
+  "ContactLifecycleAdapter": "App\\Modules\\Contact\\Integration\\Workflow\\ContactLifecycleAdapter",
+  "DisplaySettingsMutationService": "App\\Modules\\Settings\\Display\\Compatibility\\DisplaySettingsMutationService",
+  "FoundationLocationLifecycleAdapter": "App\\Modules\\Foundation\\Integration\\Workflow\\FoundationLocationLifecycleAdapter",
+  "InitialCreateStateNormalizer": "App\\Modules\\Workflow\\WriteBoundary\\Compatibility\\InitialCreateStateNormalizer",
+  "LifecycleService": "App\\Modules\\Workflow\\Lifecycle\\Compatibility\\LifecycleService",
+  "LifecycleTargetSnapshot": "App\\Modules\\Workflow\\Lifecycle\\Compatibility\\Domain\\LifecycleTargetSnapshot",
+  "PolicyAdministrationService": "App\\Modules\\Authorization\\Compatibility\\PolicyAdministrationService",
+  "ProductLookupService": "App\\Modules\\Product\\Lookup\\Compatibility\\ProductLookupService",
+  "ResourceIdentifierMetadata": "App\\Modules\\Numbering\\Issuance\\Domain\\ResourceIdentifierMetadata",
+  "ResourceWorkflowStateResolver": "App\\Modules\\Workflow\\StateResolution\\Compatibility\\ResourceWorkflowStateResolver",
+  "SystemAdminPermissionReconciler": "App\\Modules\\Authorization\\Compatibility\\SystemAdminPermissionReconciler",
+  "WorkflowBusinessStatus": "App\\Modules\\Workflow\\WriteBoundary\\Compatibility\\WorkflowBusinessStatus"
+}

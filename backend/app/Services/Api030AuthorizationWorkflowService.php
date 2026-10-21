@@ -15,6 +15,7 @@ use App\Infrastructure\Mutation\MutationContext;
 use App\Infrastructure\Mutation\OperationContext;
 use App\Infrastructure\RequestContext;
 use App\Modules\Resource\Application\ResourceAdministrationService;
+use App\Modules\Authorization\Administration\Policies\Application\AuthorizedPolicyPageReader;
 use App\Repositories\AuthorizationGroupRepository;
 use App\Repositories\AuthorizationLogRepository;
 use App\Repositories\LifecycleRepository;
@@ -118,36 +119,15 @@ final class Api030AuthorizationWorkflowService
      */
     private function tryPolicySqlList(array $query, OperationContext $operation): ?CommonListResult
     {
-        $adapter = $this->queryAdapter ?? new CommonListQueryAdapter();
-        $parsed = $adapter->parse($query, $this->allowlist('policy'));
-        $repository = $this->policyRepository();
-        if (! $repository->supportsSqlPolicyList($parsed)) {
-            return null;
-        }
-        $buckets = $repository->findPolicyVisibilityBuckets();
-        if ($buckets === null) {
-            return null;
-        }
-        $allowed = [];
-        foreach ($buckets as $bucket) {
-            try {
-                $this->authorize('policy', 'view', [
-                    'id' => $bucket['id'],
-                    'organization_id' => $bucket['organization_id'],
-                    'status' => $bucket['status'],
-                ], [], $operation);
-                $allowed[] = $bucket;
-            } catch (DomainException $exception) {
-                if (! $this->isVisibilityDenial($exception)) {
-                    throw $exception;
-                }
-            }
-        }
-        $page = $repository->findAuthorizedPolicyPage($parsed, $allowed);
-        return new CommonListResult(
-            $this->attachPolicyActions($page['rows']),
+        $parsed = ($this->queryAdapter ?? new CommonListQueryAdapter())->parse($query, $this->allowlist('policy'));
+        return $this->policyPageReader()->tryList(
             $parsed,
-            (string) $page['total'],
+            fn (array $bucket) => $this->authorize('policy', 'view', [
+                'id' => $bucket['id'],
+                'organization_id' => $bucket['organization_id'],
+                'status' => $bucket['status'],
+            ], [], $operation),
+            fn (DomainException $exception): bool => $this->isVisibilityDenial($exception),
         );
     }
 
@@ -576,20 +556,7 @@ final class Api030AuthorizationWorkflowService
      */
     private function attachPolicyActions(array $rows): array
     {
-        $ids = array_values(array_unique(array_map(
-            static fn (array $row): int => (int) $row['id'],
-            $rows,
-        )));
-        $byPolicy = [];
-        foreach ($this->policyRepository()->findAllPolicyActionsForPolicies($ids) as $action) {
-            $byPolicy[(int) $action['policy_id']][] = $action;
-        }
-        foreach ($rows as &$row) {
-            $row['actions'] = $byPolicy[(int) $row['id']] ?? [];
-        }
-        unset($row);
-
-        return $rows;
+        return $this->policyPageReader()->attachActions($rows);
     }
 
     /** @param list<array<string, mixed>> $rows
@@ -717,6 +684,11 @@ final class Api030AuthorizationWorkflowService
             db: $this->connection,
             workflowStates: $this->runtimeStateResolver ??= new ResourceWorkflowStateResolver($this->connection),
         ));
+    }
+
+    private function policyPageReader(): AuthorizedPolicyPageReader
+    {
+        return new AuthorizedPolicyPageReader($this->policyRepository());
     }
 
     private function groupRepository(): AuthorizationGroupRepository
