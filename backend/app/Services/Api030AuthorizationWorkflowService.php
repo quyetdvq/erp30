@@ -6,7 +6,6 @@ namespace App\Services;
 
 use App\Authorization\AuthorizationService;
 use App\Authorization\EvaluationOrganizationRequest;
-use App\Authorization\ResourceDomain;
 use App\Exceptions\DomainException;
 use App\Infrastructure\Api\AuthorizedArrayListSource;
 use App\Infrastructure\Api\CommonListQueryAllowlist;
@@ -15,6 +14,7 @@ use App\Infrastructure\Api\CommonListResult;
 use App\Infrastructure\Mutation\MutationContext;
 use App\Infrastructure\Mutation\OperationContext;
 use App\Infrastructure\RequestContext;
+use App\Modules\Resource\Application\ResourceAdministrationService;
 use App\Repositories\AuthorizationGroupRepository;
 use App\Repositories\AuthorizationLogRepository;
 use App\Repositories\LifecycleRepository;
@@ -23,7 +23,6 @@ use App\Repositories\ResourceCatalogRepository;
 use App\Repositories\ShieldSecurityUserRepository;
 use CodeIgniter\Database\ConnectionInterface;
 use CodeIgniter\Exceptions\PageNotFoundException;
-use CodeIgniter\HTTP\Exceptions\BadRequestException;
 use CodeIgniter\Shield\Entities\User;
 
 /** Application boundary for the CONTRACT_READY P1-API-030 surface. */
@@ -34,7 +33,7 @@ final class Api030AuthorizationWorkflowService
 
     /** @var ConnectionInterface<mixed, mixed> */
     private ConnectionInterface $connection;
-    private ?ResourceWorkflowStateResolver $runtimeStateResolver = null;
+    private ?ResourceAdministrationService $resourceAdministration = null;
     private ?AuthorizationService $runtimeAuthorization = null;
 
     /** @param ConnectionInterface<mixed, mixed>|null $db */
@@ -208,7 +207,7 @@ final class Api030AuthorizationWorkflowService
         $id = match ($resource) {
             'authorization_group' => $this->groupService($operation)->create($payload, $operation),
             'policy' => $this->policyService($operation)->create($this->policyPayload($payload), $this->actions($payload), $operation),
-            'resource' => $this->createResource($payload, $operation),
+            'resource' => $this->resourceService()->create($payload, $operation),
             'workflow_state' => $this->lifecycleRepository()->createWorkflowState($this->statePayload($payload), $operation),
             'lifecycle' => $this->lifecycleRepository()->createLifecycle($this->lifecyclePayload($payload), $operation),
             default => throw new \InvalidArgumentException('Unsupported API-030 create resource.'),
@@ -233,7 +232,7 @@ final class Api030AuthorizationWorkflowService
         match ($resource) {
             'authorization_group' => $this->groupService($operation)->update($id, $payload, $operation),
             'policy' => $this->policyService($operation)->update($id, $this->policyPayload($payload, $current), array_key_exists('actions', $payload) ? $this->actions($payload) : null, $operation),
-            'resource' => $this->updateResource($id, $payload, $operation),
+            'resource' => $this->resourceService()->update($id, $payload, $operation),
             'workflow_state' => $this->lifecycleRepository()->updateWorkflowState($id, $this->statePayload($payload), $operation),
             'lifecycle' => $this->lifecycleRepository()->updateLifecycle($id, $this->lifecyclePayload($payload), $operation),
             default => throw new \InvalidArgumentException('Unsupported API-030 update resource.'),
@@ -247,8 +246,8 @@ final class Api030AuthorizationWorkflowService
     {
         $this->assertResource($resource);
         $current = $this->find($resource, $id);
-        if ($resource === 'resource' && ($current['type'] ?? null) === 'contact' && strtoupper(trim($status)) === 'ACTIVE') {
-            throw new DomainException('CONTACT_LEGACY_RESOURCE_RETIRED');
+        if ($resource === 'resource') {
+            $this->resourceService()->assertContactRecoveryAllowed($current, $status);
         }
         $operation = $this->operation();
         $this->authorize($resource, 'setstate', $current, ['status' => $status], $operation);
@@ -259,7 +258,7 @@ final class Api030AuthorizationWorkflowService
         match ($resource) {
             'authorization_group' => $this->groupService($operation)->update($id, ['status' => $status], $operation),
             'policy' => $this->policyRepository()->setStatus($id, $status, $operation, (string) $current['status']),
-            'resource' => $this->resourceRepository()->setResourceStatus($id, $status, (string) $current['status'], $operation),
+            'resource' => $this->resourceService()->setState($id, $status, (string) $current['status'], $operation),
             'workflow_state' => $this->lifecycleRepository()->updateWorkflowState($id, ['status' => $status], $operation),
             'lifecycle' => $this->lifecycleRepository()->updateLifecycle($id, ['status' => $status], $operation),
             default => throw new DomainException('VALIDATION_ERROR', ['field' => 'status']),
@@ -343,7 +342,7 @@ final class Api030AuthorizationWorkflowService
         $resource = $this->find('resource', $resourceId);
         $this->authorize('resource', 'view', $resource, [], $this->operation());
 
-        return $this->resourceRepository()->findResourceActions($resourceId);
+        return $this->resourceService()->actions($resourceId);
     }
 
     /**
@@ -355,11 +354,7 @@ final class Api030AuthorizationWorkflowService
         $resource = $this->find('resource', $resourceId);
         $operation = $this->operation();
         $this->authorize('resource', 'edit', $resource, $payload, $operation);
-        $code = $this->token($payload['code'] ?? null, 'code');
-        $row = ['resource_id' => $resourceId, 'code' => $code, 'description' => $payload['description'] ?? null, ...$operation->createdAudit()];
-        $actionId = $this->resourceRepository()->insertResourceAction($row);
-
-        return $this->resourceRepository()->findResourceActionById($actionId) ?? [];
+        return $this->resourceService()->createAction($resourceId, $payload, $operation);
     }
 
     /**
@@ -369,44 +364,31 @@ final class Api030AuthorizationWorkflowService
     public function updateResourceAction(int $resourceId, int $actionId, array $payload): array
     {
         $resource = $this->find('resource', $resourceId);
-        $action = $this->resourceRepository()->findResourceAction($resourceId, $actionId);
+        $action = $this->resourceService()->findAction($resourceId, $actionId);
         if ($action === null) {
             throw new PageNotFoundException('Resource action not found.');
         }
         $operation = $this->operation();
         $this->authorize('resource', 'edit', $resource, $payload, $operation);
-        $changes = [];
-        if (array_key_exists('description', $payload)) {
-            $changes['description'] = $payload['description'];
-        }
-        if (array_key_exists('code', $payload) && $this->token($payload['code'], 'code') !== (string) $action['code']) {
-            throw new DomainException('RESOURCE_ACTION_CODE_IMMUTABLE');
-        }
-        if ($changes === []) {
-            throw new DomainException('VALIDATION_ERROR');
-        }
-        $changes = [...$changes, ...$operation->updatedAudit()];
-        $this->resourceRepository()->updateResourceAction($actionId, $changes);
-
-        return $this->resourceRepository()->findResourceActionById($actionId) ?? [];
+        return $this->resourceService()->updateAction($actionId, $payload, $action, $operation);
     }
 
     public function deleteResourceAction(int $resourceId, int $actionId): void
     {
         $resource = $this->find('resource', $resourceId);
-        $action = $this->resourceRepository()->findResourceAction($resourceId, $actionId);
+        $action = $this->resourceService()->findAction($resourceId, $actionId);
         if ($action === null) {
             throw new PageNotFoundException('Resource action not found.');
         }
         $this->authorize('resource', 'delete', $resource, [], $this->operation());
-        $this->resourceRepository()->deleteResourceAction($actionId);
+        $this->resourceService()->deleteAction($actionId);
     }
 
     public function deleteResourceActionTarget(int $resourceId): void
     {
         $resource = $this->find('resource', $resourceId);
         $this->authorize('resource', 'delete', $resource, [], $this->operation());
-        $this->resourceRepository()->deleteResource($resourceId);
+        $this->resourceService()->delete($resourceId);
     }
 
     /** @return list<array<string, mixed>> */
@@ -495,77 +477,6 @@ final class Api030AuthorizationWorkflowService
         }
     }
 
-    /** @param array<string, mixed> $payload */
-    private function createResource(array $payload, OperationContext $operation): int
-    {
-        $type = $this->token($payload['type'] ?? null, 'type');
-        if (ResourceNativeStateCatalog::isIndependent($type) && ($payload['lifecycle_id'] ?? null) !== null) {
-            throw new DomainException(ResourceWorkflowStateResolver::ERROR_LIFECYCLE_SELF_REFERENCE, ['resource' => $type]);
-        }
-        $domain = strtoupper(trim((string) ($payload['domain'] ?? '')));
-        if ($domain === '' || $domain === 'COMPANY' || ! in_array($domain, array_map(static fn (ResourceDomain $d): string => $d->value, ResourceDomain::cases()), true)) {
-            throw new DomainException('RESOURCE_DOMAIN_INVALID', ['field' => 'domain']);
-        }
-        if (array_key_exists('status', $payload) && $payload['status'] !== 'ACTIVE') {
-            throw new DomainException('NATIVE_STATE_REQUIRES_SETSTATE', ['resource' => 'resource']);
-        }
-        if (isset($payload['lifecycle_id'])) {
-            $lifecycleId = \App\Infrastructure\Id\PositiveId::normalize(
-                $payload['lifecycle_id'], 'lifecycle_id', ResourceWorkflowStateResolver::ERROR_RESOURCE_LIFECYCLE_INVALID,
-            );
-            (new ResourceWorkflowStateResolver($this->connection))->assertLifecycleStateCompatibility($type, $lifecycleId);
-        }
-        $row = [
-            'status' => 'ACTIVE',
-            'type' => $type,
-            'name' => $this->token($payload['name'] ?? null, 'name'),
-            'domain' => $domain,
-            'lifecycle_id' => $payload['lifecycle_id'] ?? null,
-            ...$operation->createdAudit(),
-        ];
-        return $this->resourceRepository()->insertResource($row);
-    }
-
-    /** @param array<string, mixed> $payload */
-    private function updateResource(int $id, array $payload, OperationContext $operation): bool
-    {
-        if (array_key_exists('domain', $payload)) {
-            throw new DomainException('RESOURCE_DOMAIN_IMMUTABLE', ['field' => 'domain']);
-        }
-        $current = $this->resourceRepository()->findResource($id);
-        if ($current === null) {
-            throw new PageNotFoundException('Resource not found.');
-        }
-        if (array_key_exists('lifecycle_id', $payload)
-            && ResourceNativeStateCatalog::isIndependent((string) $current['type'])
-            && $payload['lifecycle_id'] !== null) {
-            throw new DomainException(ResourceWorkflowStateResolver::ERROR_LIFECYCLE_SELF_REFERENCE);
-        }
-        if (array_key_exists('lifecycle_id', $payload)) {
-            $next = $payload['lifecycle_id'];
-            $nextId = $next === null ? null : \App\Infrastructure\Id\PositiveId::normalize(
-                $next, 'lifecycle_id', ResourceWorkflowStateResolver::ERROR_RESOURCE_LIFECYCLE_INVALID,
-            );
-            (new ResourceWorkflowStateResolver($this->connection))->assertLifecycleReassignmentSafe(
-                (string) $current['type'], $nextId,
-            );
-        }
-        $changes = [];
-        foreach (['type', 'name', 'lifecycle_id'] as $field) {
-            if (array_key_exists($field, $payload)) {
-                if ($field === 'type') {
-                    throw new DomainException('RESOURCE_TYPE_IMMUTABLE', ['field' => 'type']);
-                }
-                $changes[$field] = $field === 'name' ? $this->token($payload[$field], $field) : $payload[$field];
-            }
-        }
-        if ($changes === []) {
-            throw new DomainException('VALIDATION_ERROR');
-        }
-
-        return $this->resourceRepository()->updateResource($id, [...$changes, ...$operation->updatedAudit()]);
-    }
-
     /**
      * @param array<string, mixed> $payload
      * @param array<string, mixed>|null $current
@@ -644,11 +555,7 @@ final class Api030AuthorizationWorkflowService
             $row['actions'] = $this->policyRepository()->findPolicyActions((int) $row['id']);
         }
         if ($resource === 'resource') {
-            $states = $this->runtimeStateResolver ??= new ResourceWorkflowStateResolver($this->connection);
-            $row['policy_state_codes'] = $states->allowedPolicyStateCodes((string) $row['type']);
-            if ($includeResourceActions) {
-                $row['actions'] = $this->resourceRepository()->findResourceActions((int) $row['id']);
-            }
+            return $this->resourceService()->decorate($row, $includeResourceActions);
         }
         return $row;
     }
@@ -656,18 +563,7 @@ final class Api030AuthorizationWorkflowService
     /** @param array<string, mixed> $query */
     private function includeResourceActions(string $resource, array &$query): bool
     {
-        if (! array_key_exists('include', $query)) {
-            return false;
-        }
-        if ($resource !== 'resource') {
-            return false;
-        }
-        if (! is_string($query['include']) || $query['include'] !== 'actions') {
-            throw new BadRequestException('Malformed list query: include.');
-        }
-        unset($query['include']);
-
-        return true;
+        return $resource === 'resource' && $this->resourceService()->consumeIncludeActions($query);
     }
 
     /**
@@ -701,32 +597,7 @@ final class Api030AuthorizationWorkflowService
      */
     private function attachResourceActions(array $rows): array
     {
-        $resourceIds = [];
-        foreach ($rows as $row) {
-            $id = filter_var($row['id'] ?? null, FILTER_VALIDATE_INT, ['options' => ['min_range' => 1]]);
-            if ($id !== false) {
-                $resourceIds[] = (int) $id;
-            }
-        }
-
-        $actionsByResource = [];
-        foreach ($this->resourceRepository()->findResourceActionsForResources(array_values(array_unique($resourceIds))) as $action) {
-            $resourceId = (int) ($action['resource_id'] ?? 0);
-            $actionsByResource[$resourceId][] = [
-                'id' => (int) ($action['id'] ?? 0),
-                'code' => (string) ($action['code'] ?? ''),
-                'description' => array_key_exists('description', $action) && $action['description'] !== null
-                    ? (string) $action['description']
-                    : null,
-            ];
-        }
-
-        foreach ($rows as &$row) {
-            $row['actions'] = $actionsByResource[(int) ($row['id'] ?? 0)] ?? [];
-        }
-        unset($row);
-
-        return $rows;
+        return $this->resourceService()->attachActions($rows);
     }
 
     /**
@@ -814,14 +685,6 @@ final class Api030AuthorizationWorkflowService
         return array_values(array_unique($result));
     }
 
-    private function token(mixed $value, string $field): string
-    {
-        if (! is_string($value) || trim($value) === '') {
-            throw new DomainException('VALIDATION_ERROR', ['field' => $field]);
-        }
-        return strtolower(trim($value));
-    }
-
     private function isVisibilityDenial(DomainException $exception): bool
     {
         $code = strtoupper($exception->getErrorCode());
@@ -874,6 +737,14 @@ final class Api030AuthorizationWorkflowService
     private function lifecycleRepository(): LifecycleRepository
     {
         return $this->lifecycleRepository ?? new LifecycleRepository($this->connection);
+    }
+
+    private function resourceService(): ResourceAdministrationService
+    {
+        return $this->resourceAdministration ??= new ResourceAdministrationService(
+            $this->resourceRepository(),
+            fn (): ResourceWorkflowStateResolver => new ResourceWorkflowStateResolver($this->connection),
+        );
     }
 
     private function resourceRepository(): ResourceCatalogRepository

@@ -10,6 +10,12 @@ try {
         throw new InvalidArgumentException('Usage: php tools/test-unit-standard-source-gate.php');
     }
     $backend = dirname(__DIR__);
+    // CI4 DatabaseTestTrait checks recorded migration versions during setUp().
+    // This fixture migration is a runtime dependency even when not imported by a test.
+    $historyMigration = $backend . '/tests/_support/Database/Migrations/2020-02-22-222222_example_migration.php';
+    if (! is_file($historyMigration)) {
+        throw new RuntimeException('UNIT-STANDARD: missing historical CI4 test migration 2020-02-22-222222.');
+    }
     $standard = require __DIR__ . '/unit-standard-inventory.php';
     $manifest = require __DIR__ . '/unit-no-drop-inventory.php';
     $approved = require __DIR__ . '/no-drop-approved.php';

@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Services;
 
 use App\Bootstrap\WorkflowStateResolutionFactory;
+use App\Modules\Resource\Application\Ports\ResourceLifecycleGuardPort;
 use App\Modules\Workflow\StateResolution\Application\Ports\ResourceStateResolutionPort;
 use App\Modules\Workflow\StateResolution\Contracts\ResourceStateResolutionErrors;
 use App\Repositories\LifecycleRepository;
@@ -16,7 +17,7 @@ use CodeIgniter\Database\ConnectionInterface;
  * Legacy compatibility entrypoint; canonical State resolution and per-request
  * caches now live in the Workflow/StateResolution application module.
  */
-final class ResourceWorkflowStateResolver
+final class ResourceWorkflowStateResolver implements ResourceLifecycleGuardPort
 {
     public const ERROR_STATE_NOT_MAPPED = ResourceStateResolutionErrors::ERROR_STATE_NOT_MAPPED;
     public const ERROR_RESOURCE_LIFECYCLE_INVALID = ResourceStateResolutionErrors::ERROR_RESOURCE_LIFECYCLE_INVALID;

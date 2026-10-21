@@ -4,14 +4,5 @@ declare(strict_types=1);
 
 namespace App\Authorization;
 
-enum ResourceDomain: string
-{
-    case SYSTEM = 'SYSTEM';
-    case MASTER = 'MASTER';
-    case ORGANIZATION = 'ORGANIZATION';
-
-    public function isGroupScoped(): bool
-    {
-        return $this !== self::ORGANIZATION;
-    }
-}
+/** @deprecated Compatibility alias; canonical enum lives in Modules/Resource. */
+class_alias(\App\Modules\Resource\Domain\ResourceDomain::class, __NAMESPACE__ . '\\ResourceDomain');
