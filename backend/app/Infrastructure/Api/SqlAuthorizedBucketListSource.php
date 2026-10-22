@@ -25,14 +25,20 @@ final class SqlAuthorizedBucketListSource implements AuthorizedListSource
         'department' => ['table' => 'departments', 'scope' => false, 'numeric' => ['parent_id']],
         'position' => ['table' => 'positions', 'scope' => false, 'numeric' => []],
         'employee' => ['table' => 'employees', 'scope' => false, 'numeric' => []],
+        'product_group' => ['table' => 'product_groups', 'scope' => false, 'numeric' => ['parent_id']],
+        'product_uom' => ['table' => 'product_uoms', 'scope' => false, 'numeric' => []],
         'employee_assignment' => [
             'table' => 'employee_assignments', 'scope' => true,
             'numeric' => ['employee_id', 'organization_id', 'department_id', 'position_id', 'is_primary'],
         ],
     ];
 
-    /** @var list<array{status:string,organization_id?:int}> */
-    private readonly array $allowedBuckets;
+    /**
+     * null is a BASE-PBAC-authorized unrestricted state set, permitted ONLY
+     * for Product Group/UOM. [] is an explicitly denied state set.
+     * @var list<array{status:string,organization_id?:int}>|null
+     */
+    private readonly ?array $allowedBuckets;
 
     /** @param list<array<string,mixed>> $allowedBuckets
      *  @param ConnectionInterface<mixed, mixed> $db
@@ -40,18 +46,21 @@ final class SqlAuthorizedBucketListSource implements AuthorizedListSource
     public function __construct(
         private readonly ConnectionInterface $db,
         private readonly string $resource,
-        array $allowedBuckets,
+        ?array $allowedBuckets,
     ) {
         if (! isset(self::RESOURCES[$resource])) {
             throw new \InvalidArgumentException('Unsupported PBAC SQL list resource.');
         }
-        foreach ($allowedBuckets as $bucket) {
+        if ($allowedBuckets === null && ! in_array($resource, ['product_group', 'product_uom'], true)) {
+            throw new \InvalidArgumentException('Unrestricted State SQL source requires a Product master Base-PBAC gate.');
+        }
+        foreach ($allowedBuckets ?? [] as $bucket) {
             if (! is_string($bucket['status'] ?? null)
                 || (self::RESOURCES[$resource]['scope'] && (! is_int($bucket['organization_id'] ?? null) || $bucket['organization_id'] < 1))) {
                 throw new \InvalidArgumentException('Malformed authorized PBAC SQL bucket.');
             }
         }
-        /** @var list<array{status:string,organization_id?:int}> $allowedBuckets */
+        /** @var list<array{status:string,organization_id?:int}>|null $allowedBuckets */
         $this->allowedBuckets = $allowedBuckets;
     }
 
@@ -144,24 +153,24 @@ final class SqlAuthorizedBucketListSource implements AuthorizedListSource
         if ($this->allowedBuckets === []) {
             return $builder->where('1 = 0', null, false);
         }
-
-        // In a case-insensitive MariaDB collation ACTIVE and active may be
-        // equal; HEX(status) preserves exact PHP byte-level State matching.
-        // Ordinary status IN can still benefit from a suitable index.
-        $codes = array_values(array_unique(array_column($this->allowedBuckets, 'status')));
-        $builder->whereIn('status', $codes);
-        $builder->groupStart();
-        foreach ($this->allowedBuckets as $index => $bucket) {
-            $method = $index === 0 ? 'groupStart' : 'orGroupStart';
-            $builder->{$method}();
-            if ($config['scope']) {
-                $organizationId = $bucket['organization_id'] ?? throw new \LogicException('Malformed authorized PBAC SQL bucket.');
-                $builder->where('organization_id', $organizationId);
+        if ($this->allowedBuckets !== null) {
+            // Only compiler-approved, byte-exact State buckets may contribute
+            // to COUNT and PAGE. Null is a separately BASE-authorized mode.
+            $codes = array_values(array_unique(array_column($this->allowedBuckets, 'status')));
+            $builder->whereIn('status', $codes);
+            $builder->groupStart();
+            foreach ($this->allowedBuckets as $index => $bucket) {
+                $method = $index === 0 ? 'groupStart' : 'orGroupStart';
+                $builder->{$method}();
+                if ($config['scope']) {
+                    $organizationId = $bucket['organization_id'] ?? throw new \LogicException('Malformed authorized PBAC SQL bucket.');
+                    $builder->where('organization_id', $organizationId);
+                }
+                $builder->where('HEX(status) = ' . $this->db->escape(strtoupper(bin2hex($bucket['status']))), null, false);
+                $builder->groupEnd();
             }
-            $builder->where('HEX(status) = ' . $this->db->escape(strtoupper(bin2hex($bucket['status']))), null, false);
             $builder->groupEnd();
         }
-        $builder->groupEnd();
 
         foreach ($query->filters as $field => $values) {
             if ($field === 'status') {

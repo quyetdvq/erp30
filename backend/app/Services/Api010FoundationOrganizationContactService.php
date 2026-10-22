@@ -21,6 +21,7 @@ use App\Infrastructure\Api\SqlOwnerAwareListSource;
 use App\Infrastructure\Mutation\MutationContext;
 use App\Infrastructure\Mutation\OperationContext;
 use App\Infrastructure\RequestContext;
+use App\Modules\Organization\Application\VisibleOrganizationTreeProjector;
 use App\Repositories\ContactRepository;
 use App\Repositories\FoundationLocationRepository;
 use App\Repositories\OrganizationRepository;
@@ -210,21 +211,13 @@ final class Api010FoundationOrganizationContactService
     public function tree(array $query): CommonListResult
     {
         $result = $this->list('organization', $query);
-        $rows = iterator_to_array($result->data);
-        $visibleIds = [];
-        foreach ($rows as $row) {
-            if (isset($row['id'])) {
-                $visibleIds[(string) $row['id']] = true;
-            }
-        }
-        foreach ($rows as &$row) {
-            if (($row['parent_id'] ?? null) !== null && ! isset($visibleIds[(string) $row['parent_id']])) {
-                $row['parent_id'] = null;
-            }
-        }
-        unset($row);
-
-        return new CommonListResult($rows, $result->query, $result->total);
+        // Projection runs only on the already authorized page. Parent records
+        // outside this page stay hidden; PBAC, SQL/COUNT and metadata are unchanged.
+        return new CommonListResult(
+            (new VisibleOrganizationTreeProjector())->project(iterator_to_array($result->data)),
+            $result->query,
+            $result->total,
+        );
     }
 
     /**

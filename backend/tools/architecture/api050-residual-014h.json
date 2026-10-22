@@ -1,0 +1,418 @@
+{
+  "change_id": "BE-REORG-014H",
+  "based_on": "DinkERP v1.2.2 + BE-ARCH-001 + BE-REORG-014C..014G",
+  "standard": "DINKERP-BE-ARCH-001 v1.1.1",
+  "approval_status": "SOURCE_OBSERVED_DRAFT_NOT_APPROVED",
+  "semantics": "Descriptive audit only; no runtime changes, contract approvals or performance proof",
+  "upstream_inventory": "backend/tools/architecture/api050-orchestration-inventory.json",
+  "http_operations": 26,
+  "already_delegated_list_methods": [
+    "listProducts",
+    "listPriceLists",
+    "listUoms",
+    "listGroups"
+  ],
+  "residual_http_operations": 22,
+  "classification_counts": {
+    "OWNER_DELEGATED": 5,
+    "FACADE_PROTECTED_READ": 4,
+    "OWNER_MUTATION_READBACK": 8,
+    "NORMALIZE_CREATE": 3,
+    "FACADE_AUTH_GATE": 1,
+    "KIR001_CREATE": 1
+  },
+  "operations": [
+    {
+      "facade_method": "createGroup",
+      "http_method": "POST",
+      "path": "/api/v1/product-groups",
+      "operation_id": "createProductGroup",
+      "module_owner": "Product",
+      "capability": "ProductGroup",
+      "observed_boundary": "FACADE_NORMALIZE_OWNER_CREATE",
+      "classification": "NORMALIZE_CREATE",
+      "review_priority": "P2",
+      "source_body_markers": [
+        "InitialCreateStateNormalizer",
+        "->groups()->create(",
+        "->groups()->findById("
+      ]
+    },
+    {
+      "facade_method": "getGroup",
+      "http_method": "GET",
+      "path": "/api/v1/product-groups/(:num)",
+      "operation_id": "getProductGroup",
+      "module_owner": "Product",
+      "capability": "ProductGroup",
+      "observed_boundary": "FACADE_AUTHORIZED_SHOW",
+      "classification": "FACADE_PROTECTED_READ",
+      "review_priority": "P2",
+      "source_body_markers": [
+        "->groups()->findById(",
+        "->authorize('product_group', 'view'"
+      ]
+    },
+    {
+      "facade_method": "updateGroup",
+      "http_method": "PATCH",
+      "path": "/api/v1/product-groups/(:num)",
+      "operation_id": "updateProductGroup",
+      "module_owner": "Product",
+      "capability": "ProductGroup",
+      "observed_boundary": "OWNER_COMMAND_FACADE_READBACK",
+      "classification": "OWNER_MUTATION_READBACK",
+      "review_priority": "P1",
+      "source_body_markers": [
+        "->groups()->update(",
+        "->getGroup("
+      ]
+    },
+    {
+      "facade_method": "setGroupState",
+      "http_method": "POST",
+      "path": "/api/v1/product-groups/(:num)/actions/set-state",
+      "operation_id": "setProductGroupState",
+      "module_owner": "Product",
+      "capability": "ProductGroup",
+      "observed_boundary": "OWNER_WORKFLOW_FACADE_READBACK",
+      "classification": "OWNER_MUTATION_READBACK",
+      "review_priority": "P1",
+      "source_body_markers": [
+        "->groups()->setState(",
+        "->getGroup("
+      ]
+    },
+    {
+      "facade_method": "createUom",
+      "http_method": "POST",
+      "path": "/api/v1/product-uoms",
+      "operation_id": "createProductUom",
+      "module_owner": "Product",
+      "capability": "Uom",
+      "observed_boundary": "FACADE_NORMALIZE_OWNER_CREATE",
+      "classification": "NORMALIZE_CREATE",
+      "review_priority": "P2",
+      "source_body_markers": [
+        "InitialCreateStateNormalizer",
+        "->uoms()->create(",
+        "->uoms()->findById("
+      ]
+    },
+    {
+      "facade_method": "getUom",
+      "http_method": "GET",
+      "path": "/api/v1/product-uoms/(:num)",
+      "operation_id": "getProductUom",
+      "module_owner": "Product",
+      "capability": "Uom",
+      "observed_boundary": "FACADE_AUTHORIZED_SHOW",
+      "classification": "FACADE_PROTECTED_READ",
+      "review_priority": "P2",
+      "source_body_markers": [
+        "->uoms()->findById(",
+        "->authorize('product_uom', 'view'"
+      ]
+    },
+    {
+      "facade_method": "updateUom",
+      "http_method": "PATCH",
+      "path": "/api/v1/product-uoms/(:num)",
+      "operation_id": "updateProductUom",
+      "module_owner": "Product",
+      "capability": "Uom",
+      "observed_boundary": "OWNER_COMMAND_FACADE_READBACK",
+      "classification": "OWNER_MUTATION_READBACK",
+      "review_priority": "P1",
+      "source_body_markers": [
+        "->uoms()->update(",
+        "->getUom("
+      ]
+    },
+    {
+      "facade_method": "setUomState",
+      "http_method": "POST",
+      "path": "/api/v1/product-uoms/(:num)/actions/set-state",
+      "operation_id": "setProductUomState",
+      "module_owner": "Product",
+      "capability": "Uom",
+      "observed_boundary": "OWNER_WORKFLOW_FACADE_READBACK",
+      "classification": "OWNER_MUTATION_READBACK",
+      "review_priority": "P1",
+      "source_body_markers": [
+        "->uoms()->setState(",
+        "->getUom("
+      ]
+    },
+    {
+      "facade_method": "createProduct",
+      "http_method": "POST",
+      "path": "/api/v1/products",
+      "operation_id": "createProduct",
+      "module_owner": "Product",
+      "capability": "Product",
+      "observed_boundary": "FACADE_MULTI_STEP_CREATE",
+      "classification": "KIR001_CREATE",
+      "review_priority": "P0_STOP",
+      "source_body_markers": [
+        "array_key_exists('combo_items'",
+        "->transBegin()",
+        "->products()->create(",
+        "->combos()->replaceItems(",
+        "->transCommit()"
+      ]
+    },
+    {
+      "facade_method": "getProduct",
+      "http_method": "GET",
+      "path": "/api/v1/products/(:num)",
+      "operation_id": "getProduct",
+      "module_owner": "Product",
+      "capability": "Product",
+      "observed_boundary": "FACADE_AUTHORIZED_DECORATED_SHOW",
+      "classification": "FACADE_PROTECTED_READ",
+      "review_priority": "P2",
+      "source_body_markers": [
+        "->decorateProduct(",
+        "->productReadAccess()->authorizedRow("
+      ]
+    },
+    {
+      "facade_method": "updateProduct",
+      "http_method": "PATCH",
+      "path": "/api/v1/products/(:num)",
+      "operation_id": "updateProduct",
+      "module_owner": "Product",
+      "capability": "Product",
+      "observed_boundary": "OWNER_COMMAND_FACADE_READBACK",
+      "classification": "OWNER_MUTATION_READBACK",
+      "review_priority": "P1",
+      "source_body_markers": [
+        "->products()->update(",
+        "->getProduct("
+      ]
+    },
+    {
+      "facade_method": "setProductState",
+      "http_method": "POST",
+      "path": "/api/v1/products/(:num)/actions/set-state",
+      "operation_id": "setProductState",
+      "module_owner": "Product",
+      "capability": "Product",
+      "observed_boundary": "OWNER_WORKFLOW_FACADE_READBACK",
+      "classification": "OWNER_MUTATION_READBACK",
+      "review_priority": "P1",
+      "source_body_markers": [
+        "->products()->setState(",
+        "->getProduct("
+      ]
+    },
+    {
+      "facade_method": "getConversions",
+      "http_method": "GET",
+      "path": "/api/v1/products/(:num)/uom-conversions",
+      "operation_id": "listProductUomConversions",
+      "module_owner": "Product",
+      "capability": "UomConversion",
+      "observed_boundary": "FACADE_VIEW_GATE_OWNER_READ",
+      "classification": "FACADE_AUTH_GATE",
+      "review_priority": "P1",
+      "source_body_markers": [
+        "->authorize('product', 'view'",
+        "->conversions()->listByProduct("
+      ]
+    },
+    {
+      "facade_method": "replaceConversions",
+      "http_method": "PUT",
+      "path": "/api/v1/products/(:num)/uom-conversions",
+      "operation_id": "replaceProductUomConversions",
+      "module_owner": "Product",
+      "capability": "UomConversion",
+      "observed_boundary": "DELEGATED_OWNER_COMMAND",
+      "classification": "OWNER_DELEGATED",
+      "review_priority": "P3_KEEP",
+      "source_body_markers": [
+        "->conversions()->replaceByProduct("
+      ]
+    },
+    {
+      "facade_method": "getComboItems",
+      "http_method": "GET",
+      "path": "/api/v1/products/(:num)/combo-items",
+      "operation_id": "listComboItems",
+      "module_owner": "Product",
+      "capability": "Combo",
+      "observed_boundary": "DELEGATED_OWNER_AUTHORIZED_READ",
+      "classification": "OWNER_DELEGATED",
+      "review_priority": "P3_KEEP",
+      "source_body_markers": [
+        "->combos()->listItems("
+      ]
+    },
+    {
+      "facade_method": "replaceComboItems",
+      "http_method": "PUT",
+      "path": "/api/v1/products/(:num)/combo-items",
+      "operation_id": "replaceComboItems",
+      "module_owner": "Product",
+      "capability": "Combo",
+      "observed_boundary": "DELEGATED_OWNER_ATOMIC_REPLACE",
+      "classification": "OWNER_DELEGATED",
+      "review_priority": "P3_KEEP",
+      "source_body_markers": [
+        "->combos()->replaceItems("
+      ]
+    },
+    {
+      "facade_method": "createPriceList",
+      "http_method": "POST",
+      "path": "/api/v1/price-lists",
+      "operation_id": "createPriceList",
+      "module_owner": "Pricing",
+      "capability": "PriceList",
+      "observed_boundary": "FACADE_NORMALIZE_OWNER_CREATE_READBACK",
+      "classification": "NORMALIZE_CREATE",
+      "review_priority": "P2",
+      "source_body_markers": [
+        "InitialCreateStateNormalizer",
+        "->priceLists()->create(",
+        "->getPriceList("
+      ]
+    },
+    {
+      "facade_method": "getPriceList",
+      "http_method": "GET",
+      "path": "/api/v1/price-lists/(:num)",
+      "operation_id": "getPriceList",
+      "module_owner": "Pricing",
+      "capability": "PriceList",
+      "observed_boundary": "FACADE_AUTHORIZED_SHOW",
+      "classification": "FACADE_PROTECTED_READ",
+      "review_priority": "P2",
+      "source_body_markers": [
+        "->priceLists()->findById(",
+        "->authorize('price_list', 'view'"
+      ]
+    },
+    {
+      "facade_method": "updatePriceList",
+      "http_method": "PATCH",
+      "path": "/api/v1/price-lists/(:num)",
+      "operation_id": "updatePriceList",
+      "module_owner": "Pricing",
+      "capability": "PriceList",
+      "observed_boundary": "OWNER_COMMAND_FACADE_READBACK",
+      "classification": "OWNER_MUTATION_READBACK",
+      "review_priority": "P1",
+      "source_body_markers": [
+        "->priceLists()->update(",
+        "->getPriceList("
+      ]
+    },
+    {
+      "facade_method": "setPriceListState",
+      "http_method": "POST",
+      "path": "/api/v1/price-lists/(:num)/actions/set-state",
+      "operation_id": "setPriceListState",
+      "module_owner": "Pricing",
+      "capability": "PriceList",
+      "observed_boundary": "OWNER_WORKFLOW_FACADE_READBACK",
+      "classification": "OWNER_MUTATION_READBACK",
+      "review_priority": "P1",
+      "source_body_markers": [
+        "->priceLists()->setState(",
+        "->getPriceList("
+      ]
+    },
+    {
+      "facade_method": "getPriceListItems",
+      "http_method": "GET",
+      "path": "/api/v1/price-lists/(:num)/items",
+      "operation_id": "listPriceListItems",
+      "module_owner": "Pricing",
+      "capability": "PriceListItems",
+      "observed_boundary": "DELEGATED_OWNER_AUTHORIZED_READ",
+      "classification": "OWNER_DELEGATED",
+      "review_priority": "P3_KEEP",
+      "source_body_markers": [
+        "->priceLists()->listItems("
+      ]
+    },
+    {
+      "facade_method": "replacePriceListItems",
+      "http_method": "PUT",
+      "path": "/api/v1/price-lists/(:num)/items",
+      "operation_id": "replacePriceListItems",
+      "module_owner": "Pricing",
+      "capability": "PriceListItems",
+      "observed_boundary": "DELEGATED_OWNER_ATOMIC_REPLACE",
+      "classification": "OWNER_DELEGATED",
+      "review_priority": "P3_KEEP",
+      "source_body_markers": [
+        "->priceLists()->replaceItems("
+      ]
+    }
+  ],
+  "open_risks": [
+    {
+      "id": "KIR-001",
+      "priority": "P0",
+      "status": "OPEN_RUNTIME_NOT_VERIFIED",
+      "evidence": "Api050::createProduct transBegin + AutoNumberingCounterAllocator transDepth guard",
+      "hold": "No transaction refactor until ADR and MariaDB/Shield collision, rollback and concurrency POC"
+    },
+    {
+      "id": "CXT-001",
+      "priority": "P1",
+      "status": "SOURCE_OBSERVED_RUNTIME_NOT_VERIFIED",
+      "evidence": "Api050::operation() invokes MutationContext::begin(); multiple calls in multi-step commands",
+      "hold": "One OperationContext command boundary requires parity tests for actor, evaluationTime, requestId"
+    },
+    {
+      "id": "PERF-001",
+      "priority": "P1",
+      "status": "UNMEASURED_RUNTIME",
+      "evidence": "ProductGroupListQueryService and ProductUomListQueryService listAll + per-row state authorization + PHP count and page",
+      "hold": "Benchmark p50/p95/memory, SQL queries and PBAC count with representative dataset before SQL redesign"
+    },
+    {
+      "id": "COMPAT-001",
+      "priority": "P2",
+      "status": "ACTIVE_CALLERS",
+      "evidence": "ProductMediaFactory productReadAccess; ProductImages productForImage",
+      "hold": "Do not retire Api050 facade"
+    }
+  ],
+  "performance_surfaces": [
+    {
+      "method": "listGroups",
+      "owner": "Product",
+      "resource": "product_group",
+      "repository": "ProductGroupRepository::listAll",
+      "sql_table": "product_groups",
+      "http_path": "/api/v1/product-groups"
+    },
+    {
+      "method": "listUoms",
+      "owner": "Product",
+      "resource": "product_uom",
+      "repository": "ProductUomRepository::listAll",
+      "sql_table": "product_uoms",
+      "http_path": "/api/v1/product-uoms"
+    }
+  ],
+  "measurement_evidence": {
+    "synthetic_php": "NOT_RUN",
+    "authenticated_http_mariadb_shield": "NOT_RUN",
+    "sql_explain": "NOT_RUN",
+    "query_count": "NOT_RUN",
+    "pbac_policy_query_count": "NOT_RUN",
+    "live_latency_p95": "NOT_RUN"
+  },
+  "limits": [
+    "No claim that SQL can replicate per-row PBAC/authorized COUNT without parity",
+    "Synthetic probes exclude MariaDB, Shield, policy resolution, HTTP overhead and network",
+    "No endpoint/contract, mutation, schema or transaction changes in 014H"
+  ]
+}

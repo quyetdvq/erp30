@@ -1,0 +1,327 @@
+{
+  "format_version": 1,
+  "source": "erp_v1.2.2.zip",
+  "approval": "NONE; inventory only, not approved exceptions",
+  "entries": [
+    {
+      "path": "backend/app/Authorization/ResourceDomain.php",
+      "legacy_class": "App\\Authorization\\ResourceDomain",
+      "delegate": "App\\Modules\\Resource\\Domain\\ResourceDomain",
+      "owner_module": "Resource",
+      "status": "CANDIDATE_REVIEW",
+      "caller_inventory": "NOT_VERIFIED (static name grep alone does not cover runtime aliases)",
+      "tests": "backend/tools/test-services-ownership-boundary.php (partial; validate additional suites before retirement)",
+      "revisit_trigger": "all production/tests/CLI/dynamic callers removed, compatibility sign-off"
+    },
+    {
+      "path": "backend/app/Repositories/ResourceCatalogRepository.php",
+      "legacy_class": "App\\Repositories\\ResourceCatalogRepository",
+      "delegate": "App\\Modules\\Resource\\Infrastructure\\Persistence\\SqlResourceCatalogRepository",
+      "owner_module": "Resource",
+      "status": "CANDIDATE_REVIEW",
+      "caller_inventory": "NOT_VERIFIED (static name grep alone does not cover runtime aliases)",
+      "tests": "backend/tools/test-services-ownership-boundary.php (partial; validate additional suites before retirement)",
+      "revisit_trigger": "all production/tests/CLI/dynamic callers removed, compatibility sign-off"
+    },
+    {
+      "path": "backend/app/Repositories/ShieldSecurityUserRepository.php",
+      "legacy_class": "App\\Repositories\\ShieldSecurityUserRepository",
+      "delegate": "App\\Modules\\Identity\\Infrastructure\\Persistence\\ShieldSecurityUserRepository",
+      "owner_module": "Identity",
+      "status": "CANDIDATE_REVIEW",
+      "caller_inventory": "NOT_VERIFIED (static name grep alone does not cover runtime aliases)",
+      "tests": "backend/tools/test-services-ownership-boundary.php (partial; validate additional suites before retirement)",
+      "revisit_trigger": "all production/tests/CLI/dynamic callers removed, compatibility sign-off"
+    },
+    {
+      "path": "backend/app/Services/AuthorizationGroupService.php",
+      "legacy_class": "App\\Services\\AuthorizationGroupService",
+      "delegate": "App\\Modules\\Authorization\\Compatibility\\AuthorizationGroupService",
+      "owner_module": "Authorization",
+      "status": "CANDIDATE_REVIEW",
+      "caller_inventory": "NOT_VERIFIED (static name grep alone does not cover runtime aliases)",
+      "tests": "backend/tools/test-services-ownership-boundary.php (partial; validate additional suites before retirement)",
+      "revisit_trigger": "all production/tests/CLI/dynamic callers removed, compatibility sign-off"
+    },
+    {
+      "path": "backend/app/Services/AutoNumberingConfigurationService.php",
+      "legacy_class": "App\\Services\\AutoNumberingConfigurationService",
+      "delegate": "App\\Modules\\Numbering\\Configuration\\Compatibility\\AutoNumberingConfigurationService",
+      "owner_module": "Numbering",
+      "status": "CANDIDATE_REVIEW",
+      "caller_inventory": "NOT_VERIFIED (static name grep alone does not cover runtime aliases)",
+      "tests": "backend/tools/test-services-ownership-boundary.php (partial; validate additional suites before retirement)",
+      "revisit_trigger": "all production/tests/CLI/dynamic callers removed, compatibility sign-off"
+    },
+    {
+      "path": "backend/app/Services/AutoNumberingCounterAllocator.php",
+      "legacy_class": "App\\Services\\AutoNumberingCounterAllocator",
+      "delegate": "App\\Modules\\Numbering\\Allocation\\Compatibility\\AutoNumberingCounterAllocator",
+      "owner_module": "Numbering",
+      "status": "CANDIDATE_REVIEW",
+      "caller_inventory": "NOT_VERIFIED (static name grep alone does not cover runtime aliases)",
+      "tests": "backend/tools/test-services-ownership-boundary.php (partial; validate additional suites before retirement)",
+      "revisit_trigger": "all production/tests/CLI/dynamic callers removed, compatibility sign-off"
+    },
+    {
+      "path": "backend/app/Services/AutoNumberingScopePeriodResolver.php",
+      "legacy_class": "App\\Services\\AutoNumberingScopePeriodResolver",
+      "delegate": "App\\Modules\\Numbering\\Scope\\Compatibility\\AutoNumberingScopePeriodResolver",
+      "owner_module": "Numbering",
+      "status": "CANDIDATE_REVIEW",
+      "caller_inventory": "NOT_VERIFIED (static name grep alone does not cover runtime aliases)",
+      "tests": "backend/tools/test-services-ownership-boundary.php (partial; validate additional suites before retirement)",
+      "revisit_trigger": "all production/tests/CLI/dynamic callers removed, compatibility sign-off"
+    },
+    {
+      "path": "backend/app/Services/BusinessLifecycleTargetAdapter.php",
+      "legacy_class": "App\\Services\\BusinessLifecycleTargetAdapter",
+      "delegate": "App\\Modules\\Workflow\\Lifecycle\\Infrastructure\\Adapters\\BusinessLifecycleTargetAdapter",
+      "owner_module": "Workflow",
+      "status": "CANDIDATE_REVIEW",
+      "caller_inventory": "NOT_VERIFIED (static name grep alone does not cover runtime aliases)",
+      "tests": "backend/tools/test-services-ownership-boundary.php (partial; validate additional suites before retirement)",
+      "revisit_trigger": "all production/tests/CLI/dynamic callers removed, compatibility sign-off"
+    },
+    {
+      "path": "backend/app/Services/BusinessLifecycleTransitions.php",
+      "legacy_class": "App\\Services\\BusinessLifecycleTransitions",
+      "delegate": "App\\Modules\\Workflow\\BusinessActions\\Compatibility\\BusinessLifecycleTransitions",
+      "owner_module": "Workflow",
+      "status": "CANDIDATE_REVIEW",
+      "caller_inventory": "NOT_VERIFIED (static name grep alone does not cover runtime aliases)",
+      "tests": "backend/tools/test-services-ownership-boundary.php (partial; validate additional suites before retirement)",
+      "revisit_trigger": "all production/tests/CLI/dynamic callers removed, compatibility sign-off"
+    },
+    {
+      "path": "backend/app/Services/BusinessWorkflowActions.php",
+      "legacy_class": "App\\Services\\BusinessWorkflowActions",
+      "delegate": "App\\Modules\\Workflow\\BusinessActions\\Compatibility\\BusinessWorkflowActions",
+      "owner_module": "Workflow",
+      "status": "CANDIDATE_REVIEW",
+      "caller_inventory": "NOT_VERIFIED (static name grep alone does not cover runtime aliases)",
+      "tests": "backend/tools/test-services-ownership-boundary.php (partial; validate additional suites before retirement)",
+      "revisit_trigger": "all production/tests/CLI/dynamic callers removed, compatibility sign-off"
+    },
+    {
+      "path": "backend/app/Services/BusinessWorkflowWriteBoundary.php",
+      "legacy_class": "App\\Services\\BusinessWorkflowWriteBoundary",
+      "delegate": "App\\Modules\\Workflow\\WriteBoundary\\Compatibility\\BusinessWorkflowWriteBoundary",
+      "owner_module": "Workflow",
+      "status": "CANDIDATE_REVIEW",
+      "caller_inventory": "NOT_VERIFIED (static name grep alone does not cover runtime aliases)",
+      "tests": "backend/tools/test-services-ownership-boundary.php (partial; validate additional suites before retirement)",
+      "revisit_trigger": "all production/tests/CLI/dynamic callers removed, compatibility sign-off"
+    },
+    {
+      "path": "backend/app/Services/CanonicalNumberingPatternValidator.php",
+      "legacy_class": "App\\Services\\CanonicalNumberingPatternValidator",
+      "delegate": "App\\Modules\\Numbering\\Pattern\\Compatibility\\CanonicalNumberingPatternValidator",
+      "owner_module": "Numbering",
+      "status": "CANDIDATE_REVIEW",
+      "caller_inventory": "NOT_VERIFIED (static name grep alone does not cover runtime aliases)",
+      "tests": "backend/tools/test-services-ownership-boundary.php (partial; validate additional suites before retirement)",
+      "revisit_trigger": "all production/tests/CLI/dynamic callers removed, compatibility sign-off"
+    },
+    {
+      "path": "backend/app/Services/ContactLifecycleAdapter.php",
+      "legacy_class": "App\\Services\\ContactLifecycleAdapter",
+      "delegate": "App\\Modules\\Contact\\Integration\\Workflow\\ContactLifecycleAdapter",
+      "owner_module": "Contact",
+      "status": "CANDIDATE_REVIEW",
+      "caller_inventory": "NOT_VERIFIED (static name grep alone does not cover runtime aliases)",
+      "tests": "backend/tools/test-services-ownership-boundary.php (partial; validate additional suites before retirement)",
+      "revisit_trigger": "all production/tests/CLI/dynamic callers removed, compatibility sign-off"
+    },
+    {
+      "path": "backend/app/Services/DisplaySettingsMutationService.php",
+      "legacy_class": "App\\Services\\DisplaySettingsMutationService",
+      "delegate": "App\\Modules\\Settings\\Display\\Compatibility\\DisplaySettingsMutationService",
+      "owner_module": "Settings",
+      "status": "CANDIDATE_REVIEW",
+      "caller_inventory": "NOT_VERIFIED (static name grep alone does not cover runtime aliases)",
+      "tests": "backend/tools/test-services-ownership-boundary.php (partial; validate additional suites before retirement)",
+      "revisit_trigger": "all production/tests/CLI/dynamic callers removed, compatibility sign-off"
+    },
+    {
+      "path": "backend/app/Services/FoundationLocationLifecycleAdapter.php",
+      "legacy_class": "App\\Services\\FoundationLocationLifecycleAdapter",
+      "delegate": "App\\Modules\\Foundation\\Integration\\Workflow\\FoundationLocationLifecycleAdapter",
+      "owner_module": "Foundation",
+      "status": "CANDIDATE_REVIEW",
+      "caller_inventory": "NOT_VERIFIED (static name grep alone does not cover runtime aliases)",
+      "tests": "backend/tools/test-services-ownership-boundary.php (partial; validate additional suites before retirement)",
+      "revisit_trigger": "all production/tests/CLI/dynamic callers removed, compatibility sign-off"
+    },
+    {
+      "path": "backend/app/Services/InitialCreateStateNormalizer.php",
+      "legacy_class": "App\\Services\\InitialCreateStateNormalizer",
+      "delegate": "App\\Modules\\Workflow\\WriteBoundary\\Compatibility\\InitialCreateStateNormalizer",
+      "owner_module": "Workflow",
+      "status": "CANDIDATE_REVIEW",
+      "caller_inventory": "NOT_VERIFIED (static name grep alone does not cover runtime aliases)",
+      "tests": "backend/tools/test-services-ownership-boundary.php (partial; validate additional suites before retirement)",
+      "revisit_trigger": "all production/tests/CLI/dynamic callers removed, compatibility sign-off"
+    },
+    {
+      "path": "backend/app/Services/LifecycleService.php",
+      "legacy_class": "App\\Services\\LifecycleService",
+      "delegate": "App\\Modules\\Workflow\\Lifecycle\\Compatibility\\LifecycleService",
+      "owner_module": "Workflow",
+      "status": "CANDIDATE_REVIEW",
+      "caller_inventory": "NOT_VERIFIED (static name grep alone does not cover runtime aliases)",
+      "tests": "backend/tools/test-services-ownership-boundary.php (partial; validate additional suites before retirement)",
+      "revisit_trigger": "all production/tests/CLI/dynamic callers removed, compatibility sign-off"
+    },
+    {
+      "path": "backend/app/Services/LifecycleTargetSnapshot.php",
+      "legacy_class": "App\\Services\\LifecycleTargetSnapshot",
+      "delegate": "App\\Modules\\Workflow\\Lifecycle\\Compatibility\\Domain\\LifecycleTargetSnapshot",
+      "owner_module": "Workflow",
+      "status": "CANDIDATE_REVIEW",
+      "caller_inventory": "NOT_VERIFIED (static name grep alone does not cover runtime aliases)",
+      "tests": "backend/tools/test-services-ownership-boundary.php (partial; validate additional suites before retirement)",
+      "revisit_trigger": "all production/tests/CLI/dynamic callers removed, compatibility sign-off"
+    },
+    {
+      "path": "backend/app/Services/PolicyAdministrationService.php",
+      "legacy_class": "App\\Services\\PolicyAdministrationService",
+      "delegate": "App\\Modules\\Authorization\\Compatibility\\PolicyAdministrationService",
+      "owner_module": "Authorization",
+      "status": "CANDIDATE_REVIEW",
+      "caller_inventory": "NOT_VERIFIED (static name grep alone does not cover runtime aliases)",
+      "tests": "backend/tools/test-services-ownership-boundary.php (partial; validate additional suites before retirement)",
+      "revisit_trigger": "all production/tests/CLI/dynamic callers removed, compatibility sign-off"
+    },
+    {
+      "path": "backend/app/Services/ProductLookupService.php",
+      "legacy_class": "App\\Services\\ProductLookupService",
+      "delegate": "App\\Modules\\Product\\Lookup\\Compatibility\\ProductLookupService",
+      "owner_module": "Product",
+      "status": "CANDIDATE_REVIEW",
+      "caller_inventory": "NOT_VERIFIED (static name grep alone does not cover runtime aliases)",
+      "tests": "backend/tools/test-services-ownership-boundary.php (partial; validate additional suites before retirement)",
+      "revisit_trigger": "all production/tests/CLI/dynamic callers removed, compatibility sign-off"
+    },
+    {
+      "path": "backend/app/Services/ResourceIdentifierMetadata.php",
+      "legacy_class": "App\\Services\\ResourceIdentifierMetadata",
+      "delegate": "App\\Modules\\Numbering\\Issuance\\Domain\\ResourceIdentifierMetadata",
+      "owner_module": "Numbering",
+      "status": "CANDIDATE_REVIEW",
+      "caller_inventory": "NOT_VERIFIED (static name grep alone does not cover runtime aliases)",
+      "tests": "backend/tools/test-services-ownership-boundary.php (partial; validate additional suites before retirement)",
+      "revisit_trigger": "all production/tests/CLI/dynamic callers removed, compatibility sign-off"
+    },
+    {
+      "path": "backend/app/Services/ResourceNativeStateCatalog.php",
+      "legacy_class": "App\\Services\\ResourceNativeStateCatalog",
+      "delegate": "App\\Modules\\Resource\\Domain\\ResourceNativeStateCatalog",
+      "owner_module": "Resource",
+      "status": "CANDIDATE_REVIEW",
+      "caller_inventory": "NOT_VERIFIED (static name grep alone does not cover runtime aliases)",
+      "tests": "backend/tools/test-services-ownership-boundary.php (partial; validate additional suites before retirement)",
+      "revisit_trigger": "all production/tests/CLI/dynamic callers removed, compatibility sign-off"
+    },
+    {
+      "path": "backend/app/Services/ResourceWorkflowStateResolver.php",
+      "legacy_class": "App\\Services\\ResourceWorkflowStateResolver",
+      "delegate": "App\\Modules\\Workflow\\StateResolution\\Compatibility\\ResourceWorkflowStateResolver",
+      "owner_module": "Workflow",
+      "status": "CANDIDATE_REVIEW",
+      "caller_inventory": "NOT_VERIFIED (static name grep alone does not cover runtime aliases)",
+      "tests": "backend/tools/test-services-ownership-boundary.php (partial; validate additional suites before retirement)",
+      "revisit_trigger": "all production/tests/CLI/dynamic callers removed, compatibility sign-off"
+    },
+    {
+      "path": "backend/app/Services/ShieldUserIdentityService.php",
+      "legacy_class": "App\\Services\\ShieldUserIdentityService",
+      "delegate": "App\\Modules\\Identity\\Application\\ShieldUserIdentityService",
+      "owner_module": "Identity",
+      "status": "CANDIDATE_REVIEW",
+      "caller_inventory": "NOT_VERIFIED (static name grep alone does not cover runtime aliases)",
+      "tests": "backend/tools/test-services-ownership-boundary.php (partial; validate additional suites before retirement)",
+      "revisit_trigger": "all production/tests/CLI/dynamic callers removed, compatibility sign-off"
+    },
+    {
+      "path": "backend/app/Services/SystemAdminPermissionReconciler.php",
+      "legacy_class": "App\\Services\\SystemAdminPermissionReconciler",
+      "delegate": "App\\Modules\\Authorization\\Compatibility\\SystemAdminPermissionReconciler",
+      "owner_module": "Authorization",
+      "status": "CANDIDATE_REVIEW",
+      "caller_inventory": "NOT_VERIFIED (static name grep alone does not cover runtime aliases)",
+      "tests": "backend/tools/test-services-ownership-boundary.php (partial; validate additional suites before retirement)",
+      "revisit_trigger": "all production/tests/CLI/dynamic callers removed, compatibility sign-off"
+    },
+    {
+      "path": "backend/app/Services/UserAvatarService.php",
+      "legacy_class": "App\\Services\\UserAvatarService",
+      "delegate": "App\\Modules\\Identity\\Application\\UserAvatarService",
+      "owner_module": "Identity",
+      "status": "CANDIDATE_REVIEW",
+      "caller_inventory": "NOT_VERIFIED (static name grep alone does not cover runtime aliases)",
+      "tests": "backend/tools/test-services-ownership-boundary.php (partial; validate additional suites before retirement)",
+      "revisit_trigger": "all production/tests/CLI/dynamic callers removed, compatibility sign-off"
+    },
+    {
+      "path": "backend/app/Services/UserAvatarStorage.php",
+      "legacy_class": "App\\Services\\UserAvatarStorage",
+      "delegate": "App\\Modules\\Identity\\Infrastructure\\Storage\\UserAvatarStorage",
+      "owner_module": "Identity",
+      "status": "CANDIDATE_REVIEW",
+      "caller_inventory": "NOT_VERIFIED (static name grep alone does not cover runtime aliases)",
+      "tests": "backend/tools/test-services-ownership-boundary.php (partial; validate additional suites before retirement)",
+      "revisit_trigger": "all production/tests/CLI/dynamic callers removed, compatibility sign-off"
+    },
+    {
+      "path": "backend/app/Services/UserDisplayName.php",
+      "legacy_class": "App\\Services\\UserDisplayName",
+      "delegate": "App\\Modules\\Identity\\Domain\\UserDisplayName",
+      "owner_module": "Identity",
+      "status": "CANDIDATE_REVIEW",
+      "caller_inventory": "NOT_VERIFIED (static name grep alone does not cover runtime aliases)",
+      "tests": "backend/tools/test-services-ownership-boundary.php (partial; validate additional suites before retirement)",
+      "revisit_trigger": "all production/tests/CLI/dynamic callers removed, compatibility sign-off"
+    },
+    {
+      "path": "backend/app/Services/UserGroupSelection.php",
+      "legacy_class": "App\\Services\\UserGroupSelection",
+      "delegate": "App\\Modules\\Identity\\Domain\\UserGroupSelection",
+      "owner_module": "Identity",
+      "status": "CANDIDATE_REVIEW",
+      "caller_inventory": "NOT_VERIFIED (static name grep alone does not cover runtime aliases)",
+      "tests": "backend/tools/test-services-ownership-boundary.php (partial; validate additional suites before retirement)",
+      "revisit_trigger": "all production/tests/CLI/dynamic callers removed, compatibility sign-off"
+    },
+    {
+      "path": "backend/app/Services/WorkflowBusinessStatus.php",
+      "legacy_class": "App\\Services\\WorkflowBusinessStatus",
+      "delegate": "App\\Modules\\Workflow\\WriteBoundary\\Compatibility\\WorkflowBusinessStatus",
+      "owner_module": "Workflow",
+      "status": "CANDIDATE_REVIEW",
+      "caller_inventory": "NOT_VERIFIED (static name grep alone does not cover runtime aliases)",
+      "tests": "backend/tools/test-services-ownership-boundary.php (partial; validate additional suites before retirement)",
+      "revisit_trigger": "all production/tests/CLI/dynamic callers removed, compatibility sign-off"
+    },
+    {
+      "path": "backend/app/Services/ProductImageService.php",
+      "legacy_class": "App\\Services\\ProductImageService",
+      "delegate": "App\\Modules\\Product\\Media\\Application\\ProductImageApplicationService (built via App\\Bootstrap\\ProductMediaFactory)",
+      "owner_module": "Product",
+      "status": "CANDIDATE_REVIEW",
+      "caller_inventory": "NOT_VERIFIED (constructor/named-argument and runtime consumers)",
+      "tests": "backend/tests/unit/ProductImageStorageTest.php and Product Media tests; verify runtime",
+      "revisit_trigger": "remaining controller/tests/integrations consumers migrated and signed off"
+    },
+    {
+      "path": "backend/app/Services/ProductImageStorage.php",
+      "legacy_class": "App\\Services\\ProductImageStorage",
+      "delegate": "App\\Modules\\Product\\Media\\Infrastructure\\Storage\\LocalProductImageStorage",
+      "owner_module": "Product",
+      "status": "CANDIDATE_REVIEW",
+      "caller_inventory": "NOT_VERIFIED (constructor/named-argument and runtime consumers)",
+      "tests": "backend/tests/unit/ProductImageStorageTest.php and Product Media tests; verify runtime",
+      "revisit_trigger": "remaining controller/tests/integrations consumers migrated and signed off"
+    }
+  ]
+}

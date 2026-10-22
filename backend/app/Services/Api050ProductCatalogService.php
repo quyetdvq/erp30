@@ -5,22 +5,25 @@ declare(strict_types=1);
 namespace App\Services;
 
 use App\Authorization\AuthorizationService;
-use App\Authorization\EffectiveListBucketCompiler;
 use App\Authorization\EvaluationOrganizationRequest;
-use App\Authorization\PriceListAuthorizedBucketCompiler;
 use App\Exceptions\DomainException;
-use App\Infrastructure\Api\AuthorizedArrayListSource;
 use App\Infrastructure\Api\CommonListQueryAdapter;
-use App\Infrastructure\Api\CommonListQueryAllowlist;
-use App\Infrastructure\Api\SqlProductListSource;
-use App\Infrastructure\Api\SqlPriceListListSource;
 use App\Infrastructure\Mutation\MutationContext;
 use App\Infrastructure\Mutation\OperationContext;
 use App\Infrastructure\RequestContext;
 use App\Modules\Pricing\PriceList\PriceListService;
-use App\Modules\Pricing\PriceList\PriceListRepository;
+use App\Modules\Pricing\PriceList\Application\PriceListQueryService;
+use App\Bootstrap\PriceListListAuthorizationAdapter;
 use App\Modules\Product\Combo\ComboCompositionService;
 use App\Modules\Product\Product\Application\AuthorizedProductReadService;
+use App\Modules\Product\Product\Application\ProductListQueryService;
+use App\Bootstrap\ProductListAuthorizationAdapter;
+use App\Bootstrap\ProductUomListAuthorizationAdapter;
+use App\Bootstrap\ProductGroupListAuthorizationAdapter;
+use App\Bootstrap\ProductMasterListSqlAuthorizationAdapter;
+use App\Modules\Product\Lookup\Application\ProductMasterListSqlFastPath;
+use App\Modules\Product\ProductGroup\Application\ProductGroupListQueryService;
+use App\Modules\Product\Uom\Application\ProductUomListQueryService;
 use App\Modules\Product\Product\ProductMasterService;
 use App\Modules\Product\Product\ProductRepository;
 use App\Repositories\PolicyRepository;
@@ -60,21 +63,51 @@ final class Api050ProductCatalogService
      */
     public function listGroups(array $query = []): array
     {
-        $rows = $this->groups()->listAll();
-        if ($this->requiresRowStateAuthorization('product_group')) {
-            // State-scoped policies are evaluated before pagination/total.
-            $rows = array_values(array_filter($rows, fn (array $row): bool => $this->decision('product_group', 'view', $row)->isAllowed()));
-        } else {
-            $this->authorize('product_group', 'view');
-        }
-        return $this->paginate(
-            $rows,
-            $query,
-            new CommonListQueryAllowlist(
-                search: ['code', 'name'],
-                filters: ['code', 'name', 'parent_id', 'status'],
-                sort: ['id', 'code', 'name', 'parent_id', 'status'],
+        // A trusted Product master SQL plan is optional: injected Group
+        // collaborators keep their existing full-PBAC characterization path.
+        $requiresState = fn (): bool => $this->requiresRowStateAuthorization('product_group');
+        $authorizeBase = function (): void { $this->authorize('product_group', 'view'); };
+        return (new ProductGroupListQueryService(
+            $this->groups(),
+            new ProductGroupListAuthorizationAdapter(
+                $requiresState, $authorizeBase,
+                fn (array $row): bool => $this->decision('product_group', 'view', $row)->isAllowed(),
             ),
+            $this->queryAdapter,
+            $this->groups === null ? $this->masterListSqlFastPath('product_group', $requiresState, $authorizeBase) : null,
+        ))->list($query);
+    }
+
+    /**
+     * Factory-only seam for two existing Product MASTER read operations.
+     * No public API or state-policy change; runtime SQL eligibility is checked
+     * after composition, and the fallback uses the original facade callbacks.
+     * @param \Closure():bool $requiresState
+     * @param \Closure():void $authorizeBase
+     */
+    private function masterListSqlFastPath(string $resource, \Closure $requiresState, \Closure $authorizeBase): ?ProductMasterListSqlFastPath
+    {
+        // Runtime rollout is explicitly opt-in: source-only tests do not
+        // certify MariaDB/Shield parity or representative PBAC latency.
+        // Without this exact value, both existing lists retain 014F/014G.
+        if ($this->authorization !== null || getenv('ERP_PRODUCT_MASTER_LIST_SQL_OPT_IN') !== '1') {
+            return null;
+        }
+        $db = $this->connection();
+        if (! $db instanceof BaseConnection) {
+            return null;
+        }
+        return new ProductMasterListSqlFastPath(
+            $db,
+            $resource,
+            new ProductMasterListSqlAuthorizationAdapter(
+                $db, $resource,
+                fn (): OperationContext => $this->operation(),
+                fn (): AuthorizationService => $this->authorization(),
+            ),
+            $requiresState,
+            $authorizeBase,
+            $this->queryAdapter,
         );
     }
 
@@ -122,21 +155,17 @@ final class Api050ProductCatalogService
      */
     public function listUoms(array $query = []): array
     {
-        $rows = $this->uoms()->listAll();
-        if ($this->requiresRowStateAuthorization('product_uom')) {
-            $rows = array_values(array_filter($rows, fn (array $row): bool => $this->decision('product_uom', 'view', $row)->isAllowed()));
-        } else {
-            $this->authorize('product_uom', 'view');
-        }
-        return $this->paginate(
-            $rows,
-            $query,
-            new CommonListQueryAllowlist(
-                search: ['code', 'name'],
-                filters: ['code', 'name', 'status'],
-                sort: ['id', 'code', 'name', 'status'],
+        $requiresState = fn (): bool => $this->requiresRowStateAuthorization('product_uom');
+        $authorizeBase = function (): void { $this->authorize('product_uom', 'view'); };
+        return (new ProductUomListQueryService(
+            $this->uoms(),
+            new ProductUomListAuthorizationAdapter(
+                $requiresState, $authorizeBase,
+                fn (array $row): bool => $this->decision('product_uom', 'view', $row)->isAllowed(),
             ),
-        );
+            $this->queryAdapter,
+            $this->uoms === null ? $this->masterListSqlFastPath('product_uom', $requiresState, $authorizeBase) : null,
+        ))->list($query);
     }
 
     /** @param array<string,mixed> $payload
@@ -178,95 +207,24 @@ final class Api050ProductCatalogService
      */
     public function listProducts(array $query = []): array
     {
-        $allowlist = new CommonListQueryAllowlist(
-            search: ['product_code', 'sku', 'barcode', 'product_name', 'product_child_name'],
-            filters: ['base_uom_id', 'parent_product_id', 'product_group_id', 'product_type', 'status'],
-            sort: ['id', 'product_code', 'product_name', 'product_type', 'status'],
+        // Transitional API-050 facade: Product owns list query orchestration.
+        // Retain the exact lazy operation, Authorization instance and injected
+        // collaborators of this facade while migrating its HTTP consumers.
+        $db = $this->connection();
+        $security = new ProductListAuthorizationAdapter(
+            $db,
+            fn (): OperationContext => $this->operation(),
+            fn (): AuthorizationService => $this->authorization(),
+            fn (): bool => $this->requiresRowStateAuthorization('product'),
         );
-        $adapter = $this->queryAdapter ?? new CommonListQueryAdapter();
-        $repository = $this->productRepository ?? new ProductRepository($this->connection());
-        if ($this->requiresRowStateAuthorization('product')) {
-            // MASTER resources have GROUP scope; only persisted State affects
-            // per-row PBAC. Compile the *effective* decision through the
-            // existing engine once for each byte-exact State bucket.
-            // The Product structure scan remains global even when a Policy
-            // denies every row. The transaction spans State samples, count,
-            // paginated Product records and all relationship hydration.
-            $parsed = $adapter->parse($query, $allowlist);
-            if ($repository->supportsSqlProjection($parsed)) {
-                $operation = $this->operation();
-                $optimized = $repository->withConsistentListSnapshot(function () use ($repository, $operation, $adapter, $query, $allowlist): ?array {
-                    return $this->authorization()->withReadOnlyBatch($operation, function () use ($repository, $operation, $adapter, $query, $allowlist): ?array {
-                        $buckets = (new EffectiveListBucketCompiler($this->connection(), $this->authorization()))
-                            ->compile('product', $operation, static fn (DomainException $_): bool => false);
-                        if ($buckets === null) {
-                            return null;
-                        }
-                        $roles = new ProductRoleService(repository: $repository, db: $this->connection());
-                        $result = $adapter->paginate($query, $allowlist,
-                            new SqlProductListSource($repository, $roles, array_column($buckets, 'status')));
-                        $items = [];
-                        foreach ($result->data as $row) {
-                            // Revalidate every returned row using its real
-                            // State. A concurrent permissions change must
-                            // fail closed, never serve a denied row.
-                            if (! $this->authorization()->authorize(
-                                $operation, 'product', 'view',
-                                new EvaluationOrganizationRequest(persistedTarget: $row),
-                            )->isAllowed()) {
-                                throw new DomainException('PRODUCT_AUTHORIZATION_DENIED');
-                            }
-                            $items[] = $this->productCodeForApi($row);
-                        }
-                        return ['items' => $items, 'page' => $result->query->page,
-                            'page_size' => $result->query->pageSize, 'total' => $result->total];
-                    });
-                });
-                if ($optimized !== null) {
-                    return $optimized;
-                }
-            }
-            // Non-canonical numeric filters, too many Scope/State buckets or
-            // custom resource metadata keep the original fail-closed path.
-            $rows = array_values(array_filter(
-                $this->roles()->describeList($this->products()->listAll()),
-                fn (array $row): bool => $this->decision('product', 'view', $row)->isAllowed(),
-            ));
-            return $this->paginate(array_map(fn (array $row): array => $this->productCodeForApi($row), $rows), $query, $allowlist);
-        }
-        $this->authorize('product', 'view');
-        // Only page after the MASTER-level product.view gate. Product List has
-        // no per-row PBAC predicate, unlike Price List. The repository
-        // applies SQL only when exact filters are equivalent. For Unicode
-        // search or string sorting, a projection preserves the existing PHP
-        // comparator without loading every complete Product row.
-        if ($repository->supportsSqlProjection($adapter->parse($query, $allowlist))) {
-            // COUNT and full-row/page/relationship reads must observe the
-            // same InnoDB snapshot. Materialize the iterable before commit.
-            return $repository->withConsistentListSnapshot(function () use ($adapter, $query, $allowlist, $repository): array {
-                // Use the same repository/connection for relationship reads;
-                // a separately injected roles service could observe a different snapshot.
-                $roles = new ProductRoleService(repository: $repository, db: $this->connection());
-                $result = $adapter->paginate($query, $allowlist, new SqlProductListSource($repository, $roles));
-                return [
-                    'items' => array_map(
-                        fn (array $row): array => $this->productCodeForApi($row),
-                        array_values(iterator_to_array($result->data)),
-                    ),
-                    'page' => $result->query->page,
-                    'page_size' => $result->query->pageSize,
-                    'total' => $result->total,
-                ];
-            });
-        }
-
-        // A noncanonical numeric filter (e.g. "01") must stay on the exact
-        // PHP path; coercing it to an SQL integer would change membership.
-        $rows = array_map(
-            fn (array $row): array => $this->productCodeForApi($row),
-            $this->roles()->describeList($this->products()->listAll()),
-        );
-        return $this->paginate($rows, $query, $allowlist);
+        return (new ProductListQueryService(
+            $db,
+            $security,
+            $this->queryAdapter,
+            $this->productRepository,
+            $this->roles,
+            $this->products,
+        ))->list($query);
     }
 
     /** @param array<string,mixed> $payload
@@ -383,70 +341,18 @@ final class Api050ProductCatalogService
      */
     public function listPriceLists(array $query = []): array
     {
-        $allowlist = new CommonListQueryAllowlist(
-            search: ['code', 'name'],
-            filters: ['code', 'name', 'organization_id', 'status'],
-            sort: ['id', 'code', 'effective_from', 'name', 'organization_id', 'priority', 'status'],
-        );
-        $adapter = $this->queryAdapter ?? new CommonListQueryAdapter();
-        $parsed = $adapter->parse($query, $allowlist);
-        $db = $this->connection();
-        if (SqlPriceListListSource::supports($parsed)
-            && $db instanceof BaseConnection && $db->transDepth === 0) {
-            $repository = new PriceListRepository($db);
-            $operation = $this->operation();
-            $optimized = $repository->withConsistentListSnapshot(function () use ($db, $operation, $adapter, $query, $parsed, $allowlist): ?array {
-                return $this->authorization()->withReadOnlyBatch($operation, function () use ($db, $operation, $adapter, $query, $parsed, $allowlist): ?array {
-                    // First rule out legacy-sort mismatches. The existing PHP
-                    // numeric comparator does not match SQL for negative priority.
-                    $probe = new SqlPriceListListSource($db, []);
-                    if (! $probe->canServe($parsed)) {
-                        return null;
-                    }
-                    $buckets = (new PriceListAuthorizedBucketCompiler($db, $this->authorization()))
-                        ->compile($operation);
-                    if ($buckets === null) {
-                        return null;
-                    }
-                    $result = $adapter->paginate($query, $allowlist,
-                        new SqlPriceListListSource($db, $buckets));
-                    $items = [];
-                    foreach ($result->data as $row) {
-                        if (! is_array($row)) {
-                            return null;
-                        }
-                        try {
-                            $decision = $this->authorization()->authorize(
-                                $operation, 'price_list', 'view',
-                                new EvaluationOrganizationRequest(persistedTarget: $row),
-                            );
-                        } catch (DomainException $_) {
-                            return null; // Uncertain snapshot/owner: use original path.
-                        }
-                        if (! $decision->isAllowed()) {
-                            return null;
-                        }
-                        $items[] = $row;
-                    }
-                    return ['items' => $items, 'page' => $result->query->page,
-                        'page_size' => $result->query->pageSize, 'total' => $result->total];
-                });
-            });
-            if ($optimized !== null) {
-                return $optimized;
-            }
-        }
-
-        // Search, Unicode/text sort, noncanonical owner filters, excessive
-        // buckets and ambiguous State/Scope all retain the original behavior.
-        $visible = [];
-        foreach ($this->priceLists()->listAll() as $row) {
-            $decision = $this->decision('price_list', 'view', $row);
-            if ($decision->isAllowed()) {
-                $visible[] = $row;
-            }
-        }
-        return $this->paginate($visible, $query, $allowlist);
+        // Transitional API-050 facade: Pricing owns Price List list/query
+        // orchestration. Preserve lazy operation/PBAC and injected collaborators;
+        // query validation still precedes the first DB connection resolution.
+        return (new PriceListQueryService(
+            fn (): ConnectionInterface => $this->connection(),
+            new PriceListListAuthorizationAdapter(
+                fn (): OperationContext => $this->operation(),
+                fn (): AuthorizationService => $this->authorization(),
+            ),
+            $this->queryAdapter,
+            $this->priceLists,
+        ))->list($query);
     }
 
     /** @return array<string,mixed> */
@@ -587,26 +493,6 @@ final class Api050ProductCatalogService
                 clientEvaluationOrganizationId: $clientHint,
             ),
         );
-    }
-
-    /** @param list<array<string,mixed>> $rows
-     *  @param array<string,mixed> $query
-     *  @return array{items:list<array<string,mixed>>,page:int,page_size:int,total:int|string}
-     */
-    private function paginate(array $rows, array $query, CommonListQueryAllowlist $allowlist): array
-    {
-        $result = ($this->queryAdapter ?? new CommonListQueryAdapter())->paginate(
-            $query,
-            $allowlist,
-            new AuthorizedArrayListSource($rows),
-        );
-
-        return [
-            'items' => array_values(iterator_to_array($result->data)),
-            'page' => $result->query->page,
-            'page_size' => $result->query->pageSize,
-            'total' => $result->total,
-        ];
     }
 
     private function operation(): OperationContext

@@ -29,6 +29,8 @@ final class EffectiveListBucketCompiler
         'employee' => ['table' => 'employees', 'domain' => 'MASTER', 'scoped' => false],
         'employee_assignment' => ['table' => 'employee_assignments', 'domain' => 'ORGANIZATION', 'scoped' => true],
         'product' => ['table' => 'products', 'domain' => 'MASTER', 'scoped' => false],
+        'product_group' => ['table' => 'product_groups', 'domain' => 'MASTER', 'scoped' => false],
+        'product_uom' => ['table' => 'product_uoms', 'domain' => 'MASTER', 'scoped' => false],
     ];
 
     public const MAX_BUCKETS = 64;

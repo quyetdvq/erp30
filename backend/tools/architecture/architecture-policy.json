@@ -1,0 +1,94 @@
+{
+  "format_version": 1,
+  "authority": "DINKERP-BE-ARCH-001 v1.1.1 PROPOSED; not a business/DB/API approval",
+  "modules": [
+    "Identity",
+    "Authorization",
+    "Resource",
+    "Workflow",
+    "Numbering",
+    "Settings",
+    "Foundation",
+    "Organization",
+    "Contact",
+    "EmployeeStructure",
+    "Product",
+    "Pricing"
+  ],
+  "table_owners": {
+    "authorization_logs": "Authorization",
+    "auto_numbering_counters": "Numbering",
+    "auto_numbering_series": "Numbering",
+    "configuration_audit_events": "Settings",
+    "contacts": "Contact",
+    "departments": "EmployeeStructure",
+    "employee_assignments": "EmployeeStructure",
+    "employees": "EmployeeStructure",
+    "group_permissions": "Authorization",
+    "groups": "Authorization",
+    "import_job_rows": "ImportInfrastructure",
+    "import_jobs": "ImportInfrastructure",
+    "lifecycle_states": "Workflow",
+    "lifecycle_transitions": "Workflow",
+    "lifecycles": "Workflow",
+    "organizations": "Organization",
+    "policies": "Authorization",
+    "policy_actions": "Authorization",
+    "positions": "EmployeeStructure",
+    "price_lists": "Pricing",
+    "product_combo_items": "Product",
+    "product_groups": "Product",
+    "product_price_list_items": "Pricing",
+    "product_uom_conversions": "Product",
+    "product_uoms": "Product",
+    "products": "Product",
+    "provinces": "Foundation",
+    "resource_actions": "Resource",
+    "resources": "Resource",
+    "wards": "Foundation",
+    "workflow_states": "Workflow"
+  },
+  "table_ownership_status": "WORKING INVENTORY - requires DBD/owner review; not comprehensive of Shield framework tables",
+  "public_apis": [
+    {
+      "module": "Product",
+      "class": "App\\Modules\\Product\\Product\\ProductRoleService",
+      "methods": [
+        "findById",
+        "getRole",
+        "isSelectable"
+      ],
+      "consumers": [
+        "Pricing"
+      ],
+      "status": "CANDIDATE_OWNER_REVIEW",
+      "review": "OBSERVED ONLY from Pricing consumers; full signature/security/transaction contract needs Product owner review."
+    },
+    {
+      "module": "Product",
+      "class": "App\\Modules\\Product\\Uom\\ProductUomService",
+      "methods": [
+        "requireActiveBaseUom",
+        "validateSellingUom"
+      ],
+      "consumers": [
+        "Pricing"
+      ],
+      "status": "CANDIDATE_OWNER_REVIEW",
+      "review": "OBSERVED ONLY from Pricing consumers; full signature/security/transaction contract needs Product owner review."
+    },
+    {
+      "module": "Product",
+      "class": "App\\Modules\\Product\\Combo\\ComboExpansionService",
+      "methods": [
+        "expand"
+      ],
+      "consumers": [
+        "Pricing"
+      ],
+      "status": "CANDIDATE_OWNER_REVIEW",
+      "review": "OBSERVED ONLY from Pricing consumers; full signature/security/transaction contract needs Product owner review."
+    }
+  ],
+  "review_note": "CANDIDATE_OWNER_REVIEW entries do not permit NEW imports. APPROVED requires owner/contract approval; scanner checks class-level only, not method invocations."
+}
