@@ -68,6 +68,7 @@ export type ManagedUser = {
   username: string
   name?: string | null
   has_avatar?: boolean
+  avatar_url?: string | null
   email: string | null
   status: string | null
   active: boolean
@@ -166,7 +167,8 @@ function mapSecurityUser(user: SecurityUser): ManagedUser {
     id: user.id,
     username: user.username,
     name: user.name,
-    has_avatar: (user as SecurityUser & { has_avatar?: boolean }).has_avatar ?? false,
+    has_avatar: user.has_avatar,
+    avatar_url: user.avatar_url ?? null,
     email: user.email,
     status: user.status,
     active: user.active,

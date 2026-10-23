@@ -203,6 +203,7 @@ export const zAuthUser = z.object({
     username: z.string(),
     name: z.string().nullable(),
     has_avatar: z.boolean(),
+    avatar_url: z.string().nullable().optional(),
     email: z.email().nullable(),
     active: z.boolean(),
     status: z.string().nullable(),
@@ -294,6 +295,11 @@ export const zProduct = z.object({
     manual_standard_cost: zDecimal.nullish(),
     serial_management_enabled: z.boolean().optional(),
     image_available: z.boolean().optional(),
+    image_url: z.string().nullable().optional(),
+    allowed_actions: z.object({
+        edit: z.boolean(),
+        setstate: z.boolean()
+    }).optional(),
     status: zBusinessWorkflowStatus,
     role: z.enum([
         'SIMPLE',
@@ -1072,6 +1078,7 @@ export const zSecurityUser = z.object({
     username: z.string(),
     name: z.string().nullable(),
     has_avatar: z.boolean(),
+    avatar_url: z.string().nullable().optional(),
     email: z.string().nullable(),
     active: z.boolean(),
     status: z.string().nullable(),
@@ -1089,6 +1096,7 @@ export const zUserIdentity = z.object({
     username: z.string(),
     name: z.string().nullable(),
     has_avatar: z.boolean(),
+    avatar_url: z.string().nullable().optional(),
     email: z.email(),
     active: z.boolean(),
     status: z.enum([
@@ -2360,15 +2368,6 @@ export const zDeleteUserAvatarPath = z.object({
  */
 export const zDeleteUserAvatarResponse = zUserAvatarMutationResponse;
 
-export const zGetUserAvatarPath = z.object({
-    id: zBigInt
-});
-
-/**
- * Authenticated private JPEG, PNG or WebP image bytes; not publicly cacheable.
- */
-export const zGetUserAvatarResponse = z.string();
-
 export const zUploadUserAvatarBody = zUserAvatarUpload;
 
 export const zUploadUserAvatarPath = z.object({
@@ -3195,15 +3194,6 @@ export const zDeleteProductImagePath = z.object({
  * Product response.
  */
 export const zDeleteProductImageResponse = zProductResponse;
-
-export const zGetProductImagePath = z.object({
-    id: zBigInt
-});
-
-/**
- * Image bytes. Not publicly cacheable.
- */
-export const zGetProductImageResponse = z.string();
 
 export const zUploadProductImageBody = z.object({
     image: z.string()

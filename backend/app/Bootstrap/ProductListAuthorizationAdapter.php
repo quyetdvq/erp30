@@ -9,6 +9,8 @@ use App\Authorization\EffectiveListBucketCompiler;
 use App\Authorization\EvaluationOrganizationRequest;
 use App\Exceptions\DomainException;
 use App\Infrastructure\Mutation\OperationContext;
+use App\Repositories\ResourceCatalogRepository;
+use App\Services\ResourceWorkflowStateResolver;
 use App\Modules\Product\Product\Application\Ports\ProductListAuthorizationPort;
 use CodeIgniter\Database\ConnectionInterface;
 
@@ -89,6 +91,51 @@ final class ProductListAuthorizationAdapter implements ProductListAuthorizationP
             ->compile('product', $operation, static fn (DomainException $_): bool => false);
 
         return $buckets === null ? null : array_column($buckets, 'status');
+    }
+
+    /**
+     * Advisory Product actions for the already authorized page. Only GROUP-scoped
+     * MASTER Product rows can share a PBAC result for byte-identical States.
+     * An altered Resource domain is never grouped by State; each row is checked
+     * independently. The cache lives in this invocation only, not the adapter.
+     *
+     * @param list<array<string,mixed>> $rows
+     * @return list<array<string,mixed>>
+     */
+    public function withAllowedActions(OperationContext $operation, array $rows): array
+    {
+        if ($rows === []) {
+            return [];
+        }
+        $resource = (new ResourceCatalogRepository($this->db))->findResourceByType('product');
+        // No guessed GROUP scope when Resource metadata is absent or modified.
+        // The authoritative decision below will reject invalid metadata.
+        $sameScopeByState = ($resource['domain'] ?? null) === 'MASTER';
+        $authorization = ($this->authorization)();
+        $states = new ResourceWorkflowStateResolver($this->db);
+        $decisions = [];
+        foreach ($rows as $index => $row) {
+            if (! array_key_exists('id', $row) || ! array_key_exists('status', $row)) {
+                throw new DomainException('PRODUCT_AUTHORIZATION_DENIED', ['action' => 'view']);
+            }
+            // HEX/typed grouping: MariaDB collations and numeric-looking State
+            // strings must never silently merge distinct PBAC input values.
+            $key = $sameScopeByState
+                ? 'state:' . bin2hex(serialize($row['status']))
+                : 'row:' . $index;
+            if (! array_key_exists($key, $decisions)) {
+                $target = new EvaluationOrganizationRequest(persistedTarget: $row);
+                $currentStateId = $states->persistedStateId('product', $row);
+                $decisions[$key] = [
+                    'edit' => $authorization->authorize($operation, 'product', 'edit', $target)->isAllowed(),
+                    // Lifecycle transitions require an explicit FROM-State ID,
+                    // derived only from this persisted row (never request data).
+                    'setstate' => $authorization->authorize($operation, 'product', 'setstate', $target, $currentStateId)->isAllowed(),
+                ];
+            }
+            $rows[$index]['allowed_actions'] = $decisions[$key];
+        }
+        return $rows;
     }
 
     /** @param array<string,mixed>|null $row */

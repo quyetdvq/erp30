@@ -9,7 +9,10 @@ use App\Exceptions\DomainException;
 use App\Exceptions\PersistenceException;
 use App\Infrastructure\Mutation\OperationContext;
 use App\Infrastructure\Time\EvaluationTime;
+use App\Bootstrap\AuthorizationEmployeeScopeReadAdapter;
 use App\Modules\Authorization\Decision\Application\PbacDecisionEngine;
+use App\Repositories\EmployeeRepository;
+use App\Repositories\EmployeeAssignmentRepository;
 use App\Repositories\PolicyRepository;
 use CodeIgniter\Database\ConnectionInterface;
 use CodeIgniter\Test\CIUnitTestCase;
@@ -191,7 +194,7 @@ final class BeReorg008DecisionParityTest extends CIUnitTestCase
         $first = $this->capture(fn (): AuthorizationDecision =>
             (new AuthorizationService(policies: $policy, db: $this->db))->authorize($operation, 'price_list', 'view', $request));
         $second = $this->capture(fn (): AuthorizationDecision =>
-            (new PbacDecisionEngine(policies: $policy, db: $this->db))->authorize($operation, 'price_list', 'view', $request));
+            $this->engine($policy)->authorize($operation, 'price_list', 'view', $request));
         $this->assertSame($first::class, $second::class);
         $this->assertInstanceOf(PersistenceException::class, $first);
         $this->assertSame($first->getErrorCode(), $second->getErrorCode());
@@ -204,7 +207,7 @@ final class BeReorg008DecisionParityTest extends CIUnitTestCase
         $operation = $this->fixture->operation($actor['user_id']);
         $target = $request ?? $this->fixture->request($actor['company_id']);
         $expected = (new AuthorizationService(db: $this->db))->authorize($operation, $resource, $action, $target);
-        $actual = (new PbacDecisionEngine(db: $this->db))->authorize($operation, $resource, $action, $target);
+        $actual = $this->engine()->authorize($operation, $resource, $action, $target);
         $this->assertSame($expected->toArray(), $actual->toArray());
         return $actual;
     }
@@ -214,13 +217,26 @@ final class BeReorg008DecisionParityTest extends CIUnitTestCase
     {
         $expected = $this->capture(fn (): AuthorizationDecision => (new AuthorizationService(db: $this->db))
             ->authorize($operation, $resource, $action, $request, $stateId));
-        $actual = $this->capture(fn (): AuthorizationDecision => (new PbacDecisionEngine(db: $this->db))
+        $actual = $this->capture(fn (): AuthorizationDecision => $this->engine()
             ->authorize($operation, $resource, $action, $request, $stateId));
         $this->assertSame($expected::class, $actual::class);
         $this->assertInstanceOf(DomainException::class, $actual);
         $this->assertSame($code, $expected->getErrorCode());
         $this->assertSame($expected->getErrorCode(), $actual->getErrorCode());
         $this->assertSame($expected->getContext(), $actual->getContext());
+    }
+
+    /** Independent canonical-engine construction (not the facade/factory oracle). */
+    private function engine(?PolicyRepository $policies = null): PbacDecisionEngine
+    {
+        return new PbacDecisionEngine(
+            employeeScopeRead: new AuthorizationEmployeeScopeReadAdapter(
+                new EmployeeRepository($this->db),
+                new EmployeeAssignmentRepository($this->db),
+            ),
+            policies: $policies,
+            db: $this->db,
+        );
     }
 
     private function capture(callable $operation): Throwable

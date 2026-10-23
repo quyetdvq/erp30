@@ -9,11 +9,6 @@ export function productHasImage(row: Product | null | undefined): boolean {
 
 const url = (id: string): string => `/api/v1/products/${encodeURIComponent(id)}/image`
 
-export async function fetchProductImage(id: string): Promise<Blob> {
-  const response = await apiClient.get<Blob>(url(id), { responseType: 'blob' })
-  return response.data
-}
-
 export async function uploadProductImage(id: string, image: File): Promise<Product> {
   const body = new FormData()
   body.append('image', image, image.name)

@@ -4,6 +4,7 @@ import { useI18n } from 'vue-i18n'
 import { useRouter } from 'vue-router'
 import type { ComboItem, Product, ProductGroup, ProductUom } from '@/api/generated/types.gen'
 import ProductDetailModal from '@/components/products/ProductDetailModal.vue'
+import ProductListThumbnail from '@/components/products/ProductListThumbnail.vue'
 import ProductRelationSummary from '@/components/products/ProductRelationSummary.vue'
 import ProductRelationsDialog from '@/components/products/ProductRelationsDialog.vue'
 import {
@@ -19,6 +20,7 @@ import { useBasePermission } from '@/composables/useBasePermission'
 import { useAuthStore } from '@/stores/auth'
 import { useFormatters } from '@/composables/useFormatters'
 import {
+  getProductById,
   listProductComboItems,
   listProductGroupPage,
   listProductPage,
@@ -29,14 +31,15 @@ import { useBusinessWorkflowStates } from '@/composables/useBusinessWorkflowStat
 import { loadLookupPages } from '@/services/listLookups'
 import { databaseFlagEnabled, productRoleLabel } from '@/services/productPresentation'
 import { chunks, previewProductRelations, resolveProductDetails } from '@/services/productLookups'
+import { DEFAULT_PRODUCT_SORT, productSortOptions } from '@/features/catalog/productSortOptions'
+import {
+  buildProductInlineRows,
+  type ProductInlineRelation,
+} from '@/features/catalog/productInlineRows'
 
-type RelationState = {
-  children: Product[]
+type RelationState = ProductInlineRelation & {
   components: Product[]
   componentItems: ComboItem[]
-  total: number
-  full: boolean
-  loading: boolean
 }
 const { t } = useI18n()
 const router = useRouter()
@@ -44,13 +47,23 @@ const { hasBasePermission } = useBasePermission()
 const workflowStates = useBusinessWorkflowStates('product')
 const auth = useAuthStore()
 const formatters = useFormatters()
-const state = useListState<Product>((query) => listProductPage(query), { sort: 'product_code' })
+const state = useListState<Product>((query) => listProductPage(query), { sort: DEFAULT_PRODUCT_SORT })
 const groups = ref<ProductGroup[]>([])
 const uoms = ref<ProductUom[]>([])
 // Resolve table labels in O(1) per visible row even with thousands of groups/UOMs.
 const groupNameById = computed(() => new Map(groups.value.map((row) => [String(row.id), row.name])))
 const uomNameById = computed(() => new Map(uoms.value.map((row) => [String(row.id), row.name])))
 const relations = ref<Record<string, RelationState>>({})
+const collapsedChildren = ref(new Set<string>())
+const showAllChildren = ref(new Set<string>())
+const inlineRows = computed(() =>
+  buildProductInlineRows(
+    state.rows.value,
+    relations.value,
+    collapsedChildren.value,
+    showAllChildren.value,
+  ),
+)
 const relatedOwner = ref<Product | null>(null)
 const relationsOpen = ref(false)
 const relationLoadError = ref(false)
@@ -115,8 +128,28 @@ function uomName(id: string | null | undefined): string {
   return uomNameById.value.get(String(id)) ?? t('list.noValue')
 }
 function relation(row: Product): RelationState {
+  return relationById(String(row.id))
+}
+function toggleChildren(parentId: string): void {
+  const next = new Set(collapsedChildren.value)
+  if (next.has(parentId)) next.delete(parentId)
+  else next.add(parentId)
+  collapsedChildren.value = next
+}
+function toggleAllChildren(parentId: string): void {
+  const next = new Set(showAllChildren.value)
+  if (next.has(parentId) && relationById(parentId).full) {
+    next.delete(parentId)
+  } else {
+    next.add(parentId)
+    const parent = state.rows.value.find((row) => String(row.id) === parentId)
+    if (parent && !relationById(parentId).full) void loadFullRelations(parent)
+  }
+  showAllChildren.value = next
+}
+function relationById(id: string): RelationState {
   return (
-    relations.value[String(row.id)] ?? {
+    relations.value[id] ?? {
       children: [],
       components: [],
       componentItems: [],
@@ -126,7 +159,7 @@ function relation(row: Product): RelationState {
     }
   )
 }
-function relatedProducts(row: Product): Product[] {
+function relatedProducts(row: Product): readonly Product[] {
   return row.role === 'COMBO' ? relation(row).components : relation(row).children
 }
 const dialogRelation = computed(() => (relatedOwner.value ? relation(relatedOwner.value) : null))
@@ -163,8 +196,8 @@ async function loadFullRelations(row: Product): Promise<void> {
   const epoch = listEpoch
   const generation = auth.getSessionGeneration()
   const previous = relation(row)
-  if (previous.full) return
-  relations.value[key] = { ...previous, loading: true }
+  if (previous.full || previous.loading) return
+  relations.value[key] = { ...previous, loading: true, error: false }
   relationLoadError.value = false
   try {
     if (row.role === 'COMBO') {
@@ -188,7 +221,9 @@ async function loadFullRelations(row: Product): Promise<void> {
       }
     } else {
       const children = await loadLookupPages(listProductPage, {
-        sort: 'product_name',
+        // Match the preview endpoint's product_id ASC order so the first
+        // two child rows do not move when the owner is expanded.
+        sort: 'product_id',
         filter: { parent_product_id: key },
       })
       if (epoch !== listEpoch || generation !== auth.getSessionGeneration()) return
@@ -203,7 +238,7 @@ async function loadFullRelations(row: Product): Promise<void> {
     }
   } catch (caught: unknown) {
     if (epoch !== listEpoch || generation !== auth.getSessionGeneration()) return
-    relations.value[key] = { ...previous, loading: false }
+    relations.value[key] = { ...previous, loading: false, error: true }
     if (relatedOwner.value && String(relatedOwner.value.id) === key) relationLoadError.value = true
     error.value = caught
     reportApiError(caught)
@@ -217,9 +252,34 @@ function displayMoney(value: string | number | null | undefined): string {
     ? t('list.noValue')
     : formatters.formatMoney(String(value))
 }
+let detailRequest = 0
+function closeDetail(): void {
+  detailOpen.value = false
+  ++detailRequest
+}
 function openDetail(row: Product): void {
-  detailProduct.value = row
-  detailOpen.value = true
+  const request = ++detailRequest
+  if (row.allowed_actions !== undefined) {
+    detailProduct.value = row
+    detailOpen.value = true
+    return
+  }
+  // The bounded relation preview is authorized for VIEW but deliberately has
+  // no edit/setstate hints. Read a single product on user click instead of
+  // granting inherited parent actions or issuing N per-row requests.
+  const epoch = listEpoch
+  const generation = auth.getSessionGeneration()
+  void getProductById(String(row.id))
+    .then((product) => {
+      if (request !== detailRequest || epoch !== listEpoch || generation !== auth.getSessionGeneration()) return
+      detailProduct.value = product
+      detailOpen.value = true
+    })
+    .catch((caught: unknown) => {
+      if (request !== detailRequest || epoch !== listEpoch || generation !== auth.getSessionGeneration()) return
+      error.value = caught
+      reportApiError(caught)
+    })
 }
 let listEpoch = 0
 async function loadRelations(rows: readonly Product[], epoch: number): Promise<void> {
@@ -279,6 +339,11 @@ async function loadRelations(rows: readonly Product[], epoch: number): Promise<v
 }
 async function load(): Promise<void> {
   const epoch = ++listEpoch
+  ++detailRequest
+  detailOpen.value = false
+  detailProduct.value = null
+  collapsedChildren.value = new Set()
+  showAllChildren.value = new Set()
   error.value = null
   try {
     await state.apply()
@@ -301,6 +366,7 @@ function applyQuery(query: ListQuery): void {
 }
 function resetQuery(): void {
   state.reset()
+  state.setSort(DEFAULT_PRODUCT_SORT)
   void load()
 }
 async function afterWorkflowChange(): Promise<void> {
@@ -348,6 +414,7 @@ onMounted(async () => {
     <ListQueryControls
       :model-value="state.query"
       :filters="filters()"
+      :sort-options="productSortOptions"
       @apply="applyQuery"
       @reset="resetQuery"
     />
@@ -390,77 +457,147 @@ onMounted(async () => {
           </caption>
           <thead>
             <tr>
-              <th>{{ t('product.productCode') }}</th>
-              <th>{{ t('product.fullName') }}</th>
-              <th>{{ t('product.sku') }}</th>
-              <th>{{ t('product.type') }}</th>
-              <th>{{ t('product.role') }}</th>
-              <th>{{ t('product.productGroup') }}</th>
+              <th class="product-image-column">{{ t('product.imageColumn') }}</th>
+              <th class="product-name-column">{{ t('product.fullName') }}</th>
+              <th class="product-information-column">{{ t('product.information') }}</th>
+              <th class="product-group-column">{{ t('product.groupColumn') }}</th>
               <th>{{ t('product.baseUom') }}</th>
               <th>{{ t('product.defaultPrice') }}</th>
               <th>{{ t('product.serial') }}</th>
               <th>{{ t('product.status') }}</th>
-              <th>{{ t('product.actions') }}</th>
+              <th class="table-actions">{{ t('product.actions') }}</th>
             </tr>
           </thead>
           <tbody>
-            <tr v-for="row in state.rows.value" :key="String(row.id)">
-              <td>{{ row.product_code ?? t('list.noValue') }}</td>
-              <td>
-                <button type="button" class="product-link" @click="openDetail(row)">
-                  {{ productName(row) }}
-                </button>
-                <ProductRelationSummary
-                  v-if="row.role === 'COMBO' || row.role === 'PARENT'"
-                  :kind="row.role === 'COMBO' ? 'COMBO' : 'PARENT'"
-                  :total="relation(row).total"
-                  :preview="relatedProducts(row)"
-                  :loading="relation(row).loading"
-                  @view="openDetail"
-                  @show-all="openRelations(row)"
-                />
-              </td>
-              <td>{{ row.sku ?? t('list.noValue') }}</td>
-              <td>
-                {{ row.product_type === 'COMBO' ? t('product.combo') : t('product.standard') }}
-              </td>
-              <td>
-                <span class="role-badge" :class="`role-${row.role.toLowerCase()}`">{{
-                  productRoleLabel(row.role, t)
-                }}</span>
-              </td>
-              <td>{{ groupName(row.product_group_id) }}</td>
-              <td>{{ uomName(row.base_uom_id) }}</td>
-              <td>{{ displayMoney(row.price) }}</td>
-              <td>
-                {{
-                  databaseFlagEnabled(row.serial_management_enabled)
-                    ? t('common.yes')
-                    : t('common.no')
-                }}
-              </td>
-              <td><TableStatus :status="row.status" /></td>
-              <td>
-                <TableRowActions
-                  :active="row.status === 'ACTIVE'"
-                  :state-target-id="String(row.id)"
-                  :busy="busy"
-                  :show-view="hasBasePermission('product', 'view')"
-                  :show-edit="hasBasePermission('product', 'edit')"
-                  :show-toggle="hasBasePermission('product', 'setstate')"
-                  view-permission="product.view"
-                  edit-permission="product.edit"
-                  toggle-permission="product.setstate"
-                  :view-label="t('common.view')"
-                  :edit-label="t('common.edit')"
-                  :activate-label="t('common.activate')"
-                  :deactivate-label="t('common.deactivate')"
-                  @view="openDetail(row)"
-                  @edit="router.push(`/products/${row.id}`)"
-                  @state-changed="afterWorkflowChange"
-                />
-              </td>
-            </tr>
+            <template v-for="entry in inlineRows" :key="entry.key">
+              <tr v-if="entry.kind === 'product'" class="product-data-row" :class="{ 'product-child-row': !!entry.childOf }">
+                <td class="product-image-column">
+                  <ProductListThumbnail
+                    :product-name="productName(entry.product)"
+                    :image-available="entry.product.image_available === true"
+                    :image-path="entry.product.image_url"
+                  />
+                </td>
+                <td class="product-name-column">
+                  <div class="product-name-cell" :class="{ 'product-name-cell--child': !!entry.childOf }">
+                    <button
+                      v-if="entry.product.role === 'PARENT' && relation(entry.product).total > 0"
+                      type="button"
+                      class="product-tree-toggle"
+                      :aria-label="`${collapsedChildren.has(String(entry.product.id)) ? t('product.expand') : t('product.collapse')}: ${productName(entry.product)}`"
+                      :aria-expanded="!collapsedChildren.has(String(entry.product.id))"
+                      @click="toggleChildren(String(entry.product.id))"
+                    >
+                      {{ collapsedChildren.has(String(entry.product.id)) ? '+' : '−' }}
+                    </button>
+                    <span v-else-if="entry.childOf" class="product-tree-branch" aria-hidden="true" />
+                    <div class="product-name-content">
+                      <div class="product-name-heading">
+                        <button type="button" class="product-link" @click="openDetail(entry.product)">
+                          {{ productName(entry.product) }}
+                        </button>
+                        <span
+                          v-if="entry.product.role === 'PARENT' && relation(entry.product).total > 0"
+                          class="product-child-total"
+                        >
+                          {{ t('product.children') }}: {{ relation(entry.product).total }}
+                        </span>
+                      </div>
+                      <ProductRelationSummary
+                        v-if="entry.product.role === 'COMBO'"
+                        kind="COMBO"
+                        :total="relation(entry.product).total"
+                        :preview="relatedProducts(entry.product)"
+                        :loading="relation(entry.product).loading"
+                        @view="openDetail"
+                        @show-all="openRelations(entry.product)"
+                      />
+                    </div>
+                  </div>
+                </td>
+                <td class="product-information-column">
+                  <div class="product-metadata">
+                    <div class="product-meta-line">
+                      <span class="product-meta-label">{{ t('product.code') }}:</span>
+                      <span class="product-meta-value product-code-value">{{ entry.product.product_code ?? t('list.noValue') }}</span>
+                    </div>
+                    <div class="product-meta-line">
+                      <span class="product-meta-label">{{ t('product.sku') }}:</span>
+                      <span class="product-meta-value">{{ entry.product.sku || t('list.noValue') }}</span>
+                    </div>
+                    <div class="product-meta-line">
+                      <span class="product-meta-label">{{ t('product.type') }}:</span>
+                      <span class="product-meta-value">{{ entry.product.product_type === 'COMBO' ? t('product.combo') : t('product.standard') }}</span>
+                    </div>
+                  </div>
+                </td>
+                <td class="product-group-column">
+                  <div class="product-metadata">
+                    <div class="product-meta-line">
+                      <span class="product-meta-label">{{ t('product.groupColumn') }}:</span>
+                      <span class="product-meta-value">{{ groupName(entry.product.product_group_id) }}</span>
+                    </div>
+                    <div class="product-meta-line">
+                      <span class="product-meta-label">{{ t('product.role') }}:</span>
+                      <span class="role-badge" :class="`role-${entry.product.role.toLowerCase()}`">{{
+                        productRoleLabel(entry.product.role, t)
+                      }}</span>
+                    </div>
+                  </div>
+                </td>
+                <td>{{ uomName(entry.product.base_uom_id) }}</td>
+                <td>{{ displayMoney(entry.product.price) }}</td>
+                <td>
+                  {{
+                    databaseFlagEnabled(entry.product.serial_management_enabled)
+                      ? t('common.yes')
+                      : t('common.no')
+                  }}
+                </td>
+                <td><TableStatus :status="entry.product.status" /></td>
+                <td class="table-actions">
+                  <TableRowActions
+                    :active="entry.product.status === 'ACTIVE'"
+                    :state-target-id="String(entry.product.id)"
+                    :busy="busy"
+                    :show-view="true"
+                    :show-edit="entry.product.allowed_actions?.edit === true"
+                    :show-toggle="entry.product.allowed_actions?.setstate === true"
+                    state-resource="product"
+                    :view-label="t('common.view')"
+                    :edit-label="t('common.edit')"
+                    :activate-label="t('common.activate')"
+                    :deactivate-label="t('common.deactivate')"
+                    @view="openDetail(entry.product)"
+                    @edit="router.push(`/products/${entry.product.id}`)"
+                    @state-changed="afterWorkflowChange"
+                  />
+                </td>
+              </tr>
+              <tr v-else class="product-child-control-row">
+                <td class="product-image-column"></td>
+                <td colspan="8" class="product-child-control-cell">
+                  <button
+                    type="button"
+                    class="product-children-control"
+                    :disabled="entry.loading"
+                    :aria-expanded="entry.expanded"
+                    @click="toggleAllChildren(entry.parentId)"
+                  >
+                    <span aria-hidden="true">{{ entry.expanded ? '−' : '+' }}</span>
+                    {{
+                      entry.loading
+                        ? t('list.loading')
+                        : entry.error
+                          ? t('list.retry')
+                          : entry.expanded
+                            ? t('product.showFirstTwoChildren')
+                            : `${t('product.viewMore')} (${t('product.relationOthers', { count: entry.total - 2 })})`
+                    }}
+                  </button>
+                </td>
+              </tr>
+            </template>
           </tbody>
         </table>
       </div>
@@ -503,8 +640,8 @@ onMounted(async () => {
     :groups="groups"
     :uoms="uoms"
     :products="productsForDetail"
-    @close="detailOpen = false"
-    @edit="(row) => router.push(`/products/${row.id}`)"
+    @close="closeDetail"
+    @edit="(row) => row.allowed_actions?.edit === true && router.push(`/products/${row.id}`)"
   />
 </template>
 
@@ -526,7 +663,7 @@ onMounted(async () => {
 }
 .master-table {
   width: 100%;
-  min-width: 1240px;
+  min-width: 1100px;
   border-collapse: collapse;
   color: #183b57;
   font-size: 13px;
@@ -536,7 +673,7 @@ onMounted(async () => {
   padding: 10px 12px;
   border-bottom: 1px solid #e8eef1;
   text-align: start;
-  vertical-align: top;
+  vertical-align: middle;
 }
 .master-table th {
   background: #f7fafb;
@@ -548,15 +685,166 @@ onMounted(async () => {
 .master-table tbody tr:last-child td {
   border-bottom: 0;
 }
+.master-table th.table-actions,
+.master-table td.table-actions {
+  display: table-cell;
+  text-align: right;
+  vertical-align: middle;
+  white-space: nowrap;
+  width: 1%;
+}
+.product-image-column {
+  width: 76px;
+  min-width: 76px;
+}
+.product-name-column {
+  min-width: 320px;
+  width: 30%;
+}
+.product-information-column {
+  min-width: 190px;
+}
+.product-group-column {
+  min-width: 170px;
+}
+.product-metadata {
+  display: grid;
+  gap: 5px;
+  font-size: 12px;
+  line-height: 1.45;
+}
+.product-meta-line {
+  display: flex;
+  align-items: center;
+  min-width: 0;
+  gap: 6px;
+}
+.product-meta-label {
+  flex: 0 0 42px;
+  color: #708696;
+  font-size: 11px;
+}
+.product-meta-value {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+.product-code-value {
+  overflow-wrap: anywhere;
+  font-weight: 550;
+}
+.product-name-cell {
+  display: flex;
+  align-items: flex-start;
+  gap: 9px;
+  min-width: 0;
+}
+.product-name-cell--child {
+  padding-left: 16px;
+}
+.product-name-content {
+  flex: 1 1 auto;
+  min-width: 0;
+  display: grid;
+  gap: 7px;
+}
+.product-name-heading {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 4px 9px;
+  min-width: 0;
+}
+.product-tree-toggle {
+  display: inline-grid;
+  place-items: center;
+  flex: 0 0 24px;
+  width: 24px;
+  height: 24px;
+  border: 1px solid #b8ccd8;
+  border-radius: 4px;
+  background: #fff;
+  color: #294b65;
+  font-weight: 700;
+  cursor: pointer;
+}
+.product-tree-toggle:hover {
+  background: #edf6fb;
+  border-color: #77a8c4;
+}
+.product-tree-branch {
+  display: block;
+  flex: 0 0 20px;
+  width: 20px;
+  height: 20px;
+  border-left: 1px solid #b8cfdd;
+  border-bottom: 1px solid #b8cfdd;
+  border-bottom-left-radius: 4px;
+}
+.master-table tbody tr.product-data-row:hover,
+.master-table tbody tr.product-data-row:focus-within {
+  background: #f0f7fb;
+}
+.product-child-row {
+  background: #f8fbfd;
+}
+.product-child-row td.product-name-column {
+  box-shadow: inset 3px 0 0 #dceaf2;
+}
+.product-child-total {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px 7px;
+  border-radius: 999px;
+  background: #edf4f9;
+  color: #5c7586;
+  font-size: 11px;
+  white-space: nowrap;
+}
+.product-child-control-row td {
+  background: #f8fbfd;
+}
+.master-table td.product-child-control-cell {
+  padding-left: 48px;
+}
+.product-children-control {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  border: 0;
+  padding: 4px 0;
+  color: #176b9d;
+  background: transparent;
+  cursor: pointer;
+  font-weight: 650;
+}
+.product-children-control:hover:not(:disabled),
+.product-children-control:focus-visible {
+  text-decoration: underline;
+}
+.product-children-control:disabled {
+  cursor: wait;
+  opacity: 0.7;
+}
 .product-link {
   border: 0;
+  padding: 0;
   background: transparent;
   color: #1876a8;
   cursor: pointer;
   text-align: start;
-}
-.product-link {
+  font: inherit;
   font-weight: 700;
+  line-height: 1.4;
+  overflow-wrap: anywhere;
+}
+.product-link:hover {
+  text-decoration: underline;
+}
+.product-tree-toggle:focus-visible,
+.product-link:focus-visible,
+.product-children-control:focus-visible {
+  outline: 2px solid #1682bd;
+  outline-offset: 2px;
 }
 .role-badge {
   display: inline-block;

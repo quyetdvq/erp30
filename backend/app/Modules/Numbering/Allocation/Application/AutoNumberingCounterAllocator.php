@@ -20,7 +20,7 @@ use App\Services\ParsedNumberingPattern;
 use CodeIgniter\Database\BaseConnection;
 use CodeIgniter\Database\ConnectionInterface;
 
-/** Owns serialized counter allocation and the business mutation transaction. */
+/** Serializes counter allocation and owns a transaction only when no caller transaction is active. */
 final class AutoNumberingCounterAllocator
 {
     public const ERROR_CONFIGURATION_INVALID = 'NUM_COUNTER_CONFIGURATION_INVALID';
@@ -68,10 +68,13 @@ final class AutoNumberingCounterAllocator
         $start = $this->nonNegative($series['start_number'] ?? null, 'start_number');
         $increment = $this->positive($series['increment_by'] ?? null, 'increment_by');
         $this->assertPatternMetadata($series, $pattern);
-        if ((int) $this->db->transDepth > 0) {
-            throw new DomainException(SqlNumberingCounterRepository::ERROR_TRANSACTION_REQUIRED, ['operation' => 'allocate']);
-        }
-        if (! $this->db->transBegin()) {
+        // AUTO allocation may be one participant in a wider business command
+        // (for example Product create + COMBO composition). In that case the
+        // caller owns the physical transaction and this allocator must not
+        // commit or roll it back independently. Standalone issuance retains
+        // the existing allocator-owned transaction.
+        $ownsTransaction = (int) $this->db->transDepth === 0;
+        if ($ownsTransaction && ! $this->db->transBegin()) {
             throw new DomainException(self::ERROR_TRANSACTION_FAILED, ['operation' => 'begin']);
         }
 
@@ -82,14 +85,19 @@ final class AutoNumberingCounterAllocator
                 ? $this->allocateFirst($seriesId, $start, $increment, $context, $pattern, $business, $operation, $lockKey)
                 : $this->allocateExisting($counter, $seriesId, $increment, $context, $pattern, $business, $operation);
 
-            if (! $this->db->transStatus() || ! $this->db->transCommit()) {
+            if (! $this->db->transStatus()) {
+                throw new DomainException(self::ERROR_TRANSACTION_FAILED, ['operation' => 'status']);
+            }
+            if ($ownsTransaction && ! $this->db->transCommit()) {
                 throw new DomainException(self::ERROR_TRANSACTION_FAILED, ['operation' => 'commit']);
             }
 
             return $result;
         } catch (\Throwable $exception) {
-            $this->db->transRollback();
-            $this->db->resetTransStatus();
+            if ($ownsTransaction) {
+                $this->db->transRollback();
+                $this->db->resetTransStatus();
+            }
             if ($exception instanceof DomainException) {
                 throw $exception;
             }

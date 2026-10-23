@@ -9,15 +9,16 @@ use CodeIgniter\Test\CIUnitTestCase;
 /** @internal Structural HTTP contract and stable error/status mapping. */
 final class UserAvatarApiContractTest extends CIUnitTestCase
 {
-    public function testBinaryRoutesDoNotExposeStaticAvatarFilesOrAlterUserCreation(): void
+    public function testOnlyUploadDeleteRoutesAreRegisteredAndUserCreationIsUnchanged(): void
     {
         $routes = (string) file_get_contents(__DIR__ . '/../../app/Config/Routes.php');
-        foreach (['get' => 'show', 'put' => 'upload', 'delete' => 'delete'] as $verb => $action) {
+        foreach (['put' => 'upload', 'delete' => 'delete'] as $verb => $action) {
             $this->assertStringContainsString(
                 "\$routes->{$verb}('users/(:num)/avatar', 'Api\\\\UserAvatars::{$action}/\$1');",
                 $routes,
             );
         }
+        $this->assertStringNotContainsString("\$routes->get('users/(:num)/avatar'", $routes);
         $this->assertStringContainsString("\$routes->post('users', 'Api\\\\AuthorizationWorkflow::createUser');", $routes);
     }
 

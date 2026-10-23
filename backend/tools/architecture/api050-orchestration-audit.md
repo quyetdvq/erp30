@@ -82,11 +82,11 @@
 
 ## 5. Các rủi ro và khoảng trống cần được xử lý
 
-### KIR-001 / P0 — Product COMBO + AUTO: STOP transaction refactor
+### KIR-001 / P0 — Product COMBO + AUTO: C2 remediation runtime-pending
 
-**Điều kiện source:** `createProduct()` thấy khóa `combo_items` (kể cả mảng rỗng), mở `BaseConnection::transBegin()`; sau đó gọi `ProductMasterService::create()`. Khi AUTO series có hiệu lực, đường tạo có thể đi vào `AutoNumberingCounterAllocator::allocate()` và allocator từ chối active transaction (`transDepth > 0`). Cả việc service con tự mở transaction cho COMBO replacement cũng cần kiểm tra bằng integration, không sửa dựa trên phỏng đoán.
+C1 đã được chạy trên MariaDB/Shield ngày 2026-10-22 và PASS 6/6 tests, 50 assertions. Bằng chứng xác nhận Product COMBO outer transaction hoạt động đúng với manual path và rollback/PBAC, còn AUTO+COMBO bị chặn cụ thể bởi allocator khi `transDepth > 0`.
 
-**Matrix trước ADR/POC:** `combo_items` absent/present/empty; `SIMPLE/COMBO`; manual identifier, `AUTO_IF_EMPTY` manual/blank, `AUTO_REQUIRED`; có/không có series; invalid child, collision, permission deny, insert lỗi sau parent, transaction rollback; counter rollback/reuse, DB session identity, advisory lock, simultaneous creates. **Không tự sửa nested transaction** hoặc đổi callback Numbering trong một cleanup 014E.
+C2 giữ nguyên `createProduct()` làm transaction owner và đổi `AutoNumberingCounterAllocator` sang **own-or-participate**: standalone AUTO vẫn tự begin/commit/rollback; khi caller đã có transaction, allocator không commit/rollback/reset transaction của caller. Runtime closure yêu cầu 9 case gồm success, empty items, first/existing counter rollback+reuse, PBAC rollback, collision và concurrent first-counter AUTO COMBO; đồng thời UNIT-STANDARD/NO-DROP phải sạch. Xem `kir001-product-combo-auto-remediation.md`.
 
 ### CXT-001 / P1 — Một command, một OperationContext
 

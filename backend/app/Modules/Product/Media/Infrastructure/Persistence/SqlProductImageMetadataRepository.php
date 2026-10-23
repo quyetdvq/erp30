@@ -21,8 +21,8 @@ final class SqlProductImageMetadataRepository implements ProductImageMetadataPor
         try {
             $values = [
                 'image_filename' => $filename,
-                'image_mime' => $mime,
-                'image_size_bytes' => $size,
+                'image_mime' => null, // Retain nullable legacy columns for backward schema compatibility.
+                'image_size_bytes' => null,
                 'updated_at' => date('Y-m-d H:i:s'),
             ];
             $actor = auth()->user();

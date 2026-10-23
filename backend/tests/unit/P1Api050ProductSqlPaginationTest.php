@@ -10,7 +10,7 @@ use App\Infrastructure\Api\AuthorizedArrayListSource;
 use App\Infrastructure\Api\CommonListQuery;
 use App\Infrastructure\Api\CommonListQueryAdapter;
 use App\Infrastructure\Api\CommonListQueryAllowlist;
-use App\Infrastructure\Api\SqlProductListSource;
+use App\Modules\Product\Product\Application\SqlProductListSource;
 use App\Infrastructure\Mutation\MutationContext;
 use App\Modules\Product\Product\ProductRepository;
 use App\Repositories\PolicyRepository;
@@ -196,9 +196,14 @@ final class P1Api050ProductSqlPaginationTest extends CIUnitTestCase
         $updated = false;
         $listener = static function ($statement) use (&$updated, $other, $id): void {
             $sql = (string) $statement;
-            if ($updated || stripos($sql, 'products') === false
-                || stripos($sql, 'ORDER BY') === false || stripos($sql, 'code') === false
-                || stripos($sql, 'SELECT') === false || stripos($sql, 'product_name') === false) {
+            // The code-sort projection is intentionally narrow after 015B:
+            // SELECT id, code FROM products ORDER BY code ASC, id ASC.
+            // Match that read, not the old projection's product_name column,
+            // so the concurrent update still runs between keys and full rows.
+            if ($updated || preg_match(
+                '/\ASELECT\s+`?id`?\s*,\s*`?code`?\s+FROM\s+`?[a-zA-Z0-9_]*products`?\s+ORDER\s+BY\s+`?code`?\s+ASC\s*,\s*`?id`?\s+ASC\b/i',
+                ltrim($sql),
+            ) !== 1) {
                 return;
             }
             $updated = true;

@@ -38,6 +38,16 @@ interface ProductListAuthorizationPort
     public function withReadOnlyBatch(OperationContext $operation, callable $read): mixed;
 
     /**
+     * Add advisory UI actions only to already authorized, hydrated page rows.
+     * Decisions must use trusted persisted State and the supplied operation.
+     * No global/request cache or mutation-time permission shortcut is allowed.
+     *
+     * @param list<array<string,mixed>> $rows
+     * @return list<array<string,mixed>>
+     */
+    public function withAllowedActions(OperationContext $operation, array $rows): array;
+
+    /**
      * null = bucket inference unsafe; retain exact per-row fallback.
      * [] = no authorized State buckets; COUNT must be zero.
      * @return list<string>|null

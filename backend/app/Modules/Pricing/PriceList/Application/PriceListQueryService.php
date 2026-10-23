@@ -8,7 +8,6 @@ use App\Exceptions\DomainException;
 use App\Infrastructure\Api\AuthorizedArrayListSource;
 use App\Infrastructure\Api\CommonListQueryAdapter;
 use App\Infrastructure\Api\CommonListQueryAllowlist;
-use App\Infrastructure\Api\SqlPriceListListSource;
 use App\Modules\Pricing\PriceList\Application\Ports\PriceListListAuthorizationPort;
 use App\Modules\Pricing\PriceList\PriceListRepository;
 use App\Modules\Pricing\PriceList\PriceListService;

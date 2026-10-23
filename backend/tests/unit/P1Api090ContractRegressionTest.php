@@ -164,7 +164,7 @@ final class P1Api090ContractRegressionTest extends CIUnitTestCase
         $this->assertStringContainsString("gender: {type: [string, 'null'], enum: [MALE, FEMALE, OTHER, null]}", $openapi);
     }
 
-    public function testUserV12OpenApiPreservesLegacyCreateAndDocumentsPrivateAvatarApi(): void
+    public function testUserV12OpenApiPreservesLegacyCreateAndDocumentsStaticOnlyAvatarApi(): void
     {
         $yaml = file_get_contents(__DIR__ . '/../../../contracts/openapi/openapi.yaml');
         $this->assertIsString($yaml);
@@ -178,12 +178,12 @@ final class P1Api090ContractRegressionTest extends CIUnitTestCase
         $matched = preg_match('/^  \/api\/v1\/users\/\{id\}\/avatar:\s*\n(.*?)(?=^  \/api\/v1\/|\z)/ms', $yaml, $pathMatch);
         $this->assertSame(1, $matched);
         $avatarPath = $pathMatch[1];
-        foreach (['getUserAvatar', 'uploadUserAvatar', 'deleteUserAvatar'] as $operationId) {
+        foreach (['uploadUserAvatar', 'deleteUserAvatar'] as $operationId) {
             $this->assertStringContainsString('operationId: ' . $operationId, $avatarPath);
         }
-        $this->assertSame(3, substr_count($avatarPath, 'operationId:'));
+        $this->assertSame(2, substr_count($avatarPath, 'operationId:'));
+        $this->assertStringNotContainsString('operationId: getUserAvatar', $avatarPath);
         $this->assertStringContainsString("#/components/requestBodies/UserAvatarUpload", $avatarPath);
-        $this->assertStringContainsString("#/components/responses/UserAvatarBinary", $avatarPath);
         $this->assertStringContainsString("#/components/responses/UserAvatarMutationResponse", $avatarPath);
     }
 

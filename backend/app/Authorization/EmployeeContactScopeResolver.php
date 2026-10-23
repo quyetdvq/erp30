@@ -26,6 +26,24 @@ final class EmployeeContactScopeResolver implements ResourceOrganizationScopeRes
     ) {
     }
 
+    /**
+     * Shared by per-contact PBAC and the authorized Contact list batch path.
+     * The caller supplies primary candidates (SQL primaryOnly=true or the
+     * batch equivalent). Invalid/ambiguous rows must never authorize a scope.
+     *
+     * @param list<array<string, mixed>> $primaries
+     * @return array<string, mixed>|null
+     */
+    public static function uniqueCanonicalPrimary(array $primaries): ?array
+    {
+        if (count($primaries) !== 1 || ($primaries[0]['status'] ?? null) !== 'ACTIVE'
+            || ! in_array($primaries[0]['is_primary'] ?? null, [1, '1'], true)) {
+            return null;
+        }
+
+        return $primaries[0];
+    }
+
     public function resolve(string $action, EvaluationOrganizationRequest $request): OrganizationScopeResolution
     {
         $data = $action === 'create' ? $request->input : $request->persistedTarget;
@@ -44,12 +62,12 @@ final class EmployeeContactScopeResolver implements ResourceOrganizationScopeRes
         $primaries = $this->assignments->findEffective($employeeId, $date, true);
         // MariaDB may use a case-insensitive collation for status; reject a
         // noncanonical row even if WHERE status='ACTIVE' happened to match it.
-        if (count($primaries) !== 1 || ($primaries[0]['status'] ?? null) !== 'ACTIVE'
-            || ! in_array($primaries[0]['is_primary'] ?? null, [1, '1'], true)) {
+        $primary = self::uniqueCanonicalPrimary($primaries);
+        if ($primary === null) {
             throw new DomainException(self::ERROR_PRIMARY_SCOPE_UNAVAILABLE, ['employee_id' => $employeeId]);
         }
         $organizationId = PositiveId::normalize(
-            $primaries[0]['organization_id'] ?? null,
+            $primary['organization_id'] ?? null,
             'organization_id', self::ERROR_PRIMARY_SCOPE_UNAVAILABLE,
         );
 

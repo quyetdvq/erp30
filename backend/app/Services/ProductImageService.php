@@ -22,12 +22,6 @@ final class ProductImageService
         $this->application = ProductMediaFactory::create($db, $catalog, $storage);
     }
 
-    /** @return array{path:string,mime:string} */
-    public function read(int $id): array
-    {
-        return $this->application->read($id);
-    }
-
     /** @return array<string,mixed> */
     public function upload(int $id, string $temporaryFile): array
     {

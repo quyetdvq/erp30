@@ -149,6 +149,28 @@ describe('shared list components', () => {
     expect(wrapper.find('button').exists()).toBe(false)
   })
 
+  it('uses server-authorized row controls without inferring Product edit or state permission', async () => {
+    setActivePinia(createPinia())
+    // No base_permissions snapshot: these are trusted per-row Product hints.
+    const actions = mount(TableRowActions, {
+      props: {
+        showView: true,
+        showEdit: false,
+        showToggle: false,
+        stateTargetId: '123',
+        stateResource: 'product',
+      },
+      global: { plugins: [i18n] },
+    })
+    expect(actions.findAll('button')).toHaveLength(1)
+    await actions.setProps({ showEdit: true, showToggle: true })
+    expect(actions.findAll('button')).toHaveLength(3)
+    await actions.get('button[title="Sửa"]').trigger('click')
+    expect(actions.emitted('edit')).toHaveLength(1)
+    await actions.setProps({ showEdit: false, showToggle: false })
+    expect(actions.findAll('button')).toHaveLength(1)
+  })
+
   it('right-aligns shared actions columns unless the caller overrides them', () => {
     setActivePinia(createPinia())
     const wrapper = mount(ListTable, {

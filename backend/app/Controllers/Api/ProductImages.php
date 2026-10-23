@@ -10,24 +10,9 @@ use App\Services\ProductImageStorage;
 use CodeIgniter\HTTP\IncomingRequest;
 use CodeIgniter\HTTP\ResponseInterface;
 
-/** Authorized binary endpoints: a Product's image is never public storage. */
+/** Authorized image upload/delete only. Images are served as static files. */
 final class ProductImages extends ApiController
 {
-    public function show(int $id): ResponseInterface
-    {
-        $image = $this->service()->read($id);
-        $body = @file_get_contents($image['path']);
-        if ($body === false) {
-            throw new DomainException('PRODUCT_IMAGE_NOT_FOUND');
-        }
-        return $this->response
-            ->setHeader('Content-Type', $image['mime'])
-            ->setHeader('Content-Disposition', 'inline')
-            ->setHeader('X-Content-Type-Options', 'nosniff')
-            ->setHeader('Cache-Control', 'private, no-store')
-            ->setBody($body);
-    }
-
     public function upload(int $id): ResponseInterface
     {
         // Deny unauthorized mutations before reporting upload validation.

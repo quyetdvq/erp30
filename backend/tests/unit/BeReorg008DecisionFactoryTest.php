@@ -79,11 +79,14 @@ final class BeReorg008DecisionFactoryTest extends CIUnitTestCase
         $policies = $this->property($engine, 'policies');
         $this->assertSame($this->db, $this->property($this->property($policies, 'delegate'), 'db'));
         $this->assertSame($this->db, $this->property($this->property($this->property($engine, 'profiles'), 'identityAdapter'), 'db'));
-        $this->assertSame($this->db, $this->property($this->property($this->property($engine, 'employees'), 'delegate'), 'db'));
+        $scopeReader = $this->property($engine, 'employeeScopeRead');
+        $this->assertInstanceOf(\App\Modules\Authorization\Decision\Application\Ports\EmployeeScopeReadPort::class, $scopeReader);
+        $this->assertSame($this->db, $this->property($this->property($scopeReader, 'employees'), 'db'));
+        $this->assertSame($this->db, $this->property($this->property($scopeReader, 'assignments'), 'db'));
         $this->assertSame($this->db, $this->property($this->property($this->property($this->property($this->property($engine, 'workflowStates'), 'engine'), 'reader'), 'resources'), 'db'));
         $names = array_map(static fn (ReflectionParameter $p): string => $p->getName(),
             (new ReflectionClass(PbacDecisionEngine::class))->getConstructor()->getParameters());
-        $this->assertSame(['profiles', 'contexts', 'policies', 'employees', 'assignments',
+        $this->assertSame(['employeeScopeRead', 'profiles', 'contexts', 'policies',
             'organizations', 'identities', 'db', 'catalog', 'workflowStates'], $names);
 
         $actor = $this->fixture->seedActor(false);
@@ -111,6 +114,22 @@ final class BeReorg008DecisionFactoryTest extends CIUnitTestCase
         $this->assertSame('AUTH_NO_BASE_PERMISSION', $result[0]['reason_code']);
         $this->assertSame($engine, $this->property($service, 'engine'));
         $this->assertNull($this->property($engine, 'readOnlyContext'));
+
+        // Negative runtime recursion test: a privileged EmployeeStructure read
+        // adapter may not call back into this PBAC engine. Do not convert the
+        // recursion into NO_MATCH or an implicit allow.
+        $eligible = $this->fixture->seedActor();
+        $scopePort = $this->createMock(\App\Modules\Authorization\Decision\Application\Ports\EmployeeScopeReadPort::class);
+        $recursive = AuthorizationDecisionFactory::create(employeeScopeRead: $scopePort, db: $this->db);
+        $actorOperation = $this->fixture->operation($eligible['user_id']);
+        $actorRequest = $this->fixture->request($eligible['company_id']);
+        $scopePort->method('findByUserId')->willReturnCallback(static function () use ($recursive, $actorOperation, $actorRequest): ?array {
+            $recursive->authorize($actorOperation, 'price_list', 'view', $actorRequest);
+            return null;
+        });
+        $this->expectException(\LogicException::class);
+        $this->expectExceptionMessage('Recursive PBAC employee scope read is forbidden.');
+        $recursive->authorize($actorOperation, 'price_list', 'view', $actorRequest);
     }
 
     private function property(object $object, string $property): mixed

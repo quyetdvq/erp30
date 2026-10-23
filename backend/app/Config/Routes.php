@@ -48,7 +48,8 @@ $routes->group('api/v1', ['filter' => 'cors'], static function (RouteCollection 
     $routes->get('security/users', 'Api\\AuthorizationWorkflow::securityUsers');
     $routes->post('users', 'Api\\AuthorizationWorkflow::createUser');
     $routes->patch('users/(:num)', 'Api\\AuthorizationWorkflow::updateUser/$1');
-    $routes->get('users/(:num)/avatar', 'Api\\UserAvatars::show/$1');
+    // PHP exposes multipart files directly on POST; keep PUT for existing clients.
+    $routes->post('users/(:num)/avatar', 'Api\\UserAvatars::upload/$1');
     $routes->put('users/(:num)/avatar', 'Api\\UserAvatars::upload/$1');
     $routes->delete('users/(:num)/avatar', 'Api\\UserAvatars::delete/$1');
     $routes->post('users/(:num)/actions/set-state', 'Api\\AuthorizationWorkflow::setUserState/$1');
@@ -115,7 +116,6 @@ $routes->group('api/v1', ['filter' => 'cors'], static function (RouteCollection 
     $routes->post('products', 'Api\\ProductCatalog::createProduct');
     $routes->get('products/(:num)', 'Api\\ProductCatalog::showProduct/$1');
     $routes->patch('products/(:num)', 'Api\\ProductCatalog::updateProduct/$1');
-    $routes->get('products/(:num)/image', 'Api\\ProductImages::show/$1');
     $routes->post('products/(:num)/image', 'Api\\ProductImages::upload/$1');
     $routes->delete('products/(:num)/image', 'Api\\ProductImages::delete/$1');
     $routes->post('products/(:num)/actions/set-state', 'Api\\ProductCatalog::setProductState/$1');

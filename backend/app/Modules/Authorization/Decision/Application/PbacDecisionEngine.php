@@ -12,15 +12,14 @@ use App\Authorization\EvaluationOrganizationResolver;
 use App\Authorization\ReadOnlyAuthorizationContext;
 use App\Authorization\ResourceDomain;
 use App\Authorization\ShieldIdentityAdapter;
-use App\Modules\Authorization\Decision\Application\Ports\PbacDecisionPort;
 use App\Exceptions\DomainException;
 use App\Infrastructure\Id\PositiveId;
 use App\Infrastructure\Mutation\OperationContext;
-use App\Repositories\EmployeeRepository;
+use App\Modules\Authorization\Decision\Application\Ports\EmployeeScopeReadPort;
+use App\Modules\Authorization\Decision\Application\Ports\PbacDecisionPort;
 use App\Repositories\OrganizationRepository;
 use App\Repositories\PolicyRepository;
 use App\Repositories\ResourceCatalogRepository;
-use App\Services\EmployeeAssignmentService;
 use App\Services\OrganizationService;
 use App\Services\ResourceWorkflowStateResolver;
 use CodeIgniter\Database\ConnectionInterface;
@@ -51,8 +50,7 @@ final class PbacDecisionEngine implements PbacDecisionPort
     private EvaluationOrganizationResolver $contexts;
     private PolicyRepository $policies;
     private ResourceCatalogRepository $catalog;
-    private EmployeeRepository $employees;
-    private EmployeeAssignmentService $assignments;
+    private bool $employeeScopeReadActive = false;
     private OrganizationService $organizations;
     private ShieldIdentityAdapter $identities;
     private ResourceWorkflowStateResolver $workflowStates;
@@ -60,11 +58,10 @@ final class PbacDecisionEngine implements PbacDecisionPort
 
     /** @param ConnectionInterface<mixed, mixed>|null $db */
     public function __construct(
+        private readonly EmployeeScopeReadPort $employeeScopeRead,
         ?EffectiveProfileResolver $profiles = null,
         ?EvaluationOrganizationResolver $contexts = null,
         ?PolicyRepository $policies = null,
-        ?EmployeeRepository $employees = null,
-        ?EmployeeAssignmentService $assignments = null,
         ?OrganizationService $organizations = null,
         ?ShieldIdentityAdapter $identities = null,
         ?ConnectionInterface $db = null,
@@ -76,13 +73,11 @@ final class PbacDecisionEngine implements PbacDecisionPort
         $this->policies = $policies ?? new PolicyRepository($connection);
         $this->catalog = $catalog ?? new ResourceCatalogRepository($connection);
         $this->workflowStates = $workflowStates ?? new ResourceWorkflowStateResolver($connection);
-        $this->employees = $employees ?? new EmployeeRepository($connection);
-        $this->assignments = $assignments ?? new EmployeeAssignmentService(null, $connection);
         $this->organizations = $organizations ?? new OrganizationService(null, $connection);
         $this->identities = $identities ?? new ShieldIdentityAdapter($connection);
         $this->contexts = $contexts ?? new EvaluationOrganizationResolver(
             new OrganizationRepository($connection),
-            $this->employees,
+            null,
             null,
             $connection,
         );
@@ -114,6 +109,24 @@ final class PbacDecisionEngine implements PbacDecisionPort
 
     /**
      * @template T
+     * @param callable(): T $reader
+     * @return T
+     */
+    private function readEmployeeScope(callable $reader): mixed
+    {
+        if ($this->employeeScopeReadActive) {
+            throw new \LogicException('Recursive PBAC employee scope read is forbidden.');
+        }
+        $this->employeeScopeReadActive = true;
+        try {
+            return $reader();
+        } finally {
+            $this->employeeScopeReadActive = false;
+        }
+    }
+
+    /**
+     * @template T
      * @param callable(): T $loader
      * @return T
      */
@@ -129,6 +142,11 @@ final class PbacDecisionEngine implements PbacDecisionPort
         EvaluationOrganizationRequest $contextRequest,
         mixed $stateId = null,
     ): AuthorizationDecision {
+        // The privileged PBAC employee read must never call back into this
+        // decision engine (even if an adapter is accidentally replaced).
+        if ($this->employeeScopeReadActive) {
+            throw new \LogicException('Recursive PBAC employee scope read is forbidden.');
+        }
         if ($operation->actorUserId === null) {
             throw new DomainException(self::REASON_CONTEXT_REQUIRED, ['field' => 'actor_user_id']);
         }
@@ -236,7 +254,8 @@ final class PbacDecisionEngine implements PbacDecisionPort
         // SYSTEM / MASTER are shared across the group: any effective assignment
         // is sufficient, even when that assignment belongs to a lower level.
         $employee = $this->readThrough($batch, 'employee', (string) $userId,
-            fn (): ?array => $this->employees->findByUserId($userId));
+            fn (): ?array => $this->readEmployeeScope(
+                fn (): ?array => $this->employeeScopeRead->findByUserId($userId)));
         if ($employee === null || ($employee['status'] ?? null) !== 'ACTIVE') {
             return $this->decision(
                 self::DECISION_DENY,
@@ -253,7 +272,8 @@ final class PbacDecisionEngine implements PbacDecisionPort
 
         $employeeId = PositiveId::normalize($employee['id'] ?? null, 'employee_id', self::REASON_CONTEXT_REQUIRED);
         $effectiveAssignments = $this->readThrough($batch, 'assignments', (string) $employeeId,
-            fn (): array => $this->assignments->findEffective($employeeId, $operation->evaluationTime));
+            fn (): array => $this->readEmployeeScope(
+                fn (): array => $this->employeeScopeRead->findEffective($employeeId, $operation->evaluationTime)));
         if ($effectiveAssignments === []) {
             return $this->decision(
                 self::DECISION_DENY,

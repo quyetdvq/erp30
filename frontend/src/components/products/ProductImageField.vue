@@ -1,12 +1,15 @@
 <script setup lang="ts">
-import { onBeforeUnmount, ref, watch } from 'vue'
+import { computed, onBeforeUnmount, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
-import { deleteProductImage, fetchProductImage, uploadProductImage } from '@/services/productImage'
+import { deleteProductImage, uploadProductImage } from '@/services/productImage'
+import { uploadImageUrl } from '@/services/uploadImageUrl'
+import type { Product } from '@/api/generated/types.gen'
 
 const props = withDefaults(
   defineProps<{
     productId?: string
     imageAvailable?: boolean
+    imagePath?: string | null
     editable?: boolean
     disabled?: boolean
   }>(),
@@ -17,29 +20,24 @@ const emit = defineEmits<{ dirty: [value: boolean] }>()
 const selectedFile = ref<File | null>(null)
 const imageUrl = ref<string | null>(null)
 const removing = ref(false)
-const loading = ref(false)
+const staticFailed = ref(false)
+// A newly created Product can acquire its ID after commit(). That transition
+// is not a switch to another record and must not discard a failed upload.
+let adoptedProductId: string | null = null
+const storedUrl = computed(() => uploadImageUrl(props.imagePath, 'product'))
+const hasStoredImage = computed(() => Boolean(storedUrl.value) || props.imageAvailable)
+const staticUrl = computed(() => staticFailed.value ? null : storedUrl.value)
+const displayedUrl = computed(() => imageUrl.value || (removing.value ? null : staticUrl.value))
 const error = ref<string | null>(null)
-let generation = 0
 
+function handleImageError(): void {
+  if (!imageUrl.value) staticFailed.value = true
+  else releaseImage()
+  error.value = t('product.imageLoadError')
+}
 function releaseImage(): void {
   if (imageUrl.value) URL.revokeObjectURL(imageUrl.value)
   imageUrl.value = null
-}
-
-async function loadImage(): Promise<void> {
-  const current = ++generation
-  releaseImage()
-  if (!props.productId || !props.imageAvailable) return
-  loading.value = true
-  try {
-    const image = await fetchProductImage(props.productId)
-    if (current !== generation) return
-    imageUrl.value = URL.createObjectURL(image)
-  } catch {
-    if (current === generation) error.value = t('product.imageLoadError')
-  } finally {
-    if (current === generation) loading.value = false
-  }
 }
 
 function chooseImage(event: Event): void {
@@ -55,8 +53,6 @@ function chooseImage(event: Event): void {
     error.value = t('product.imageInvalid')
     return
   }
-  ++generation
-  loading.value = false
   releaseImage()
   imageUrl.value = URL.createObjectURL(file)
   selectedFile.value = file
@@ -66,57 +62,71 @@ function chooseImage(event: Event): void {
 }
 
 function removeImage(): void {
-  ++generation
-  loading.value = false
   releaseImage()
   selectedFile.value = null
   // Removing an unsaved selection is not a server-side DELETE. Only an
   // already persisted image should schedule a deletion on Product save.
-  removing.value = Boolean(props.productId && props.imageAvailable)
+  removing.value = Boolean(props.productId && hasStoredImage.value)
   error.value = null
   emit('dirty', removing.value)
 }
 
 /** Called only after the enclosing Product JSON CREATE/PATCH succeeded. */
-async function commit(productId: string): Promise<boolean> {
-  if (!selectedFile.value && !removing.value) return false
+async function commit(productId: string): Promise<Product | null> {
+  if (!selectedFile.value && !removing.value) return null
   error.value = null
+  if (!props.productId) adoptedProductId = productId
   try {
-    if (selectedFile.value) await uploadProductImage(productId, selectedFile.value)
-    else if (removing.value) await deleteProductImage(productId)
+    const updated = selectedFile.value
+      ? await uploadProductImage(productId, selectedFile.value)
+      : await deleteProductImage(productId)
     selectedFile.value = null
     removing.value = false
     emit('dirty', false)
-    // Parent refreshes Product metadata; keep preview while save settles.
-    return true
+    // Parent installs the Product returned by this mutation (including image_url).
+    return updated
   } catch (caught) {
     error.value = t('product.imageSaveError')
     throw caught
   }
 }
 
+// Switching records discards unsaved local files. Metadata refreshes for
+// the SAME record must not clear a file awaiting upload after Product JSON save.
 watch(
-  () => [props.productId, props.imageAvailable] as const,
-  () => {
+  () => props.productId,
+  (next, previous) => {
+    if (previous === undefined && next && next === adoptedProductId) {
+      adoptedProductId = null
+      return
+    }
+    adoptedProductId = null
     selectedFile.value = null
     removing.value = false
+    staticFailed.value = false
     error.value = null
     emit('dirty', false)
-    void loadImage()
+    releaseImage()
   },
   { immediate: true },
 )
-onBeforeUnmount(() => {
-  ++generation
-  releaseImage()
-})
+watch(
+  () => [props.imageAvailable, props.imagePath] as const,
+  () => {
+    staticFailed.value = false
+    // After a successful upload, the parent supplies a new immutable URL.
+    // Keep the local preview (or failed upload) until it actually finishes.
+    if (!selectedFile.value && !removing.value) releaseImage()
+  },
+)
+onBeforeUnmount(releaseImage)
 defineExpose({ commit })
 </script>
 
 <template>
   <div class="product-image-field">
     <div class="product-image-preview" :aria-label="t('product.image')">
-      <img v-if="imageUrl && !removing" :src="imageUrl" :alt="t('product.image')" />
+      <img v-if="displayedUrl && !removing" :src="displayedUrl" @error="handleImageError" :alt="t('product.image')" />
       <span v-else class="product-image-placeholder">{{ t('product.imageEmpty') }}</span>
     </div>
     <div class="product-image-controls">
@@ -134,7 +144,7 @@ defineExpose({ commit })
           />
         </label>
         <button
-          v-if="imageUrl || selectedFile || (imageAvailable && !removing)"
+          v-if="displayedUrl || selectedFile || (hasStoredImage && !removing)"
           class="image-remove-button"
           type="button"
           :disabled="disabled"
@@ -146,7 +156,6 @@ defineExpose({ commit })
       <small v-if="selectedFile || removing" class="product-image-hint">{{
         t('product.imageSaveHint')
       }}</small>
-      <p v-if="loading" class="product-image-hint" role="status">{{ t('common.loading') }}</p>
       <p v-if="error" class="product-image-error" role="alert">{{ error }}</p>
     </div>
   </div>

@@ -167,6 +167,7 @@ function toCombo(row: ComboItem): ComboForm {
 const role = computed(() => currentProduct.value?.role)
 const isCombo = computed(() => role.value === 'COMBO')
 const isParent = computed(() => role.value === 'PARENT')
+const canEditCurrent = computed(() => currentProduct.value?.allowed_actions?.edit === true)
 const baseUomName = computed(
   () => productUomName(props.uoms, currentProduct.value?.base_uom_id) ?? t('list.noValue'),
 )
@@ -303,7 +304,7 @@ function backToParent(): void {
   activeTab.value = 'children'
 }
 function editCurrent(): void {
-  if (currentProduct.value) emit('edit', currentProduct.value)
+  if (currentProduct.value?.allowed_actions?.edit === true) emit('edit', currentProduct.value)
 }
 function resetChildForm(): void {
   childForm.value = {
@@ -552,6 +553,7 @@ watch(
           <ProductImageField
             :product-id="currentProduct ? String(currentProduct.id) : undefined"
             :image-available="productHasImage(currentProduct)"
+            :image-path="currentProduct?.image_url"
           />
           <dl class="detail-grid">
             <dt>{{ t('product.productCode') }}</dt>
@@ -588,7 +590,7 @@ watch(
           <header class="section-header">
             <h3>{{ t('product.comboComponents') }}</h3>
             <button
-              v-if="hasBasePermission('product', 'edit')"
+              v-if="canEditCurrent"
               type="button"
               class="secondary-button"
               @click="addComboItem"
@@ -633,7 +635,7 @@ watch(
                   <td>{{ componentUom(row.component_product_id) }}</td>
                   <td>
                     <button
-                      v-if="hasBasePermission('product', 'edit')"
+                      v-if="canEditCurrent"
                       type="button"
                       class="icon-button danger"
                       :aria-label="t('common.delete')"
@@ -650,7 +652,7 @@ watch(
             </table>
           </div>
           <button
-            v-if="hasBasePermission('product', 'edit')"
+            v-if="canEditCurrent"
             type="button"
             class="primary-button"
             :disabled="busy"
@@ -705,8 +707,8 @@ watch(
                   </td>
                   <td class="child-actions">
                     <TableRowActions
-                      :show-view="hasBasePermission('product', 'view')"
-                      :show-edit="hasBasePermission('product', 'edit')"
+                      :show-view="true"
+                      :show-edit="row.allowed_actions?.edit === true"
                       :busy="busy"
                       :view-label="`${t('common.view')} ${row.full_name}`"
                       :edit-label="`${t('common.edit')} ${row.full_name}`"
@@ -730,7 +732,7 @@ watch(
               <p class="field-note">1 {{ t('product.alternateUom') }} = factor {{ baseUomName }}</p>
             </div>
             <button
-              v-if="hasBasePermission('product', 'edit')"
+              v-if="canEditCurrent"
               type="button"
               class="secondary-button"
               @click="openConversion()"
@@ -769,14 +771,14 @@ watch(
                   <td>{{ row.status === 'ACTIVE' ? t('status.active') : t('status.inactive') }}</td>
                   <td>
                     <button
-                      v-if="hasBasePermission('product', 'edit')"
+                      v-if="canEditCurrent"
                       type="button"
                       class="icon-button"
                       @click="openConversion(index)"
                     >
                       {{ t('common.edit') }}</button
                     ><button
-                      v-if="hasBasePermission('product', 'edit')"
+                      v-if="canEditCurrent"
                       type="button"
                       class="icon-button danger"
                       :aria-label="t('common.delete')"
@@ -793,7 +795,7 @@ watch(
             </table>
           </div>
           <button
-            v-if="hasBasePermission('product', 'edit')"
+            v-if="canEditCurrent"
             type="button"
             class="primary-button"
             :disabled="busy"
@@ -821,7 +823,7 @@ watch(
       </div>
       <footer class="detail-footer">
         <button
-          v-if="hasBasePermission('product', 'edit')"
+          v-if="canEditCurrent"
           type="button"
           class="secondary-button"
           @click="editCurrent"

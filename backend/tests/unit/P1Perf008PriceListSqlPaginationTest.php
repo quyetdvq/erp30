@@ -9,7 +9,7 @@ use App\Database\Seeds\ResourceActionSeeder;
 use App\Infrastructure\Api\AuthorizedArrayListSource;
 use App\Infrastructure\Api\CommonListQueryAdapter;
 use App\Infrastructure\Api\CommonListQueryAllowlist;
-use App\Infrastructure\Api\SqlPriceListListSource;
+use App\Modules\Pricing\PriceList\Application\SqlPriceListListSource;
 use App\Infrastructure\Mutation\MutationContext;
 use App\Infrastructure\Mutation\OperationContext;
 use App\Infrastructure\Time\EvaluationTime;

@@ -49,7 +49,7 @@ export function buildEditUserPayload(original: UserEditOriginal, draft: UserEdit
   return patch
 }
 
-/** Account creation commits independently from optional Avatar PUT. Keep its ID after PUT fails. */
+/** Account creation commits independently from optional Avatar upload. Keep the ID for retry. */
 export async function submitCreatedUserAvatar(
   state: { createdUserId: string | null },
   create: () => Promise<{ id: string | number }>,

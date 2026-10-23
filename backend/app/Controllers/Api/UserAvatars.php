@@ -10,24 +10,9 @@ use App\Services\UserAvatarStorage;
 use CodeIgniter\HTTP\IncomingRequest;
 use CodeIgniter\HTTP\ResponseInterface;
 
-/** Authenticated binary User avatar resource; files never pass through public/. */
+/** Authorized image upload/delete only. Images are served as static files. */
 final class UserAvatars extends ApiController
 {
-    public function show(int $id): ResponseInterface
-    {
-        $image = $this->service()->read($id);
-        $body = @file_get_contents($image['path']);
-        if (! is_string($body)) {
-            throw new DomainException('USER_AVATAR_NOT_FOUND');
-        }
-        return $this->response
-            ->setHeader('Content-Type', $image['mime'])
-            ->setHeader('Content-Disposition', 'inline')
-            ->setHeader('Cache-Control', 'private, no-store')
-            ->setHeader('X-Content-Type-Options', 'nosniff')
-            ->setBody($body);
-    }
-
     public function upload(int $id): ResponseInterface
     {
         $service = $this->service();

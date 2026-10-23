@@ -16,7 +16,7 @@ use CodeIgniter\Database\ConnectionInterface;
 use CodeIgniter\Shield\Entities\User;
 use Throwable;
 
-/** Owns avatar authorization and conditional metadata transitions; never serves public file URLs. */
+/** Owns avatar authorization and conditional metadata transitions. */
 final class UserAvatarService
 {
     /** @var ConnectionInterface<mixed,mixed> */
@@ -32,34 +32,6 @@ final class UserAvatarService
     ) {
         $this->db = $db ?? db_connect();
         $this->storage = $storage ?? new UserAvatarStorage();
-    }
-
-    /** @return array{path:string,mime:string} */
-    public function read(int $userId): array
-    {
-        $user = $this->authorizedRow($userId, 'view');
-        $filename = $this->avatarName($user);
-        if ($filename === null) {
-            throw new DomainException('USER_AVATAR_NOT_FOUND');
-        }
-        try {
-            $path = $this->storage->path($filename);
-            if (is_link($path) || ! is_file($path)) {
-                throw new DomainException('USER_AVATAR_NOT_FOUND');
-            }
-            $mime = match (pathinfo($filename, PATHINFO_EXTENSION)) {
-                'jpg' => 'image/jpeg',
-                'png' => 'image/png',
-                'webp' => 'image/webp',
-                default => throw new DomainException('USER_AVATAR_NOT_FOUND'),
-            };
-            if ((new \finfo(FILEINFO_MIME_TYPE))->file($path) !== $mime) {
-                throw new DomainException('USER_AVATAR_NOT_FOUND');
-            }
-            return ['path' => $path, 'mime' => $mime];
-        } catch (DomainException $exception) {
-            throw new DomainException('USER_AVATAR_NOT_FOUND', [], $exception);
-        }
     }
 
     /** Explicit preflight for the HTTP adapter, before inspecting multipart details. */
@@ -91,7 +63,8 @@ final class UserAvatarService
         if ($old !== null) {
             $this->discardOrphanedFile($old, $userId);
         }
-        return ['user_id' => (string) $userId, 'has_avatar' => true];
+        return ['user_id' => (string) $userId, 'has_avatar' => true,
+            'avatar_url' => \App\Infrastructure\Media\YearlyImageStorage::publicUrl($new['filename'], 'avatar')];
     }
 
     /** @return array{user_id:string,has_avatar:bool} */
@@ -103,7 +76,7 @@ final class UserAvatarService
             $this->persistAvatarFilename($userId, $old, null, $row);
             $this->discardOrphanedFile($old, $userId);
         }
-        return ['user_id' => (string) $userId, 'has_avatar' => false];
+        return ['user_id' => (string) $userId, 'has_avatar' => false, 'avatar_url' => null];
     }
 
     /** @return array<string,mixed> */

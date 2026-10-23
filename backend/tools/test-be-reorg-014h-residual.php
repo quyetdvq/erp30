@@ -90,7 +90,7 @@ function be014hValidate(array $record, array $source, array $bodies): void
             be014hAssert(is_string($marker) && strlen($marker) > 3 && str_contains($bodies[$method], $marker), 'Method evidence changed: ' . $method . '/' . (string) $marker);
         }
         if ($method === 'createProduct') {
-            be014hAssert($role === 'KIR001_CREATE' && $op['review_priority'] === 'P0_STOP', 'KIR-001 downgraded without ADR');
+            be014hAssert($role === 'KIR001_CREATE' && $op['review_priority'] === 'P0_VERIFY', 'KIR-001 remediation verification priority drift');
         }
     }
     be014hAssert(count($seen) === 22 && count($remaining) === 22 && count(array_diff($remaining, array_keys($seen))) === 0, 'Residual 22-operation mapping drift');
@@ -117,10 +117,10 @@ $checks = [
             be014hAssert(str_contains($methods[$method], 'new ' . $service . '('), 'Delegated list changed: ' . $method);
         }
     },
-    'eight mutation readbacks preserve authorization via show' => static function () use ($methods): void {
-        foreach (['updateGroup' => 'getGroup', 'setGroupState' => 'getGroup', 'updateUom' => 'getUom',
-            'setUomState' => 'getUom', 'updateProduct' => 'getProduct', 'setProductState' => 'getProduct',
-            'updatePriceList' => 'getPriceList', 'setPriceListState' => 'getPriceList'] as $write => $read) {
+    'eight mutation readbacks preserve authorization via fixed-context show helper' => static function () use ($methods): void {
+        foreach (['updateGroup' => 'getGroupWithOperation', 'setGroupState' => 'getGroupWithOperation', 'updateUom' => 'getUomWithOperation',
+            'setUomState' => 'getUomWithOperation', 'updateProduct' => 'getProductWithOperation', 'setProductState' => 'getProductWithOperation',
+            'updatePriceList' => 'getPriceListWithOperation', 'setPriceListState' => 'getPriceListWithOperation'] as $write => $read) {
             be014hAssert(str_contains($methods[$write], '->' . $read . '('), 'Readback removed: ' . $write);
         }
     },
@@ -130,19 +130,23 @@ $checks = [
         $read = strpos($body, '->conversions()->listByProduct(');
         be014hAssert($permission !== false && $read !== false && $permission < $read, 'Conversion read bypasses facade authorization');
     },
-    'KIR-001 and its allocator nested-transaction guard stay frozen' => static function () use ($methods, $app): void {
+    'KIR-001 keeps the Product command boundary while Numbering uses own-or-participate semantics' => static function () use ($methods, $app, $record): void {
         $body = $methods['createProduct'];
         foreach (['->transBegin()', '->products()->create(', '->combos()->replaceItems(', '->transCommit()', '->transRollback()'] as $marker) {
             be014hAssert(str_contains($body, $marker), 'KIR-001 code changed: ' . $marker);
         }
         $allocator = (string) file_get_contents($app . 'Modules/Numbering/Allocation/Application/AutoNumberingCounterAllocator.php');
-        be014hAssert(str_contains($allocator, 'transDepth > 0'), 'Numbering transaction guard changed');
-    },
-    'CXT-001 recapture is documented but not marked fixed' => static function () use ($methods, $record): void {
-        be014hAssert(str_contains($methods['operation'], '$this->mutationContext->begin()'), 'OperationContext seam changed');
-        be014hAssert(substr_count($methods['createProduct'], '$this->operation()') >= 2, 'CreateProduct context calls changed');
+        be014hAssert(str_contains($allocator, '$ownsTransaction = (int) $this->db->transDepth === 0'), 'Numbering own-or-participate decision missing');
+        be014hAssert(str_contains($allocator, '$ownsTransaction && ! $this->db->transCommit()'), 'Numbering caller-owned commit guard missing');
+        be014hAssert(! str_contains($allocator, 'if ((int) $this->db->transDepth > 0)'), 'Legacy Numbering nested-transaction rejection returned');
         $risks = array_column($record['open_risks'], null, 'id');
-        be014hAssert($risks['CXT-001']['status'] === 'SOURCE_OBSERVED_RUNTIME_NOT_VERIFIED', 'CXT-001 must remain open');
+        be014hAssert($risks['KIR-001']['status'] === 'REMEDIATION_SOURCE_READY_RUNTIME_PENDING', 'KIR-001 remediation status drift');
+    },
+    'CXT-001 source fix is recorded while runtime verification remains open' => static function () use ($methods, $record): void {
+        be014hAssert(str_contains($methods['operation'], '$this->mutationContext->begin()'), 'OperationContext seam changed');
+        be014hAssert(substr_count($methods['createProduct'], '$this->operation()') === 1, 'CreateProduct must capture one context');
+        $risks = array_column($record['open_risks'], null, 'id');
+        be014hAssert($risks['CXT-001']['status'] === 'SOURCE_FIXED_RUNTIME_NOT_VERIFIED', 'CXT-001 source fix/runtime status drift');
     },
     'group and UOM retain frozen materialized fallback with PBAC before paging' => static function () use ($app): void {
         foreach (['ProductGroup/ProductGroupListQueryService' => 'ProductGroup', 'Uom/ProductUomListQueryService' => 'Uom'] as $pair => $folder) {

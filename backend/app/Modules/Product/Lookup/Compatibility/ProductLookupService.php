@@ -331,6 +331,7 @@ final class ProductLookupService
     {
         if (array_key_exists('image_filename', $row)) {
             $row['image_available'] = is_string($row['image_filename']) && $row['image_filename'] !== '';
+            $row['image_url'] = \App\Infrastructure\Media\YearlyImageStorage::publicUrl($row['image_filename'], 'product');
         }
         unset($row['image_filename'], $row['image_mime'], $row['image_size_bytes']);
         if (array_key_exists('code', $row)) {

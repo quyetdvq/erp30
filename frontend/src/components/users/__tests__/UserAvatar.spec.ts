@@ -1,45 +1,44 @@
-import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { beforeEach, describe, expect, it } from 'vitest'
 import { flushPromises, mount } from '@vue/test-utils'
 import { createPinia, setActivePinia } from 'pinia'
 import UserAvatar from '@/components/users/UserAvatar.vue'
 import { useAuthStore } from '@/stores/auth'
-import { readUserAvatar } from '@/services/userAvatar'
 
-vi.mock('@/services/userAvatar', () => ({
-  readUserAvatar: vi.fn(),
-  uploadUserAvatar: vi.fn(),
-  deleteUserAvatar: vi.fn(),
-}))
-
-beforeEach(() => {
-  setActivePinia(createPinia())
-  vi.resetAllMocks()
-  Object.defineProperty(URL, 'createObjectURL', { configurable: true, value: vi.fn(() => 'blob:avatar-1') })
-  Object.defineProperty(URL, 'revokeObjectURL', { configurable: true, value: vi.fn() })
-})
-
-describe('private User Avatar', () => {
-  it('shows initials when no private avatar exists without fetching', async () => {
-    const wrapper = mount(UserAvatar, { props: { userId: '7', hasAvatar: false, fallback: 'Nguyễn A' } })
-    expect(wrapper.get('[role="img"]').text()).toBe('N')
-    expect(readUserAvatar).not.toHaveBeenCalled()
+beforeEach(() => { setActivePinia(createPinia()) })
+function login() {
+  const auth = useAuthStore()
+  auth.user = {
+    id: 7, username: 'nguyena', name: 'Nguyễn A', has_avatar: true,
+    email: 'a@example.test', active: true, status: 'ACTIVE', groups: [], base_permissions: [],
+  }
+  return auth
+}
+const avatarPath = '/writable/uploads/2026/20261023avatar5689523.webp'
+describe('static-only User Avatar', () => {
+  it('renders URL directly, without a binary API request', () => {
+    login()
+    const wrapper = mount(UserAvatar, { props: { userId: '7', hasAvatar: true, fallback: 'Nguyễn A', avatarUrl: avatarPath } })
+    expect(wrapper.get('img').attributes('src')).toContain(avatarPath)
     wrapper.unmount()
   })
 
-  it('revokes private object URL when the user logs out', async () => {
-    const auth = useAuthStore()
-    auth.user = {
-      id: 7, username: 'nguyena', name: 'Nguyễn A', has_avatar: true,
-      email: 'a@example.test', active: true, status: 'ACTIVE', groups: [], base_permissions: [],
-    }
-    vi.mocked(readUserAvatar).mockResolvedValue(new Blob(['avatar'], { type: 'image/png' }))
+  it('shows initials when URL is absent or legacy', () => {
+    login()
     const wrapper = mount(UserAvatar, { props: { userId: '7', hasAvatar: true, fallback: 'Nguyễn A' } })
-    await flushPromises()
-    expect(wrapper.get('img').attributes('src')).toBe('blob:avatar-1')
+    expect(wrapper.get('[role="img"]').text()).toBe('N')
+    wrapper.unmount()
+  })
+
+  it('shows initials on static image failure and after logout; new URL resets error', async () => {
+    const auth = login()
+    const wrapper = mount(UserAvatar, { props: { userId: '7', hasAvatar: true, fallback: 'Nguyễn A', avatarUrl: avatarPath } })
+    await wrapper.get('img').trigger('error')
+    expect(wrapper.get('[role="img"]').text()).toBe('N')
+    await wrapper.setProps({ avatarUrl: '/writable/uploads/2027/20270105avatar5689524.jpg' })
+    expect(wrapper.get('img').attributes('src')).toContain('/writable/uploads/2027/')
     auth.expireSession()
     await flushPromises()
     expect(wrapper.find('img').exists()).toBe(false)
-    expect(URL.revokeObjectURL).toHaveBeenCalledWith('blob:avatar-1')
     wrapper.unmount()
   })
 })

@@ -129,9 +129,7 @@ final class Api050ProductCatalogService
     /** @return array<string,mixed> */
     public function getGroup(int $id): array
     {
-        $row = $this->requireRow($this->groups()->findById($id), ProductGroupService::ERROR_NOT_FOUND);
-        $this->authorize('product_group', 'view', $row);
-        return $row;
+        return $this->getGroupWithOperation($id, $this->operation());
     }
 
     /** @param array<string,mixed> $payload
@@ -139,15 +137,17 @@ final class Api050ProductCatalogService
      */
     public function updateGroup(int $id, array $payload): array
     {
-        $this->groups()->update($id, $payload, $this->operation());
-        return $this->getGroup($id);
+        $operation = $this->operation();
+        $this->groups()->update($id, $payload, $operation);
+        return $this->getGroupWithOperation($id, $operation);
     }
 
     /** @return array<string,mixed> */
     public function setGroupState(int $id, string $status): array
     {
-        $this->groups()->setState($id, $status, $this->operation());
-        return $this->getGroup($id);
+        $operation = $this->operation();
+        $this->groups()->setState($id, $status, $operation);
+        return $this->getGroupWithOperation($id, $operation);
     }
 
     /** @param array<string,mixed> $query
@@ -181,9 +181,7 @@ final class Api050ProductCatalogService
     /** @return array<string,mixed> */
     public function getUom(int $id): array
     {
-        $row = $this->requireRow($this->uoms()->findById($id), ProductUomMasterService::ERROR_NOT_FOUND);
-        $this->authorize('product_uom', 'view', $row);
-        return $row;
+        return $this->getUomWithOperation($id, $this->operation());
     }
 
     /** @param array<string,mixed> $payload
@@ -191,15 +189,17 @@ final class Api050ProductCatalogService
      */
     public function updateUom(int $id, array $payload): array
     {
-        $this->uoms()->update($id, $payload, $this->operation());
-        return $this->getUom($id);
+        $operation = $this->operation();
+        $this->uoms()->update($id, $payload, $operation);
+        return $this->getUomWithOperation($id, $operation);
     }
 
     /** @return array<string,mixed> */
     public function setUomState(int $id, string $status): array
     {
-        $this->uoms()->setState($id, $status, $this->operation());
-        return $this->getUom($id);
+        $operation = $this->operation();
+        $this->uoms()->setState($id, $status, $operation);
+        return $this->getUomWithOperation($id, $operation);
     }
 
     /** @param array<string,mixed> $query
@@ -243,9 +243,10 @@ final class Api050ProductCatalogService
             throw new DomainException('VALIDATION_ERROR', ['field' => 'combo_items']);
         }
         $payload = (new InitialCreateStateNormalizer($this->stateResolver()))->normalize('product', $payload);
+        $operation = $this->operation();
         if (! $hasItems) {
-            $id = $this->products()->create($payload, $this->operation());
-            return $this->getProduct($id);
+            $id = $this->products()->create($payload, $operation);
+            return $this->getProductWithOperation($id, $operation);
         }
 
         $db = $this->connection();
@@ -253,11 +254,11 @@ final class Api050ProductCatalogService
             throw new DomainException('PRODUCT_MUTATION_FAILED', ['operation' => 'combo_create']);
         }
         try {
-            $id = $this->products()->create($payload, $this->operation());
+            $id = $this->products()->create($payload, $operation);
             // Always apply normal product.edit PBAC in the new record's trusted
             // Initial State. No create->edit privilege escalation is allowed.
-            $this->combos()->replaceItems($id, $items, $this->operation());
-            $created = $this->getProduct($id);
+            $this->combos()->replaceItems($id, $items, $operation);
+            $created = $this->getProductWithOperation($id, $operation);
             if (! $db->transStatus() || ! $db->transCommit()) {
                 throw new DomainException('PRODUCT_MUTATION_FAILED', ['operation' => 'combo_create']);
             }
@@ -289,9 +290,17 @@ final class Api050ProductCatalogService
     /** @return array<string,mixed> */
     public function getProduct(int $id): array
     {
-        // Keep API-050's established Product output decoration while sharing
-        // the same persisted-row PBAC reader with Product Media.
-        return $this->decorateProduct($this->productReadAccess()->authorizedRow($id, 'view'));
+        $operation = $this->operation();
+        $row = $this->getProductWithOperation($id, $operation);
+        // A direct Product detail GET also powers the editor. Return the same
+        // advisory PBAC actions as the list; mutation readbacks stay unchanged.
+        $security = new ProductListAuthorizationAdapter(
+            $this->connection(),
+            static fn (): OperationContext => $operation,
+            fn (): AuthorizationService => $this->authorization(),
+            fn (): bool => $this->requiresRowStateAuthorization('product'),
+        );
+        return $security->withAllowedActions($operation, [$row])[0];
     }
 
     /**
@@ -308,15 +317,17 @@ final class Api050ProductCatalogService
      */
     public function updateProduct(int $id, array $payload): array
     {
-        $this->products()->update($id, $payload, $this->operation());
-        return $this->getProduct($id);
+        $operation = $this->operation();
+        $this->products()->update($id, $payload, $operation);
+        return $this->getProductWithOperation($id, $operation);
     }
 
     /** @return array<string,mixed> */
     public function setProductState(int $id, string $status): array
     {
-        $this->products()->setState($id, $status, $this->operation());
-        return $this->getProduct($id);
+        $operation = $this->operation();
+        $this->products()->setState($id, $status, $operation);
+        return $this->getProductWithOperation($id, $operation);
     }
 
     /** @return list<array<string,mixed>> */
@@ -362,16 +373,15 @@ final class Api050ProductCatalogService
     public function createPriceList(array $payload): array
     {
         $payload = (new InitialCreateStateNormalizer($this->stateResolver()))->normalize('price_list', $payload);
-        $id = $this->priceLists()->create($payload, $this->operation());
-        return $this->getPriceList($id);
+        $operation = $this->operation();
+        $id = $this->priceLists()->create($payload, $operation);
+        return $this->getPriceListWithOperation($id, $operation);
     }
 
     /** @return array<string,mixed> */
     public function getPriceList(int $id): array
     {
-        $row = $this->requireRow($this->priceLists()->findById($id), PriceListService::ERROR_NOT_FOUND);
-        $this->authorize('price_list', 'view', $row);
-        return $row;
+        return $this->getPriceListWithOperation($id, $this->operation());
     }
 
     /** @return array<string,mixed> */
@@ -380,15 +390,17 @@ final class Api050ProductCatalogService
      */
     public function updatePriceList(int $id, array $payload): array
     {
-        $this->priceLists()->update($id, $payload, $this->operation());
-        return $this->getPriceList($id);
+        $operation = $this->operation();
+        $this->priceLists()->update($id, $payload, $operation);
+        return $this->getPriceListWithOperation($id, $operation);
     }
 
     /** @return array<string,mixed> */
     public function setPriceListState(int $id, string $status): array
     {
-        $this->priceLists()->setState($id, $status, $this->operation());
-        return $this->getPriceList($id);
+        $operation = $this->operation();
+        $this->priceLists()->setState($id, $status, $operation);
+        return $this->getPriceListWithOperation($id, $operation);
     }
 
     /** @return list<array<string,mixed>> */
@@ -419,6 +431,44 @@ final class Api050ProductCatalogService
         return $this->combos()->replaceItems($id, $items, $this->operation());
     }
 
+    /** @return array<string,mixed> */
+    private function getGroupWithOperation(int $id, OperationContext $operation): array
+    {
+        $row = $this->requireRow($this->groups()->findById($id), ProductGroupService::ERROR_NOT_FOUND);
+        $this->authorize('product_group', 'view', $row, operation: $operation);
+        return $row;
+    }
+
+    /** @return array<string,mixed> */
+    private function getUomWithOperation(int $id, OperationContext $operation): array
+    {
+        $row = $this->requireRow($this->uoms()->findById($id), ProductUomMasterService::ERROR_NOT_FOUND);
+        $this->authorize('product_uom', 'view', $row, operation: $operation);
+        return $row;
+    }
+
+    /** @return array<string,mixed> */
+    private function getProductWithOperation(int $id, OperationContext $operation): array
+    {
+        // Keep the shared Product read capability while freezing the command's
+        // actor/evaluation time/request id for mutation readback.
+        $reader = new AuthorizedProductReadService(
+            $this->products(),
+            $this->roles(),
+            $this->authorization(),
+            static fn (): OperationContext => $operation,
+        );
+        return $this->decorateProduct($reader->authorizedRow($id, 'view'));
+    }
+
+    /** @return array<string,mixed> */
+    private function getPriceListWithOperation(int $id, OperationContext $operation): array
+    {
+        $row = $this->requireRow($this->priceLists()->findById($id), PriceListService::ERROR_NOT_FOUND);
+        $this->authorize('price_list', 'view', $row, operation: $operation);
+        return $row;
+    }
+
     /** @param array<string,mixed> $row
      *  @return array<string,mixed>
      */
@@ -442,6 +492,7 @@ final class Api050ProductCatalogService
         // Never expose internal storage filenames or server paths in API JSON.
         if (array_key_exists('image_filename', $row)) {
             $row['image_available'] = is_string($row['image_filename']) && $row['image_filename'] !== '';
+            $row['image_url'] = \App\Infrastructure\Media\YearlyImageStorage::publicUrl($row['image_filename'], 'product');
         }
         unset($row['image_filename'], $row['image_mime'], $row['image_size_bytes']);
         if (array_key_exists('serial_management_enabled', $row)) {
@@ -470,9 +521,15 @@ final class Api050ProductCatalogService
     /** @param array<string,mixed>|null $target
      *  @param array<string,mixed> $input
      */
-    private function authorize(string $resource, string $action, ?array $target = null, array $input = [], mixed $clientHint = null): void
-    {
-        $decision = $this->decision($resource, $action, $target, $input, $clientHint);
+    private function authorize(
+        string $resource,
+        string $action,
+        ?array $target = null,
+        array $input = [],
+        mixed $clientHint = null,
+        ?OperationContext $operation = null,
+    ): void {
+        $decision = $this->decision($resource, $action, $target, $input, $clientHint, $operation);
         if (! $decision->isAllowed()) {
             throw new DomainException(strtoupper($resource) . '_AUTHORIZATION_DENIED', ['action' => $action]);
         }
@@ -481,10 +538,16 @@ final class Api050ProductCatalogService
     /** @param array<string,mixed>|null $target
      *  @param array<string,mixed> $input
      */
-    private function decision(string $resource, string $action, ?array $target = null, array $input = [], mixed $clientHint = null): \App\Authorization\AuthorizationDecision
-    {
+    private function decision(
+        string $resource,
+        string $action,
+        ?array $target = null,
+        array $input = [],
+        mixed $clientHint = null,
+        ?OperationContext $operation = null,
+    ): \App\Authorization\AuthorizationDecision {
         return $this->authorization()->authorize(
-            $this->operation(),
+            $operation ?? $this->operation(),
             $resource,
             $action,
             new EvaluationOrganizationRequest(

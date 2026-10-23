@@ -10,6 +10,7 @@ export type AuthUser = {
   username: string
   name: string | null
   has_avatar: boolean
+  avatar_url?: string | null
   email: string | null
   active: boolean
   status: string | null

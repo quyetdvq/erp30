@@ -49,8 +49,7 @@
       "classification": "FACADE_PROTECTED_READ",
       "review_priority": "P2",
       "source_body_markers": [
-        "->groups()->findById(",
-        "->authorize('product_group', 'view'"
+        "->getGroupWithOperation("
       ]
     },
     {
@@ -65,7 +64,7 @@
       "review_priority": "P1",
       "source_body_markers": [
         "->groups()->update(",
-        "->getGroup("
+        "->getGroupWithOperation("
       ]
     },
     {
@@ -80,7 +79,7 @@
       "review_priority": "P1",
       "source_body_markers": [
         "->groups()->setState(",
-        "->getGroup("
+        "->getGroupWithOperation("
       ]
     },
     {
@@ -110,8 +109,7 @@
       "classification": "FACADE_PROTECTED_READ",
       "review_priority": "P2",
       "source_body_markers": [
-        "->uoms()->findById(",
-        "->authorize('product_uom', 'view'"
+        "->getUomWithOperation("
       ]
     },
     {
@@ -126,7 +124,7 @@
       "review_priority": "P1",
       "source_body_markers": [
         "->uoms()->update(",
-        "->getUom("
+        "->getUomWithOperation("
       ]
     },
     {
@@ -141,7 +139,7 @@
       "review_priority": "P1",
       "source_body_markers": [
         "->uoms()->setState(",
-        "->getUom("
+        "->getUomWithOperation("
       ]
     },
     {
@@ -153,7 +151,7 @@
       "capability": "Product",
       "observed_boundary": "FACADE_MULTI_STEP_CREATE",
       "classification": "KIR001_CREATE",
-      "review_priority": "P0_STOP",
+      "review_priority": "P0_VERIFY",
       "source_body_markers": [
         "array_key_exists('combo_items'",
         "->transBegin()",
@@ -173,8 +171,7 @@
       "classification": "FACADE_PROTECTED_READ",
       "review_priority": "P2",
       "source_body_markers": [
-        "->decorateProduct(",
-        "->productReadAccess()->authorizedRow("
+        "->getProductWithOperation("
       ]
     },
     {
@@ -189,7 +186,7 @@
       "review_priority": "P1",
       "source_body_markers": [
         "->products()->update(",
-        "->getProduct("
+        "->getProductWithOperation("
       ]
     },
     {
@@ -204,7 +201,7 @@
       "review_priority": "P1",
       "source_body_markers": [
         "->products()->setState(",
-        "->getProduct("
+        "->getProductWithOperation("
       ]
     },
     {
@@ -277,7 +274,7 @@
       "source_body_markers": [
         "InitialCreateStateNormalizer",
         "->priceLists()->create(",
-        "->getPriceList("
+        "->getPriceListWithOperation("
       ]
     },
     {
@@ -291,8 +288,7 @@
       "classification": "FACADE_PROTECTED_READ",
       "review_priority": "P2",
       "source_body_markers": [
-        "->priceLists()->findById(",
-        "->authorize('price_list', 'view'"
+        "->getPriceListWithOperation("
       ]
     },
     {
@@ -307,7 +303,7 @@
       "review_priority": "P1",
       "source_body_markers": [
         "->priceLists()->update(",
-        "->getPriceList("
+        "->getPriceListWithOperation("
       ]
     },
     {
@@ -322,7 +318,7 @@
       "review_priority": "P1",
       "source_body_markers": [
         "->priceLists()->setState(",
-        "->getPriceList("
+        "->getPriceListWithOperation("
       ]
     },
     {
@@ -358,16 +354,16 @@
     {
       "id": "KIR-001",
       "priority": "P0",
-      "status": "OPEN_RUNTIME_NOT_VERIFIED",
-      "evidence": "Api050::createProduct transBegin + AutoNumberingCounterAllocator transDepth guard",
-      "hold": "No transaction refactor until ADR and MariaDB/Shield collision, rollback and concurrency POC"
+      "status": "REMEDIATION_SOURCE_READY_RUNTIME_PENDING",
+      "evidence": "KIR-001-C1 runtime PASS 2026-10-22 (6 tests/50 assertions); C2 changes allocator to own-or-participate while Product COMBO outer transaction remains owner",
+      "hold": "Require C2 9-case MariaDB/Shield PASS including concurrency, UNIT-STANDARD and NO-DROP before closing KIR-001"
     },
     {
       "id": "CXT-001",
       "priority": "P1",
-      "status": "SOURCE_OBSERVED_RUNTIME_NOT_VERIFIED",
-      "evidence": "Api050::operation() invokes MutationContext::begin(); multiple calls in multi-step commands",
-      "hold": "One OperationContext command boundary requires parity tests for actor, evaluationTime, requestId"
+      "status": "SOURCE_FIXED_RUNTIME_NOT_VERIFIED",
+      "evidence": "BE-REORG-014I: API-050 mutation/readback commands capture one OperationContext and pass it through owner mutation, COMBO participant, and response authorization",
+      "hold": "Runtime MariaDB/Shield parity still required; do not cache OperationContext beyond one facade invocation"
     },
     {
       "id": "PERF-001",

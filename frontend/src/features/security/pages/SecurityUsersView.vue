@@ -324,7 +324,7 @@ async function saveIdentity(): Promise<void> {
         createdFlow,
         () => saveSecurityUser(buildCreateUserPayload(form.value)),
         createAvatarFile.value
-          ? (id) => uploadUserAvatar(id, createAvatarFile.value!)
+          ? async (id) => { await uploadUserAvatar(id, createAvatarFile.value!) }
           : null,
       )
       savedId = result.id
@@ -521,7 +521,7 @@ onMounted(() => void load())
 
       <div v-if="tab === 'overview'" class="modal-card__body security-editor">
         <p>{{ t('security.userIdentitySourceNote') }}</p>
-        <UserAvatarManager :user-id="String(selected.id)" :has-avatar="selected.has_avatar === true"
+        <UserAvatarManager :user-id="String(selected.id)" :has-avatar="selected.has_avatar === true" :avatar-url="selected.avatar_url"
           :label="selected.name || selected.username"
           :can-edit="hasBasePermission('user', 'edit') || String(auth.user?.id) === String(selected.id)"
           @updated="avatarUpdated" />

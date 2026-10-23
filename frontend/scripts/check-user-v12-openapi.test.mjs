@@ -49,33 +49,31 @@ test('create and profile schema remain backward compatible with optional name an
   assert.doesNotMatch(profile, /required: \[username, email\]/);
 });
 
-test('all public user schemas expose name and has_avatar but no file key', () => {
+test('public user schemas expose safe static URLs but no storage filenames', () => {
   for (const name of ['UserIdentity', 'SecurityUser', 'AuthUser']) {
     const body = schema(name);
     assert.match(body, /has_avatar:/, `${name} must expose has_avatar`);
     assert.match(body, /name:/, `${name} must expose name`);
-    assert.doesNotMatch(body, /avatar_filename|avatar_url/, `${name} must not leak filename`);
+    assert.doesNotMatch(body, /avatar_filename/, `${name} must not leak storage filenames`);
+    assert.match(body, /avatar_url:/, `${name} must expose optional static avatar URL`);
   }
 });
 
-test('avatar path has GET binary, PUT multipart image, DELETE JSON and error contracts', () => {
+test('avatar path has documented POST multipart and DELETE; image reads are static URLs', () => {
   const avatar = pathItem('/api/v1/users/{id}/avatar');
-  for (const operationId of ['getUserAvatar', 'uploadUserAvatar', 'deleteUserAvatar']) {
+  for (const operationId of ['uploadUserAvatar', 'deleteUserAvatar']) {
     assert.match(avatar, new RegExp(`operationId: ${operationId}\\b`));
   }
-  const binary = component('responses', 'UserAvatarBinary');
-  assert.match(binary, /image\/jpeg/);
-  assert.match(binary, /image\/png/);
-  assert.match(binary, /image\/webp/);
-  assert.match(binary, /format: binary/);
+  assert.match(avatar, /\n    post:\s*\n      operationId: uploadUserAvatar/);
+  assert.doesNotMatch(avatar, /\n    put:|operationId: getUserAvatar|\n    get:/);
+  assert.doesNotMatch(spec, /UserAvatarBinary:/);
   const request = component('requestBodies', 'UserAvatarUpload');
   assert.match(request, /multipart\/form-data/);
   assert.match(request, /required: \[image\]/);
   assert.match(avatar, /UserAvatarMutationResponse/);
   assert.match(avatar, /UnprocessableEntity/);
   assert.match(avatar, /InternalServerError/);
-  assert.match(binary, /Cache-Control/);
-  assert.match(binary, /X-Content-Type-Options/);
+  assert.match(schema('UserIdentity'), /avatar_url:/);
 });
 
 test('existing account and profile operation IDs are unchanged', () => {
@@ -88,7 +86,7 @@ test('existing account and profile operation IDs are unchanged', () => {
 test('component sections remain discoverable in CRLF OpenAPI checkouts', () => {
   const windowsYaml = spec.replace(/\r?\n/g, '\r\n');
   assert.match(component('schemas', 'UserIdentityCreate', windowsYaml), /group_ids:/);
-  assert.match(component('responses', 'UserAvatarBinary', windowsYaml), /image\/png/);
+  assert.match(component('schemas', 'UserIdentity', windowsYaml), /avatar_url:/);
   assert.match(component('requestBodies', 'UserAvatarUpload', windowsYaml), /multipart\/form-data/);
 });
 

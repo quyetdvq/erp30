@@ -10,7 +10,7 @@ A PHP `public` method is not automatically a public module API. The `App\Modules
 | Authorization | groups, group_permissions, policies, policy_actions, authorization_logs (technical log) | Public PBAC decision/read methods; mandatory gates; runtime non-recursive assignment read seam | `NOT_VERIFIED` |
 | Resource | resources, resource_actions | Catalog actions, state metadata and read interfaces | `NOT_VERIFIED` |
 | Workflow | lifecycles, workflow_states, lifecycle_states, lifecycle_transitions | Public transition/write boundary, state read seam and locks | `NOT_VERIFIED` |
-| Numbering | auto_numbering_series, auto_numbering_counters | AUTO same-session ownership, callback/rollback/collision, `KIR-001` | `NOT_VERIFIED` |
+| Numbering | auto_numbering_series, auto_numbering_counters | AUTO own-or-participate transaction semantics, rollback/collision/concurrency, `KIR-001-C2` | `NOT_VERIFIED` |
 | Settings | configuration_audit_events; runtime display settings | Read/write config ownership, technical audit; retention | `NOT_VERIFIED` |
 | Foundation | provinces, wards | Read/persistence and workflow ownership | `NOT_VERIFIED` |
 | Organization | organizations; tree/ancestor/owner | Current PBAC scope/parent mutation. Tree projector boundary below | `NOT_VERIFIED` |
@@ -49,7 +49,7 @@ A PHP `public` method is not automatically a public module API. The `App\Modules
 | List invariants | Allowlisted search/filter/sort unchanged; effective state buckets compiled inside authorization read-only batch and Product read snapshot; authorized State filter before `COUNT`/`PAGE`; page rows rechecked. SQL projection/source, complete role/relationship hydration and exact PHP fallback unchanged. |
 | Transaction / read boundary | `readSnapshot` = existing `ProductRepository::withConsistentListSnapshot` for SQL paths, no new `BEGIN`, no write or Numbering transaction; snapshot not nested in write transaction. PBAC uses the exact legacy operation on SQL path (one instance carried to compile/recheck). Non-SQL row decisions retain legacy per-row operation capture for parity. |
 | Precision/serialization | `total` stays `int|string` (`CommonListQueryAdapter` formats as decimal string), `product_code`, `serial_management_enabled` boolean, image path redaction preserved by already-existing `AuthorizedProductReadService::projectForApi` |
-| SQL / schema / cross-owner write | `N/A` to new migration/write: no SQL or schema changed. Read-only SQL projection remains in `Infrastructure/Api/SqlProductListSource` as existing technical debt; no Product→Pricing new dependency. |
+| SQL / schema / cross-owner write | `N/A` to new migration/write: no SQL or schema changed. As of 014J, the Product-specific SQL source lives in `Modules/Product/Product/Application/SqlProductListSource` (from `Infrastructure/Api`); no Product→Pricing dependency. The 014C SQL semantics are unchanged. |
 | Characterization tests | `tools/test-be-reorg-014c-product-list.php`: 14 vendor-free scenarios with recording test doubles for SQL/PBAC branching, context identity, authorization-before-count, fallback, errors, serializer. Existing real DB test: `tests/unit/P1Api050ProductSqlPaginationTest.php` (15 tests; `UNIT-STANDARD` suite) protects actual MariaDB SQL snapshot, relationship and PBAC. |
 | Runtime gates | Source-only tests: PASS as reported per change. MariaDB/Shield `UNIT-STANDARD`, API contract/404–403, SQL EXPLAIN, p95 and concurrency: `BLOCKED_ENV` in the distributed ZIP, **must be run on guarded test DB before acceptance**. SQL/parity and performance cannot be certified by fakes. |
 | Release/rollback | Revert only BE-REORG-014C code+test+MDR patch; API-050 original list body is in v1.2.2 baseline, no DB rollback required. Keep 014C separate from any future Pricing/COMBO+AUTO changes. |
@@ -65,7 +65,7 @@ A PHP `public` method is not automatically a public module API. The `App\Modules
 | Authorization and scope | Existing `price_list.view` on persisted `ORGANIZATION` owner/state, base permission and eligible assignment lanes remain in `AuthorizationService`. `PriceListAuthorizedBucketCompiler` groups by **byte-exact** `(organization_id, status)`; missing/unsafe projection returns `null`, triggering original per-row PBAC. Client organization filter is not authoritative scope. |
 | PBAC implementation boundary | `Pricing/PriceList/Application/Ports/PriceListListAuthorizationPort` is an **internal read-only consumer port** implemented by `Bootstrap/PriceListListAuthorizationAdapter`. Only existing `AuthorizationService` and `PriceListAuthorizedBucketCompiler` decide visibility. No Pricing→legacy Authorization import or recursive/privileged provider read seam is added. No `skipAuthorization` flag. |
 | Snapshot / transaction | `readSnapshot`: existing `PriceListRepository::withConsistentListSnapshot` opens a short REPEATABLE READ transaction for the SQL branch (`transDepth === 0` only). Bucket collection, authorized COUNT/page and per-row recheck are in the same snapshot/batch/`OperationContext`/connection; no write transaction or new lock. If unsafe/non-BaseConnection/nested, use original full-list fallback. |
-| SQL and pagination | Unmodified `SqlPriceListListSource`, repository, `CommonListQueryAdapter` and allowlist (`q`, `code`, `name`, `organization_id`, `status`; sort `id`, `code`, `effective_from`, `name`, `organization_id`, `priority`, `status`). Exact Owner/State predicates before COUNT/page; `null` buckets cause full-list PBAC, `[]` means proven zero. Recheck false/DomainException/malformed page falls back **before emitting results**. Priority negative and noncanonical owner (`'011'`) retain PHP comparator/equality path. |
+| SQL and pagination | Unmodified SQL body in Pricing-owned `Modules/Pricing/PriceList/Application/SqlPriceListListSource`, repository, `CommonListQueryAdapter` and allowlist (`q`, `code`, `name`, `organization_id`, `status`; sort `id`, `code`, `effective_from`, `name`, `organization_id`, `priority`, `status`). Exact Owner/State predicates before COUNT/page; `null` buckets cause full-list PBAC, `[]` means proven zero. Recheck false/DomainException/malformed page falls back **before emitting results**. Priority negative and noncanonical owner (`'011'`) retain PHP comparator/equality path. |
 | Serialization / errors | Keep raw `effective_from`/`effective_to`, signed priority, `page`, `page_size`, string `total`, field names, original `DomainException` code/status mapping via existing HTTP adapter. Read-only list does **not** calculate DECIMAL amounts or alter Pricing resolution. Approved HTTP status review remains open per v1.1.1. |
 | Connection and compatibility | Deferred DB resolver is intentional: legacy `listPriceLists` parsed/validated query **before** opening `db_connect()`; malformed filter/sort must still fail as request error first. Facade reuses existing `queryAdapter`, `priceLists` injection, lazy Authorization/OperationContext. SQL batch uses one context; fallback retains independent legacy operation capture on each row. |
 | Characterization and DB tests | `tools/test-be-reorg-014d-price-list.php`: 16 vendor-free branch/authorization/parity scenarios. Existing MariaDB/Shield `tests/unit/P1Perf008PriceListSqlPaginationTest.php` tests real SQL bucket/Unicode priority/differential and API-050 facade; test is in guarded **NO-DROP**, not UNIT-STANDARD. Run both gates after backup and test DB verification. `tests/unit/P1Api050ProductCatalogTest.php` preserves 26 API-050 endpoints. |
@@ -142,3 +142,66 @@ A PHP `public` method is not automatically a public module API. The `App\Modules
 **Candidate/NOT_RUNTIME_VERIFIED, opt-in OFF by default.** Product owns Group and UOM list query orchestration; `Modules/Product/Lookup/Application/ProductMasterListSqlFastPath` supplies only authorized SQL COUNT/page where byte-exact equivalence to PHP list semantics can be demonstrated. `Infrastructure/Api/SqlAuthorizedBucketListSource` and `Authorization/EffectiveListBucketCompiler` support these existing MASTER resources without new Resource/Action/domain or schema. The Bootstrap adapter uses a narrow read-only Product-owned port. Active State rows are compiled from real persisted State representatives by Authorization and rechecked per returned page row; no raw Policy SQL or security bypass. Unsupported text sort/search/filter, uncertain buckets, nested transactions and injected legacy test seams retain original full-list per-row PBAC. One read snapshot / `OperationContext` for the SQL path; `CXT-001` for write commands remains open.
 
 **Gate/evidence/rollback:** `backend/tools/architecture/api050-product-master-sql-015a.md` is the detailed SQL/PBAC/transaction and performance test record. `ERP_PRODUCT_MASTER_LIST_SQL_OPT_IN=1` is required in the PHP server to enable; unset to roll back immediately. Simulated-source gate and unchanged baseline source tests are not MariaDB/Shield authorization parity; the latter and HTTP benchmarks/EXPLAIN remain `NOT_RUN` until run and reviewed, as required by Standard v1.1.1. Historic 014H audit describes the pre-optimization observation, not a new production certification.
+
+## API-050 OperationContext: BE-REORG-014I retrofit slice
+
+| Field | Implementation / evidence |
+|---|---|
+| Boundary | Transitional `Api050ProductCatalogService`; no new module/public HTTP API |
+| Problem | Multi-step mutation commands could call `MutationContext::begin()` repeatedly through `operation()`, producing different operation objects/evaluation times inside one command |
+| Change | Capture one `OperationContext` at the facade command boundary and pass the same object through owner mutation, COMBO participant where applicable, and authorized response readback |
+| Affected owners | Product Group/UOM/Product under Product; Price List under Pricing. No owner logic moved between modules |
+| Compatibility | Existing route signatures, payloads, error codes, `productReadAccess()` Media seam and standalone reads retained |
+| PBAC | Same authorization services/actions/targets; only the already-established command context is reused |
+| Transaction | 014I itself made no transaction change. KIR-001-C1 is now runtime-characterized; KIR-001-C2 changes only Numbering allocator ownership semantics and remains runtime-pending |
+| Verification | `tools/test-be-reorg-014i-operation-context.php`; 014H residual gate updated to fail if CXT-001 regresses |
+| Runtime status | `SOURCE_FIXED_RUNTIME_NOT_VERIFIED`; MariaDB/Shield/API parity still required |
+
+## KIR-001-C1 — Product COMBO + AUTO characterization
+
+| Field | Implementation / evidence |
+|---|---|
+| Boundary | `Api050ProductCatalogService::createProduct` → `ProductMasterService::create` → Numbering allocator → COMBO composition |
+| Change | Test/tooling only; no production transaction, lock, API, PBAC, schema or Numbering algorithm change |
+| Runtime evidence | Operator run 2026-10-22: **6/6 PASS / 50 assertions** on guarded MariaDB/Shield |
+| Result | `RUNTIME_CHARACTERIZED / OWNERSHIP_CONFLICT_CONFIRMED`; nested guard is the reproduced blocker for AUTO+COMBO |
+
+## KIR-001-C2 — Product COMBO + AUTO ownership remediation
+
+| Field | Implementation / evidence |
+|---|---|
+| Decision | Numbering allocator owns a transaction only at `transDepth === 0`; otherwise it participates and leaves physical commit/rollback/reset to the caller |
+| Command owner | Product `createProduct(combo_items)` outer transaction remains unchanged |
+| Production change | `Modules/Numbering/Allocation/Application/AutoNumberingCounterAllocator.php` only |
+| Runtime matrix | 9 guarded MariaDB/Shield cases: AUTO success, empty items, standalone owner, first/existing counter rollback+reuse, PBAC rollback, collision, concurrent first-counter COMBO |
+| UNIT-STANDARD | Existing NUM-004 test gains ambient-owner assertions without changing suite class/method inventory |
+| Source gate | `tools/test-kir001-source-gate.php` requires own-or-participate markers and the 9-case/concurrency evidence |
+| Current status | `SOURCE_READY / RUNTIME_REMEDIATION_NOT_RUN`; KIR-001 remains P0 until C2 + UNIT-STANDARD + NO-DROP runtime PASS |
+| ADR/evidence | `kir001-product-combo-auto-remediation.md` |
+
+## BE-REORG-014J — Product SQL list source ownership (internal-only)
+
+**Source evidence / MDR status:** The Product-specific `SqlProductListSource` implementation moved out of shared `Infrastructure/Api` into the existing Product List Application folder. The reusable `AuthorizedListSource` and query parser remain generic Infrastructure. Production consumer remains `ProductListQueryService`; existing runtime PHPUnit import and 014C simulated collaborator were relocated to the new owner namespace. No new Product public inter-module method, alias, DB migration, transaction or PBAC capability. See [`be-reorg-014j-product-sql-source-ownership.md`](be-reorg-014j-product-sql-source-ownership.md).
+
+**Source gates:** 014J actual-class vendor-free 7 checks + 014C 14 cases + architecture scanner/conformance. `P1Api050ProductSqlPaginationTest`, `UNIT-STANDARD`, `NO-DROP`, authenticated API/PBAC parity and representative SQL benchmark remain **NOT_RUN** for 014J until run by operator with `vendor` and MariaDB/Shield. Root Product conformance remains `NOT_VERIFIED`; `DINKERP-BE-ARCH-001` remains proposed.
+
+
+## BE-REORG-014K — Pricing SQL list source ownership (internal-only)
+
+**Scope:** `SqlPriceListListSource` moves from `Infrastructure/Api` to `Modules/Pricing/PriceList/Application`; `PriceListQueryService` uses the local Pricing class. The old generic location is removed; the original `AuthorizedListSource`, `CommonListQuery` and the shared list adapter remain reusable. No new interface, alias, public module API, DB schema, SQL algorithm, PBAC rule, API-050 signature or transaction owner. The runtime test `P1Perf008PriceListSqlPaginationTest` and 014D fake move their imports/namespaces to the owner; the single NO-DROP source fingerprint is explicitly re-reviewed/re-pinned without loosening safe-lane selection. All implementation class bodies after `final class SqlPriceListListSource` are byte-identical to pre-014K.
+
+**Evidence/status:** `tools/test-be-reorg-014k-price-list-sql-owner.php` (9 real-source/recording-builder assertions) + `tools/test-be-reorg-014d-price-list.php` (16 orchestration vectors), architecture scan/conformance. **SOURCE_VERIFIED / NO-DROP RUNTIME_PENDING** for 014K in this source-only package. Operator must back up `erp_test` and run both unit cohorts; specialized authenticated HTTP, EXPLAIN/p95 and formal Pricing module conformance remain unverified. No changes to `observed-v1.2.2.json`. Details/rollback: [`be-reorg-014k-price-list-sql-source-ownership.md`](be-reorg-014k-price-list-sql-source-ownership.md).
+
+## BE-REORG-014M — Authorization Contact PRIMARY scope rule (22/10/2026)
+
+**Conformance:** `DRAFT / SOURCE_VERIFIED / MARIADB_SHIELD_HTTP_PENDING`. Review `be-reorg-014m-employee-primary-scope.md` for the per-resource resolver, Contact-owner batch and conservative `EffectiveOrganizationScopeIndex` inventory. **One** duplicated canonical primary-eligibility check was consolidated into `EmployeeContactScopeResolver` and reused by `OwnerAwareListBucketCompiler`, which already depended on that class's error semantics. No interface, DB query, dependency edge, cross-module write, API payload, actor assignment rule or transaction was changed. Both legacy query entrypoints and the 014L two-method privileged read port remain in place. Database/PBAC differential validation and HTTP Contact pagination are not certified by this source-only slice.
+
+## BE-REORG-014N — Authorization Organization scope signature reuse (22/10/2026)
+
+**Conformance:** `DRAFT / SOURCE_VERIFIED / MARIADB_SHIELD_HTTP_PENDING`. The read-only `EffectiveOrganizationScopeIndex` in Authorization retains the same legacy Organization/EmployeeStructure/Resource/Policy sources and immutable projection inputs. Only repeated signature traversal is eliminated through per-instance memoization; the **original signature strings, null fail-closed behavior, UTC effective assignment date, approved PBAC buckets, COUNT-before-LIMIT, DB schema and operation/transaction boundaries remain unchanged**. No new module dependency, public port, SQL query, wrapper or cross-owner write. See [`be-reorg-014n-scope-signature-reuse.md`](be-reorg-014n-scope-signature-reuse.md) for full evidence, synthetic-only performance caveat, 8-case source gate, DB parity requirements and code-only rollback.
+
+## BE-PERF-015B — Product default-ID and sortable list (23/10/2026)
+
+**Scope:** Product only; no API route, Product SQL/PBAC predicate, Action-hint timing, transaction ownership, schema or cross-module dependency changes. The public `product_id` sort alias is canonicalized to persisted `id`, preserving legacy `sort=id` and default id ASC. Product UI exposes asc/desc options for ID, full displayed name, default price, product code, SKU, type and status. Decimal prices use a SQL COUNT/page fast path when safe and exact non-float PHP comparison in projection/fallback; child full-name sort uses an on-demand batched parent lookup. Other sorts retain Unicode/numeric-aware PHP ordering, with narrow columns transferred only for actual search/sort keys.
+
+**Evidence/status:** `tools/test-be-perf-015b-product-sort.php` (9 source-level behavior checks), `frontend/src/features/catalog/__tests__/productSortOptions.spec.ts` (Vitest runtime pending), existing 014C/014J/016A gates, architecture scanner/conformance and static lint. **SOURCE_VERIFIED / MARIADB_SHIELD_HTTP_FRONTEND_RUNTIME_PENDING**. See [`be-perf-015b-product-sort.md`](be-perf-015b-product-sort.md) for performance limitations, PBAC/snapshot invariants, local runtime commands and rollback notes. Legacy `sort=product_code` still projects matching keys and sorts in PHP; no unverified MariaDB collation rewrite was introduced.

@@ -157,6 +157,47 @@ final class P1Num004CounterAllocatorTest extends CIUnitTestCase
         }
         $this->assertSame(100, (int) $this->db->table('auto_numbering_counters')->where('numbering_series_id', $existingSeries)->get()->getRowArray()['last_value']);
         $this->assertSame(105, $allocator->allocate($this->series($existingSeries, 100, 5), $this->context($existingScope), $this->pattern(), new Num004FakeBusiness(), $this->operation())->sequenceValue);
+
+        // An active caller transaction is the physical owner. The allocator
+        // participates without committing it, so a later business participant
+        // can still roll back both the generated counter and its own writes.
+        [$ambientSeries, $ambientScope] = $this->fixture('ambient-owner', 100, 5);
+        $this->assertTrue($this->db->transBegin());
+        $this->assertSame(1, (int) $this->db->transDepth);
+        $ambient = $allocator->allocate(
+            $this->series($ambientSeries, 100, 5),
+            $this->context($ambientScope),
+            $this->pattern(),
+            new Num004FakeBusiness(),
+            $this->operation(),
+        );
+        $this->assertSame(100, $ambient->sequenceValue);
+        $this->assertSame(1, (int) $this->db->transDepth);
+        $this->assertSame(1, (int) $this->db->table('auto_numbering_counters')->where('numbering_series_id', $ambientSeries)->countAllResults());
+        $this->assertTrue($this->db->transRollback());
+        $this->db->resetTransStatus();
+        $this->assertSame(0, (int) $this->db->transDepth);
+        $this->assertSame(0, (int) $this->db->table('auto_numbering_counters')->where('numbering_series_id', $ambientSeries)->countAllResults());
+
+        [$ambientFailureSeries, $ambientFailureScope] = $this->fixture('ambient-failure-owner', 100, 5);
+        $this->assertTrue($this->db->transBegin());
+        try {
+            $allocator->allocate(
+                $this->series($ambientFailureSeries, 100, 5),
+                $this->context($ambientFailureScope),
+                $this->pattern(),
+                new Num004FakeBusiness([], [], new RuntimeException('ambient business failed')),
+                $this->operation(),
+            );
+            $this->fail('Expected ambient allocation failure.');
+        } catch (DomainException $exception) {
+            $this->assertSame(AutoNumberingCounterAllocator::ERROR_TRANSACTION_FAILED, $exception->getErrorCode());
+        }
+        $this->assertSame(1, (int) $this->db->transDepth);
+        $this->assertTrue($this->db->transRollback());
+        $this->db->resetTransStatus();
+        $this->assertSame(0, (int) $this->db->transDepth);
+        $this->assertSame(0, (int) $this->db->table('auto_numbering_counters')->where('numbering_series_id', $ambientFailureSeries)->countAllResults());
     }
 
     public function testCommittedSequenceNeverDecrementsOrReuses(): void

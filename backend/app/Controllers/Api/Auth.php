@@ -139,6 +139,7 @@ final class Auth extends ApiController
             'email' => $user->getEmail(),
             'name' => $user->full_name ?? null,
             'has_avatar' => is_string($user->avatar_filename ?? null) && $user->avatar_filename !== '',
+            'avatar_url' => \App\Infrastructure\Media\YearlyImageStorage::publicUrl($user->avatar_filename ?? null, 'avatar'),
             'active' => (bool) $user->active,
             'status' => $user->status,
             'groups' => array_values(array_map('strval', $groups)),

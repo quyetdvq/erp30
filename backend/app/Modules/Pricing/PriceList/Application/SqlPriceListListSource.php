@@ -2,8 +2,10 @@
 
 declare(strict_types=1);
 
-namespace App\Infrastructure\Api;
+namespace App\Modules\Pricing\PriceList\Application;
 
+use App\Infrastructure\Api\AuthorizedListSource;
+use App\Infrastructure\Api\CommonListQuery;
 use CodeIgniter\Database\BaseBuilder;
 use CodeIgniter\Database\ConnectionInterface;
 

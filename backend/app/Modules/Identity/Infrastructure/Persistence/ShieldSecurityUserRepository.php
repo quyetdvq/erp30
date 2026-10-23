@@ -47,6 +47,7 @@ final class ShieldSecurityUserRepository
                 'username' => (string) ($row['username'] ?? ''),
                 'name' => $row['name'] === null ? null : (string) $row['name'],
                 'has_avatar' => is_string($row['avatar_filename'] ?? null) && $row['avatar_filename'] !== '',
+            'avatar_url' => \App\Infrastructure\Media\YearlyImageStorage::publicUrl($row['avatar_filename'] ?? null, 'avatar'),
                 'email' => $row['email'] === null ? null : (string) $row['email'],
                 'active' => (bool) ($row['active'] ?? false),
                 'status' => $row['status'] === null ? null : strtoupper((string) $row['status']),

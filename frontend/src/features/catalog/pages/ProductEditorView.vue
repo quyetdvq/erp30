@@ -84,7 +84,10 @@ const role = computed(
   () => product.value?.role ?? (isCombo.value ? 'COMBO' : isChild.value ? 'CHILD' : 'SIMPLE'),
 )
 const isParentRole = computed(() => role.value === 'PARENT')
-const canEdit = computed(() => hasBasePermission('product', editing.value ? 'edit' : 'create'))
+const canEdit = computed(() =>
+  editing.value ? product.value?.allowed_actions?.edit === true : hasBasePermission('product', 'create'),
+)
+const canSetState = computed(() => editing.value && product.value?.allowed_actions?.setstate === true)
 const {
   groups,
   uoms,
@@ -175,7 +178,7 @@ async function load(): Promise<void> {
     if (id.value) {
       product.value = await getProductById(id.value)
       resetFromRow(product.value)
-      unsaved.markClean()
+      if (!imageDirty.value) unsaved.markClean()
       await Promise.all([
         loadConversions(),
         loadChildren(),
@@ -222,26 +225,33 @@ async function save(): Promise<void> {
   error.value = null
   try {
     const saved = await saveProduct(payload(), id.value)
-    product.value = saved
     imagePartialError.value = false
-    // Commit the pending file BEFORE router.replace changes productId; otherwise
-    // the image field could discard its selection when the new route mounts.
+    // Upload BEFORE replacing Product metadata: a CREATE response changes
+    // imagePath from undefined to null and previously cleared selectedFile.
     try {
-      const imageChanged = await imageField.value?.commit(String(saved.id))
-      if (imageChanged) product.value = await getProductById(String(saved.id))
+      // The authorized image mutation already returns Product + image_url;
+      // do not issue another SQL-backed GET just to display the new image.
+      const imageResult = await imageField.value?.commit(String(saved.id))
+      product.value = { ...(imageResult ?? saved), allowed_actions: product.value?.allowed_actions }
     } catch {
-      // Product CREATE/PATCH already committed. Never retry creating it.
+      // JSON CREATE/PATCH was committed. Keep the selected file for retry;
+      // a subsequent Save on the edit route must PATCH, never create again.
+      product.value = { ...saved, allowed_actions: product.value?.allowed_actions }
       imagePartialError.value = true
     }
+    // Product JSON is persisted; clear the route guard for the internal
+    // CREATE -> EDIT redirect. Restore pending-image dirtiness afterwards.
+    imageDirty.value = false
     unsaved.markClean()
-    if (!id.value && typeof route.query.return_parent_id === 'string') {
+    if (!id.value && typeof route.query.return_parent_id === 'string' && !imagePartialError.value) {
       await router.replace(`/products/${route.query.return_parent_id}`)
       product.value = await getProductById(route.query.return_parent_id)
     } else if (!id.value) {
       await router.replace(`/products/${saved.id}`)
     }
     if (product.value) resetFromRow(product.value)
-    unsaved.markClean()
+    if (imagePartialError.value) imageDirty.value = true
+    else unsaved.markClean()
     await Promise.all([loadConversions(), loadChildren(), loadComboItems()])
   } catch (caught: unknown) {
     error.value = caught
@@ -352,8 +362,9 @@ watch(
         <legend>{{ t('product.image') }}</legend>
         <ProductImageField
           ref="imageField"
-          :product-id="id"
+          :product-id="id ?? (product ? String(product.id) : undefined)"
           :image-available="productHasImage(product)"
+          :image-path="product?.image_url"
           :editable="canEdit"
           :disabled="busy"
           @dirty="onImageDirty"
@@ -507,7 +518,7 @@ watch(
         ><button type="submit" class="primary-button" :disabled="busy || !canEdit || !lookupsReady">
           {{ busy ? t('common.saving') : t('common.save') }}</button
         ><BusinessWorkflowAction
-          v-if="editing && product && hasBasePermission('product', 'setstate')"
+          v-if="editing && product && canSetState"
           resource="product"
           :target-id="String(product.id)"
           :busy="busy"
@@ -577,7 +588,7 @@ watch(
                 >
                   {{ t('common.view') }}</button
                 ><button
-                  v-if="hasBasePermission('product', 'edit')"
+                  v-if="row.allowed_actions?.edit === true"
                   type="button"
                   class="icon-button"
                   :aria-label="`${t('common.edit')} ${row.full_name}`"
@@ -628,7 +639,7 @@ watch(
           <p class="field-note">{{ t('product.conversionDirection', { uom: baseUomName }) }}</p>
         </div>
         <button
-          v-if="hasBasePermission('product', 'edit')"
+          v-if="canEdit"
           type="button"
           class="secondary-button"
           @click="openConversion()"
@@ -672,7 +683,7 @@ watch(
               <td>{{ businessStateLabel(row.status) }}</td>
               <td class="table-actions">
                 <button
-                  v-if="hasBasePermission('product', 'edit')"
+                  v-if="canEdit"
                   type="button"
                   class="icon-button"
                   :aria-label="`${t('common.edit')} ${row.uom_id}`"
@@ -680,7 +691,7 @@ watch(
                 >
                   {{ t('common.edit') }}</button
                 ><button
-                  v-if="hasBasePermission('product', 'edit')"
+                  v-if="canEdit"
                   type="button"
                   class="icon-button danger-button"
                   :aria-label="t('common.delete')"
@@ -697,7 +708,7 @@ watch(
         </table>
       </div>
       <button
-        v-if="hasBasePermission('product', 'edit')"
+        v-if="canEdit"
         type="button"
         class="primary-button"
         :disabled="conversionBusy"
@@ -720,10 +731,10 @@ watch(
           <p v-if="!editing" class="field-note">{{ t('product.atomicComboCreate') }}</p>
         </div>
         <button
-          v-if="hasBasePermission('product', editing ? 'edit' : 'create')"
+          v-if="editing ? canEdit : hasBasePermission('product', 'create')"
           type="button"
           class="secondary-button"
-          :disabled="!hasBasePermission('product', 'edit')"
+          :disabled="editing ? !canEdit : !hasBasePermission('product', 'edit')"
           @click="addComboItem"
         >
           {{ t('product.addComponent') }}
@@ -771,7 +782,7 @@ watch(
               <td>{{ componentUom(row.component_product_id) }}</td>
               <td>
                 <button
-                  v-if="hasBasePermission('product', 'edit')"
+                  v-if="editing ? canEdit : hasBasePermission('product', 'edit')"
                   type="button"
                   class="icon-button danger-button"
                   :aria-label="t('common.delete')"
@@ -788,7 +799,7 @@ watch(
         </table>
       </div>
       <button
-        v-if="editing && hasBasePermission('product', 'edit')"
+        v-if="editing && canEdit"
         type="button"
         class="primary-button"
         :disabled="comboBusy"
@@ -1005,9 +1016,7 @@ textarea {
 .data-table tbody tr:last-child td {
   border-bottom: 0;
 }
-.table-actions {
-  white-space: nowrap;
-}
+
 .icon-button {
   border: 0;
   background: transparent;

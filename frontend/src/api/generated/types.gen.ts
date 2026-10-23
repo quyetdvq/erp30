@@ -210,6 +210,7 @@ export type AuthUser = {
      * Whether private avatar metadata is present; no storage filename is exposed.
      */
     has_avatar: boolean;
+    avatar_url?: string | null;
     email: string | null;
     active: boolean;
     status: string | null;
@@ -307,6 +308,14 @@ export type Product = {
      * Whether this Product has an uploaded representative image.
      */
     image_available?: boolean;
+    image_url?: string | null;
+    /**
+     * Advisory record-specific PBAC for list/detail GET; mutations reauthorize.
+     */
+    allowed_actions?: {
+        edit: boolean;
+        setstate: boolean;
+    };
     status: BusinessWorkflowStatus;
     role: 'SIMPLE' | 'PARENT' | 'CHILD' | 'COMBO';
     full_name: string;
@@ -1019,6 +1028,7 @@ export type SecurityUser = {
     username: string;
     name: string | null;
     has_avatar: boolean;
+    avatar_url?: string | null;
     email: string | null;
     active: boolean;
     status: string | null;
@@ -1036,6 +1046,7 @@ export type UserIdentity = {
     username: string;
     name: string | null;
     has_avatar: boolean;
+    avatar_url?: string | null;
     email: string;
     active: boolean;
     status: 'ACTIVE' | 'INACTIVE' | 'LOCKED' | 'SUSPENDED' | 'BANNED' | 'DISABLED';
@@ -1080,6 +1091,7 @@ export type UserIdentityResponse = SuccessResponse & {
 export type UserAvatarMutation = {
     user_id: BigInt;
     has_avatar: boolean;
+    avatar_url?: string | null;
 };
 
 export type UserAvatarMutationResponse = SuccessResponse & {
@@ -3901,41 +3913,6 @@ export type DeleteUserAvatarResponses = {
 };
 
 export type DeleteUserAvatarResponse = DeleteUserAvatarResponses[keyof DeleteUserAvatarResponses];
-
-export type GetUserAvatarData = {
-    body?: never;
-    path: {
-        id: BigInt;
-    };
-    query?: never;
-    url: '/api/v1/users/{id}/avatar';
-};
-
-export type GetUserAvatarErrors = {
-    /**
-     * Unauthenticated or invalid authentication.
-     */
-    401: ErrorResponse;
-    /**
-     * Visible target but action denied.
-     */
-    403: ErrorResponse;
-    /**
-     * Target not found or not visible.
-     */
-    404: ErrorResponse;
-};
-
-export type GetUserAvatarError = GetUserAvatarErrors[keyof GetUserAvatarErrors];
-
-export type GetUserAvatarResponses = {
-    /**
-     * Authenticated private JPEG, PNG or WebP image bytes; not publicly cacheable.
-     */
-    200: Blob | File;
-};
-
-export type GetUserAvatarResponse = GetUserAvatarResponses[keyof GetUserAvatarResponses];
 
 export type UploadUserAvatarData = {
     body: UserAvatarUpload;
@@ -6793,41 +6770,6 @@ export type DeleteProductImageResponses = {
 };
 
 export type DeleteProductImageResponse = DeleteProductImageResponses[keyof DeleteProductImageResponses];
-
-export type GetProductImageData = {
-    body?: never;
-    path: {
-        id: BigInt;
-    };
-    query?: never;
-    url: '/api/v1/products/{id}/image';
-};
-
-export type GetProductImageErrors = {
-    /**
-     * Unauthenticated or invalid authentication.
-     */
-    401: ErrorResponse;
-    /**
-     * Visible target but action denied.
-     */
-    403: ErrorResponse;
-    /**
-     * Target not found or not visible.
-     */
-    404: ErrorResponse;
-};
-
-export type GetProductImageError = GetProductImageErrors[keyof GetProductImageErrors];
-
-export type GetProductImageResponses = {
-    /**
-     * Image bytes. Not publicly cacheable.
-     */
-    200: Blob | File;
-};
-
-export type GetProductImageResponse = GetProductImageResponses[keyof GetProductImageResponses];
 
 export type UploadProductImageData = {
     body: {

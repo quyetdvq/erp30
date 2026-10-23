@@ -20,14 +20,18 @@ final class UserAvatarStorageTest extends TestCase
 
     protected function tearDown(): void
     {
-        foreach (glob($this->folder . DIRECTORY_SEPARATOR . '*') ?: [] as $file) {
-            @unlink($file);
+        foreach (glob($this->folder . DIRECTORY_SEPARATOR . '*') ?: [] as $entry) {
+            foreach (glob($entry . DIRECTORY_SEPARATOR . '*') ?: [] as $file) {
+                @unlink($file);
+            }
+            if (is_dir($entry)) @rmdir($entry);
+            else @unlink($entry);
         }
         @rmdir($this->folder);
         parent::tearDown();
     }
 
-    public function testSupportedFormatsAreDecodedAndReencodedToRandomPrivateFiles(): void
+    public function testSupportedFormatsAreDecodedAndReencodedToYearlyFiles(): void
     {
         $this->requireCodecs();
         foreach (['jpg' => 'image/jpeg', 'png' => 'image/png', 'webp' => 'image/webp'] as $extension => $mime) {
@@ -42,7 +46,7 @@ final class UserAvatarStorageTest extends TestCase
 
                 $a = $storage->store($source);
                 $b = $storage->store($source);
-                self::assertMatchesRegularExpression('/\A[a-f0-9]{40}\.' . $extension . '\z/', $a['filename']);
+                self::assertMatchesRegularExpression('/\A[0-9]{8}avatar[0-9]{7}\.' . $extension . '\z/', $a['filename']);
                 self::assertNotSame($a['filename'], $b['filename']);
                 self::assertSame($mime, $a['mime']);
                 self::assertFileExists($storage->path($a['filename']));
@@ -88,7 +92,7 @@ final class UserAvatarStorageTest extends TestCase
         }
     }
 
-    public function testOversizedPixelsSvgGifAndFakePngAreRejected(): void
+    public function testLargeImagesAreResizedAndInvalidImagesRejected(): void
     {
         $this->requireCodecs();
         $storage = new UserAvatarStorage($this->folder);
@@ -97,7 +101,9 @@ final class UserAvatarStorageTest extends TestCase
         $svg = $this->temporaryFile('<svg xmlns="http://www.w3.org/2000/svg"></svg>');
         $fakePng = $this->temporaryFile("\x89PNG\r\n\x1A\n" . str_repeat('a', 80));
         try {
-            $this->assertDomainError('USER_AVATAR_INVALID_CONTENT', static fn () => $storage->inspect($oversized));
+            $large = $storage->store($oversized);
+            self::assertSame([2048, 1], array_slice(getimagesize($storage->path($large['filename'])), 0, 2));
+            $storage->delete($large['filename']);
             $this->assertDomainError('USER_AVATAR_INVALID_TYPE', static fn () => $storage->inspect($gif));
             $this->assertDomainError('USER_AVATAR_INVALID_CONTENT', static fn () => $storage->inspect($svg));
             $this->assertDomainError('USER_AVATAR_INVALID_CONTENT', static fn () => $storage->inspect($fakePng));

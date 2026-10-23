@@ -906,3 +906,8 @@ a {
   background-position: center;
   background-size: 1em;
 }
+
+
+.table-actions {
+  text-align: end !important;
+}

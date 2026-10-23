@@ -37,16 +37,16 @@ test('edit never sends group_ids and may leave a legacy NULL name unchanged', ()
   assert.throws(() => buildEditUserPayload({username:'old',email:'a@example.test',name:'Old'}, {username:'new',email:'a@example.test',name:' '}))
 })
 
-test('avatar failure saves created user id and retry only uploads, never re-POSTs', async () => {
+test('avatar failure saves created user id and retry only uploads, never re-creates user', async () => {
   const state = {createdUserId:null}
   let posts = 0
-  let puts = 0
+  let uploads = 0
   const create = async () => { posts++; return {id:99} }
-  const upload = async (id) => { assert.equal(id,'99'); puts++; if (puts === 1) throw new Error('403') }
+  const upload = async (id) => { assert.equal(id,'99'); uploads++; if (uploads === 1) throw new Error('403') }
   await assert.rejects(submitCreatedUserAvatar(state, create, upload), /403/)
   assert.equal(state.createdUserId, '99')
   assert.equal(posts,1)
   assert.equal((await submitCreatedUserAvatar(state, create, upload)).id, '99')
   assert.equal(posts,1)
-  assert.equal(puts,2)
+  assert.equal(uploads,2)
 })

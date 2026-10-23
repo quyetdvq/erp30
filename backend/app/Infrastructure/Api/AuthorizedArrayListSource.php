@@ -10,8 +10,12 @@ namespace App\Infrastructure\Api;
  */
 final readonly class AuthorizedArrayListSource implements AuthorizedListSource
 {
-    /** @param list<array<string, mixed>> $rows */
-    public function __construct(private array $rows)
+    /**
+     * @param list<array<string, mixed>> $rows
+     * @param (\Closure(string,mixed,mixed):?int)|null $compareField Optional field-specific comparator.
+     *        A null return retains the existing shared ordering semantics.
+     */
+    public function __construct(private array $rows, private ?\Closure $compareField = null)
     {
     }
 
@@ -25,9 +29,13 @@ final readonly class AuthorizedArrayListSource implements AuthorizedListSource
     {
         $rows = $this->filtered($query);
         $terms = $query->sortTerms();
-        usort($rows, static function (array $left, array $right) use ($terms): int {
+        $compareField = $this->compareField;
+        usort($rows, static function (array $left, array $right) use ($terms, $compareField): int {
             foreach ($terms as $term) {
-                $comparison = self::compare($left[$term->field] ?? null, $right[$term->field] ?? null);
+                $a = $left[$term->field] ?? null;
+                $b = $right[$term->field] ?? null;
+                $comparison = $compareField === null ? null : $compareField($term->field, $a, $b);
+                $comparison ??= self::compare($a, $b);
                 if ($comparison !== 0) {
                     return $term->direction === 'DESC' ? -$comparison : $comparison;
                 }

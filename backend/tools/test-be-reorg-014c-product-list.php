@@ -100,11 +100,14 @@ namespace App\Modules\Product\Product {
         }
     }
 }
-namespace App\Infrastructure\Api {
+namespace App\Modules\Product\Product\Application {
     use App\Exceptions\DomainException;
+    use App\Infrastructure\Api\AuthorizedListSource;
+    use App\Infrastructure\Api\AuthorizedArrayListSource;
+    use App\Infrastructure\Api\CommonListQuery;
     use App\Modules\Product\Product\ProductRepository;
     use App\Modules\Product\Product\ProductRoleService;
-    /** Stub SQL source; use canonical parser/comparator for page/count. */
+    /** Stub SQL source at its Product-owned location; keep page/count behavior. */
     final class SqlProductListSource implements AuthorizedListSource
     {
         /** @param list<string>|null $statuses */
@@ -237,6 +240,15 @@ namespace {
             try { return $read(); }
             finally { Be014cTrace::add('batch-close'); }
         }
+        public function withAllowedActions(OperationContext $operation, array $rows): array
+        {
+            be014cAssert($operation === $this->identity, 'action preview must share Product operation');
+            Be014cTrace::add('actions-page-' . count($rows));
+            return array_map(static function (array $row): array {
+                $row['allowed_actions'] = ['edit' => $row['status'] === 'ACTIVE', 'setstate' => false];
+                return $row;
+            }, $rows);
+        }
         public function authorizedStatuses(OperationContext $operation): ?array
         {
             be014cAssert($operation === $this->identity, 'bucket compiler must share OperationContext instance');
@@ -302,18 +314,18 @@ namespace {
         be014cSame('B-002', $response['items'][0]['product_code'], 'public product code');
         be014cSame(false, $response['items'][0]['serial_management_enabled'], 'string zero to JSON bool');
         be014cAssert(! array_key_exists('image_filename', $response['items'][0]), 'storage path redaction');
-        be014cSame(['requires-state', 'base-view', 'supports-sql', 'snapshot-open', 'sql-count', 'sql-page', 'roles-page', 'snapshot-close'], Be014cTrace::$events, 'base SQL order');
-        be014cSame(0, $auth->operationCount, 'base-scope operation delegated inside PBAC adapter');
+        be014cSame(['requires-state', 'base-view', 'supports-sql', 'snapshot-open', 'sql-count', 'sql-page', 'roles-page', 'operation', 'actions-page-1', 'snapshot-close'], Be014cTrace::$events, 'base SQL order');
+        be014cSame(1, $auth->operationCount, 'base-scope action preview captures one operation');
     });
     $check('state buckets filter before COUNT and page', static function (): void {
         $auth = new Be014cFakeAuthorization();
         $auth->state = true;
-        $response = be014cService(new ProductRepository(be014cRows()), $auth)->list(['page' => '2', 'page_size' => '1']);
+        $response = be014cService(new ProductRepository(be014cRows()), $auth)->list(['page' => '2', 'page_size' => '1', 'sort' => 'id']);
         be014cSame('2', $response['total'], 'authorized total');
         be014cSame(3, $response['items'][0]['id'], 'state-filtered page');
         be014cSame(1, $auth->operationCount, 'one operation on SQL path');
         be014cSame(1, $auth->recheckCount, 'each returned row rechecked');
-        be014cSame(['requires-state', 'supports-sql', 'operation', 'snapshot-open', 'batch-open', 'compile', 'sql-count', 'sql-page', 'roles-page', 'recheck-3', 'batch-close', 'snapshot-close'], Be014cTrace::$events, 'state SQL order');
+        be014cSame(['requires-state', 'supports-sql', 'operation', 'snapshot-open', 'batch-open', 'compile', 'sql-count', 'sql-page', 'roles-page', 'recheck-3', 'batch-close', 'actions-page-1', 'snapshot-close'], Be014cTrace::$events, 'state SQL order');
     });
     $check('no permitted State yields authorized zero total', static function (): void {
         $auth = new Be014cFakeAuthorization();
@@ -328,7 +340,7 @@ namespace {
         $auth->state = true;
         $auth->statuses = null;
         $auth->blocked = [2];
-        $response = be014cService(new ProductRepository(be014cRows()), $auth)->list(['page' => '2', 'page_size' => '1']);
+        $response = be014cService(new ProductRepository(be014cRows()), $auth)->list(['page' => '2', 'page_size' => '1', 'sort' => 'id']);
         be014cSame('2', $response['total'], 'fallback authorized total');
         be014cSame(3, $response['items'][0]['id'], 'fallback visible page');
         $enumerateAt = array_search('products-all', Be014cTrace::$events, true);
@@ -372,7 +384,7 @@ namespace {
         $auth = new Be014cFakeAuthorization();
         $auth->state = true;
         $auth->blocked = [1];
-        be014cThrows(static fn () => be014cService(new ProductRepository(be014cRows()), $auth)->list(['page_size' => '1']), DomainException::class, 'PRODUCT_AUTHORIZATION_DENIED');
+        be014cThrows(static fn () => be014cService(new ProductRepository(be014cRows()), $auth)->list(['page_size' => '1', 'sort' => 'id']), DomainException::class, 'PRODUCT_AUTHORIZATION_DENIED');
         be014cAssert(in_array('snapshot-close', Be014cTrace::$events, true), 'snapshot unwound on denial');
     });
     $check('invalid filter and sort rejected by original query adapter', static function (): void {
@@ -389,6 +401,7 @@ namespace {
         $inputs = [
             ['code' => '0001', 'serial_management_enabled' => '0', 'image_filename' => '', 'image_mime' => 'image/jpeg'],
             ['code' => 'x', 'serial_management_enabled' => 1, 'image_filename' => 'picture.png', 'image_size_bytes' => 10],
+            ['code' => 'y', 'serial_management_enabled' => 1, 'image_filename' => '20261023product5689522.jpg'],
             ['code' => null, 'serial_management_enabled' => null],
             ['serial_management_enabled' => true, 'image_filename' => '0'],
             ['serial_management_enabled' => false],
@@ -397,6 +410,7 @@ namespace {
             $old = $row;
             if (array_key_exists('image_filename', $old)) {
                 $old['image_available'] = is_string($old['image_filename']) && $old['image_filename'] !== '';
+                $old['image_url'] = \App\Infrastructure\Media\YearlyImageStorage::publicUrl($old['image_filename'], 'product');
             }
             unset($old['image_filename'], $old['image_mime'], $old['image_size_bytes']);
             if (array_key_exists('serial_management_enabled', $old)) {

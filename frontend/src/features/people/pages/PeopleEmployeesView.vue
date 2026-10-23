@@ -852,13 +852,6 @@ onMounted(async () => {
 }
 
 
-.table-actions {
-  display: flex;
-  align-items: center;
-  justify-content: end;
-  gap: 6px;
-}
-
 .employee-detail-modal :deep(.contact-list) {
   width: 100%;
   min-width: 0;

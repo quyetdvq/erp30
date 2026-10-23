@@ -284,10 +284,16 @@ SQL;
      */
     public function supportsSqlList(CommonListQuery $query): bool
     {
-        return $this->supportsSqlProjection($query)
-            && $query->q === null
-            && count($query->sort) === 1
-            && $query->sort[0]->field === 'id';
+        if (! $this->supportsSqlProjection($query) || $query->q !== null) {
+            return false;
+        }
+        // Numeric id and DECIMAL price have exact SQL ordering. Product code,
+        // Unicode names and SKU deliberately retain PHP comparison semantics.
+        return (count($query->sort) === 1 && $query->sort[0]->field === 'id')
+            || (count($query->sort) === 2
+                && $query->sort[0]->field === 'price'
+                && $query->sort[1]->field === 'id'
+                && $query->sort[1]->direction === 'ASC');
     }
 
     /**
@@ -335,10 +341,11 @@ SQL;
     {
         $this->assertSupportedSqlList($query);
         try {
-            $result = $this->listBuilder($query, $authorizedStatuses)
-                ->orderBy('id', $query->sort[0]->direction)
-                ->limit($query->pageSize, $query->offset)
-                ->get();
+            $builder = $this->listBuilder($query, $authorizedStatuses);
+            foreach ($query->sort as $sort) {
+                $builder->orderBy($sort->field, $sort->direction);
+            }
+            $result = $builder->limit($query->pageSize, $query->offset)->get();
             if ($result === false) {
                 throw new PersistenceException(self::ERROR_PERSISTENCE_FAILED, 'listPageMatching');
             }
@@ -363,9 +370,29 @@ SQL;
         if (! $this->supportsSqlProjection($query)) {
             throw new \InvalidArgumentException('Unsupported SQL Product key projection.');
         }
+        // Restrict the transferred projection to fields required by this
+        // query. `sort=product_code` without search now transfers id+code only.
+        $columns = ['id'];
+        $project = static function (string $field) use (&$columns): void {
+            if ($field === 'product_code') {
+                $columns[] = 'code';
+            } elseif ($field === 'full_name') {
+                array_push($columns, 'parent_product_id', 'product_name', 'product_child_name');
+            } elseif ($field !== 'id') {
+                $columns[] = $field;
+            }
+        };
+        foreach ($query->sort as $term) {
+            $project($term->field);
+        }
+        if ($query->q !== null) {
+            foreach ($query->searchFields() as $field) {
+                $project($field);
+            }
+        }
         try {
             $result = $this->listBuilder($query, $authorizedStatuses)
-                ->select(['id', 'code', 'sku', 'barcode', 'product_name', 'product_child_name', 'product_type', 'status'])
+                ->select(array_values(array_unique($columns)))
                 ->orderBy('code', 'ASC')->orderBy('id', 'ASC')->get();
             if ($result === false) {
                 throw new PersistenceException(self::ERROR_PERSISTENCE_FAILED, 'listProjectedKeys');
@@ -377,8 +404,10 @@ SQL;
         }
         $keys = [];
         foreach ($result->getResultArray() as $row) {
-            $row['product_code'] = $row['code'];
-            unset($row['code']);
+            if (array_key_exists('code', $row)) {
+                $row['product_code'] = $row['code'];
+                unset($row['code']);
+            }
             $keys[] = $row;
         }
         return $keys;
@@ -390,6 +419,22 @@ SQL;
     public function findByIds(array $ids): array
     {
         return $this->findByIn('id', $ids, 'findByIds');
+    }
+
+    /**
+     * Fetch only parent names for full-name sorting, batched rather than
+     * issuing a query per CHILD. Caller runs inside the Product list snapshot.
+     *
+     * @param list<int> $ids
+     * @return array<int,string>
+     */
+    public function findNamesByIds(array $ids): array
+    {
+        $names = [];
+        foreach ($this->findByIn('id', $ids, 'findNamesByIds', ['id', 'product_name']) as $row) {
+            $names[(int) $row['id']] = (string) $row['product_name'];
+        }
+        return $names;
     }
 
     /** @param list<int> $ids

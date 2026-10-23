@@ -191,19 +191,21 @@ $checks = [
         auditAssert(! str_contains($groups, 'resolveAncestor') && ! str_contains($groups, '->listChildren('),
             '014G must not re-parent, prune, or rebuild hierarchy during flat list read');
     },
-    'createProduct KIR-001 transaction/Numbering conflict remains explicitly tracked' => static function () use ($facadeBodies, $app): void {
+    'createProduct KIR-001 keeps its command transaction while Numbering participates explicitly' => static function () use ($facadeBodies, $app): void {
         $method = $facadeBodies['createProduct'];
         foreach (["array_key_exists('combo_items'", '->transBegin()', '->products()->create(', '->combos()->replaceItems('] as $marker) {
             auditAssert(str_contains($method, $marker), 'COMBO create changed; KIR-001 matrix/ADR required: ' . $marker);
         }
         $allocator = (string) file_get_contents($app . 'Modules/Numbering/Allocation/Application/AutoNumberingCounterAllocator.php');
-        auditAssert(str_contains($allocator, 'transDepth > 0'), 'Numbering transaction guard changed; re-audit KIR-001');
+        auditAssert(str_contains($allocator, '$ownsTransaction = (int) $this->db->transDepth === 0'), 'KIR-001 own-or-participate decision missing');
+        auditAssert(str_contains($allocator, '$ownsTransaction && ! $this->db->transCommit()'), 'KIR-001 caller-owned commit guard missing');
+        auditAssert(! str_contains($allocator, 'if ((int) $this->db->transDepth > 0)'), 'Legacy KIR-001 nested-transaction rejection returned');
     },
     'read-after-write and Product media compatibility are documented by active code' => static function () use ($facadeBodies, $app): void {
-        foreach (['updateGroup' => 'getGroup', 'setGroupState' => 'getGroup', 'updateUom' => 'getUom',
-            'setUomState' => 'getUom', 'updateProduct' => 'getProduct', 'setProductState' => 'getProduct',
-            'createPriceList' => 'getPriceList', 'updatePriceList' => 'getPriceList',
-            'setPriceListState' => 'getPriceList'] as $write => $read) {
+        foreach (['updateGroup' => 'getGroupWithOperation', 'setGroupState' => 'getGroupWithOperation', 'updateUom' => 'getUomWithOperation',
+            'setUomState' => 'getUomWithOperation', 'updateProduct' => 'getProductWithOperation', 'setProductState' => 'getProductWithOperation',
+            'createPriceList' => 'getPriceListWithOperation', 'updatePriceList' => 'getPriceListWithOperation',
+            'setPriceListState' => 'getPriceListWithOperation'] as $write => $read) {
             auditAssert(str_contains($facadeBodies[$write], '->' . $read . '('), 'Read-after-write boundary changed: ' . $write);
         }
         $mediaFactory = (string) file_get_contents($app . 'Bootstrap/ProductMediaFactory.php');
@@ -211,9 +213,10 @@ $checks = [
         auditAssert(str_contains($mediaFactory, '$catalog->productReadAccess()'), 'Media factory compatibility changed');
         auditAssert(str_contains($imagesController, '->productForImage('), 'Product image authorization entrypoint changed');
     },
-    'operation() can recapture EvaluationTime; same-context change still requires separate tests' => static function () use ($facadeBodies): void {
+    'operation() stays stateless while 014I pins one context per affected command' => static function () use ($facadeBodies): void {
         auditAssert(str_contains($facadeBodies['operation'], '$this->mutationContext->begin()'), 'OperationContext path changed; context parity must be revisited');
-        auditAssert(str_contains($facadeBodies['createProduct'], '$this->operation()'), 'createProduct operation capture changed');
+        auditAssert(substr_count($facadeBodies['createProduct'], '$this->operation()') === 1, 'createProduct must capture exactly one command context');
+        auditAssert(str_contains($facadeBodies['createProduct'], '->getProductWithOperation($id, $operation)'), 'createProduct readback must reuse command context');
     },
 ];
 

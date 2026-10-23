@@ -24,6 +24,9 @@ final class EffectiveOrganizationScopeIndex
     private const MAX_BOUNDARIES = 768;
     private const TYPES = ['GROUP', 'COMPANY', 'BRANCH', 'PLANT', 'WAREHOUSE'];
 
+    /** @var array<int,string> Per-index signatures; never shared across operations. */
+    private array $resolvedSignatures = [];
+
     /** @param array<int,array{id:int,parent_id:?int,type:string,status:string}> $nodes
      * @param array<int,true> $boundaries
      */
@@ -176,10 +179,16 @@ final class EffectiveOrganizationScopeIndex
         if (! isset($this->nodes[$id])) {
             return null;
         }
+        if (array_key_exists($id, $this->resolvedSignatures)) {
+            return $this->resolvedSignatures[$id];
+        }
+
         $seen = [];
         $path = [];
         $cursor = $id;
-        while (true) {
+        // Walk only to the nearest already validated ancestor. This index is
+        // immutable, so all descendants can reuse that ancestor's signature.
+        while (! array_key_exists($cursor, $this->resolvedSignatures)) {
             if (isset($seen[$cursor]) || ! isset($this->nodes[$cursor])) {
                 return null; // orphan or cycle
             }
@@ -194,7 +203,14 @@ final class EffectiveOrganizationScopeIndex
             }
             $cursor = $parent;
         }
-        $path = array_reverse($path);
-        return implode(',', array_values(array_filter($path, fn (int $nodeId): bool => isset($this->boundaries[$nodeId]))));
+
+        $signature = $this->resolvedSignatures[$cursor] ?? '';
+        foreach (array_reverse($path) as $nodeId) {
+            if (isset($this->boundaries[$nodeId])) {
+                $signature .= ($signature === '' ? '' : ',') . $nodeId;
+            }
+            $this->resolvedSignatures[$nodeId] = $signature;
+        }
+        return $this->resolvedSignatures[$id];
     }
 }

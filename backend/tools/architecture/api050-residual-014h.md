@@ -16,7 +16,7 @@ Authoritative source inventory for the route/controller/OpenAPI mapping remains 
 | Owner mutation + facade readback | 8 | `updateGroup`, `setGroupState`, `updateUom`, `setUomState`, `updateProduct`, `setProductState`, `updatePriceList`, `setPriceListState` | `write → read` may run distinct PBAC checks; do not change response or error precedence without contract tests |
 | Initial-state normalized create | 3 | `createGroup`, `createUom`, `createPriceList` | Must preserve normalization, mutation, optional readback, state and context |
 | Facade authorization gate | 1 | `getConversions` | `product.view` is checked **before** calling ProductUomService::listByProduct (which is not self-authorizing at this entrypoint) |
-| Conditional multi-step COMBO create | 1 | `createProduct` | **KIR-001 / P0 STOP** until ADR and MariaDB/Shield transaction+concurrency POC |
+| Conditional multi-step COMBO create | 1 | `createProduct` | **KIR-001 / P0 VERIFY**: C1 runtime conflict confirmed; C2 own-or-participate remediation is source-ready and must pass runtime concurrency/rollback gates |
 
 **Residual:** 5 + 4 + 8 + 3 + 1 + 1 = **22** operations. Product owns 19 routes overall and Pricing 7; these ownership figures **do not** mean each operation should receive its own service. A route-to-method-to-owner ledger with evidence markers lives in `api050-residual-014h.json` and is checked by `test-be-reorg-014h-residual.php`.
 
@@ -24,8 +24,8 @@ Two additional active non-route consumers block facade deletion: `Bootstrap/Prod
 
 ## 2. OperationContext, transaction and authorization risks
 
-- **`CXT-001` P1**: `Api050ProductCatalogService::operation()` invokes `MutationContext::begin()` when called. `MutationContext::begin()` captures an `EvaluationTime` if one is not supplied. Multi-step facade paths can invoke this method repeatedly (including Product create/COMBO, write then authorized show). This is **source-observed risk**, **not proof of a persisted runtime defect**. Before changing semantics, add tests for same object/actor/evaluationTime/requestId across command participants, Numbering callback, audit and readback. Keep context confined to one command, not singleton/request-global state. The Standard requires one context per command; do not silently rewrite PBAC evaluation in this audit.
-- **`KIR-001` P0**: In `createProduct()` the `combo_items` branch opens a transaction with `transBegin()`. AUTO Product creation can pass through Numbering's `AutoNumberingCounterAllocator` which rejects a positive `transDepth`. The exact failure/success matrix on MariaDB remains unverified here. **DO NOT** change Numbering allocator, Product create transaction opener/locks or COMBO callback without approved ADR, test DB POC, rollback, concurrency/collision and security parity.
+- **`CXT-001` P1 — source fix applied by BE-REORG-014I**: `Api050ProductCatalogService::operation()` still creates a fresh `OperationContext` per call, but affected mutation commands now capture it once and pass the same object through owner mutation, COMBO participation where applicable, and authorized response readback. No singleton/request-global cache was introduced. This is **source-verified only**; MariaDB/Shield/API parity for actor/evaluationTime/requestId, PBAC and response behavior remains required before closing the risk at runtime.
+- **`KIR-001` P0 — C2 source-ready, runtime pending**: C1 operator evidence on 2026-10-22 passed 6/6 tests (50 assertions) and confirmed that the allocator nested-transaction rejection is the AUTO+COMBO blocker. C2 keeps the Product COMBO outer transaction and changes only Numbering to own-or-participate semantics. Do not close the risk until the 9-case remediation matrix, UNIT-STANDARD and NO-DROP pass, including concurrent first-counter AUTO COMBO creates.
 - **Read-after-write P1**: eight `update`/`setState` methods perform mutation through the owner then authorize a show/read response at the facade. A denied read *after* a committed write is a possible observable outcome under existing code; runtime tests must characterize it and the approved contract must decide if change is needed. Do not remove readback simply to eliminate extra PBAC calls.
 - **`COMPAT-001` P2**: keep API-050 compatibility for active Media/Image callers until all routes, factories, CLI/scripts and tests have been migrated with tests and a release rollback path.
 
@@ -90,14 +90,14 @@ The script intentionally does not output raw API data, cookies, bearer tokens or
 
 | Order | Work item | Safe scope now | Blocker for behavior change |
 |---|---|---|---|
-| P0 | `KIR-001` Product COMBO + AUTO | ADR draft and controlled read-only tests/POC plan | MariaDB/Shield integration, collision/rollback/concurrency proof, architecture & contract approval |
-| P1 | `CXT-001` operation context | Characterization tests for current per-command participants; locate duplicate captures and audit context | Approved plan and parity before passing one context through callbacks |
+| P0 | `KIR-001` Product COMBO + AUTO | **C2 source remediation implemented**: Numbering own-or-participate, Product command boundary retained | 9-case MariaDB/Shield remediation PASS including concurrency + UNIT-STANDARD + NO-DROP before runtime closure |
+| P1 | `CXT-001` operation context | **BE-REORG-014I source fix complete**: one context per affected API-050 mutation invocation; retain runtime parity gate | MariaDB/Shield/API parity before marking runtime-closed |
 | P1 | `PERF-001` Group/UOM PHP lists | Gather real HTTP/DB measurements using the provided tools; document cases and budgets | No SQL/PBAC rewrite until exact authorization-aware COUNT/page is proved |
 | P1 | Owner mutation/readback | Tests protecting write outcome vs view-denied response and audit/transaction status | Approved response semantics and runtime tests for each use case |
 | P2 | Protected read/conversions | Document read ownership and narrow Product read entrypoints without adding wrappers | 404/403/evaluation-context parity and active Media compatibility |
 | P3 | Five owner-delegated methods | Leave unchanged; update MDR/consumer list when touched | None unless there is demonstrated duplication or coupling |
 
-**Recommended next engineering checkpoint:** `BE-REORG-014I` focused on `CXT-001` characterization and controlled `KIR-001` test-plan design, **not** a speculative production transaction patch. Performance work remains conditional on actual measurements.
+**Current KIR-001 checkpoint:** C1 characterization is complete and C2 source remediation is implemented. Keep `KIR-001` P0 until the guarded 9-case C2 runtime suite proves rollback/reuse, collision and concurrency and the shared Numbering UNIT-STANDARD/NO-DROP cohorts remain green. `PERF-001` remains measurement-first.
 
 ## 6. Quality gate semantics
 

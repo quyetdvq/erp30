@@ -79,7 +79,7 @@ async function save(): Promise<void> {
   <div class="profile-layout">
     <section class="content-panel profile-summary">
       <UserAvatarManager v-if="auth.user" :key="String(auth.user.id)" :user-id="auth.user.id"
-        :has-avatar="auth.user.has_avatar" :label="auth.user.name || auth.user.username" :can-edit="true"
+        :has-avatar="auth.user.has_avatar" :avatar-url="auth.user.avatar_url" :label="auth.user.name || auth.user.username" :can-edit="true"
         @updated="void avatarUpdated()" />
       <strong>{{ auth.user?.name || auth.user?.username }}</strong
       ><small>{{ auth.user?.email }}</small>

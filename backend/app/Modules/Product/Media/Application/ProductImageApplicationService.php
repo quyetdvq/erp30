@@ -4,13 +4,12 @@ declare(strict_types=1);
 
 namespace App\Modules\Product\Media\Application;
 
-use App\Exceptions\DomainException;
 use App\Modules\Product\Media\Ports\ProductImageMetadataPort;
 use App\Modules\Product\Media\Ports\ProductImageStoragePort;
 use App\Modules\Product\Media\Ports\ProductMediaAccessPort;
 
 /**
- * PM-1: same authorize/store/metadata/cleanup/readback order as legacy ProductImageService.
+ * Protected image mutation: authorize, store/clear metadata, cleanup, return Product.
  * No implicit transaction: filesystem effects must remain observable after caller rollback.
  */
 final class ProductImageApplicationService
@@ -20,22 +19,6 @@ final class ProductImageApplicationService
         private readonly ProductImageMetadataPort $metadata,
         private readonly ProductImageStoragePort $storage,
     ) {
-    }
-
-    /** @return array{path:string,mime:string} */
-    public function read(int $id): array
-    {
-        $row = $this->access->authorizedProduct($id, 'view');
-        $filename = $row['image_filename'] ?? null;
-        $mime = $row['image_mime'] ?? null;
-        if (! is_string($filename) || $filename === '' || ! in_array($mime, ['image/jpeg', 'image/png', 'image/webp'], true)) {
-            throw new DomainException('PRODUCT_IMAGE_NOT_FOUND');
-        }
-        $path = $this->storage->path($filename);
-        if (! $this->storage->isFile($path)) {
-            throw new DomainException('PRODUCT_IMAGE_NOT_FOUND');
-        }
-        return ['path' => $path, 'mime' => $mime];
     }
 
     /** @return array<string,mixed> */

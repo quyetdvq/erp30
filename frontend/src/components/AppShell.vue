@@ -195,7 +195,7 @@ const {
               :title="auth.user?.name || auth.user?.username || t('shell.profile')"
             >
               <template #icon>
-                <UserAvatar v-if="auth.user" :user-id="auth.user.id" :has-avatar="auth.user.has_avatar" :fallback="auth.user.name || auth.user.username" />
+                <UserAvatar v-if="auth.user" :user-id="auth.user.id" :has-avatar="auth.user.has_avatar" :avatar-url="auth.user.avatar_url" :fallback="auth.user.name || auth.user.username" />
                 <NIcon v-else><PersonCircleOutline /></NIcon>
               </template>
               <span class="header-user-label">{{ auth.user?.name || auth.user?.username || t('shell.profile') }}</span>

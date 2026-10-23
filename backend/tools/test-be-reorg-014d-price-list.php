@@ -83,7 +83,10 @@ namespace App\Modules\Pricing\PriceList {
         }
     }
 }
-namespace App\Infrastructure\Api {
+namespace App\Modules\Pricing\PriceList\Application {
+    use App\Infrastructure\Api\AuthorizedArrayListSource;
+    use App\Infrastructure\Api\AuthorizedListSource;
+    use App\Infrastructure\Api\CommonListQuery;
     use CodeIgniter\Database\BaseConnection;
     use CodeIgniter\Database\ConnectionInterface;
 

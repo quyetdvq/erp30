@@ -20,6 +20,8 @@ const props = withDefaults(
     showEdit?: boolean
     showToggle?: boolean
     stateTargetId?: string
+    /** Explicit resource for server-provided row action hints (no base-permission recheck). */
+    stateResource?: string
     showDelete?: boolean
     viewPermission?: string
     editPermission?: string
@@ -106,10 +108,10 @@ const toggleIcon = computed(() => (props.active === false ? PowerOutline : BanOu
       v-if="
         props.showToggle &&
         props.stateTargetId &&
-        props.togglePermission &&
+        (props.stateResource || props.togglePermission) &&
         can(props.togglePermission)
       "
-      :resource="props.togglePermission.split('.')[0] || ''"
+      :resource="props.stateResource || props.togglePermission?.split('.')[0] || ''"
       :target-id="props.stateTargetId"
       :busy="props.busy"
       @changed="(status) => emit('stateChanged', status)"

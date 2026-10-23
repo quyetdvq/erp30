@@ -2,8 +2,11 @@
 
 declare(strict_types=1);
 
-namespace App\Infrastructure\Api;
+namespace App\Modules\Product\Product\Application;
 
+use App\Infrastructure\Api\AuthorizedListSource;
+use App\Infrastructure\Api\AuthorizedArrayListSource;
+use App\Infrastructure\Api\CommonListQuery;
 use App\Exceptions\DomainException;
 use App\Exceptions\PersistenceException;
 use App\Modules\Product\Product\ProductRepository;
@@ -14,15 +17,18 @@ use App\Modules\Product\Product\ProductRoleService;
  * are compiled through AuthorizationService from persisted Product samples;
  * the same State predicate is used by COUNT and page/key SQL.
  *
- * For id sorting with no text search, COUNT and LIMIT/OFFSET run in SQL.
- * For other canonical list queries, SQL projects only searchable/sortable
+ * For id and DECIMAL-price sorting with no text search, COUNT and LIMIT/OFFSET run in SQL.
+ * For other canonical list queries, SQL projects only required searchable/sortable
  * keys and PHP performs its original Unicode/numeric-aware comparisons.
  * Full Product rows and their relationships are loaded only for the page.
  */
 final class SqlProductListSource implements AuthorizedListSource
 {
     private ?AuthorizedArrayListSource $projected = null;
+    /** @var list<array<string,mixed>>|null */
+    private ?array $projectedKeys = null;
     private ?CommonListQuery $projectedQuery = null;
+    private bool $fullNamesReady = false;
     private bool $structureValidated = false;
 
     public function __construct(
@@ -52,7 +58,7 @@ final class SqlProductListSource implements AuthorizedListSource
 
         $ids = array_map(
             static fn (array $row): int => (int) $row['id'],
-            $this->projected($query)->fetchAuthorized($this->withoutSqlFilters($query)),
+            $this->projected($query, true)->fetchAuthorized($this->withoutSqlFilters($query)),
         );
         if ($ids === []) {
             return [];
@@ -87,11 +93,31 @@ final class SqlProductListSource implements AuthorizedListSource
         $this->structureValidated = true;
     }
 
-    private function projected(CommonListQuery $query): AuthorizedArrayListSource
+    private function projected(CommonListQuery $query, bool $forPage = false): AuthorizedArrayListSource
     {
         if ($this->projected === null || $this->projectedQuery !== $query) {
-            $this->projected = new AuthorizedArrayListSource($this->repository->listProjectedKeys($query, $this->authorizedStatuses));
+            $this->projectedKeys = $this->repository->listProjectedKeys($query, $this->authorizedStatuses);
+            $this->projected = new AuthorizedArrayListSource($this->projectedKeys, ProductListSort::compareField(...));
             $this->projectedQuery = $query;
+            $this->fullNamesReady = false;
+        }
+        if ($forPage && ! $this->fullNamesReady
+            && in_array('full_name', array_map(static fn ($term): string => $term->field, $query->sort), true)) {
+            // COUNT needs only q/filters. Resolve parent names for the actual
+            // sort/page, in one batched lookup under the same SQL snapshot.
+            $parentIds = [];
+            foreach ($this->projectedKeys ?? [] as $row) {
+                if (($row['parent_product_id'] ?? null) !== null) {
+                    $parentIds[] = (int) $row['parent_product_id'];
+                }
+            }
+            $keys = ProductListSort::withFullNames(
+                $this->projectedKeys ?? [],
+                $this->repository->findNamesByIds($parentIds),
+            );
+            $this->projected = new AuthorizedArrayListSource($keys, ProductListSort::compareField(...));
+            $this->projectedKeys = null; // Drop raw projection after derived name materialization.
+            $this->fullNamesReady = true;
         }
         return $this->projected;
     }

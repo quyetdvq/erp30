@@ -9,7 +9,8 @@ use PHPUnit\Framework\TestCase;
 /** @internal */
 final class ProductImageStorageTest extends TestCase
 {
-    private const PNG_1X1 = 'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+jWZ8AAAAASUVORK5CYII=';
+    // CRC-verified PNG: getimagesize() alone also accepts malformed IDAT checksums.
+    private const PNG_1X1 = 'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+ip1sAAAAASUVORK5CYII=';
 
     public function testValidPngIsDetectedFromBytesAndStoredUnderGeneratedName(): void
     {
@@ -20,8 +21,11 @@ final class ProductImageStorageTest extends TestCase
             self::assertSame('image/png', $info['mime']);
             self::assertSame('png', $info['extension']);
             $stored = $storage->store($path);
-            self::assertMatchesRegularExpression('/\A[a-f0-9]{40}\.png\z/', $stored['filename']);
+            self::assertMatchesRegularExpression('/\A[0-9]{8}product[0-9]{7}\.png\z/', $stored['filename']);
             self::assertFileExists($storage->path($stored['filename']));
+            self::assertSame('/writable/uploads/' . substr($stored['filename'], 0, 4) . '/' . $stored['filename'],
+                \App\Infrastructure\Media\YearlyImageStorage::publicUrl($stored['filename'], 'product'));
+            self::assertSame([1, 1], array_slice(getimagesize($storage->path($stored['filename'])), 0, 2));
             $storage->delete($stored['filename']);
             self::assertFileDoesNotExist($storage->path($stored['filename']));
         } finally {

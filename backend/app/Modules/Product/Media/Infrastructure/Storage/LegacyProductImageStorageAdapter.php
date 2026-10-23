@@ -7,7 +7,7 @@ namespace App\Modules\Product\Media\Infrastructure\Storage;
 use App\Modules\Product\Media\Ports\ProductImageStoragePort;
 use App\Services\ProductImageStorage;
 
-/** Preserve the existing private file format, generated filenames and cleanup behavior. */
+/** Compatibility adapter for authorized writes/deletion (no binary GET). */
 final class LegacyProductImageStorageAdapter implements ProductImageStoragePort
 {
     public function __construct(private readonly ProductImageStorage $storage)
@@ -18,16 +18,6 @@ final class LegacyProductImageStorageAdapter implements ProductImageStoragePort
     public function store(string $temporaryFile): array
     {
         return $this->storage->store($temporaryFile);
-    }
-
-    public function path(string $filename): string
-    {
-        return $this->storage->path($filename);
-    }
-
-    public function isFile(string $path): bool
-    {
-        return is_file($path);
     }
 
     public function delete(string $filename): void

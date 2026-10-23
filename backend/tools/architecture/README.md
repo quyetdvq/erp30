@@ -52,3 +52,108 @@ php .\backend\tools\bench-be-reorg-014h-php.php --self-test
 ```
 
 For large synthetic datasets and a guarded authenticated **read-only** local HTTP timing run, see `api050-residual-014h.md`. Synthetic PHP latency **is not** server/MariaDB p95. HTTP timing must confirm an isolated backed-up `erp_test` connection separately; the script does not inspect database configuration. 014H changes no application runtime code and does not authorize SQL/PBAC/Numbering transaction refactors.
+
+### BE-REORG-014I — API-050 command OperationContext
+
+API-050 mutation/readback paths now capture one `OperationContext` per facade invocation and reuse it through mutation participants and response authorization. This is a source-level fix for `CXT-001`; runtime MariaDB/Shield/API parity remains unverified. `KIR-001` is intentionally unchanged.
+
+```powershell
+php .\backend\tools\test-be-reorg-014i-operation-context.php
+```
+
+See `api050-operation-context-014i.md` for scope, invariants and rollback.
+
+### KIR-001-C1 — Product COMBO + AUTO runtime characterization
+
+C1 is complete. Operator runtime evidence on 2026-10-22 reported **6/6 tests PASS / 50 assertions** on guarded MariaDB/Shield, confirming the AUTO+COMBO ownership conflict while preserving manual COMBO rollback and standalone AUTO behavior. See `kir001-product-combo-auto-characterization.md`.
+
+### KIR-001-C2 — transaction ownership remediation
+
+C2 changes Numbering allocation to **own-or-participate** semantics: standalone AUTO issuance still owns its transaction, while AUTO invoked inside the Product COMBO command participates in the caller transaction without committing/rolling it back. The Product facade remains the command-level transaction owner. No API/schema/PBAC change is introduced.
+
+```powershell
+php .\backend\tools\test-kir001-source-gate.php
+# Back up erp_test before runtime:
+.\backend\tools\test-unit.ps1 RUN UNIT-STANDARD
+.\backend\tools\test-kir001.ps1 RUN
+.\backend\tools\test-unit.ps1 RUN NO-DROP
+```
+
+See `kir001-product-combo-auto-remediation.md`. Status remains `SOURCE_READY / RUNTIME_REMEDIATION_NOT_RUN` until the 9-case runtime matrix, UNIT-STANDARD and NO-DROP all pass.
+
+### BE-REORG-014J — Product SQL source module ownership
+
+An internal Product SQL list implementation was moved from generic `Infrastructure/Api` to `Modules/Product/Product/Application`, without SQL, authorization or transaction algorithm changes. No legacy alias was added: inventoried callers are the Product query service and its internal tests. The v1.2.2 observed dependency snapshot is intentionally **not** rewritten.
+
+```powershell
+php .\backend\tools\test-be-reorg-014j-product-sql-owner.php
+php .\backend\tools\test-be-reorg-014c-product-list.php
+php .\backend\tools\architecture-scan.php
+```
+
+See `be-reorg-014j-product-sql-source-ownership.md`. Source gate PASS is not MariaDB/Shield/API parity. Run `UNIT-STANDARD` then `NO-DROP` against the backed-up `erp_test` target prior to merging.
+
+
+### BE-REORG-014K — Pricing SQL list source module ownership
+
+Moved the internal `SqlPriceListListSource` from generic `Infrastructure/Api` into `Modules/Pricing/PriceList/Application`, keeping SQL body, authorization buckets, read snapshot and API behavior unchanged. Only the owner query service and its known tests were retargeted; no compatibility alias is added.
+
+```powershell
+php .\backend\tools\test-be-reorg-014k-price-list-sql-owner.php
+php .\backend\tools\test-be-reorg-014d-price-list.php
+php .\backend\tools\architecture-scan.php
+```
+
+See `be-reorg-014k-price-list-sql-source-ownership.md`. Source-only 9-case class test is not DB/Shield parity; run UNIT-STANDARD plus NO-DROP (including `P1Perf008PriceListSqlPaginationTest`) on a backed-up, verified `erp_test`. HTTP/benchmark evidence remains pending.
+
+### BE-REORG-014L — PBAC EmployeeStructure read seam
+
+Authorization's canonical decision engine now consumes the **consumer-owned** `EmployeeScopeReadPort` instead of the legacy mutable employee assignment service and employee repository. Bootstrap provides a two-method read-only bridge to existing EmployeeStructure repositories on a shared DB connection, preserving ten-argument legacy `AuthorizationService` construction. Runtime recursion into the same engine while the privileged port is active is rejected and reset on exceptions; no business PBAC policy, SQL, API, schema, or transaction changes are intended.
+
+```powershell
+php .\backend\tools\test-be-reorg-014l-employee-scope-read.php
+php .\backend\tools\architecture-scan.php
+php .\backend\tools\test-unit-no-drop-source-gate.php
+```
+
+See `be-reorg-014l-employee-scope-read.md` for exact owner/dependency inventory, privileged consumer restrictions, runtime negative spy, verification/rollback and deferred read seams. **Source checks are not MariaDB/Shield/HTTP parity**; UNIT-STANDARD, guarded KIR-001 and NO-DROP must run against a backed-up `erp_test` before promotion.
+
+### BE-REORG-014M — Organizational scope read audit and PRIMARY rule parity
+
+Audited `EvaluationOrganizationResolver`, `EmployeeContactScopeResolver`, and `EffectiveOrganizationScopeIndex`, including the Contact list's batch scope compiler. One issue warranted code change: two separate definitions of **unique canonical ACTIVE PRIMARY assignment** in the per-contact PBAC path and the authorized batch-count path. A single pure helper on the existing Contact resolver is now shared; the per-row/batch query shapes, UTC date, missing employee handling, strict status/identifier checks and fail-closed results are unchanged. No new port, SQL or layer is added.
+
+```powershell
+php .\backend\tools\test-be-reorg-014m-employee-primary-scope.php
+php .\backend\tools\test-be-reorg-014l-employee-scope-read.php
+php .\backend\tools\architecture-scan.php
+```
+
+See `be-reorg-014m-employee-primary-scope.md` for the three-reader inventory, unchanged index/legacy seams, test and rollback plan. Vendor-free PASS does not establish MariaDB/Shield/HTTP parity; rerun guarded UNIT-STANDARD and NO-DROP on the backed-up test database.
+
+### BE-REORG-014N — Immutable Organization scope signature reuse
+
+Audited `EffectiveOrganizationScopeIndex` and its consumers following 014M. A measurable duplicate computation was found: `build()` validates all ancestor chains, then the authorized Organization/Contact list compiler walks the same chains again. The only production change caches **exact legacy boundary signature strings per immutable index instance**. No shared PBAC cache, SQL, new dependency/port, permission, or transaction change. Unknown/orphan/cyclic hierarchy still fails closed.
+
+```powershell
+php .\backend\tools\test-be-reorg-014n-scope-signature.php
+php .\backend\tools\test-be-reorg-014m-employee-primary-scope.php
+php .\backend\tools\architecture-scan.php
+```
+
+See `be-reorg-014n-scope-signature-reuse.md` for the read/owner inventory, synthetic measurement, eight source parity checks, guarded runtime plan and rollback. `SOURCE_VERIFIED` is **not** actual MariaDB/Shield authorization or HTTP performance parity. The focused `P1Perf006OwnerAwareSqlPaginationTest` is not in the NO-DROP allowlist; use only an independently reviewed guarded execution lane for its DB differential checks.
+
+### BE-PBAC-016A — Product allowed actions (advisory list/detail UI)
+
+Product List and Product detail GET now expose `allowed_actions.edit` and
+`allowed_actions.setstate` as authoritative, record-State PBAC previews. The
+existing `view` bucket-to-SQL `WHERE` / COUNT / page behavior is untouched.
+Product remains GROUP-scoped MASTER only when metadata proves it; no global
+action cache or backend mutation bypass is introduced.
+
+```powershell
+php .\backend\tools\test-be-pbac-016a-product-actions.php
+```
+
+See `be-pbac-016a-product-actions.md` for the exact security, contract and
+runtime verification gates. Source PASS does **not** certify HTTP/DB/Shield
+parity or frontend build.

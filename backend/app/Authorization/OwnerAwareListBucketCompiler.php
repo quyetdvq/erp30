@@ -199,10 +199,11 @@ final class OwnerAwareListBucketCompiler
         foreach ($assignments as $employeeId => $rows) {
             $primaries = array_values(array_filter($rows,
                 static fn (array $row): bool => in_array($row['is_primary'] ?? null, [1, '1'], true)));
-            if (count($primaries) !== 1 || ($primaries[0]['status'] ?? null) !== 'ACTIVE') {
+            $primary = EmployeeContactScopeResolver::uniqueCanonicalPrimary($primaries);
+            if ($primary === null) {
                 continue;
             }
-            $organizationId = filter_var($primaries[0]['organization_id'] ?? null,
+            $organizationId = filter_var($primary['organization_id'] ?? null,
                 FILTER_VALIDATE_INT, ['options' => ['min_range' => 1]]);
             if (is_int($organizationId)) {
                 $scopes[(int) $employeeId] = $organizationId;

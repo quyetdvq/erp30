@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- KIR-001-C2: dedicated MariaDB/Shield Product COMBO + AUTO transaction remediation verification. -->
+<phpunit xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:noNamespaceSchemaLocation="vendor/phpunit/phpunit/phpunit.xsd"
+         bootstrap="tests/_support/Kir001/guarded_bootstrap.php"
+         backupGlobals="false"
+         beStrictAboutOutputDuringTests="true"
+         colors="true"
+         failOnRisky="true"
+         failOnWarning="true"
+         columns="max">
+    <testsuites>
+        <testsuite name="KIR001ProductComboAutoRemediation">
+            <file>./tests/integration/Kir001ProductComboAutoTransactionRemediationTest.php</file>
+        </testsuite>
+    </testsuites>
+    <php>
+        <server name="app.baseURL" value="http://example.com/"/>
+        <server name="CODEIGNITER_SCREAM_DEPRECATIONS" value="0"/>
+        <env name="ERP_PHPUNIT_ALLOW_DISPLAY_FIELD_RESET" value="1"/>
+        <const name="HOMEPATH" value="./"/>
+        <const name="CONFIGPATH" value="./app/Config/"/>
+        <const name="PUBLICPATH" value="./public/"/>
+    </php>
+</phpunit>
