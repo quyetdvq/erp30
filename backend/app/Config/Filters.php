@@ -1,150 +1,40 @@
 <?php
 
+declare(strict_types=1);
+
 namespace Config;
 
-use App\Filters\CsrfTokenResponse;
-use App\Filters\RequestContextFilter;
+use App\Shared\Http\RequestMetadataFilter;
+use App\Shared\Http\CsrfResponseFilter;
 use CodeIgniter\Config\Filters as BaseFilters;
 use CodeIgniter\Filters\Cors;
 use CodeIgniter\Filters\CSRF;
-use CodeIgniter\Filters\DebugToolbar;
 use CodeIgniter\Filters\ForceHTTPS;
-use CodeIgniter\Filters\Honeypot;
-use CodeIgniter\Filters\InvalidChars;
-use CodeIgniter\Filters\PageCache;
-use CodeIgniter\Filters\PerformanceMetrics;
 use CodeIgniter\Filters\SecureHeaders;
 
-class Filters extends BaseFilters
+final class Filters extends BaseFilters
 {
-    public function __construct()
-    {
-        parent::__construct();
-
-        // Treat an explicitly enabled HTTPS runtime as production-like for
-        // response instrumentation, even when a deployment has not yet
-        // switched CI_ENVIRONMENT to production.
-        $secureRuntime = filter_var(
-            env('app.forceGlobalSecureRequests', ENVIRONMENT === 'production'),
-            FILTER_VALIDATE_BOOLEAN,
-        );
-
-        if (! $secureRuntime) {
-            return;
-        }
-
-        if (config(Security::class)->csrfEnabled) {
-            $this->globals['before'][] = 'csrf';
-            $this->globals['after'][] = 'csrftoken';
-        }
-
-        $this->required['after'] = array_values(array_diff(
-            $this->required['after'],
-            ['performance', 'toolbar'],
-        ));
-
-        if (! in_array('secureheaders', $this->globals['after'], true)) {
-            $this->globals['after'][] = 'secureheaders';
-        }
-    }
-
-    /**
-     * Configures aliases for Filter classes to
-     * make reading things nicer and simpler.
-     *
-     * @var array<string, class-string|list<class-string>>
-     *
-     * [filter_name => classname]
-     * or [filter_name => [classname1, classname2, ...]]
-     */
     public array $aliases = [
-        'csrf'          => CSRF::class,
-        'toolbar'       => DebugToolbar::class,
-        'honeypot'      => Honeypot::class,
-        'invalidchars'  => InvalidChars::class,
+        'cors' => Cors::class,
+        'csrf' => CSRF::class,
+        'forcehttps' => ForceHTTPS::class,
         'secureheaders' => SecureHeaders::class,
-        'cors'          => Cors::class,
-        'forcehttps'    => ForceHTTPS::class,
-        'pagecache'     => PageCache::class,
-        'performance'   => PerformanceMetrics::class,
-        'requestcontext' => RequestContextFilter::class,
-        'csrftoken'     => CsrfTokenResponse::class,
+        'requestmeta' => RequestMetadataFilter::class,
+        'csrfresponse' => CsrfResponseFilter::class,
     ];
 
-    /**
-     * List of special required filters.
-     *
-     * The filters listed here are special. They are applied before and after
-     * other kinds of filters, and always applied even if a route does not exist.
-     *
-     * Filters set by default provide framework functionality. If removed,
-     * those functions will no longer work.
-     *
-     * @see https://codeigniter.com/user_guide/incoming/filters.html#provided-filters
-     *
-     * @var array{before: list<string>, after: list<string>}
-     */
+    // Keep core force-HTTPS filter active when App config enables it.
     public array $required = [
-        'before' => [
-            'forcehttps', // Force Global Secure Requests
-            'pagecache',  // Web Page Caching
-        ],
-        'after' => [
-            'pagecache', // Web Page Caching
-            // Debug-only response instrumentation must never run in production.
-            ...(ENVIRONMENT === 'production' ? [] : ['performance', 'toolbar']),
-        ],
+        'before' => ['forcehttps'],
+        'after' => [],
     ];
 
-    /**
-     * List of filter aliases that are always
-     * applied before and after every request.
-     *
-     * @var array{
-     *     before: array<string, array{except: list<string>|string}>|list<string>,
-     *     after: array<string, array{except: list<string>|string}>|list<string>
-     * }
-     */
     public array $globals = [
-        'before' => [
-            // CORS must run before CSRF/auth failures so browser clients can
-            // read the stable 401/403 error envelope cross-origin.
-            'cors',
-            'requestcontext',
-            // 'honeypot',
-            // 'csrf',
-            // 'invalidchars',
-        ],
-        'after' => [
-            'requestcontext',
-            ...(ENVIRONMENT === 'production' ? ['secureheaders'] : []),
-            // 'honeypot',
-        ],
+        // Metadata and CORS must precede CSRF so errors get stable headers.
+        'before' => ['cors', 'requestmeta', 'csrf'],
+        'after' => ['requestmeta', 'csrfresponse', 'secureheaders'],
     ];
 
-    /**
-     * List of filter aliases that works on a
-     * particular HTTP method (GET, POST, etc.).
-     *
-     * Example:
-     * 'POST' => ['foo', 'bar']
-     *
-     * If you use this, you should disable auto-routing because auto-routing
-     * permits any HTTP method to access a controller. Accessing the controller
-     * with a method you don't expect could bypass the filter.
-     *
-     * @var array<string, list<string>>
-     */
     public array $methods = [];
-
-    /**
-     * List of filter aliases that should run on any
-     * before or after URI patterns.
-     *
-     * Example:
-     * 'isLoggedIn' => ['before' => ['account/*', 'profiles/*']]
-     *
-     * @var array<string, array<string, list<string>>>
-     */
     public array $filters = [];
 }

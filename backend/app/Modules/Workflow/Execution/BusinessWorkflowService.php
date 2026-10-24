@@ -1,0 +1,173 @@
+<?php
+
+declare(strict_types=1);
+
+namespace App\Modules\Workflow\Execution;
+
+use App\Exceptions\DomainException;
+use App\Modules\Access\BasePermissionReader;
+use App\Modules\Access\ResourceStateRepository;
+use App\Modules\Access\UnifiedAccessService;
+use CodeIgniter\Database\BaseConnection;
+use CodeIgniter\Shield\Entities\User;
+use RuntimeException;
+use Throwable;
+
+/** Reads, previews and executes only persisted Lifecycle transitions. */
+final class BusinessWorkflowService
+{
+    private readonly BaseConnection $db;
+    private readonly UnifiedAccessService $access;
+    private readonly ResourceStateRepository $states;
+    private readonly User $actor;
+
+    public function __construct(User $actor, ?BaseConnection $db = null)
+    {
+        $this->db = $db ?? db_connect();
+        $this->actor = $actor;
+        $this->access = new UnifiedAccessService($actor,$this->db);
+        $this->states = new ResourceStateRepository($this->db);
+    }
+
+    /** @return array{mode:string,initial:?string,states:list<string>} */
+    public function states(string $type): array
+    {
+        BusinessWorkflowRules::table($type);
+        $resource = $this->resource($type);
+        $base = (new BasePermissionReader($this->db))->forUser($this->actor);
+        if ((string) ($resource['status'] ?? '') !== 'ACTIVE' || !in_array($type.'.view',$base,true)) {
+            throw new DomainException('AUTH_POLICY_DENIED',['action'=>'view']);
+        }
+        $definition = $this->states->definitionFor($type);
+        $codes = array_keys($definition['by_code']);
+        $lifecycle = (string) ($definition['lifecycle_id'] ?? '');
+        if ($lifecycle === '') throw new DomainException('WF_TRANSITION_REQUIRED',['resource'=>$type]);
+        $initial = $definition['initial'];
+        return ['mode'=>'LIFECYCLE','initial'=>$initial,'states'=>$codes];
+    }
+
+    /** @return array{mode:string,current:string,options:list<array{action_code:string,status:string}>} */
+    public function options(string $type,string $id): array
+    {
+        $row = $this->target($type,$id,false);
+        $current = strtoupper((string) $row['status']);
+        if (!$this->access->canView($type,$row)) throw new DomainException('AUTH_POLICY_DENIED',['action'=>'view']);
+        $allowed = $this->access->decideMutation($type,'setstate',$row)['allowed'];
+        $options = [];
+        if ($allowed) {
+            foreach ($this->transitions($type,$row) as $transition) {
+                if (!$this->transitionAuthorized($type,(string) $transition['action_code'],$row)) continue;
+                $options[] = ['action_code'=>(string) $transition['action_code'], 'status'=>(string) $transition['destination']];
+            }
+        }
+        return ['mode'=>'LIFECYCLE','current'=>$current,'options'=>$options];
+    }
+
+    /** @return array{status:string,action_code:string} */
+    public function execute(string $type,string $id,string $action): array
+    {
+        $action = BusinessWorkflowRules::action($action);
+        BusinessWorkflowRules::table($type);
+        if (!$this->db->transBegin()) throw new RuntimeException('Workflow transition transaction failed');
+        try {
+            // Serialize transition on the actual business row and reassess PBAC
+            // against its CURRENT persisted status. No client-controlled state ID.
+            $row = $this->target($type,$id,true);
+            if (!$this->access->decideMutation($type,'setstate',$row)['allowed']) {
+                throw new DomainException('AUTH_POLICY_DENIED',['action'=>'setstate']);
+            }
+            $chosen = null;
+            foreach ($this->transitions($type,$row) as $transition) {
+                if ((string) $transition['action_code'] === $action) { $chosen = $transition; break; }
+            }
+            if ($chosen === null) throw new DomainException('WF_INVALID_TRANSITION',['action_code'=>$action]);
+            if (!$this->transitionAuthorized($type,$action,$row)) {
+                throw new DomainException('AUTH_POLICY_DENIED',['action'=>$action]);
+            }
+            $table = BusinessWorkflowRules::table($type);
+            $old = (string) $row['status'];
+            $new = (string) $chosen['destination'];
+            $ok = $this->db->table($table)->where('id',$id)->where('status',$old)->update([
+                'status'=>$new, 'updated_by'=>(string) $this->actor->id,
+                'updated_at'=>gmdate('Y-m-d H:i:s'),
+            ]);
+            if (!$ok || $this->db->affectedRows()!==1) throw new DomainException('WF_CONCURRENT_STATE_CHANGE');
+            if (!$this->db->transStatus() || !$this->db->transCommit()) {
+                throw new RuntimeException('Workflow transaction commit failed');
+            }
+            return ['status'=>$new,'action_code'=>$action];
+        } catch (Throwable $e) {
+            $this->db->transRollback();
+            $this->db->resetTransStatus();
+            throw $e;
+        }
+    }
+
+    /** @return array<string,mixed> */
+    private function resource(string $type): array
+    {
+        $row = $this->db->table('resources')->where('type',$type)->get()->getRowArray();
+        if ($row===null) throw new DomainException('WF_TARGET_ADAPTER_UNAVAILABLE');
+        return $row;
+    }
+
+    /** @return array<string,mixed> */
+    private function target(string $type,string $id,bool $lock): array
+    {
+        $table = BusinessWorkflowRules::table($type);
+        $id = BusinessWorkflowRules::id($id);
+        $builder = $this->db->table($table)->where('id',$id);
+        $result = $lock ? $this->db->query($builder->getCompiledSelect().' FOR UPDATE') : $builder->get();
+        if ($result===false) throw new RuntimeException('Workflow target query failed');
+        $row = $result->getRowArray();
+        if ($row===null) throw new DomainException('WF_TARGET_NOT_FOUND');
+        if (str_ends_with($type,'_contact')) {
+            if (strtoupper((string) ($row['contact_type'] ?? '')) !== ($type==='organization_contact' ? 'ORGANIZATION' : 'EMPLOYEE')) {
+                throw new DomainException('WF_TARGET_NOT_FOUND');
+            }
+        }
+        return $row;
+    }
+
+    /**
+     * @param array<string,mixed> $row
+     * @return list<array{action_code:string,destination:string}>
+     */
+    private function transitions(string $type,array $row): array
+    {
+        $definition = $this->states->definitionFor($type);
+        $lifecycle = $definition['lifecycle_id'] ?? null;
+        if ($lifecycle===null) throw new DomainException('WF_TRANSITION_REQUIRED',['resource'=>$type]);
+        // The current State ID is always derived from the locked/read row.
+        $stateId = $this->states->persistedStateId($type,$row);
+        if ($stateId===null) throw new DomainException('WF_STATE_NOT_MAPPED');
+        $list = $this->db->table('lifecycle_transitions')
+            ->where('lifecycle_id',$lifecycle)->where('from_state_id',$stateId)
+            ->where('status','ACTIVE')->orderBy('id','ASC')->get()->getResultArray();
+        $byId = array_flip($definition['by_code']);
+        $results = [];
+        foreach ($list as $t) {
+            $to = (string) ($t['to_state_id'] ?? '');
+            if ($to === (string) $stateId || !isset($byId[$to])) continue;
+            $active = $this->db->table('workflow_states')->select('id')
+                ->where('id',$to)->where('status','ACTIVE')->get()->getRowArray();
+            if ($active===null) continue;
+            $action = strtolower((string) ($t['action_code'] ?? ''));
+            try { $action = BusinessWorkflowRules::action($action); }
+            catch (DomainException) { continue; }
+            $results[] = ['action_code'=>$action,'destination'=>(string) $byId[$to]];
+        }
+        return $results;
+    }
+
+    /** @param array<string,mixed> $row */
+    private function transitionAuthorized(string $type,string $action,array $row): bool
+    {
+        try {
+            return $this->access->decideTransitionAction($type,$action,$row)['allowed'];
+        } catch (Throwable) {
+            // Missing/inactive or unregistered action is never an option.
+            return false;
+        }
+    }
+}

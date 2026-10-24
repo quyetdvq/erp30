@@ -1,0 +1,118 @@
+{
+  "milestone": "DinkERP Backend v2 M2",
+  "base": "DinkERP_Repository_v2_M0-M1_NewLayout.zip",
+  "base_package_sha256": "58b54db18e0a5cb5243acd4e623be7f5d5ecef5d62e8866ff761f5ef1e23bb06",
+  "application_instruction": "Extract Overlay ZIP INTO existing erp/ (not its parent); never delete .env, vendor, public/upload user files.",
+  "limits": "Internal read models only, no public API/mutation/migration.",
+  "changed_files": [
+    {
+      "path": "README.md",
+      "status": "modified",
+      "sha256": "fe6217461330626081ada6c835a8164b0e20b18735e37c0c15f6b898a3e3f088",
+      "size": 3051
+    },
+    {
+      "path": "backend/README.md",
+      "status": "modified",
+      "sha256": "ebd0a8b3160f637ec242adead379299c2a860877b34763d834bfb35bb240eecc",
+      "size": 1821
+    },
+    {
+      "path": "backend/app/Commands/M2Verify.php",
+      "status": "added",
+      "sha256": "9433303814735402254ce294b25ea572ebcefdfbcc2e630e62f04ccb23798666",
+      "size": 5521
+    },
+    {
+      "path": "backend/app/Modules/Access/ScopeFactsReader.php",
+      "status": "added",
+      "sha256": "2db8efbf21927300d7ee2a19e2aa30dce94c9be2d764f044a8381c1779388735",
+      "size": 2062
+    },
+    {
+      "path": "backend/app/Modules/Locations/LocationReadRepository.php",
+      "status": "added",
+      "sha256": "750d3e12fd7cc03ca5d0cc8c04b4c7e159a9ce4b3bde0136546f6ea2ea33063a",
+      "size": 2072
+    },
+    {
+      "path": "backend/app/Modules/Organization/OrganizationReadRepository.php",
+      "status": "added",
+      "sha256": "4a54fc949c1184b14f28466adb436ecd93b6298ad8c36b94756abad4ed48f2a3",
+      "size": 2820
+    },
+    {
+      "path": "backend/app/Modules/People/PeopleReadRepository.php",
+      "status": "added",
+      "sha256": "aa0e3c96832bf13ee59b201245662dac9f9f0fab1bca99c05c74ccf61def0241",
+      "size": 4606
+    },
+    {
+      "path": "backend/app/Shared/Read/FlatHierarchy.php",
+      "status": "added",
+      "sha256": "0b6fef770028c7d7d9c251a89eed6163d884cc78355f6cac4c19bd46e6746e4c",
+      "size": 5079
+    },
+    {
+      "path": "backend/app/Shared/Read/PositiveId.php",
+      "status": "added",
+      "sha256": "5f646608a7072b978f6dceb70ea779a575650ddd967a2425d63b2f793a9ddc49",
+      "size": 1120
+    },
+    {
+      "path": "backend/app/Shared/Read/UtcBusinessDate.php",
+      "status": "added",
+      "sha256": "23e900c2f564ceff15f922e6ee6e4b09d8b34c4e70310ed96964cf8f3f2f7fe3",
+      "size": 1606
+    },
+    {
+      "path": "backend/tests/m2_pure.php",
+      "status": "added",
+      "sha256": "2a6cba032242b3315c697eacc1a7a2d780187fe160bae04a32cd84c927ab98ee",
+      "size": 6402
+    },
+    {
+      "path": "backend/tools/verify_m2.py",
+      "status": "added",
+      "sha256": "6df9306b63c79c484a9122eaa8cc2ae3807244b6692313f0304368aae10984d6",
+      "size": 3427
+    },
+    {
+      "path": "docs/backend-rewrite/DEPENDENCY_ORDER.md",
+      "status": "modified",
+      "sha256": "59d3221f96a8938f3f4e82c121ee5eba295594f23921a1e2189ac7a0fdf02ecc",
+      "size": 3467
+    },
+    {
+      "path": "docs/backend-rewrite/IMPLEMENTATION_STATUS.md",
+      "status": "modified",
+      "sha256": "630daf2db944a2336df13d692942a8cc3472089d6ed4e7209c1463567b5e9c87",
+      "size": 4382
+    },
+    {
+      "path": "docs/backend-rewrite/M2_IMPLEMENTATION_AND_QA.md",
+      "status": "added",
+      "sha256": "e3730ac33f157c6e1ed3a974a80b4dc3d482730e31a06a5a1104d0f0567ebbc1",
+      "size": 7259
+    },
+    {
+      "path": "docs/backend-rewrite/NEXT_WORK.md",
+      "status": "modified",
+      "sha256": "d418ebfea01b7b5dfab81d548f9dba1982e6c157f74742dcc829871dbb46819a",
+      "size": 1274
+    },
+    {
+      "path": "docs/backend-rewrite/m1-runtime-unchanged.json",
+      "status": "added",
+      "sha256": "12326a8f30e061225cd8eaf672fe393847049f9b87d1ebf50e2fc15c90c2043e",
+      "size": 9707
+    }
+  ],
+  "protected_unchanged": [
+    "frontend/",
+    "backend_basline/",
+    "contracts/",
+    "backend/app/Config/",
+    "backend/app/Modules/Identity/"
+  ]
+}

@@ -1,165 +1,53 @@
 <?php
 
+declare(strict_types=1);
+
 namespace Config;
 
 use CodeIgniter\Config\BaseConfig;
 
-/**
- * Cross-Origin Resource Sharing (CORS) Configuration
- *
- * @see https://developer.mozilla.org/en-US/docs/Web/HTTP/CORS
- */
-class Cors extends BaseConfig
+final class Cors extends BaseConfig
 {
-    /**
-     * The default CORS configuration.
-     *
-     * @var array{
-     *      allowedOrigins: list<string>,
-     *      allowedOriginsPatterns: list<string>,
-     *      supportsCredentials: bool,
-     *      allowedHeaders: list<string>,
-     *      exposedHeaders: list<string>,
-     *      allowedMethods: list<string>,
-     *      maxAge: int,
-     *  }
-     */
+    /** @var array<string, mixed> */
     public array $default = [
-        /**
-         * Origins for the `Access-Control-Allow-Origin` header.
-         *
-         * @see https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Access-Control-Allow-Origin
-         *
-         * E.g.:
-         *   - ['http://localhost:8080']
-         *   - ['https://www.example.com']
-         */
-        'allowedOrigins' => [
-            'http://erp.dinktech.vn',
-            'https://erp.monmin.net/',
-            'http://erp.monmin.net',
-            'http://localhost:5174',
-            'http://127.0.0.1:5174', 
-            'http://localhost:5173',
-            'http://127.0.0.1:5173',
-            ],
-
-        /**
-         * Origin regex patterns for the `Access-Control-Allow-Origin` header.
-         *
-         * @see https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Access-Control-Allow-Origin
-         *
-         * NOTE: A pattern specified here is part of a regular expression. It will
-         *       be actually `#\A<pattern>\z#`.
-         *
-         * E.g.:
-         *   - ['https://\w+\.example\.com']
-         */
+        'allowedOrigins' => [],
         'allowedOriginsPatterns' => [],
-
-        /**
-         * Weather to send the `Access-Control-Allow-Credentials` header.
-         *
-         * The Access-Control-Allow-Credentials response header tells browsers whether
-         * the server allows cross-origin HTTP requests to include credentials.
-         *
-         * @see https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Access-Control-Allow-Credentials
-         */
         'supportsCredentials' => true,
-
-        /**
-         * Set headers to allow.
-         *
-         * The Access-Control-Allow-Headers response header is used in response to
-         * a preflight request which includes the Access-Control-Request-Headers to
-         * indicate which HTTP headers can be used during the actual request.
-         *
-         * @see https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Access-Control-Allow-Headers
-         */
-        'allowedHeaders' => [
-            'Content-Type',
-            'Accept-Language',
-            'X-Request-ID',
-            'X-CSRF-TOKEN',
-            'X-Correlation-ID',
-            'Idempotency-Key',
-            'If-Match',
-            'If-None-Match',
-        ],
-
-        /**
-         * Set headers to expose.
-         *
-         * The Access-Control-Expose-Headers response header allows a server to
-         * indicate which response headers should be made available to scripts running
-         * in the browser, in response to a cross-origin request.
-         *
-         * @see https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Access-Control-Expose-Headers
-         */
-        'exposedHeaders' => [
-            'ETag',
-            'X-Request-ID',
-            'X-Correlation-ID',
-            'Idempotency-Replayed',
-            'Retry-After',
-            'X-CSRF-TOKEN',
-        ],
-
-        /**
-         * Set methods to allow.
-         *
-         * The Access-Control-Allow-Methods response header specifies one or more
-         * methods allowed when accessing a resource in response to a preflight
-         * request.
-         *
-         * E.g.:
-         *   - ['GET', 'POST', 'PUT', 'DELETE']
-         *
-         * @see https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Access-Control-Allow-Methods
-         */
+        'allowedHeaders' => ['Accept', 'Content-Type', 'Accept-Language', 'X-Request-ID', 'X-CSRF-TOKEN', 'Authorization', 'If-Match', 'If-None-Match'],
+        'exposedHeaders' => ['X-Request-ID', 'Content-Language', 'X-CSRF-TOKEN', 'ETag'],
         'allowedMethods' => ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
-
-        /**
-         * Set how many seconds the results of a preflight request can be cached.
-         *
-         * @see https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Access-Control-Max-Age
-         */
         'maxAge' => 7200,
     ];
 
     public function __construct()
     {
         parent::__construct();
-
-        // An explicit deployment allowlist takes precedence in every
-        // environment. This allows HTTPS staging without inheriting the
-        // development HTTP origins, while keeping the development defaults
-        // when no deployment setting is supplied.
-        $configuredOrigins = trim((string) env('cors.allowedOrigins', ''));
-        if ($configuredOrigins !== '') {
-            $origins = array_values(array_filter(array_map(
-                static fn (string $origin): string => rtrim(trim($origin), '/'),
-                explode(',', $configuredOrigins),
-            )));
-
-            // CI4 emits a fixed ACAO value when exactly one literal origin is
-            // configured. Use anchored exact patterns so disallowed origins
-            // receive no ACAO header at all.
-            if (count($origins) === 1) {
-                $this->default['allowedOrigins'] = [];
-                $this->default['allowedOriginsPatterns'] = [preg_quote($origins[0], '#')];
-            } else {
-                $this->default['allowedOrigins'] = $origins;
+        $configured = trim((string) env('cors.allowedOrigins', ''));
+        $origins = $configured === '' && ENVIRONMENT !== 'production'
+            ? ['http://erp.dinktech.vn', 'https://erp.monmin.net', 'http://erp.monmin.net',
+                'http://localhost:5173', 'http://127.0.0.1:5173',
+                'http://localhost:5174', 'http://127.0.0.1:5174']
+            : array_map('trim', explode(',', $configured));
+        $valid = [];
+        foreach ($origins as $origin) {
+            $origin = rtrim($origin, '/');
+            if ($origin === '') {
+                continue;
             }
-
-            return;
+            $pieces = parse_url($origin);
+            if (! is_array($pieces) || ! in_array($pieces['scheme'] ?? '', ['http', 'https'], true)
+                || ! isset($pieces['host']) || isset($pieces['path']) || isset($pieces['query']) || isset($pieces['fragment'])
+                || str_contains($origin, '*') || isset($pieces['user']) || isset($pieces['pass'])) {
+                throw new \InvalidArgumentException('cors.allowedOrigins must contain exact HTTP(S) origins.');
+            }
+            $valid[$origin] = true;
         }
-
-        // Production cross-origin access is deployment-owned. An empty
-        // setting intentionally denies cross-origin requests until the exact
-        // HTTPS SPA origin is supplied.
-        if (ENVIRONMENT === 'production') {
-            $this->default['allowedOrigins'] = [];
+        $valid = array_keys($valid);
+        // One CI4 literal origin can be emitted unconditionally. Use an anchored regex for a single origin.
+        if (count($valid) === 1) {
+            $this->default['allowedOriginsPatterns'] = [preg_quote($valid[0], '#')];
+        } else {
+            $this->default['allowedOrigins'] = $valid;
         }
     }
 }

@@ -81,12 +81,6 @@ require FCPATH . '../app/Config/Paths.php';
 
 $paths = new Paths();
 
-// CI4's testing autoloader expects SUPPORTPATH before Boot::bootSpark().
-// Keep standalone testing commands aligned with the framework test bootstrap.
-if (is_dir($paths->testsDirectory . '/_support/') && ! defined('SUPPORTPATH')) {
-    define('SUPPORTPATH', realpath($paths->testsDirectory . '/_support/') . DIRECTORY_SEPARATOR);
-}
-
 // LOAD THE FRAMEWORK BOOTSTRAP FILE
 require $paths->systemDirectory . '/Boot.php';
 

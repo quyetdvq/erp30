@@ -4,7 +4,7 @@ namespace Config;
 
 use CodeIgniter\Config\BaseConfig;
 use CodeIgniter\Debug\ExceptionHandlerInterface;
-use App\Debug\ApiExceptionHandler;
+use App\Shared\Http\ApiExceptionHandler;
 use Psr\Log\LogLevel;
 use Throwable;
 

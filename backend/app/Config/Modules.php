@@ -76,7 +76,7 @@ class Modules extends BaseModules
         'events',
         'filters',
         'registrars',
-        'routes',
+        // Vendor routes are not auto-registered: only the reviewed Routes.php is public.
         'services',
     ];
 }

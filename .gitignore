@@ -30,3 +30,7 @@ Thumbs.db
 *.db
 *.log
 *.sql
+
+# M3.4 sandbox/session/acceptance outputs must not be committed
+backend/writable/m34b/
+backend/writable/m34d/

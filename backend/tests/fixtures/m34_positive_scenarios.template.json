@@ -1,0 +1,378 @@
+{
+  "warning": "TEMPLATE ONLY. All 29 ready flags are false. Must edit for disposable clones and check every operation payload with baseline.",
+  "scenarios": [
+    {
+      "key": "createWorkflowState",
+      "operation_id": "createWorkflowState",
+      "ready": false,
+      "path_ids": {},
+      "body": {
+        "code": "M34_AUDIT_STATE_1",
+        "name": "M34 State Alpha",
+        "status": "ACTIVE"
+      },
+      "fixture_notes": "Choose a unique code in both identical clones"
+    },
+    {
+      "key": "updateWorkflowState",
+      "operation_id": "updateWorkflowState",
+      "ready": false,
+      "path_ids": {
+        "id": "{{createWorkflowState.data.id}}"
+      },
+      "body": {
+        "name": "M34 State Alpha Updated"
+      },
+      "fixture_notes": ""
+    },
+    {
+      "key": "setWorkflowStateState",
+      "operation_id": "setWorkflowStateState",
+      "ready": false,
+      "path_ids": {
+        "id": "{{createWorkflowState.data.id}}"
+      },
+      "body": {
+        "status": "ACTIVE"
+      },
+      "fixture_notes": ""
+    },
+    {
+      "key": "createLifecycle",
+      "operation_id": "createLifecycle",
+      "ready": false,
+      "path_ids": {},
+      "body": {
+        "code": "M34_AUDIT_LIFECYCLE",
+        "name": "M34 Lifecycle",
+        "status": "ACTIVE"
+      },
+      "fixture_notes": ""
+    },
+    {
+      "key": "updateLifecycle",
+      "operation_id": "updateLifecycle",
+      "ready": false,
+      "path_ids": {
+        "id": "{{createLifecycle.data.id}}"
+      },
+      "body": {
+        "name": "M34 Lifecycle Updated"
+      },
+      "fixture_notes": ""
+    },
+    {
+      "key": "configureLifecycleStates",
+      "operation_id": "configureLifecycleStates",
+      "ready": false,
+      "path_ids": {
+        "id": "{{createLifecycle.data.id}}"
+      },
+      "body": {
+        "states": [
+          {
+            "state_id": "{{createWorkflowState.data.id}}",
+            "sequence": 1,
+            "is_initial": true,
+            "is_terminal": false
+          }
+        ],
+        "transitions": []
+      },
+      "fixture_notes": "Some baseline builds require an additional state; see OpenAPI and current Lifecycle rules."
+    },
+    {
+      "key": "configureLifecycleTransitions",
+      "operation_id": "configureLifecycleTransitions",
+      "ready": false,
+      "path_ids": {
+        "id": "{{createLifecycle.data.id}}"
+      },
+      "body": {
+        "states": [],
+        "transitions": [
+          {
+            "from_state_id": "{{createWorkflowState.data.id}}",
+            "to_state_id": "{{createWorkflowState.data.id}}",
+            "action_code": "m34_recheck",
+            "status": "ACTIVE"
+          }
+        ]
+      },
+      "fixture_notes": "Transition semantics may disallow self-links; adjust to a second active member in clones."
+    },
+    {
+      "key": "setLifecycleState",
+      "operation_id": "setLifecycleState",
+      "ready": false,
+      "path_ids": {
+        "id": "{{createLifecycle.data.id}}"
+      },
+      "body": {
+        "status": "ACTIVE"
+      },
+      "fixture_notes": ""
+    },
+    {
+      "key": "createResource",
+      "operation_id": "createResource",
+      "ready": false,
+      "path_ids": {},
+      "body": {
+        "type": "m34_audit_document",
+        "name": "M34 Audit Document",
+        "domain": "ORGANIZATION",
+        "lifecycle_id": "{{createLifecycle.data.id}}"
+      },
+      "fixture_notes": "Validate target Resource type and domain against current catalog rules."
+    },
+    {
+      "key": "updateResource",
+      "operation_id": "updateResource",
+      "ready": false,
+      "path_ids": {
+        "id": "{{createResource.data.id}}"
+      },
+      "body": {
+        "name": "m34_audit_document_updated"
+      },
+      "fixture_notes": ""
+    },
+    {
+      "key": "setResourceState",
+      "operation_id": "setResourceState",
+      "ready": false,
+      "path_ids": {
+        "id": "{{createResource.data.id}}"
+      },
+      "body": {
+        "status": "ACTIVE"
+      },
+      "fixture_notes": ""
+    },
+    {
+      "key": "createResourceAction",
+      "operation_id": "createResourceAction",
+      "ready": false,
+      "path_ids": {
+        "id": "{{createResource.data.id}}"
+      },
+      "body": {
+        "code": "m34_check",
+        "description": "M34 QA Action"
+      },
+      "fixture_notes": ""
+    },
+    {
+      "key": "updateResourceAction",
+      "operation_id": "updateResourceAction",
+      "ready": false,
+      "path_ids": {
+        "id": "{{createResource.data.id}}",
+        "action_id": "{{createResourceAction.data.id}}"
+      },
+      "body": {
+        "description": "M34 QA Action revised"
+      },
+      "fixture_notes": ""
+    },
+    {
+      "key": "createAuthorizationGroup",
+      "operation_id": "createAuthorizationGroup",
+      "ready": false,
+      "path_ids": {},
+      "body": {
+        "code": "M34_AUDIT_GROUP",
+        "name": "M34 Audit Group"
+      },
+      "fixture_notes": ""
+    },
+    {
+      "key": "updateAuthorizationGroup",
+      "operation_id": "updateAuthorizationGroup",
+      "ready": false,
+      "path_ids": {
+        "id": "{{createAuthorizationGroup.data.id}}"
+      },
+      "body": {
+        "name": "M34 Audit Group Revised"
+      },
+      "fixture_notes": ""
+    },
+    {
+      "key": "setAuthorizationGroupState",
+      "operation_id": "setAuthorizationGroupState",
+      "ready": false,
+      "path_ids": {
+        "id": "{{createAuthorizationGroup.data.id}}"
+      },
+      "body": {
+        "status": "ACTIVE"
+      },
+      "fixture_notes": ""
+    },
+    {
+      "key": "createUser",
+      "operation_id": "createUser",
+      "ready": false,
+      "path_ids": {},
+      "body": {
+        "username": "m34_test_actor_1",
+        "email": "m34_test_actor_1@example.test",
+        "password": "${ENV:M34_NEW_USER_PASSWORD}",
+        "state": "ACTIVE",
+        "name": "M34 QA User"
+      },
+      "fixture_notes": "Never store real passwords in JSON; set M34_NEW_USER_PASSWORD in shell."
+    },
+    {
+      "key": "updateUser",
+      "operation_id": "updateUser",
+      "ready": false,
+      "path_ids": {
+        "id": "{{createUser.data.id}}"
+      },
+      "body": {
+        "name": "M34 QA User Revised"
+      },
+      "fixture_notes": ""
+    },
+    {
+      "key": "resetUserPassword",
+      "operation_id": "resetUserPassword",
+      "ready": false,
+      "path_ids": {
+        "id": "{{createUser.data.id}}"
+      },
+      "body": {
+        "new_password": "${ENV:M34_RESET_PASSWORD}"
+      },
+      "fixture_notes": "Set M34_RESET_PASSWORD in shell and verify new credentials using an isolated session."
+    },
+    {
+      "key": "replaceUserPermissions",
+      "operation_id": "replaceUserPermissions",
+      "ready": false,
+      "path_ids": {
+        "id": "{{createUser.data.id}}"
+      },
+      "body": {
+        "permissions": []
+      },
+      "fixture_notes": "To exercise grants, supply a registered catalog token with necessary actor authority."
+    },
+    {
+      "key": "replaceAuthorizationGroupMembers",
+      "operation_id": "replaceAuthorizationGroupMembers",
+      "ready": false,
+      "path_ids": {
+        "id": "{{createAuthorizationGroup.data.id}}"
+      },
+      "body": {
+        "user_ids": [
+          "{{createUser.data.id}}"
+        ]
+      },
+      "fixture_notes": ""
+    },
+    {
+      "key": "replaceAuthorizationGroupPermissions",
+      "operation_id": "replaceAuthorizationGroupPermissions",
+      "ready": false,
+      "path_ids": {
+        "id": "{{createAuthorizationGroup.data.id}}"
+      },
+      "body": {
+        "resource_action_ids": []
+      },
+      "fixture_notes": "Empty list is a valid replacement, not a grant test."
+    },
+    {
+      "key": "createPolicy",
+      "operation_id": "createPolicy",
+      "ready": false,
+      "path_ids": {},
+      "body": {
+        "organization_id": "FIXTURE_ORGANIZATION_ID",
+        "resource_id": "{{createResource.data.id}}",
+        "participant_type": "GROUP",
+        "participant_ref_id": "{{createAuthorizationGroup.data.id}}",
+        "state_id": null,
+        "actions": [
+          {
+            "resource_action_id": "{{createResourceAction.data.id}}",
+            "effect": "ALLOW"
+          }
+        ]
+      },
+      "fixture_notes": "Replace FIXTURE_ORGANIZATION_ID with authorized root scope ID."
+    },
+    {
+      "key": "updatePolicy",
+      "operation_id": "updatePolicy",
+      "ready": false,
+      "path_ids": {
+        "id": "{{createPolicy.data.id}}"
+      },
+      "body": {
+        "description": "M34 QA Policy Update"
+      },
+      "fixture_notes": "Check PolicyPatch allowed keys; a description field may not be supported."
+    },
+    {
+      "key": "setPolicyState",
+      "operation_id": "setPolicyState",
+      "ready": false,
+      "path_ids": {
+        "id": "{{createPolicy.data.id}}"
+      },
+      "body": {
+        "status": "INACTIVE"
+      },
+      "fixture_notes": ""
+    },
+    {
+      "key": "deletePolicy",
+      "operation_id": "deletePolicy",
+      "ready": false,
+      "path_ids": {
+        "id": "{{createPolicy.data.id}}"
+      },
+      "body": {},
+      "fixture_notes": ""
+    },
+    {
+      "key": "setUserState",
+      "operation_id": "setUserState",
+      "ready": false,
+      "path_ids": {
+        "id": "{{createUser.data.id}}"
+      },
+      "body": {
+        "state": "INACTIVE"
+      },
+      "fixture_notes": "Only deactivate disposable QA user, not the authenticated admin."
+    },
+    {
+      "key": "deleteResourceAction",
+      "operation_id": "deleteResourceAction",
+      "ready": false,
+      "path_ids": {
+        "id": "{{createResource.data.id}}",
+        "action_id": "{{createResourceAction.data.id}}"
+      },
+      "body": {},
+      "fixture_notes": ""
+    },
+    {
+      "key": "deleteResource",
+      "operation_id": "deleteResource",
+      "ready": false,
+      "path_ids": {
+        "id": "{{createResource.data.id}}"
+      },
+      "body": {},
+      "fixture_notes": "Delete only disposable QA resource after removing policies/actions. Review FK relationships."
+    }
+  ]
+}

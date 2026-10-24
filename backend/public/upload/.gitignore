@@ -1,0 +1,5 @@
+# Keep directory policy, never commit uploaded content.
+*
+!.gitignore
+!.htaccess
+!.gitkeep

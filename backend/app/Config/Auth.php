@@ -25,7 +25,7 @@ use CodeIgniter\Shield\Authentication\Passwords\DictionaryValidator;
 use CodeIgniter\Shield\Authentication\Passwords\NothingPersonalValidator;
 use CodeIgniter\Shield\Authentication\Passwords\PwnedValidator;
 use CodeIgniter\Shield\Authentication\Passwords\ValidatorInterface;
-use App\Models\UserModel;
+use App\Modules\Identity\UserModel;
 
 class Auth extends ShieldAuth
 {
@@ -158,7 +158,7 @@ class Auth extends ShieldAuth
      * --------------------------------------------------------------------
      * Determines whether users can register for the site.
      */
-    public bool $allowRegistration = ENVIRONMENT !== 'production';
+    public bool $allowRegistration = false;
 
     /**
      * --------------------------------------------------------------------
@@ -182,7 +182,7 @@ class Auth extends ShieldAuth
      * could be modified as the only method of login once an account
      * has been set up.
      */
-    public bool $allowMagicLinkLogins = ENVIRONMENT !== 'production';
+    public bool $allowMagicLinkLogins = false;
 
     /**
      * --------------------------------------------------------------------
@@ -209,7 +209,7 @@ class Auth extends ShieldAuth
      */
     public array $sessionConfig = [
         'field'              => 'user',
-        'allowRemembering'   => ENVIRONMENT !== 'production',
+        'allowRemembering'   => false,
         'rememberCookieName' => 'remember',
         'rememberLength'     => 30 * DAY,
     ];
@@ -217,21 +217,17 @@ class Auth extends ShieldAuth
     public function __construct()
     {
         parent::__construct();
-
+        // No registration/magic-link expansion during compatibility rewrite.
+        $this->allowRegistration = false;
+        $this->allowMagicLinkLogins = false;
         $secureRuntime = filter_var(
             env('app.forceGlobalSecureRequests', ENVIRONMENT === 'production'),
             FILTER_VALIDATE_BOOLEAN,
         );
-
-        if (! $secureRuntime) {
-            return;
-        }
-
-        // These features are explicit secure-runtime opt-ins; absence of a
-        // deployment decision must not widen the authentication surface.
-        $this->allowRegistration = filter_var(env('auth.allowRegistration', false), FILTER_VALIDATE_BOOLEAN);
-        $this->allowMagicLinkLogins = filter_var(env('auth.allowMagicLinkLogins', false), FILTER_VALIDATE_BOOLEAN);
-        $this->sessionConfig['allowRemembering'] = filter_var(env('auth.allowRemembering', false), FILTER_VALIDATE_BOOLEAN);
+        // Preserve v1.2.4 development remember-me; secure deployments opt in.
+        $this->sessionConfig['allowRemembering'] = $secureRuntime
+            ? filter_var(env('auth.allowRemembering', false), FILTER_VALIDATE_BOOLEAN)
+            : true;
     }
 
     /**

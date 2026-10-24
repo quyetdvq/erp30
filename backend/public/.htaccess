@@ -16,6 +16,11 @@ Options -Indexes
 	# http://httpd.apache.org/docs/current/mod/mod_rewrite.html#rewritebase
 	# RewriteBase /
 
+	# Frontend v1.2.4 expects /uploads/YYYY/... while physical files live in
+	# ./public/upload/YYYY/... . This is an APPLICATION rewrite, not an
+	# Apache/XAMPP vhost Alias, and exposes no paths under writable/.
+	RewriteRule ^uploads/(20[0-9]{2})/(20[0-9]{2}[0-9]{4}(?:product|avatar)[0-9]{7}\.(?:jpg|png|webp))$ upload/$1/$2 [L]
+
 	# Redirect Trailing Slashes...
 	RewriteCond %{REQUEST_FILENAME} !-d
 	RewriteCond %{REQUEST_URI} (.+)/$

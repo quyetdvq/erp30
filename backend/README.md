@@ -1,69 +1,79 @@
-# CodeIgniter 4 Application Starter
+# DinkERP Backend v2 — source chính trong `erp/backend/`
 
-## What is CodeIgniter?
+- Đây là codebase PHP/CodeIgniter 4 + Shield **mới**, không sử dụng module kinh doanh v1.
+- Backend v1 nằm trong thư mục anh em `../backend_basline/`; chỉ để tham chiếu.
+- Frontend vẫn ở `../frontend/` và không thay đổi.
+- `./public/upload/` (tính từ thư mục **backend**) là **duy nhất một root lưu hình và file upload**.
+- Public URL ảnh **vẫn là** `/uploads/<year>/<filename>` theo hợp đồng Frontend v1.2.4,
+  và ánh xạ đến `public/upload/<year>/<filename>` bằng rewrite nội bộ trong
+  `public/.htaccess`. Không cần cấu hình Apache Alias, XAMPP VirtualHost riêng hay symlink.
+- Các file upload khác sẽ có chính sách đường dẫn/phân quyền khi module sở hữu được xây;
+  không tự động coi mọi file đặt trong thư mục public là tài liệu được phép chia sẻ.
+- Chưa có endpoint upload mới ở M1/M2; `UploadPaths` chỉ chuẩn bị đường dẫn vật lý an toàn theo
+  format image filenames và root lưu trữ. Không viết file hay thay DB trong lần chỉnh layout này.
 
-CodeIgniter is a PHP full-stack web framework that is light, fast, flexible and secure.
-More information can be found at the [official site](https://codeigniter.com).
+## Kiểm thử tĩnh
 
-This repository holds a composer-installable app starter.
-It has been built from the
-[development repository](https://github.com/codeigniter4/CodeIgniter4).
+```bash
+php tests/m1_pure.php
+python tools/verify_routes.py
+python tools/verify_baseline.py --v1-root ..
+python tools/verify_layout.py
+```
 
-More information about the plans for version 4 can be found in [CodeIgniter 4](https://forum.codeigniter.com/forumdisplay.php?fid=28) on the forums.
+Xem `../docs/backend-rewrite/IMPLEMENTATION_STATUS.md` và `DEPLOYMENT_AND_QA.md`.
 
-You can read the [user guide](https://codeigniter.com/user_guide/)
-corresponding to the latest version of the framework.
+## M2 — Internal read models
 
-## Installation & updates
+Added: `Modules/Locations`, `Modules/Organization`, `Modules/People`,
+`Modules/Access/ScopeFactsReader`, `Shared/Read` plus CLI `m2:verify`.
+M2 was originally private; M2.1 later adds separate PBAC-guarded read-only routes. No migrations.
 
-`composer create-project codeigniter4/appstarter` then `composer update` whenever
-there is a new release of the framework.
+```bash
+php tests/m2_pure.php
+php spark m2:verify  # after Composer and DB are installed; read-only
+```
 
-When updating, check the release notes to see if there are any changes you might need to apply
-to your `app` folder. The affected files can be copied or merged from
-`vendor/codeigniter4/framework/app`.
+See `../docs/backend-rewrite/M2_IMPLEMENTATION_AND_QA.md`.
 
-## Setup
 
-Copy `env` to `.env` and tailor for your app, specifically the baseURL
-and any database settings.
+## M2.1 — Frontend GET routes (read-only)
 
-## Important Change with index.php
+M2 read repositories remain private. `Modules/ReadApi/ReadCatalogController` exposes
+**15 GET + 1 POST lookup** operations already declared in the frozen OpenAPI; each
+record goes through `Modules/Access/ReadViewGate` before filtering, count,
+pagination, and tree projection. `POST /organizations/labels/resolve` is
+read-only but still uses the existing session CSRF protocol.
 
-`index.php` is no longer in the root of the project! It has been moved inside the *public* folder,
-for better security and separation of components.
+No CRUD write routes are added. Access M3 still requires full runtime and
+differential PBAC tests before considering production readiness.
 
-This means that you should configure your web server to "point" to your project's *public* folder, and
-not to the project root. A better practice would be to configure a virtual host to point there. A poor practice would be to point your web server to the project root and expect to enter *public/...*, as the rest of your logic and the
-framework are exposed.
+```bash
+php tests/m21_pure.php
+python tools/verify_routes.py
+php spark m21:verify      # requires configured DB; no writes
+php spark routes          # check registered GET/POST lookup routes
+```
 
-**Please** read the user guide for a better explanation of how CI4 works!
+See `../docs/backend-rewrite/M21_READ_ROUTES_QA.md` for acceptance criteria.
 
-## Repository Management
 
-We use GitHub issues, in our main repository, to track **BUGS** and to track approved **DEVELOPMENT** work packages.
-We use our [forum](http://forum.codeigniter.com) to provide SUPPORT and to discuss
-FEATURE REQUESTS.
+## M2.1.1 - route binding and catalog check hotfix
 
-This repository is a "distribution" one, built by our release preparation script.
-Problems with it can be raised on our forum, or as issues in the main repository.
+Replaces the 14 erroneous resource GET string handlers with explicit array handlers,
+and adds a fail-safe PBAC resource/action lookup and `m211_routes_pure.php`.
+Run `php tests/m211_routes_pure.php`, `php spark m21:verify` and `php spark routes`
+after deploying the M2.1.1 overlay. See
+`../docs/backend-rewrite/M21_READ_ROUTES_QA.md` for acceptance criteria.
 
-## Server Requirements
+## M3.1 — Canonical State and PBAC core (internal; no HTTP routes)
 
-PHP version 8.2 or higher is required, with the following extensions installed:
-
-- [intl](http://php.net/manual/en/intl.requirements.php)
-- [mbstring](http://php.net/manual/en/mbstring.installation.php)
-
-> [!WARNING]
-> - The end of life date for PHP 7.4 was November 28, 2022.
-> - The end of life date for PHP 8.0 was November 26, 2023.
-> - The end of life date for PHP 8.1 was December 31, 2025.
-> - If you are still using below PHP 8.2, you should upgrade immediately.
-> - The end of life date for PHP 8.2 will be December 31, 2026.
-
-Additionally, make sure that the following extensions are enabled in your PHP:
-
-- json (enabled by default - don't turn it off)
-- [mysqlnd](http://php.net/manual/en/mysqlnd.install.php) if you plan to use MySQL
-- [libcurl](http://php.net/manual/en/curl.requirements.php) if you plan to use the HTTP\CURLRequest library
+The 10 independent Resource types are in `Modules/Access/ResourceStateCatalog.php`.
+`ResourceStateRepository` rejects business Resources missing Lifecycle and checks
+all specific-State policies, including inactive ones. `PbacDecision` preserves
+actor/assignment precedence and exposes matched policy IDs for future audit.
+Run `php tests/m3_pure.php`, `php tests/m3_repository_pure.php`, and
+`php tests/m3_lane_parity_pure.php`; on the local CI4+MariaDB runtime run
+`php spark m3:audit` (read-only). **Do not enable strict M3 authorization on
+M2.1.1 public reads before this audit and actor-equivalence testing.**
+See `../docs/backend-rewrite/M3_1_IMPLEMENTATION_AND_QA.md`.

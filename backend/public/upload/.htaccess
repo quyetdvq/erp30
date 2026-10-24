@@ -1,0 +1,13 @@
+# Files under this public directory are served as data, never executed.
+Options -Indexes -Includes -ExecCGI
+
+# Disable inherited application/script handlers, including doubled extensions.
+SetHandler none
+RemoveHandler .php .php3 .php4 .php5 .php7 .php8 .phtml .phar .cgi .pl .py .sh
+<FilesMatch "(?i:(^\.|\.(?:php[0-9]?|phtml|phar|cgi|pl|py|sh|asp|aspx|jsp|shtml|html?|svg|xhtml|mjs|js)(?:\.|$)))">
+    Require all denied
+</FilesMatch>
+
+<IfModule mod_headers.c>
+    Header always set X-Content-Type-Options "nosniff"
+</IfModule>

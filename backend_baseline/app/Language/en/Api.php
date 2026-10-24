@@ -1,0 +1,24 @@
+<?php
+
+declare(strict_types=1);
+
+return [
+    'invalidRequest' => 'The request is invalid.',
+    'unauthenticated' => 'Authentication is required.',
+    'forbidden' => 'You are not allowed to perform this action.',
+    'notFound' => 'The requested resource was not found.',
+    'conflict' => 'The request conflicts with the current state.',
+    'validation' => 'The submitted data is invalid.',
+    'serverError' => 'An unexpected server error occurred. Please try again later.',
+    'userAvatarInvalidSize' => 'The avatar must be between 1 byte and 2 MiB.',
+    'userAvatarInvalidType' => 'Only JPEG, PNG, and WebP images are accepted.',
+    'userAvatarInvalidContent' => 'The avatar image is invalid.',
+    'userAvatarNotFound' => 'The avatar was not found.',
+    'userAvatarConcurrentUpdate' => 'The avatar was changed by another request. Reload and try again.',
+    'userAvatarStorageFailed' => 'The avatar could not be saved. Please try again later.',
+    'invalidCredentials' => 'The credentials are invalid.',
+    'profileUpdateFailed' => 'The profile could not be updated.',
+    'policyScopeAlreadyExists' => 'A Policy already exists for this organization, resource, state, participant scope.',
+    'importFileTooLarge' => 'The import file exceeds the configured 10 MiB limit.',
+    'importRowLimitExceeded' => 'The import file exceeds the configured 5,000-row limit.',
+];

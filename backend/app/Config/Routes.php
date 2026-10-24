@@ -1,147 +1,119 @@
 <?php
 
+declare(strict_types=1);
+
 use CodeIgniter\Router\RouteCollection;
+use App\Modules\Identity\AuthController;
+use App\Shared\Http\HealthController;
+use App\Modules\ReadApi\ReadCatalogController;
+use App\Modules\Access\Management\AccessReadController;
+use App\Modules\Access\Mutation\AccessMutationController;
+use App\Modules\Identity\Management\IdentityReadController;
+use App\Modules\Identity\Mutation\SecurityUserMutationController;
+use App\Modules\Workflow\Management\WorkflowReadController;
+use App\Modules\Workflow\Mutation\WorkflowMutationController;
 
 /** @var RouteCollection $routes */
-$routes->get('/', 'Home::index');
+$routes->setAutoRoute(false);
 
+// Only reviewed M1–M3.3 routes; M3.3 mutations are explicit and feature-gated OFF.
 $routes->group('api/v1', ['filter' => 'cors'], static function (RouteCollection $routes): void {
-    // Browsers preflight every API request carrying the canonical locale/request-id headers.
-    // Keep OPTIONS routeable even when the target resource itself is protected.
-    $routes->options('(:any)', 'Api\\Cors::options');
-    $routes->get('health', 'Api\\Health::index');
-    $routes->options('health', 'Api\\Health::options');
-    $routes->get('display-settings/runtime', 'Api\\DisplaySettings::runtime');
-    $routes->get('display-settings/definitions', 'Api\\DisplaySettings::definitions');
-    $routes->get('display-settings/values', 'Api\\DisplaySettings::values');
-    $routes->patch('display-settings', 'Api\\DisplaySettings::update');
-    $routes->post('display-settings/actions/reset', 'Api\\DisplaySettings::reset');
-    $routes->post('auth/login', 'Api\\Auth::login');
-    $routes->post('auth/logout', 'Api\\Auth::logout');
-    $routes->get('auth/csrf', 'Api\\Auth::csrf');
-    $routes->get('auth/me', 'Api\\Auth::me');
-    $routes->patch('auth/profile', 'Api\\Auth::profile');
-    $routes->options('auth/(:any)', 'Api\\Auth::options');
+    $routes->options('(:any)', [HealthController::class, 'options']);
+    $routes->options('health', [HealthController::class, 'options']);
+    $routes->get('health', [HealthController::class, 'index']);
 
-    foreach (['provinces' => 'province', 'wards' => 'ward', 'organizations' => 'organization', 'contacts' => 'contact'] as $path => $resource) {
-        $routes->get($path, 'Api\\FoundationOrganizationContact::list/' . $resource);
-        $routes->post($path, 'Api\\FoundationOrganizationContact::create/' . $resource);
-        $routes->get($path . '/(:num)', 'Api\\FoundationOrganizationContact::show/' . $resource . '/$1');
-        $routes->patch($path . '/(:num)', 'Api\\FoundationOrganizationContact::update/' . $resource . '/$1');
-        $routes->post($path . '/(:num)/actions/set-state', 'Api\\FoundationOrganizationContact::setState/' . $resource . '/$1');
-    }
-    foreach (['departments' => 'department', 'positions' => 'position', 'employees' => 'employee'] as $path => $resource) {
-        $routes->get($path, 'Api\\EmployeeStructure::list/' . $resource);
-        $routes->post($path, 'Api\\EmployeeStructure::create/' . $resource);
-        $routes->get($path . '/(:num)', 'Api\\EmployeeStructure::show/' . $resource . '/$1');
-        $routes->patch($path . '/(:num)', 'Api\\EmployeeStructure::update/' . $resource . '/$1');
-        $routes->post($path . '/(:num)/actions/set-state', 'Api\\EmployeeStructure::setState/' . $resource . '/$1');
-    }
-    $routes->get('employee-assignments', 'Api\\EmployeeStructure::list/employee_assignment');
-    $routes->post('employee-assignments', 'Api\\EmployeeStructure::create/employee_assignment');
-    $routes->get('employee-assignments/(:num)', 'Api\\EmployeeStructure::show/employee_assignment/$1');
-    $routes->patch('employee-assignments/(:num)', 'Api\\EmployeeStructure::update/employee_assignment/$1');
-    $routes->post('employee-assignments/(:num)/actions/set-state', 'Api\\EmployeeStructure::setState/employee_assignment/$1');
-    $routes->post('organizations/labels/resolve', 'Api\\OrganizationLookups::resolve');
-    $routes->get('organizations/tree', 'Api\\FoundationOrganizationContact::tree');
+    $routes->get('auth/csrf', [AuthController::class, 'csrf']);
+    $routes->post('auth/login', [AuthController::class, 'login']);
+    $routes->post('auth/logout', [AuthController::class, 'logout']);
+    $routes->get('auth/me', [AuthController::class, 'me']);
+    $routes->patch('auth/profile', [AuthController::class, 'profile']);
 
-    $routes->get('security/users', 'Api\\AuthorizationWorkflow::securityUsers');
-    $routes->post('users', 'Api\\AuthorizationWorkflow::createUser');
-    $routes->patch('users/(:num)', 'Api\\AuthorizationWorkflow::updateUser/$1');
-    // PHP exposes multipart files directly on POST; keep PUT for existing clients.
-    $routes->post('users/(:num)/avatar', 'Api\\UserAvatars::upload/$1');
-    $routes->put('users/(:num)/avatar', 'Api\\UserAvatars::upload/$1');
-    $routes->delete('users/(:num)/avatar', 'Api\\UserAvatars::delete/$1');
-    $routes->post('users/(:num)/actions/set-state', 'Api\\AuthorizationWorkflow::setUserState/$1');
-    $routes->post('users/(:num)/actions/reset-password', 'Api\\AuthorizationWorkflow::resetUserPassword/$1');
-    $routes->get('users/(:num)/permissions', 'Api\\AuthorizationWorkflow::userPermissions/$1');
-    $routes->put('users/(:num)/permissions', 'Api\\AuthorizationWorkflow::replaceUserPermissions/$1');
+    // Reviewed M3.3 GET contracts: HTTP routes owned by domain, PBAC remains central.
+    $routes->get('security/users', [IdentityReadController::class, 'securityUsers']);
+    $routes->get('users/(:num)/permissions', [IdentityReadController::class, 'userPermissions']);
+    // Access write endpoints below remain behind the independent write gate.
+    $routes->get('authorization-groups', [AccessReadController::class, 'listAuthorizationGroups']);
+    $routes->get('authorization-groups/(:num)/members', [AccessReadController::class, 'groupMembers']);
+    $routes->get('authorization-groups/(:num)/permissions', [AccessReadController::class, 'groupPermissions']);
+    $routes->get('authorization-groups/(:num)', [AccessReadController::class, 'showAuthorizationGroup']);
+    $routes->get('resources', [AccessReadController::class, 'listResources']);
+    $routes->get('resources/(:num)/actions', [AccessReadController::class, 'resourceActions']);
+    $routes->get('resources/(:num)', [AccessReadController::class, 'showResource']);
+    $routes->get('policies', [AccessReadController::class, 'listPolicies']);
+    $routes->get('policies/(:num)', [AccessReadController::class, 'showPolicy']);
+    $routes->get('authorization-logs', [AccessReadController::class, 'listAuthorizationLogs']);
+    $routes->get('authorization-logs/(:num)', [AccessReadController::class, 'showAuthorizationLog']);
+    $routes->get('workflow-states', [WorkflowReadController::class, 'listWorkflowStates']);
+    $routes->get('workflow-states/(:num)', [WorkflowReadController::class, 'showWorkflowState']);
+    $routes->get('lifecycles', [WorkflowReadController::class, 'listLifecycles']);
+    $routes->get('lifecycles/(:num)/states', [WorkflowReadController::class, 'lifecycleStates']);
+    $routes->get('lifecycles/(:num)/transitions', [WorkflowReadController::class, 'lifecycleTransitions']);
+    $routes->get('lifecycles/(:num)', [WorkflowReadController::class, 'showLifecycle']);
 
-    foreach (['authorization-groups' => 'authorization_group', 'resources' => 'resource', 'policies' => 'policy', 'authorization-logs' => 'authorization_log', 'workflow-states' => 'workflow_state', 'lifecycles' => 'lifecycle'] as $path => $resource) {
-        $routes->get($path, 'Api\\AuthorizationWorkflow::list/' . $resource);
-        if ($resource !== 'authorization_log') {
-            $routes->post($path, 'Api\\AuthorizationWorkflow::create/' . $resource);
-        }
-        $routes->get($path . '/(:num)', 'Api\\AuthorizationWorkflow::show/' . $resource . '/$1');
-        if ($resource !== 'authorization_log') {
-            $routes->patch($path . '/(:num)', 'Api\\AuthorizationWorkflow::update/' . $resource . '/$1');
-            if ($resource === 'policy') {
-                $routes->delete($path . '/(:num)', 'Api\\AuthorizationWorkflow::deletePolicy/$1');
-            }
-        }
-        if (in_array($resource, ['authorization_group', 'workflow_state', 'lifecycle', 'policy', 'resource'], true)) {
-            $routes->post($path . '/(:num)/actions/set-state', 'Api\\AuthorizationWorkflow::setState/' . $resource . '/$1');
-        }
-    }
-    $routes->delete('resources/(:num)', 'Api\\AuthorizationWorkflow::deleteResource/$1');
-    $routes->get('resources/(:num)/numbering-series', 'Api\\AutoNumbering::list/$1');
-    $routes->post('resources/(:num)/numbering-series', 'Api\\AutoNumbering::create/$1');
-    $routes->get('resources/(:num)/numbering-series/(:num)', 'Api\\AutoNumbering::show/$1/$2');
-    $routes->patch('resources/(:num)/numbering-series/(:num)', 'Api\\AutoNumbering::update/$1/$2');
-    $routes->post('resources/(:num)/numbering-series/(:num)/actions/set-state', 'Api\\AutoNumbering::setState/$1/$2');
-    $routes->post('resources/(:num)/numbering-series/actions/validate-config', 'Api\\AutoNumbering::validateConfig/$1');
-    $routes->get('authorization-groups/(:num)/members', 'Api\\AuthorizationWorkflow::members/$1');
-    $routes->put('authorization-groups/(:num)/members', 'Api\\AuthorizationWorkflow::replaceMembers/$1');
-    $routes->get('authorization-groups/(:num)/permissions', 'Api\\AuthorizationWorkflow::permissions/$1');
-    $routes->put('authorization-groups/(:num)/permissions', 'Api\\AuthorizationWorkflow::replacePermissions/$1');
-    $routes->get('resources/(:num)/actions', 'Api\\AuthorizationWorkflow::actions/$1');
-    $routes->post('resources/(:num)/actions', 'Api\\AuthorizationWorkflow::createAction/$1');
-    $routes->patch('resources/(:num)/actions/(:num)', 'Api\\AuthorizationWorkflow::updateAction/$1/$2');
-    $routes->delete('resources/(:num)/actions/(:num)', 'Api\\AuthorizationWorkflow::deleteAction/$1/$2');
-    $routes->get('lifecycles/(:num)/states', 'Api\\AuthorizationWorkflow::states/$1');
-    $routes->put('lifecycles/(:num)/states', 'Api\\AuthorizationWorkflow::configureStates/$1');
-    $routes->get('lifecycles/(:num)/transitions', 'Api\\AuthorizationWorkflow::transitions/$1');
-    $routes->put('lifecycles/(:num)/transitions', 'Api\\AuthorizationWorkflow::configureStates/$1');
+    // M3.3B3: exact Shield User management operations (five mutations).
+    // Passwords are written through Shield and all writes remain gated OFF.
+    $routes->post('users', [SecurityUserMutationController::class, 'createUser']);
+    $routes->patch('users/(:num)', [SecurityUserMutationController::class, 'updateUser']);
+    $routes->post('users/(:num)/actions/set-state', [SecurityUserMutationController::class, 'setUserState']);
+    $routes->post('users/(:num)/actions/reset-password', [SecurityUserMutationController::class, 'resetUserPassword']);
+    $routes->put('users/(:num)/permissions', [SecurityUserMutationController::class, 'replaceUserPermissions']);
 
-    $routes->get('product-groups', 'Api\\ProductCatalog::listGroups');
-    $routes->post('product-groups', 'Api\\ProductCatalog::createGroup');
-    $routes->get('product-groups/(:num)', 'Api\\ProductCatalog::showGroup/$1');
-    $routes->patch('product-groups/(:num)', 'Api\\ProductCatalog::updateGroup/$1');
-    $routes->post('product-groups/(:num)/actions/set-state', 'Api\\ProductCatalog::setGroupState/$1');
+    // M3.3B1 guarded Group/Resource mutations; disabled by default.
+    // Every handler is an explicit reviewed operation; no auto-routing.
+    $routes->post('authorization-groups', [AccessMutationController::class, 'createAuthorizationGroup']);
+    $routes->patch('authorization-groups/(:num)', [AccessMutationController::class, 'updateAuthorizationGroup']);
+    $routes->post('authorization-groups/(:num)/actions/set-state', [AccessMutationController::class, 'setAuthorizationGroupState']);
+    $routes->put('authorization-groups/(:num)/members', [AccessMutationController::class, 'replaceAuthorizationGroupMembers']);
+    $routes->put('authorization-groups/(:num)/permissions', [AccessMutationController::class, 'replaceAuthorizationGroupPermissions']);
+    $routes->post('resources', [AccessMutationController::class, 'createResource']);
+    $routes->patch('resources/(:num)', [AccessMutationController::class, 'updateResource']);
+    $routes->post('resources/(:num)/actions/set-state', [AccessMutationController::class, 'setResourceState']);
+    $routes->delete('resources/(:num)', [AccessMutationController::class, 'deleteResource']);
+    $routes->post('resources/(:num)/actions', [AccessMutationController::class, 'createResourceAction']);
+    $routes->patch('resources/(:num)/actions/(:num)', [AccessMutationController::class, 'updateResourceAction']);
+    $routes->delete('resources/(:num)/actions/(:num)', [AccessMutationController::class, 'deleteResourceAction']);
 
-    $routes->get('product-uoms', 'Api\\ProductCatalog::listUoms');
-    $routes->post('product-uoms', 'Api\\ProductCatalog::createUom');
-    $routes->get('product-uoms/(:num)', 'Api\\ProductCatalog::showUom/$1');
-    $routes->patch('product-uoms/(:num)', 'Api\\ProductCatalog::updateUom/$1');
-    $routes->post('product-uoms/(:num)/actions/set-state', 'Api\\ProductCatalog::setUomState/$1');
+    // M3.3B2 Policy mutations: four exact OpenAPI operations, gated OFF by
+    // default. Policy Actions are validated and written transactionally with
+    // the Policy (no independent Policy Action HTTP mutation contract).
+    $routes->post('policies', [AccessMutationController::class, 'createPolicy']);
+    $routes->patch('policies/(:num)', [AccessMutationController::class, 'updatePolicy']);
+    $routes->post('policies/(:num)/actions/set-state', [AccessMutationController::class, 'setPolicyState']);
+    $routes->delete('policies/(:num)', [AccessMutationController::class, 'deletePolicy']);
 
-    // Bounded, PBAC-filtered Product lookups (distinct from the P1-API-050 CRUD contract).
-    $routes->get('products/options', 'Api\\ProductLookups::options');
-    $routes->post('products/options/resolve', 'Api\\ProductLookups::resolve');
-    $routes->post('products/details/resolve', 'Api\\ProductLookups::resolveDetails');
-    $routes->post('products/relations-preview', 'Api\\ProductLookups::relationPreviews');
-    $routes->post('products/sales-uom-options/resolve', 'Api\\ProductLookups::salesUomOptions');
-    $routes->post('product-uoms/labels/resolve', 'Api\\ProductLookups::resolveUomLabels');
-    $routes->get('products', 'Api\\ProductCatalog::listProducts');
-    $routes->post('products', 'Api\\ProductCatalog::createProduct');
-    $routes->get('products/(:num)', 'Api\\ProductCatalog::showProduct/$1');
-    $routes->patch('products/(:num)', 'Api\\ProductCatalog::updateProduct/$1');
-    $routes->post('products/(:num)/image', 'Api\\ProductImages::upload/$1');
-    $routes->delete('products/(:num)/image', 'Api\\ProductImages::delete/$1');
-    $routes->post('products/(:num)/actions/set-state', 'Api\\ProductCatalog::setProductState/$1');
-    $routes->get('products/(:num)/uom-conversions', 'Api\\ProductCatalog::listConversions/$1');
-    $routes->put('products/(:num)/uom-conversions', 'Api\\ProductCatalog::replaceConversions/$1');
-    $routes->get('products/(:num)/combo-items', 'Api\\ProductCatalog::listComboItems/$1');
-    $routes->put('products/(:num)/combo-items', 'Api\\ProductCatalog::replaceComboItems/$1');
+    // M3.3B4 exact Workflow master/configuration mutations. Baseline PUT
+    // States and Transitions are both append-only Lifecycle.configure().
+    // No new Lifecycle target transition execution routes are introduced.
+    $routes->post('workflow-states', [WorkflowMutationController::class, 'createWorkflowState']);
+    $routes->patch('workflow-states/(:num)', [WorkflowMutationController::class, 'updateWorkflowState']);
+    $routes->post('workflow-states/(:num)/actions/set-state', [WorkflowMutationController::class, 'setWorkflowStateState']);
+    $routes->post('lifecycles', [WorkflowMutationController::class, 'createLifecycle']);
+    $routes->patch('lifecycles/(:num)', [WorkflowMutationController::class, 'updateLifecycle']);
+    $routes->post('lifecycles/(:num)/actions/set-state', [WorkflowMutationController::class, 'setLifecycleState']);
+    $routes->put('lifecycles/(:num)/states', [WorkflowMutationController::class, 'configureLifecycleStates']);
+    $routes->put('lifecycles/(:num)/transitions', [WorkflowMutationController::class, 'configureLifecycleTransitions']);
 
-    $routes->post('products/import-jobs', 'Api\\ProductImport::start');
-    // Business Lifecycle metadata respects record VIEW and each transition's PBAC action.
-    $routes->get('business-workflow/(:segment)/states', 'Api\\BusinessWorkflow::states/$1');
-    $routes->get('business-workflow/(:segment)/(:num)/options', 'Api\\BusinessWorkflow::options/$1/$2');
-    $routes->post('business-workflow/(:segment)/(:num)/actions/(:segment)', 'Api\\BusinessWorkflow::execute/$1/$2/$3');
+    // M4 Settings/Numbering/Business Workflow: isolated, explicit reviewed routes.
+    // Existing M3.4D 70-route footprint above is unchanged.
+    require __DIR__ . '/M4Routes.php';
 
-    $routes->get('import-jobs', 'Api\\ProductImport::list');
-    $routes->get('import-jobs/(:num)', 'Api\\ProductImport::show/$1');
-    $routes->get('import-jobs/(:num)/rows', 'Api\\ProductImport::rows/$1');
-
-    $routes->get('price-lists', 'Api\\ProductCatalog::listPriceLists');
-    $routes->post('price-lists', 'Api\\ProductCatalog::createPriceList');
-    $routes->get('price-lists/(:num)', 'Api\\ProductCatalog::showPriceList/$1');
-    $routes->patch('price-lists/(:num)', 'Api\\ProductCatalog::updatePriceList/$1');
-    $routes->post('price-lists/(:num)/actions/set-state', 'Api\\ProductCatalog::setPriceListState/$1');
-    $routes->get('price-lists/(:num)/items', 'Api\\ProductCatalog::listPriceListItems/$1');
-    $routes->put('price-lists/(:num)/items', 'Api\\ProductCatalog::replacePriceListItems/$1');
-
+    // M2.1 read-only Frontend compatibility; every row is PBAC-filtered.
+    $routes->get('provinces', [ReadCatalogController::class, 'listProvinces']);
+    $routes->get('provinces/(:num)', [ReadCatalogController::class, 'showProvince']);
+    $routes->get('wards', [ReadCatalogController::class, 'listWards']);
+    $routes->get('wards/(:num)', [ReadCatalogController::class, 'showWard']);
+    $routes->get('organizations', [ReadCatalogController::class, 'listOrganizations']);
+    $routes->get('organizations/tree', [ReadCatalogController::class, 'tree']);
+    $routes->get('organizations/(:num)', [ReadCatalogController::class, 'showOrganization']);
+    $routes->post('organizations/labels/resolve', [ReadCatalogController::class, 'resolveOrganizationLabels']);
+    $routes->get('departments', [ReadCatalogController::class, 'listDepartments']);
+    $routes->get('departments/(:num)', [ReadCatalogController::class, 'showDepartment']);
+    $routes->get('positions', [ReadCatalogController::class, 'listPositions']);
+    $routes->get('positions/(:num)', [ReadCatalogController::class, 'showPosition']);
+    $routes->get('employees', [ReadCatalogController::class, 'listEmployees']);
+    $routes->get('employees/(:num)', [ReadCatalogController::class, 'showEmployee']);
+    $routes->get('employee-assignments', [ReadCatalogController::class, 'listEmployeeAssignments']);
+    $routes->get('employee-assignments/(:num)', [ReadCatalogController::class, 'showEmployeeAssignment']);
 });
 
-service('auth')->routes($routes);
+// Do not register Shield's built-in web registration and login routes.
