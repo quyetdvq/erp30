@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace App\Modules\Access;
 
-use App\Modules\People\PeopleReadRepository;
+use App\Bootstrap\AccessReadAdapters;
 use App\Shared\Read\PositiveId;
 use CodeIgniter\Database\BaseConnection;
 use CodeIgniter\Shield\Entities\User;
@@ -33,7 +33,7 @@ final class RuntimeActorReader
             ->setTimezone(new DateTimeZone('UTC'));
         $userId = PositiveId::value((string) $user->id);
         $permissionKeys = (new BasePermissionReader($db))->forUser($user);
-        $scope = (new ScopeFactsReader(new PeopleReadRepository($db)))->employeeFactsAt($userId, $now);
+        $scope = (new ScopeFactsReader(AccessReadAdapters::people($db)))->employeeFactsAt($userId, $now);
         $membershipTable = config('Auth')->tables['groups_users'];
         $result = $db->table($membershipTable)->select('group')->where('user_id', $userId)->get();
         if ($result === false) {

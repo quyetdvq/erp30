@@ -4,8 +4,9 @@ declare(strict_types=1);
 
 namespace App\Modules\Access;
 
-use App\Modules\Organization\OrganizationReadRepository;
-use App\Modules\People\PeopleReadRepository;
+use App\Bootstrap\AccessReadAdapters;
+use App\Modules\Access\Ports\OrganizationFactsPort;
+use App\Modules\Access\Ports\PeopleFactsPort;
 use App\Shared\Read\PositiveId;
 use App\Shared\Read\UtcBusinessDate;
 use DateTimeImmutable;
@@ -18,19 +19,19 @@ use DateTimeImmutable;
 final class ScopeFactsReader
 {
     public function __construct(
-        private readonly ?PeopleReadRepository $people = null,
-        private readonly ?OrganizationReadRepository $organizations = null,
+        private readonly ?PeopleFactsPort $people = null,
+        private readonly ?OrganizationFactsPort $organizations = null,
     ) {
     }
 
-    private function people(): PeopleReadRepository
+    private function people(): PeopleFactsPort
     {
-        return $this->people ?? new PeopleReadRepository();
+        return $this->people ?? AccessReadAdapters::people();
     }
 
-    private function organizations(): OrganizationReadRepository
+    private function organizations(): OrganizationFactsPort
     {
-        return $this->organizations ?? new OrganizationReadRepository();
+        return $this->organizations ?? AccessReadAdapters::organizations();
     }
 
     /**

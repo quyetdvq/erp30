@@ -5,7 +5,7 @@ declare(strict_types=1);
 use CodeIgniter\Router\RouteCollection;
 use App\Modules\Identity\AuthController;
 use App\Shared\Http\HealthController;
-use App\Modules\ReadApi\ReadCatalogController;
+use App\Controllers\Api\ReadCatalogController;
 use App\Modules\Access\Management\AccessReadController;
 use App\Modules\Access\Mutation\AccessMutationController;
 use App\Modules\Identity\Management\IdentityReadController;
@@ -96,6 +96,36 @@ $routes->group('api/v1', ['filter' => 'cors'], static function (RouteCollection 
     // M4 Settings/Numbering/Business Workflow: isolated, explicit reviewed routes.
     // Existing M3.4D 70-route footprint above is unchanged.
     require __DIR__ . '/M4Routes.php';
+
+    // M5.1 Province/Ward mutation routes. The M2.1 read handlers below stay unchanged.
+    require __DIR__ . '/M5Routes.php';
+
+    // M5.2 protected Organization mutations; retained M2.1 GET routes remain.
+    require __DIR__ . '/M52Routes.php';
+
+    // M5.3 protected Employee and Assignment mutations; M2.1 GET routes remain.
+    require __DIR__ . '/M53Routes.php';
+
+    // M5.4 exact Department/Position mutation routes; M2.1 GET routes remain.
+    require __DIR__ . '/M54Routes.php';
+
+    // M5.5 Contact read and write, one Contact-owned API surface (5 routes).
+    require __DIR__ . '/M55Routes.php';
+
+    // M6.1 Product Group/UOM master catalog: ten exact API-050 routes.
+    require __DIR__ . '/M61Routes.php';
+
+    // M6.2A Product Master read contract (GET only; no premature writes).
+    require __DIR__ . '/M62ARoutes.php';
+
+    // M6.2B Product Master mutations: one Product owner, explicit PBAC/write gate.
+    require __DIR__ . '/M62BRoutes.php';
+
+    // M6.3A Product representative image upload/delete; never proxy image reads.
+    require __DIR__ . '/M63Routes.php';
+
+    // M6.3B Shield User avatar mutation, same public-upload store, no image GET proxy.
+    require __DIR__ . '/M63BRoutes.php';
 
     // M2.1 read-only Frontend compatibility; every row is PBAC-filtered.
     $routes->get('provinces', [ReadCatalogController::class, 'listProvinces']);

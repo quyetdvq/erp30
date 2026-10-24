@@ -1,0 +1,9 @@
+# Access — Module Design Record (Backend Rewrite)
+
+- **MDR state:** IMPLEMENTING. Logical area: Authorization + Resource metadata in the v1.2.4 Rewrite naming. The 12-root Architecture Standard names these separately; that split is **not** an approved scope change in M5.4.1.
+- **Owned tables:** `groups`, `group_permissions`, `resources`, `resource_actions`, `policies`, `policy_actions`, `authorization_logs` and the approved Shield permission/group relation writes. See M3.4C QA for exact Group/Resource/Policy ownership.
+- **Entrypoints:** `UnifiedAccessService` for persisted VIEW/mutation decision; Access management and mutation controller/service for authorization Groups, Resource catalog, Policies and logs. `ReadAccessBridge` is a bounded M2 compatibility decision entrypoint.
+- **Consumer-owned read ports:** `Ports/OrganizationFactsPort.php` and `Ports/PeopleFactsPort.php` expose only authoritative factual reads required by authorization. Organization and People implement the ports. `App\Bootstrap\AccessReadAdapters` assembles those providers for the retained M3 constructors (transitional construction seam); it does **not** authorize or write.
+- **Dependency direction:** Organization and People command services may call Access. Access runtime code **must not** import `OrganizationReadRepository` or `PeopleReadRepository` directly. Preserve an acyclic Modules dependency graph.
+- **Security/transactions:** PBAC and persisted resource State are authoritative; native Lifecycle distinctions and `ABSOLUTE_DENY` precedence remain fixed. No business-owner write is permitted through a read port.
+- **Verification:** `m34d_architecture_pure.php`, `m32_runtime_pure.php`, `m541_module_ownership_pure.php`; real HTTP/PBAC decisions still need DEV runtime verification after relocation.

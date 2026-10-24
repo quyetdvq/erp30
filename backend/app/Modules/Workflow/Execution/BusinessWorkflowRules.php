@@ -35,6 +35,25 @@ final class BusinessWorkflowRules
         return $action;
     }
 
+    /**
+     * Reject ambiguous configured actions rather than taking the first SQL row.
+     * Never accept a destination State supplied by the client.
+     * @param list<array{action_code:string,destination:string}> $transitions
+     * @return array{action_code:string,destination:string}
+     */
+    public static function transitionForAction(array $transitions, string $action): array
+    {
+        $action = self::action($action);
+        $found = null;
+        foreach ($transitions as $transition) {
+            if ($transition['action_code'] !== $action) continue;
+            if ($found !== null) throw new DomainException('WF_INVALID_TRANSITION', ['action_code'=>$action]);
+            $found = $transition;
+        }
+        if ($found === null) throw new DomainException('WF_INVALID_TRANSITION', ['action_code'=>$action]);
+        return $found;
+    }
+
     public static function id(string $id): string
     {
         if (preg_match('/^[1-9][0-9]*$/D',$id)!==1 || strlen($id)>19 ||

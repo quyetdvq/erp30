@@ -22,7 +22,7 @@ final class ApiResponder
     public static function error(ResponseInterface $response, string $code, int $status, array $details = []): ResponseInterface
     {
         self::headers($response);
-        $message = lang('Api.' . self::messageKey($code, $status), [], RequestMetadata::locale());
+        $message = lang(self::translationKey($code, $status), [], RequestMetadata::locale());
         if (! is_string($message)) {
             $message = (string) implode(' ', $message);
         }
@@ -31,7 +31,7 @@ final class ApiResponder
 
     public static function message(string $code, int $status): string
     {
-        $value = lang('Api.' . self::messageKey($code, $status), [], RequestMetadata::locale());
+        $value = lang(self::translationKey($code, $status), [], RequestMetadata::locale());
         return is_string($value) ? $value : implode(' ', $value);
     }
 
@@ -39,6 +39,34 @@ final class ApiResponder
     {
         $response->setHeader('X-Request-ID', RequestMetadata::id());
         $response->setHeader('Content-Language', RequestMetadata::locale());
+    }
+
+    /** Keep baseline messages intact; only explicitly reviewed extension codes use ApiRuntime. */
+    private static function translationKey(string $code, int $status): string
+    {
+        if ($code === 'CONTACT_PRIMARY_SCOPE_UNAVAILABLE') {
+            return 'ApiRuntime.contactPrimaryScopeUnavailable';
+        }
+        if ($code === 'CONTACT_STATE_REQUIRES_SETSTATE') {
+            return 'ApiRuntime.contactStateRequiresSetstate';
+        }
+        if (str_starts_with($code, 'CONTACT_')) {
+            return 'Contact.' . $code;
+        }
+        if (str_starts_with($code, 'PRODUCT_GROUP_')) {
+            return 'ProductGroup.' . $code;
+        }
+        if (str_starts_with($code, 'PRODUCT_UOM_')) {
+            return 'ProductUomMaster.' . $code;
+        }
+        if (str_starts_with($code, 'PRODUCT_') || $code === 'COMBO_SELF_REFERENCE'
+            || str_starts_with($code, 'EVALUATION_ORGANIZATION_HINT_')) {
+            return 'ProductRuntime.' . $code;
+        }
+        if ($code === 'ACCESS_MUTATION_NOT_ENABLED') {
+            return 'ApiRuntime.mutationDisabled';
+        }
+        return 'Api.' . self::messageKey($code, $status);
     }
 
     private static function messageKey(string $code, int $status): string

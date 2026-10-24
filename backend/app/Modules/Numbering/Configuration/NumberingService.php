@@ -112,7 +112,9 @@ final class NumberingService
     /** @param array<string,mixed> $candidate */
     private function validateCandidate(string $resourceId, array $candidate, ?string $exceptId): void
     {
-        NumberingRules::validatePattern($candidate);
+        // Match the baseline canonical validator: same token/literal structure
+        // collides even when the SEQ padding widths differ (e.g. 3 vs 5).
+        $signature = NumberingRules::collisionSignature($candidate);
         foreach ($this->db->table('auto_numbering_series')->where('resource_id',$resourceId)->get()->getResultArray() as $old) {
             if ($exceptId !== null && (string) $old['id']===$exceptId) continue;
             if ((string) $old['series_code'] === (string) $candidate['series_code']) {
@@ -122,9 +124,8 @@ final class NumberingService
                 (string) $old['status']==='ACTIVE' && (bool) $old['is_default']) {
                 throw new DomainException('NUM_ACTIVE_DEFAULT_CONFLICT', ['field'=>'is_default']);
             }
-            if ($candidate['status']==='ACTIVE' && (string) $old['status']==='ACTIVE' &&
-                (string) $old['pattern']===(string) $candidate['pattern'] &&
-                (string) $old['scope_type']===(string) $candidate['scope_type']) {
+            if ($signature !== null && (string) $old['status']==='ACTIVE' &&
+                NumberingRules::collisionSignature($old)===$signature) {
                 throw new DomainException('NUM_PATTERN_COLLISION', ['field'=>'pattern']);
             }
         }

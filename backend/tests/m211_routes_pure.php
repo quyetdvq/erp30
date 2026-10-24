@@ -70,7 +70,7 @@ namespace {
     $routes = new RouteCollection();
     require dirname(__DIR__) . '/app/Config/Routes.php';
 
-    $controller = 'App\\Modules\\ReadApi\\ReadCatalogController';
+    $controller = 'App\\Controllers\\Api\\ReadCatalogController';
     $expected = [
         'provinces' => ['Provinces', 'Province'],
         'wards' => ['Wards', 'Ward'],
@@ -80,7 +80,7 @@ namespace {
         'employees' => ['Employees', 'Employee'],
         'employee-assignments' => ['EmployeeAssignments', 'EmployeeAssignment'],
     ];
-    $source = file_get_contents(dirname(__DIR__) . '/app/Modules/ReadApi/ReadCatalogController.php');
+    $source = file_get_contents(dirname(__DIR__) . '/app/Controllers/Api/ReadCatalogController.php');
     if (! is_string($source)) {
         throw new \RuntimeException('Cannot load read controller source.');
     }

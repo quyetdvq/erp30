@@ -44,7 +44,7 @@ print(f'PASS: {len(normalized)} M1+M2.1 API operations, all in frozen {len(known
 print('PASS: no non-contract mutations, Shield web routes or auto-routing')
 print('PASS: session CSRF rotation and JSON error policy configured')
 
-read_controller = (root/'backend/app/Modules/ReadApi/ReadCatalogController.php').read_text()
+read_controller = (root/'backend/app/Controllers/Api/ReadCatalogController.php').read_text()
 read_gate = (root/'backend/app/Modules/Access/ReadViewGate.php').read_text()
 # M3.2 wraps the accepted M2.1.1 gate; default mode remains legacy.
 bridge = (root/'backend/app/Modules/Access/ReadAccessBridge.php').read_text()
@@ -65,7 +65,7 @@ print('PASS: every list/page/tree path traverses the read PBAC bridge (legacy by
 # path. Use array-style handlers that resolve to an actual public method.
 assert "ReadCatalogController::class . '::index/" not in route_text
 assert "ReadCatalogController::class . '::show/" not in route_text
-controller_text = (root/'backend/app/Modules/ReadApi/ReadCatalogController.php').read_text()
+controller_text = (root/'backend/app/Controllers/Api/ReadCatalogController.php').read_text()
 expected_handlers = {}
 for base, plural, singular in [
     ('provinces', 'Provinces', 'Province'),

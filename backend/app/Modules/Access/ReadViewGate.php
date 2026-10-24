@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace App\Modules\Access;
 
-use App\Modules\Organization\OrganizationReadRepository;
+use App\Bootstrap\AccessReadAdapters;
 use App\Shared\Read\PositiveId;
 use App\Shared\Read\UtcBusinessDate;
 use CodeIgniter\Database\BaseConnection;
@@ -155,7 +155,7 @@ final class ReadViewGate
     private function groupRoot(): string
     {
         if (! isset($this->groupRoot['root'])) {
-            $roots = (new OrganizationReadRepository($this->db))->groupRoots();
+            $roots = (AccessReadAdapters::organizations($this->db))->groupRoots();
             if (count($roots) !== 1) {
                 throw new UnexpectedValueException('There must be exactly one GROUP root.');
             }
@@ -168,7 +168,7 @@ final class ReadViewGate
     private function ancestors(string $scopeId): array
     {
         if (! isset($this->ancestors[$scopeId])) {
-            $chain = (new OrganizationReadRepository($this->db))->ancestorChain($scopeId);
+            $chain = (AccessReadAdapters::organizations($this->db))->ancestorChain($scopeId);
             $ids = [];
             foreach ($chain as $node) {
                 $ids[] = PositiveId::value((string) $node['id']);

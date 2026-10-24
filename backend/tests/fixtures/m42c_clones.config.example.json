@@ -1,0 +1,20 @@
+{
+  "purpose": "M34_DISPOSABLE_CLONES",
+  "run_id": "REPLACE_WITH_RANDOM_32CHAR_NONCE",
+  "v2": {
+    "base_url": "http://127.0.0.1:8081",
+    "dsn": "mysql:host=127.0.0.1;port=3306;dbname=erp_m34_v2_clone;charset=utf8mb4",
+    "db_user": "m34_clone_user",
+    "db_password_env": "M34_V2_DB_PASSWORD",
+    "login_user_env": "M34_V2_LOGIN_USER",
+    "login_password_env": "M34_V2_LOGIN_PASSWORD"
+  },
+  "baseline": {
+    "base_url": "http://127.0.0.1:8082",
+    "dsn": "mysql:host=127.0.0.1;port=3306;dbname=erp_m34_baseline_clone;charset=utf8mb4",
+    "db_user": "m34_clone_user",
+    "db_password_env": "M34_BASELINE_DB_PASSWORD",
+    "login_user_env": "M34_BASELINE_LOGIN_USER",
+    "login_password_env": "M34_BASELINE_LOGIN_PASSWORD"
+  }
+}

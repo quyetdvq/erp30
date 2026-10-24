@@ -40,3 +40,11 @@ flowchart TD
 - M1 runtime: user-confirmed authentication, profile, session and CSRF checks PASS.
 - M2: read-only modules implemented and offline tests PASS; SQL smoke on user DB still pending.
 - M3: not started; **no PBAC decisions, CRUD or list endpoints** have been opened in M2.
+
+## M5 progress (2026-10-24; updated separately from the historical M2 snapshot above)
+
+- M4.2A.1 HTTP/MariaDB 14/14, M4.2B two-writer Numbering configuration, and M4.2C.2 DEV GET baseline parity 14/14: operator-reported PASS on XAMPP; these do **not** prove all M4 mutation parity.
+- M5.1 implementation: six Province/Ward write operations, 90/150 API inventory. Source/offline acceptance only; on-machine M5 HTTP/SQL testing still required.
+- M5.2 Organization mutation implementation adds three explicit API-010 write routes (93/150 total); source/offline QA only. Acyclic dependency routing: `OrganizationManagement` calls central Access while the existing `Organization` module retains read projection. M5.1/M5.2 DEV HTTP/SQL and record-PBAC are still pending.
+- M5.3 implements six Employee/Employee Assignment mutation routes (99/150 total), with source/offline QA only; M5.3.1 preserves bilingual DEV error responses.
+- M5.4 adds six Department/Position protected mutations (105/150 total), with source/offline QA only. Contacts are pending; all M5 DEV record-PBAC HTTP/SQL, Frontend CRUD E2E and baseline authorized mutation parity remain **unverified**.

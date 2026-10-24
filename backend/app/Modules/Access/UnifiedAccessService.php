@@ -4,7 +4,8 @@ declare(strict_types=1);
 
 namespace App\Modules\Access;
 
-use App\Modules\Organization\OrganizationReadRepository;
+use App\Bootstrap\AccessReadAdapters;
+use App\Modules\Access\Ports\OrganizationFactsPort;
 use App\Shared\Read\PositiveId;
 use CodeIgniter\Database\BaseConnection;
 use CodeIgniter\Shield\Entities\User;
@@ -23,6 +24,7 @@ final class UnifiedAccessService
         'province' => 'MASTER', 'ward' => 'MASTER', 'organization' => 'ORGANIZATION',
         'department' => 'MASTER', 'position' => 'MASTER', 'employee' => 'MASTER',
         'employee_assignment' => 'ORGANIZATION',
+        'organization_contact' => 'ORGANIZATION', 'employee_contact' => 'ORGANIZATION',
         // Pinned M3.3 API-030 domains from baseline ResourceActionSeeder.
         'user' => 'SYSTEM', 'authorization_group' => 'SYSTEM',
         'resource' => 'SYSTEM', 'workflow_state' => 'SYSTEM',
@@ -34,7 +36,7 @@ final class UnifiedAccessService
     private array $actor;
     private RuntimePolicyReader $policies;
     private ResourceStateRepository $states;
-    private OrganizationReadRepository $organizations;
+    private OrganizationFactsPort $organizations;
     private ?string $groupRoot = null;
     /** @var array<string,list<string>> */
     private array $ancestorIds = [];
@@ -45,7 +47,21 @@ final class UnifiedAccessService
         $this->actor = (new RuntimeActorReader($connection))->snapshot($user, $instant);
         $this->policies = new RuntimePolicyReader($connection);
         $this->states = new ResourceStateRepository($connection);
-        $this->organizations = new OrganizationReadRepository($connection);
+        $this->organizations = AccessReadAdapters::organizations($connection);
+    }
+
+    /**
+     * Base VIEW grant from the same persisted ERP/Shield permission snapshot
+     * used by decidePersisted(). Shield User::can() alone does not include
+     * active ERP group_permissions and can incorrectly return false.
+     *
+     * This is only a precondition for empty list reads, never a PBAC allow:
+     * every fetched row must still pass canView() with State/scope/policies.
+     */
+    public function hasBaseViewPermission(string $type): bool
+    {
+        $type = ResourceStateCatalog::normalizedType($type);
+        return isset($this->actor['permissions'][$type . '.view']);
     }
 
     /**
@@ -139,8 +155,14 @@ final class UnifiedAccessService
             // Authorization of a new native object uses its intended canonical
             // state; for policy, 'state_id' in the JSON is the target resource
             // State, NOT the state of the policy being created.
+            // A Lifecycle resource may start at DRAFT (or another configured
+            // initial State). Resolve CREATE PBAC against that persisted,
+            // server-owned initial State, never an untrusted JSON status.
+            $initial = ResourceStateCatalog::mode($type) === ResourceStateCatalog::LIFECYCLE
+                ? $this->states->initialState($type)
+                : null;
             $target = ['status' => $type === 'authorization_group'
-                ? ($createCandidate['status'] ?? 'ACTIVE') : 'ACTIVE'];
+                ? ($createCandidate['status'] ?? 'ACTIVE') : ($initial ?? 'ACTIVE')];
             // Native Shield User State is derived from BOTH status and active.
             // The candidate has no persisted row yet, so set the trusted
             // canonical create-side active flag rather than accepting JSON.
@@ -152,6 +174,13 @@ final class UnifiedAccessService
                     throw new UnexpectedValueException('Create lacks a validated organization target.');
                 }
                 $target['organization_id'] = PositiveId::value((string) $createCandidate['organization_id']);
+                if ($type === 'organization') {
+                    // M5.2: a new Organization has no persisted ID yet. Its
+                    // CREATE scope is its validated existing parent; the
+                    // actual inserted child is independently VIEW-checked.
+                    $target['id'] = $target['organization_id'];
+                    $target['status'] = (string) ($createCandidate['status'] ?? 'ACTIVE');
+                }
             }
         } else {
             $target = $persistedRow;

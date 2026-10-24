@@ -34,7 +34,7 @@ cd D:\XAMPP\htdocs\erp\backend
 .\tools\test-unit.ps1 RUN INTEGRATION
 ```
 
-`CHECK` and `RUN` verify the 84 reviewed operation footprint, 53 offline suites and the older M3.4D six source gates. `ACCEPTANCE` adds the M4 source contract gate and exports a JSON report in `backend/writable/m4/reports/`. `DB-READ` is the existing seven M3 read-only commands. `INTEGRATION` remains the existing **M3.4B 29-mutation** isolated sandbox, then checks the M3.4D and M4 source gates; it **DOES NOT** execute the new M4 14 endpoints. Retain this distinction in all closure reports.
+`CHECK` and `RUN` verify the 84 reviewed operation footprint, 54 offline suites (after M4.1) and the older M3.4D six source gates. `ACCEPTANCE` adds the M4 source contract gate and exports a JSON report in `backend/writable/m4/reports/`. `DB-READ` is the existing seven M3 read-only commands. `INTEGRATION` remains the existing **M3.4B 29-mutation** isolated sandbox, then checks the M3.4D and M4 source gates; it **DOES NOT** execute the new M4 14 endpoints. Retain this distinction in all closure reports.
 
 ## Remaining M4 local integration / parity gates (not automatically PASS)
 
@@ -46,4 +46,8 @@ cd D:\XAMPP\htdocs\erp\backend
 
 ## Static tested coverage
 
-The new `m4_settings_rules_pure.php`, `m4_numbering_rules_pure.php`, `m4_workflow_rules_pure.php`, `m4_contract_pure.php` and `m4_security_pure.php` cover input validation, fail-closed source guards, exact 14-route and 84-route inventory and deliberately forged route/handler rejection. Existing M1–M3.4D tests are retained; count **53/53 suites** at delivery. Static test assertions are **not** HTTP transaction evidence.
+The new `m4_settings_rules_pure.php`, `m4_numbering_rules_pure.php`, `m4_workflow_rules_pure.php`, `m4_contract_pure.php` and `m4_security_pure.php` cover input validation, fail-closed source guards, exact 14-route and 84-route inventory and deliberately forged route/handler rejection. Existing M1–M3.4D tests are retained; count **53/53 suites** in the original v1.3.0 delivery; **54/54** after the M4.1 offline regression addition. Static test assertions are **not** HTTP transaction evidence.
+
+## M4.1 incremental offline hardening
+
+The follow-up source patch tightens Numbering canonical collision handling, fail-closed Workflow action selection, and colon/hyphen PBAC action-code validation, with a frozen-v1.2.4 parser differential test. Offline 54/54 suites PASS; HTTP/MariaDB M4 parity remains NOT_TESTED. See `M4_1_OFFLINE_HARDENING_QA.md`.

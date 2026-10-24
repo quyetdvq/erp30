@@ -1,0 +1,65 @@
+{
+  "purpose": "M42C_READ_ONLY_PARITY",
+  "instructions": "Not runnable as shipped: restore BOTH clones from the same frozen data dump; replace IDs with identical persisted IDs in both; verify access and set every ready=true only after review. Dry-run POST MUST NOT mutate.",
+  "scenarios": [
+    {
+      "operation_id": "getDisplaySettingsRuntime",
+      "ready": false,
+      "path": "/api/v1/display-settings/runtime",
+      "body": null
+    },
+    {
+      "operation_id": "listDisplaySettingDefinitions",
+      "ready": false,
+      "path": "/api/v1/display-settings/definitions",
+      "body": null
+    },
+    {
+      "operation_id": "listDisplaySettingValues",
+      "ready": false,
+      "path": "/api/v1/display-settings/values?context_type=SYSTEM",
+      "body": null
+    },
+    {
+      "operation_id": "listNumberingSeries",
+      "ready": false,
+      "path": "/api/v1/resources/REPLACE_RESOURCE_ID/numbering-series",
+      "body": null
+    },
+    {
+      "operation_id": "validateNumberingSeriesConfig",
+      "ready": false,
+      "path": "/api/v1/resources/REPLACE_RESOURCE_ID/numbering-series/actions/validate-config",
+      "body": {
+        "series_code": "M42C_DRY_RUN",
+        "name": "M42C valid dry run",
+        "scope_type": "GROUP",
+        "pattern": "M42C-{YYYY}-{SEQ:4}",
+        "reset_policy": "YEARLY",
+        "generation_mode": "AUTO_REQUIRED",
+        "start_number": 1,
+        "increment_by": 1,
+        "is_default": false,
+        "status": "ACTIVE"
+      }
+    },
+    {
+      "operation_id": "getNumberingSeries",
+      "ready": false,
+      "path": "/api/v1/resources/REPLACE_RESOURCE_ID/numbering-series/REPLACE_SERIES_ID",
+      "body": null
+    },
+    {
+      "operation_id": "getBusinessWorkflowStates",
+      "ready": false,
+      "path": "/api/v1/business-workflow/organization/states",
+      "body": null
+    },
+    {
+      "operation_id": "getBusinessWorkflowOptions",
+      "ready": false,
+      "path": "/api/v1/business-workflow/organization/REPLACE_ORGANIZATION_ID/options",
+      "body": null
+    }
+  ]
+}

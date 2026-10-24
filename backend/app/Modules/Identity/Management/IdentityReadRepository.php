@@ -112,7 +112,7 @@ final class IdentityReadRepository
             $actionId = filter_var($row['resource_action_id'] ?? null,
                 FILTER_VALIDATE_INT, ['options' => ['min_range' => 1]]);
             if ($type === '' || $action === '' || $actionId === false || str_contains($type . $action, '.')) {
-                throw new UnexpectedValueException('Invalid ERP base permission catalog mapping.');
+                throw new UnexpectedValueException('ERP_PERMISSION_CATALOG_MAPPING_INVALID');
             }
             $catalog[$type . '.' . $action] = true;
         }

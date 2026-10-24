@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Modules\People;
 
+use App\Modules\Access\Ports\PeopleFactsPort;
 use App\Shared\Read\FlatHierarchy;
 use App\Shared\Read\PositiveId;
 use App\Shared\Read\UtcBusinessDate;
@@ -15,7 +16,7 @@ use CodeIgniter\Database\BaseConnection;
  * Deliberately does NOT reject inactive employees here: the PBAC engine owns
  * that decision. Dates are UTC, inclusive on both ends (v1.2.4 semantics).
  */
-final class PeopleReadRepository
+final class PeopleReadRepository implements PeopleFactsPort
 {
     private const BULK_LIMIT = 500;
 
@@ -33,6 +34,12 @@ final class PeopleReadRepository
     {
         return $this->db()->table('employees')->where('id', PositiveId::value($id))
             ->get()->getRowArray();
+    }
+
+    /** @return array<string,mixed>|null */
+    public function employeeById(int|string $employeeId): ?array
+    {
+        return $this->employee($employeeId);
     }
 
     /** @return array<string,mixed>|null */

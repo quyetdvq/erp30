@@ -24,8 +24,8 @@ checkDArch('Identity and Workflow only call central Access PBAC',
     in_array('Access',$graph['Identity'],true) && in_array('Access',$graph['Workflow'],true));
 checkDArch('Identity does not depend on Workflow',!in_array('Workflow',$graph['Identity'],true));
 checkDArch('Workflow does not depend on Identity',!in_array('Identity',$graph['Workflow'],true));
-checkDArch('Access contains 24 runtime PHP files', $gates['MODULE_GRAPH']['details']['module_files']['Access']===24);
-checkDArch('Identity owns 13 runtime PHP files', $gates['MODULE_GRAPH']['details']['module_files']['Identity']===13);
+checkDArch('Access contains 24 reviewed files plus two read ports', $gates['MODULE_GRAPH']['details']['module_files']['Access']===26);
+checkDArch('Identity owns 13 prior + 3 M6.3B Avatar PHP files', $gates['MODULE_GRAPH']['details']['module_files']['Identity']===16);
 checkDArch('Workflow owns its 8 master/management files plus 3 M4 execution files', $gates['MODULE_GRAPH']['details']['module_files']['Workflow']===11);
 checkDArch('No cycle in real module dependency graph',
     (M34DAcceptance::assertAcyclic($graph)===null));

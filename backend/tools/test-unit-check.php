@@ -66,11 +66,63 @@ try {
         'm34d_contract_pure.php',
         'm34d_architecture_pure.php',
         'm34d_evidence_fixture.php',
+        'm4_baseline_pattern_parity_pure.php',
+        'm42_runner_safety_pure.php',
+        'm42b_concurrency_safety_pure.php',
+        'm42c_parity_safety_pure.php',
+        'm42c_transport_pure.php',
         'm4_settings_rules_pure.php',
         'm4_numbering_rules_pure.php',
         'm4_workflow_rules_pure.php',
         'm4_contract_pure.php',
         'm4_security_pure.php',
+        'm5_contract_pure.php',
+        'm5_location_rules_pure.php',
+        'm5_location_state_pure.php',
+        'm52_contract_pure.php',
+        'm52_org_rules_pure.php',
+        'm52_tree_rules_pure.php',
+        'm52_org_transition_pure.php',
+        'm53_contract_pure.php',
+        'm53_employee_rules_pure.php',
+        'm53_assignment_rules_pure.php',
+        'm53_transition_pure.php',
+        'm54_contract_pure.php',
+        'm54_structure_rules_pure.php',
+        'm54_hierarchy_pure.php',
+        'm54_source_security_pure.php',
+        'm541_module_ownership_pure.php',
+        'm55_contact_rules_pure.php',
+        'm55_contract_pure.php',
+        'm55_bilingual_pure.php',
+        'm61_catalog_rules_pure.php',
+        'm61_contract_pure.php',
+        'm61_security_pure.php',
+        'm62a_product_role_pure.php',
+        'm62a_contract_pure.php',
+        'm62a_security_pure.php',
+        'm62a1_pbac_pure.php',
+        'm62a1_public_upload_pure.php',
+        'm62b_bilingual_pure.php',
+        'm62b_contract_pure.php',
+        'm62b_rules_pure.php',
+        'm62b_security_pure.php',
+        'm62b_dev_http_pure.php',
+        'm62b2_dev_write_pure.php',
+        'm62b21_preflight_pure.php',
+        'm62b3_setstate_safety_pure.php',
+        'm62b4_atomicity_safety_pure.php',
+        'm63_contract_pure.php',
+        'm63_media_security_pure.php',
+        'm63_media_storage_pure.php',
+        'm63a1_media_dev_safety_pure.php',
+        'm63b_avatar_contract_pure.php',
+        'm63b_avatar_security_pure.php',
+        'm63b_avatar_rules_pure.php',
+        'm63b_avatar_storage_pure.php',
+        'm63b_avatar_cas_fixture.php',
+        'm63b1_avatar_dev_safety_pure.php',
+        'm63b2_admin_avatar_dev_safety_pure.php',
     ];
     $present = array_map(static fn (string $path): string => basename($path), $tests);
     $missing = array_values(array_diff($requiredSuites, $present));
@@ -94,18 +146,117 @@ try {
     if (! is_file(__DIR__ . '/m34b_run.php')) {
         throw new RuntimeException('M3.4B sandbox runner missing.');
     }
+    if (! is_file(__DIR__ . '/m42_run.php') || ! is_file(__DIR__ . '/m42/M42Integration.php') || ! is_file(__DIR__ . '/m42/M42Fixture.php')) {
+        throw new RuntimeException('Missing M4.2A explicit sandbox acceptance runner.');
+    }
+    // M4.2A.1 must use its own nonce-attested child, not the enabled-only
+    // M3.4B child whose env-directory/write-mode guards are intentionally strict.
+    foreach (['M42ChildPaths.php', 'child_spark.php', 'child_web.php', 'router.php'] as $child) {
+        if (! is_file(__DIR__ . '/m42/' . $child) || is_link(__DIR__ . '/m42/' . $child)) {
+            throw new RuntimeException('Missing or unsafe M4-only sandbox child: ' . $child);
+        }
+    }
+    foreach (['m42b_run.php','m42/M42Concurrency.php','m42/race_worker.php'] as $required) {
+        if (! is_file(__DIR__.'/'.$required) || is_link(__DIR__.'/'.$required)) {
+            throw new RuntimeException('Missing or unsafe M4.2B two-writer runner: '.$required);
+        }
+    }
     if (! is_file(__DIR__ . '/m4_accept.php') || ! is_file(__DIR__ . '/m4/M4SourceAcceptance.php')) {
         throw new RuntimeException('Missing M4 source/contract acceptance auditor.');
     }
     require_once __DIR__ . '/m4/M4SourceAcceptance.php';
     M4SourceAcceptance::verify($root);
+    if (! is_file(__DIR__ . '/m5_accept.php') || ! is_file(__DIR__ . '/m5/M5SourceAcceptance.php')) {
+        throw new RuntimeException('Missing M5.1 guarded Locations acceptance auditor.');
+    }
+    require_once __DIR__ . '/m5/M5SourceAcceptance.php';
+    M5SourceAcceptance::verify($root);
+    if (! is_file(__DIR__ . '/m52_accept.php') || ! is_file(__DIR__ . '/m5/M52SourceAcceptance.php')) {
+        throw new RuntimeException('Missing M5.2 Organization acceptance auditor.');
+    }
+    require_once __DIR__ . '/m5/M52SourceAcceptance.php';
+    M52SourceAcceptance::verify($root);
+    if (! is_file(__DIR__ . '/m53_accept.php') || ! is_file(__DIR__ . '/m5/M53SourceAcceptance.php')) {
+        throw new RuntimeException('Missing M5.3 Employee/Assignment acceptance gate.');
+    }
+    require_once __DIR__ . '/m5/M53SourceAcceptance.php';
+    M53SourceAcceptance::verify($root);
+    if (! is_file(__DIR__ . '/m54_accept.php') || ! is_file(__DIR__ . '/m5/M54SourceAcceptance.php')) {
+        throw new RuntimeException('Missing M5.4 Department/Position source acceptance gate.');
+    }
+    require_once __DIR__ . '/m5/M54SourceAcceptance.php';
+    M54SourceAcceptance::verify($root);
+    if (! is_file(__DIR__ . '/m55_accept.php') || ! is_file(__DIR__ . '/m5/M55SourceAcceptance.php')) {
+        throw new RuntimeException('Missing M5.5 Contact source acceptance gate.');
+    }
+    require_once __DIR__ . '/m5/M55SourceAcceptance.php';
+    M55SourceAcceptance::verify($root);
+    if (! is_file(__DIR__ . '/m61_accept.php') || ! is_file(__DIR__ . '/m6/M61SourceAcceptance.php')) {
+        throw new RuntimeException('Missing M6.1 Product catalog source gate.');
+    }
+    require_once __DIR__ . '/m6/M61SourceAcceptance.php';
+    M61SourceAcceptance::verify($root);
+    if (! is_file(__DIR__ . '/m62a_accept.php') || ! is_file(__DIR__ . '/m6/M62ASourceAcceptance.php')) {
+        throw new RuntimeException('Missing M6.2A Product read acceptance gate.');
+    }
+    require_once __DIR__ . '/m6/M62ASourceAcceptance.php';
+    M62ASourceAcceptance::verify($root);
+    if (! is_file(__DIR__ . '/m62b_accept.php') || ! is_file(__DIR__ . '/m6/M62BSourceAcceptance.php')) {
+        throw new RuntimeException('Missing M6.2B Product mutation source gate.');
+    }
+    require_once __DIR__ . '/m6/M62BSourceAcceptance.php';
+    M62BSourceAcceptance::verify($root);
+    foreach (['m63a1_dev_media.php','m63a1/M63A1MediaPlan.php',
+        'm63a1/M63A1MediaTransport.php','m63a1/M63A1DevMedia.php',
+        '../app/Commands/M63A1DevAudit.php'] as $qa) {
+        if (!is_file(__DIR__.'/'.$qa) || is_link(__DIR__.'/'.$qa)) {
+            throw new RuntimeException('Missing or unsafe M6.3A.1 DEV media QA component: '.$qa);
+        }
+    }
+    if (!is_file(__DIR__.'/m63_accept.php') || !is_file(__DIR__.'/m6/M63SourceAcceptance.php')) {
+        throw new RuntimeException('Missing M6.3A Product Media acceptance gate.');
+    }
+    require_once __DIR__.'/m6/M63SourceAcceptance.php';
+    M63SourceAcceptance::verify($root);
+    foreach (['m63b1_dev_avatar.php', 'm63b1/M63B1AvatarPlan.php',
+        'm63b1/M63B1AvatarTransport.php', 'm63b1/M63B1DevAvatar.php',
+        '../app/Commands/M63B1DevAudit.php'] as $qa) {
+        if (!is_file(__DIR__.'/'.$qa) || is_link(__DIR__.'/'.$qa)) {
+            throw new RuntimeException('Missing or unsafe M6.3B.1 DEV Avatar QA component: '.$qa);
+        }
+    }
+    foreach (['m63b2_dev_admin_avatar.php', 'm63b2/M63B2AvatarPlan.php',
+        'm63b2/M63B2AvatarAudit.php', 'm63b2/M63B2DevDelegation.php'] as $qa) {
+        if (!is_file(__DIR__.'/'.$qa) || is_link(__DIR__.'/'.$qa)) {
+            throw new RuntimeException('Missing or unsafe M6.3B.2 DEV delegated Avatar QA component: '.$qa);
+        }
+    }
+    if (!is_file(__DIR__.'/m63b_accept.php') || !is_file(__DIR__.'/m6/M63BSourceAcceptance.php')) {
+        throw new RuntimeException('Missing M6.3B User Avatar acceptance gate.');
+    }
+    require_once __DIR__.'/m6/M63BSourceAcceptance.php';
+    M63BSourceAcceptance::verify($root);
+    foreach (['m62b_dev_http.php', 'm62b/M62BDevPlan.php', 'm62b/M62BDevHttp.php'] as $qa) {
+        if (! is_file(__DIR__ . '/' . $qa) || is_link(__DIR__ . '/' . $qa)) {
+            throw new RuntimeException('Missing or unsafe M6.2B.1 DEV negative HTTP probe: ' . $qa);
+        }
+    }
+    foreach (['m62b3_dev_setstate.php', 'm62b3/M62B3Fixture.php', 'm62b3/M62B3DevState.php', 'app/Commands/M62B3DevPlan.php'] as $qa) {
+        $path = $qa === 'app/Commands/M62B3DevPlan.php' ? $root.'/backend/'.$qa : __DIR__.'/'.$qa;
+        if (! is_file($path) || is_link($path)) {
+            throw new RuntimeException('Missing or unsafe M6.2B.3 DEV SETSTATE probe: '.$qa);
+        }
+    }
+    if (! is_file(__DIR__ . '/m62a1_accept.php')) {
+        throw new RuntimeException('Missing M6.2A.1 protected media/PBAC source gate.');
+    }
     if (! is_file(__DIR__ . '/m34d_accept.php')
         || ! is_file(__DIR__ . '/m34d/M34DAcceptance.php')
         || ! is_file(__DIR__ . '/m34d/M34DSourceFingerprint.php')) {
         throw new RuntimeException('M3.4D acceptance auditor missing.');
     }
     echo 'CHECK PASS: ' . count($tests) . ' pure/fixture scripts, '
-        . count($ops) . " pinned M3 mutations + 14 M4 source routes, 7 read-only audit commands.\n";
+        . count($ops) . " pinned M3 mutations + 14 M4 + 6 M5.1 + 3 M5.2 + 6 M5.3 + 6 M5.4 + 5 M5.5 + 10 M6.1 + 2 M6.2A + 3 M6.2B + 2 M6.3A + 2 M6.3B source routes, 7 read-only audit commands.\n";
 } catch (Throwable $e) {
     fwrite(STDERR, 'CHECK FAILED: ' . $e->getMessage() . "\n");
     exit(1);

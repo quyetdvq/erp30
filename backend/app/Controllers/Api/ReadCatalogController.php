@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace App\Modules\ReadApi;
+namespace App\Controllers\Api;
 
 use App\Modules\Access\ReadAccessBridge;
 use App\Modules\People\PeopleReadRepository;
@@ -214,7 +214,7 @@ final class ReadCatalogController extends Controller
 
     private function table(string $resource): string
     {
-        return self::TABLES[$resource] ?? throw new \InvalidArgumentException('Unsupported read endpoint.');
+        return self::TABLES[$resource] ?? throw new \InvalidArgumentException('READ_ENDPOINT_UNSUPPORTED');
     }
 
     /** @return list<array<string,mixed>> */

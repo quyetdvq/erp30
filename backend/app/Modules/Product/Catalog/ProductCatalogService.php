@@ -1,0 +1,261 @@
+<?php
+
+declare(strict_types=1);
+
+namespace App\Modules\Product\Catalog;
+
+use App\Exceptions\DomainException;
+use App\Modules\Access\ResourceStateRepository;
+use App\Modules\Access\UnifiedAccessService;
+use App\Shared\Http\AuthorizedListPage;
+use CodeIgniter\Database\BaseConnection;
+use CodeIgniter\Exceptions\PageNotFoundException;
+use CodeIgniter\Shield\Entities\User;
+use Throwable;
+use UnexpectedValueException;
+
+/**
+ * Product-owned M6.1 master catalog, no dependency on Product Master or
+ * Pricing internals. Every row decision uses authoritative persisted PBAC.
+ */
+final class ProductCatalogService
+{
+    private readonly BaseConnection $db;
+    private readonly UnifiedAccessService $access;
+    private readonly ResourceStateRepository $states;
+    private readonly string $actorId;
+    private readonly string $table;
+
+    public function __construct(private readonly User $actor, private readonly string $resource, ?BaseConnection $connection = null)
+    {
+        ProductCatalogRules::type($resource);
+        $this->table = $resource === 'product_group' ? 'product_groups' : 'product_uoms';
+        $this->db = $connection ?? db_connect();
+        $this->access = new UnifiedAccessService($actor, $this->db);
+        $this->states = new ResourceStateRepository($this->db);
+        $this->actorId = ProductCatalogRules::id((string) $actor->id, $resource);
+    }
+
+    /** @param array<string,mixed>|null $query @return array{data:list<array<string,mixed>>,page:int,page_size:int,total:int} */
+    public function list(?array $query = null): array
+    {
+        // A base VIEW grant is mandatory even for an empty table; PBAC is also
+        // evaluated per persisted row before pagination and totals are computed.
+        if (! $this->access->hasBaseViewPermission($this->resource)) {
+            throw new DomainException('AUTH_POLICY_DENIED', ['action'=>'view']);
+        }
+        $rows = $this->db->table($this->table)->orderBy('id', 'ASC')->get()->getResultArray();
+        $visible = [];
+        foreach ($rows as $row) {
+            if ($this->access->canView($this->resource, $row)) {
+                $visible[] = $row;
+            }
+        }
+        return AuthorizedListPage::paginate($this->resource, $visible, $query ?? []);
+    }
+
+    /** @return array<string,mixed> */
+    public function show(string $id): array
+    {
+        return $this->visible($this->target(ProductCatalogRules::id($id, $this->resource)));
+    }
+
+    /** @param array<string,mixed> $input @return array<string,mixed> */
+    public function create(array $input): array
+    {
+        $payload = ProductCatalogRules::payload($this->resource, $input, true);
+        $initial = $this->states->initialState($this->resource);
+        if ($initial === null) throw new DomainException('WF_INITIAL_STATE_REQUIRED', ['resource'=>$this->resource]);
+        if (isset($payload['status']) && $payload['status'] !== $initial) {
+            throw new DomainException('WF_INITIAL_STATE_INVALID', ['field'=>'status']);
+        }
+        $payload['status'] = $initial;
+        return $this->transaction(function () use ($payload): array {
+            if ($this->resource === 'product_group') {
+                ProductCatalogRules::assertAcyclicGroupParent($this->lockedGroupTree(), null, $payload['parent_id']);
+            }
+            $this->permit('create', null, $payload);
+            $this->assertUniqueCode((string) $payload['code']);
+            $id = $this->insert([...$payload, ...$this->createdAudit()]);
+            return $this->visible($this->target($id));
+        });
+    }
+
+    /** @param array<string,mixed> $input @return array<string,mixed> */
+    public function update(string $id, array $input): array
+    {
+        $id = ProductCatalogRules::id($id, $this->resource);
+        return $this->transaction(function () use ($id, $input): array {
+            $old = $this->target($id, true);
+            $this->assertVisible($old);
+            $this->permit('edit', $old);
+            $patch = ProductCatalogRules::payload($this->resource, $input, false);
+            if ($this->resource === 'product_group') {
+                $tree = $this->lockedGroupTree();
+                if (array_key_exists('parent_id', $patch)) {
+                    ProductCatalogRules::assertAcyclicGroupParent($tree, $id, $patch['parent_id']);
+                }
+            }
+            if (isset($patch['code'])) $this->assertUniqueCode($patch['code'], $id);
+            $this->updateRow($id, [...$patch, ...$this->updatedAudit()]);
+            return $this->visible($this->target($id));
+        });
+    }
+
+    /** @param array<string,mixed> $request @return array<string,mixed> */
+    public function setState(string $id, array $request): array
+    {
+        $id = ProductCatalogRules::id($id, $this->resource);
+        $requested = ProductCatalogRules::requestedState($this->resource, $request);
+        return $this->transaction(function () use ($id, $requested): array {
+            $old = $this->target($id, true);
+            $this->assertVisible($old);
+            $this->permit('setstate', $old);
+            try { $next = $this->states->transitionTarget($this->resource, $old, 'setstate'); }
+            catch (UnexpectedValueException $cause) {
+                throw new DomainException('WF_INVALID_TRANSITION', ['field'=>'status'], $cause);
+            }
+            if ($requested !== $next) throw new DomainException('WF_INVALID_TRANSITION', ['field'=>'status']);
+            $this->permit('setstate', $old, [], true);
+            try {
+                $ok = $this->db->table($this->table)->where('id', $id)
+                    ->where('status', (string) $old['status'])
+                    ->update(['status'=>$next, ...$this->updatedAudit()]);
+            } catch (Throwable $cause) { $this->writeFailure($cause); }
+            if (! $ok) $this->writeFailure();
+            if ($next !== (string) $old['status'] && $this->db->affectedRows() !== 1) {
+                throw new DomainException('WF_CONCURRENT_STATE_CHANGE');
+            }
+            return $this->visible($this->target($id));
+        });
+    }
+
+    /** @return list<array<string,mixed>> */
+    private function lockedGroupTree(): array
+    {
+        $sql = 'SELECT id, parent_id FROM ' . $this->db->prefixTable('product_groups') . ' ORDER BY id FOR UPDATE';
+        $result = $this->db->query($sql);
+        if ($result === false) $this->writeFailure();
+        return $result->getResultArray();
+    }
+
+    private function assertUniqueCode(string $code, ?string $except = null): void
+    {
+        $builder = $this->db->table($this->table)->select('id')->where('code', $code);
+        if ($except !== null) $builder->where('id !=', $except);
+        if ($builder->limit(1)->get()->getRowArray() !== null) {
+            throw new DomainException(ProductCatalogRules::codePrefix($this->resource) . 'DUPLICATE_CODE', ['field'=>'code']);
+        }
+    }
+
+    /** @return array<string,mixed> */
+    private function target(string $id, bool $lock = false): array
+    {
+        $builder = $this->db->table($this->table)->where('id', $id);
+        $result = $lock ? $this->db->query($builder->getCompiledSelect() . ' FOR UPDATE') : $builder->get();
+        if ($result === false) $this->writeFailure();
+        $row = $result->getRowArray();
+        if ($row === null) throw new DomainException(ProductCatalogRules::codePrefix($this->resource) . 'NOT_FOUND');
+        return $row;
+    }
+
+    /** @param array<string,mixed> $row @return array<string,mixed> */
+    private function visible(array $row): array
+    {
+        $this->assertVisible($row);
+        return $row;
+    }
+
+    /** @param array<string,mixed> $row */
+    private function assertVisible(array $row): void
+    {
+        if (! $this->access->canView($this->resource, $row)) {
+            throw new PageNotFoundException('Product catalog entry is not available.');
+        }
+    }
+
+    /** @param array<string,mixed>|null $old @param array<string,mixed> $candidate */
+    private function permit(string $action, ?array $old = null, array $candidate = [], bool $transition = false): void
+    {
+        $decision = $transition
+            ? $this->access->decideTransitionAction($this->resource, $action, $old ?? [])
+            : $this->access->decideMutation($this->resource, $action, $old, $candidate);
+        if (! $decision['allowed']) {
+            throw new DomainException(ProductCatalogRules::codePrefix($this->resource) . 'AUTHORIZATION_DENIED', ['action'=>$action]);
+        }
+    }
+
+    /** @param array<string,mixed> $payload */
+    private function insert(array $payload): string
+    {
+        try { $ok = $this->db->table($this->table)->insert($payload); }
+        catch (Throwable $cause) { $this->writeFailure($cause); }
+        if (! $ok) $this->writeFailure();
+        return (string) $this->db->insertID();
+    }
+
+    /** @param array<string,mixed> $payload */
+    private function updateRow(string $id, array $payload): void
+    {
+        try { $ok = $this->db->table($this->table)->where('id', $id)->update($payload); }
+        catch (Throwable $cause) { $this->writeFailure($cause); }
+        if (! $ok) $this->writeFailure();
+    }
+
+    /** @return array<string,string> */
+    private function createdAudit(): array
+    { return ['created_by'=>$this->actorId, 'created_at'=>gmdate('Y-m-d H:i:s')]; }
+
+    /** @return array<string,string> */
+    private function updatedAudit(): array
+    { return ['updated_by'=>$this->actorId, 'updated_at'=>gmdate('Y-m-d H:i:s')]; }
+
+    private function writeFailure(?Throwable $cause = null): never
+    {
+        $code = (int) ($this->db->error()['code'] ?? 0);
+        if ($code === 1062 || (int) ($cause?->getCode() ?? 0) === 1062) {
+            throw new DomainException(ProductCatalogRules::codePrefix($this->resource) . 'DUPLICATE_CODE', ['field'=>'code'], $cause);
+        }
+        if ($this->resource === 'product_group' && ($code === 1452 || (int) ($cause?->getCode() ?? 0) === 1452)) {
+            throw new DomainException('PRODUCT_GROUP_PARENT_NOT_FOUND', ['field'=>'parent_id'], $cause);
+        }
+        throw new DomainException(ProductCatalogRules::codePrefix($this->resource) . 'PERSISTENCE_FAILED', [], $cause);
+    }
+
+    /** Same advisory lock name as the baseline's MariaDbDomainLockService. */
+    private function groupLockKey(): string
+    {
+        $environment = defined('ENVIRONMENT') ? ENVIRONMENT : 'development';
+        $name = 'dinkerp:' . $environment . ':' . $this->db->getDatabase() . ':product-group-tree';
+        return strlen($name) <= 64 ? $name
+            : substr($name, 0, 31) . ':' . substr(hash('sha256', $name), 0, 32);
+    }
+
+    /** @template T @param callable():T $work @return T */
+    private function transaction(callable $work): mixed
+    {
+        // Product Group hierarchy and code changes are serialized across HTTP
+        // workers; UOM retains its native UNIQUE(code) conflict guarantee.
+        $lock = $this->resource === 'product_group' ? $this->groupLockKey() : null;
+        if ($lock !== null) {
+            $result = $this->db->query('SELECT GET_LOCK(' . $this->db->escape($lock) . ', 10) AS acquired');
+            if ($result === false || (int) ($result->getRowArray()['acquired'] ?? 0) !== 1) {
+                throw new DomainException('PRODUCT_GROUP_PERSISTENCE_FAILED');
+            }
+        }
+        try {
+            if (! $this->db->transBegin()) $this->writeFailure();
+            try {
+                $value = $work();
+                if (! $this->db->transStatus() || ! $this->db->transCommit()) $this->writeFailure();
+                return $value;
+            } catch (Throwable $cause) {
+                $this->db->transRollback();
+                $this->db->resetTransStatus();
+                throw $cause;
+            }
+        } finally {
+            if ($lock !== null) $this->db->query('SELECT RELEASE_LOCK(' . $this->db->escape($lock) . ')');
+        }
+    }
+}

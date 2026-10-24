@@ -5,6 +5,7 @@ declare(strict_types=1);
 require_once __DIR__.'/../app/Exceptions/DomainException.php';
 require_once __DIR__.'/../app/Modules/Access/ResourceStateCatalog.php';
 require_once __DIR__.'/../app/Modules/Workflow/Execution/BusinessWorkflowRules.php';
+require_once __DIR__.'/../app/Modules/Access/RuntimePolicyReader.php';
 use App\Exceptions\DomainException;
 use App\Modules\Workflow\Execution\BusinessWorkflowRules as Rules;
 $count=0;
@@ -18,6 +19,20 @@ $check(Rules::table('organization_contact')==='contacts','Contact polymorphic ta
 $check(Rules::table('province')==='provinces','Foundation lifecycle supported');
 $check(Rules::action('  APPROVE  ')==='approve','Action normalization');
 $check(Rules::id('15')==='15','Canonical target ID');
+$transitions=[['action_code'=>'approve','destination'=>'APPROVED'],['action_code'=>'reject','destination'=>'REJECTED']];
+$check(Rules::transitionForAction($transitions,'approve')['destination']==='APPROVED',
+    'Configured action selects canonical destination');
+$reject(static fn()=>Rules::transitionForAction($transitions,'missing'),'WF_INVALID_TRANSITION');
+$reject(static fn()=>Rules::transitionForAction([...$transitions,['action_code'=>'approve','destination'=>'DRAFT']],'approve'),
+    'WF_INVALID_TRANSITION');
+$check(\App\Modules\Access\RuntimePolicyReader::actionCode('Approve:Fast')==='approve:fast',
+    'PBAC supports frozen OpenAPI colon action code');
+$check(\App\Modules\Access\RuntimePolicyReader::actionCode('re-check')==='re-check',
+    'PBAC supports frozen OpenAPI hyphen action code');
+try { \App\Modules\Access\RuntimePolicyReader::actionCode('approve;delete');
+    throw new RuntimeException('Unapproved action accepted');
+} catch (UnexpectedValueException) { $check(true,'PBAC rejects unsafe action code'); }
+
 foreach (['user','resource','display_setting','authorization_group','workflow_state','lifecycle','policy','employee_assignment','import_job','authorization_log'] as $type) {
  $reject(static fn()=>Rules::table($type),'WF_TARGET_ADAPTER_UNAVAILABLE');
 }

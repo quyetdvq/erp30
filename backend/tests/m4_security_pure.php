@@ -35,6 +35,10 @@ $check(str_contains($number,'validateConfig(') && !str_contains(substr($number,s
 $check(str_contains($workflow,'decideMutation($type,\'setstate\'') && str_contains($workflow,"decideTransitionAction("), 'Workflow setstate AND each transition action PBAC');
 $check(str_contains($workflow,'FOR UPDATE') && str_contains($workflow,'->where(\'status\',$old)') && str_contains($workflow,'transRollback()'), 'Workflow uses locked row, compare-and-swap, rollback');
 $check(str_contains($workflow,'persistedStateId($type,$row)') && !str_contains($workflow,'$this->request'), 'Current workflow State from persisted row only');
+$check(str_contains($workflow, 'BusinessWorkflowRules::transitionForAction('),
+    'Workflow execution refuses ambiguous configured action codes');
+$check(str_contains($number, 'NumberingRules::collisionSignature($old)'),
+    'Numbering validates canonical active-pattern collisions');
 $check(str_contains($pbac,"'reset_password', 'configure_numbering'") && str_contains($pbac,'decideTransitionAction('), 'Access PBAC owns Numbering and Workflow Action checks');
 $routes=$source('backend/app/Config/M4Routes.php');
 $check(!str_contains($routes,'setAutoRoute(true)') && count(M4SourceAcceptance::expected())===14, 'Fourteen explicit approved HTTP operations only');

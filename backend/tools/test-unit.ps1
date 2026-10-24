@@ -7,6 +7,8 @@
 #   .\tools\test-unit.ps1 RUN ALL             # offline + read-only audits
 #   .\tools\test-unit.ps1 RUN INTEGRATION     # explicit disposable MariaDB sandbox + M3.4D acceptance
 #   .\tools\test-unit.ps1 RUN ACCEPTANCE      # source/golden-master gates; no SQL/HTTP
+#   .\tools\test-unit.ps1 RUN M4-INTEGRATION  # opt-in M4 14-route HTTP/SQL sandbox
+#   .\tools\test-unit.ps1 RUN M4-CONCURRENCY  # opt-in two-writer Numbering config race
 # Optional '-' separator is accepted, like the baseline runner.
 # NO-DROP is not an alias: the baseline's data attestation is NOT reproduced here.
 
@@ -14,7 +16,7 @@ Set-StrictMode -Version Latest
 $ErrorActionPreference = 'Stop'
 
 $tokens = @($args)
-$usage = 'Usage: .\tools\test-unit.ps1 CHECK|RUN [UNIT-STANDARD|DB-READ|ALL|INTEGRATION|ACCEPTANCE] (optional separator: RUN - DB-READ)'
+$usage = 'Usage: .\tools\test-unit.ps1 CHECK|RUN [UNIT-STANDARD|DB-READ|ALL|INTEGRATION|ACCEPTANCE|M4-INTEGRATION|M4-CONCURRENCY] (optional separator: RUN - DB-READ)'
 if ($tokens.Count -lt 1 -or $tokens.Count -gt 3) { throw $usage }
 $action = ([string]$tokens[0]).ToUpperInvariant()
 if ($action -notin @('CHECK', 'RUN')) { throw $usage }
@@ -26,7 +28,7 @@ if ($tokens.Count -eq 2) {
     $suite = [string]$tokens[2]
 }
 $suite = $suite.TrimStart('-').ToUpperInvariant()
-if ($suite -notin @('UNIT-STANDARD', 'DB-READ', 'ALL', 'INTEGRATION', 'ACCEPTANCE')) { throw $usage }
+if ($suite -notin @('UNIT-STANDARD', 'DB-READ', 'ALL', 'INTEGRATION', 'ACCEPTANCE', 'M4-INTEGRATION', 'M4-CONCURRENCY')) { throw $usage }
 
 function Invoke-PHPChecked {
     param([string[]]$Arguments, [string]$Description)
@@ -52,6 +54,17 @@ try {
         Write-Host 'UNIT-STANDARD PASS: offline only; NOT HTTP/MariaDB integration.'
         Invoke-PHPChecked -Description 'M3.4D static and baseline golden-master acceptance' -Arguments @('tools/m34d_accept.php', '--offline')
         Invoke-PHPChecked -Description 'M4 source/route extension acceptance (14 new APIs; no DB)' -Arguments @('tools/m4_accept.php')
+        Invoke-PHPChecked -Description 'M5.1 Province/Ward source acceptance (six mutations; no DB)' -Arguments @('tools/m5_accept.php')
+        Invoke-PHPChecked -Description 'M5.2 Organization source acceptance (three mutations; no DB)' -Arguments @('tools/m52_accept.php')
+        Invoke-PHPChecked -Description 'M5.3 Employee/Assignment source acceptance (six mutations; no DB)' -Arguments @('tools/m53_accept.php')
+        Invoke-PHPChecked -Description 'M5.4 Department/Position source acceptance (six mutations; no DB)' -Arguments @('tools/m54_accept.php')
+        Invoke-PHPChecked -Description 'M5.5 Contact source acceptance (five operations; no DB)' -Arguments @('tools/m55_accept.php')
+        Invoke-PHPChecked -Description 'M6.1 Product Group/UOM source acceptance (ten operations; no DB)' -Arguments @('tools/m61_accept.php')
+        Invoke-PHPChecked -Description 'M6.2A Product Master READ source acceptance (two operations; no DB)' -Arguments @('tools/m62a_accept.php')
+        Invoke-PHPChecked -Description 'M6.2A.1 Product PBAC and public-upload source acceptance (no DB)' -Arguments @('tools/m62a1_accept.php')
+        Invoke-PHPChecked -Description 'M6.2B Product Master mutation source acceptance (no DB)' -Arguments @('tools/m62b_accept.php')
+        Invoke-PHPChecked -Description 'M6.3A Product Media mutation source acceptance (no DB)' -Arguments @('tools/m63_accept.php')
+        Invoke-PHPChecked -Description 'M6.3B Identity Avatar mutation source acceptance (no DB)' -Arguments @('tools/m63b_accept.php')
     }
 
     if ($suite -in @('DB-READ', 'ALL')) {
@@ -72,6 +85,17 @@ try {
         Write-Host '===== M3.4D ACCEPTANCE: source/golden-master only (NO DATABASE) ====='
         Invoke-PHPChecked -Description 'M3.4D static and baseline golden-master acceptance' -Arguments @('tools/m34d_accept.php', '--offline')
         Invoke-PHPChecked -Description 'M4 source/route extension acceptance (14 new APIs; no DB)' -Arguments @('tools/m4_accept.php')
+        Invoke-PHPChecked -Description 'M5.1 Province/Ward source acceptance (six mutations; no DB)' -Arguments @('tools/m5_accept.php')
+        Invoke-PHPChecked -Description 'M5.2 Organization source acceptance (three mutations; no DB)' -Arguments @('tools/m52_accept.php')
+        Invoke-PHPChecked -Description 'M5.3 Employee/Assignment source acceptance (six mutations; no DB)' -Arguments @('tools/m53_accept.php')
+        Invoke-PHPChecked -Description 'M5.4 Department/Position source acceptance (six mutations; no DB)' -Arguments @('tools/m54_accept.php')
+        Invoke-PHPChecked -Description 'M5.5 Contact source acceptance (five operations; no DB)' -Arguments @('tools/m55_accept.php')
+        Invoke-PHPChecked -Description 'M6.1 Product Group/UOM source acceptance (ten operations; no DB)' -Arguments @('tools/m61_accept.php')
+        Invoke-PHPChecked -Description 'M6.2A Product Master READ source acceptance (two operations; no DB)' -Arguments @('tools/m62a_accept.php')
+        Invoke-PHPChecked -Description 'M6.2A.1 Product PBAC and public-upload source acceptance (no DB)' -Arguments @('tools/m62a1_accept.php')
+        Invoke-PHPChecked -Description 'M6.2B Product Master mutation source acceptance (no DB)' -Arguments @('tools/m62b_accept.php')
+        Invoke-PHPChecked -Description 'M6.3A Product Media mutation source acceptance (no DB)' -Arguments @('tools/m63_accept.php')
+        Invoke-PHPChecked -Description 'M6.3B Identity Avatar mutation source acceptance (no DB)' -Arguments @('tools/m63b_accept.php')
     }
 
     if ($suite -eq 'INTEGRATION') {
@@ -95,7 +119,30 @@ try {
         $reportPath = ([string]$reportLine[0]).Substring('M3.4B report: '.Length).Trim()
         Invoke-PHPChecked -Description 'M3.4D acceptance bound to exact M3.4B runtime report' -Arguments @('tools/m34d_accept.php', "--integration-report=$reportPath")
         Invoke-PHPChecked -Description 'M4 source/route extension acceptance' -Arguments @('tools/m4_accept.php')
-        Write-Host 'INTEGRATION PASS: M3.4D sandbox 29/29; M4 new HTTP/MariaDB operations remain UNTESTED.'
+        Invoke-PHPChecked -Description 'M5.1 Province/Ward source acceptance (no DB)' -Arguments @('tools/m5_accept.php')
+        Invoke-PHPChecked -Description 'M5.2 Organization source acceptance (no DB)' -Arguments @('tools/m52_accept.php')
+        Invoke-PHPChecked -Description 'M5.3 Employee/Assignment source acceptance (no DB)' -Arguments @('tools/m53_accept.php')
+        Invoke-PHPChecked -Description 'M5.4 Department/Position source acceptance (no DB)' -Arguments @('tools/m54_accept.php')
+        Invoke-PHPChecked -Description 'M5.5 Contact source acceptance (no DB)' -Arguments @('tools/m55_accept.php')
+        Invoke-PHPChecked -Description 'M6.1 Product Group/UOM source acceptance (no DB)' -Arguments @('tools/m61_accept.php')
+        Invoke-PHPChecked -Description 'M6.2A Product Master READ source acceptance (no DB)' -Arguments @('tools/m62a_accept.php')
+        Invoke-PHPChecked -Description 'M6.2A.1 Product PBAC and public-upload source acceptance (no DB)' -Arguments @('tools/m62a1_accept.php')
+        Invoke-PHPChecked -Description 'M6.2B Product Master mutation source acceptance (no DB)' -Arguments @('tools/m62b_accept.php')
+        Invoke-PHPChecked -Description 'M6.3A Product Media mutation source acceptance (no DB)' -Arguments @('tools/m63_accept.php')
+        Invoke-PHPChecked -Description 'M6.3B Identity Avatar mutation source acceptance (no DB)' -Arguments @('tools/m63b_accept.php')
+        Write-Host 'INTEGRATION PASS: M3.4D sandbox 29/29; M4/M5.1/M5.2/M5.3/M5.4/M5.5/M6.1/M6.2A are source-only in this suite (use their separate integration checks).'
+    }
+
+    if ($suite -eq 'M4-INTEGRATION') {
+        Write-Warning 'M4.2A writes only to a fresh nonce-owned local MariaDB sandbox.'
+        Write-Warning 'Never use for baseline parity; independent baseline and two-writer concurrency remain NOT_TESTED.'
+        Invoke-PHPChecked -Description 'M4.2A 14-route isolated HTTP/SQL sandbox' -Arguments @('tools/m42_run.php')
+    }
+
+    if ($suite -eq 'M4-CONCURRENCY') {
+        Write-Warning 'M4.2B starts TWO local PHP HTTP servers and mutates a new nonce-owned MariaDB sandbox.'
+        Write-Warning 'Tests Numbering CONFIGURATION races only; NOT sequence issuance, baseline parity or production readiness.'
+        Invoke-PHPChecked -Description 'M4.2B two-writer Numbering configuration race' -Arguments @('tools/m42b_run.php')
     }
 
     Write-Host "TEST-UNIT RUN PASS: $suite."

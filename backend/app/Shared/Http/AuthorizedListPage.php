@@ -15,6 +15,10 @@ final class AuthorizedListPage
     private const SPECS = [
         'province' => [ ['code','name'], ['status','code','name'], ['code','name','status'] ],
         'ward' => [ ['code','name','name_full'], ['province_id','code','name','status'], ['code','name','name_full','province_id','status'] ],
+        'contact' => [ ['name','email','phone','mobile'], ['contact_type','contact_ref_id','status'], ['name','email','phone','mobile','contact_type','contact_ref_id','status'] ],
+        'product_group' => [ ['code','name'], ['code','name','parent_id','status'], ['code','name','parent_id','status'] ],
+        'product_uom' => [ ['code','name'], ['code','name','status'], ['code','name','status'] ],
+        'product' => [ ['product_code','sku','barcode','product_name','product_child_name','full_name'], ['product_group_id','base_uom_id','parent_product_id','product_type','status'], ['full_name','product_name','price','product_code','sku','product_type','status'] ],
         'organization' => [ ['code','name','legal_name'], ['parent_id','type','status'], ['code','name','legal_name','parent_id','type','status'] ],
         'department' => [ ['code','name'], ['parent_id','status'], ['code','name','status'] ],
         'position' => [ ['code','name'], ['status'], ['code','name','level','status'] ],

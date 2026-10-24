@@ -16,6 +16,10 @@ Options -Indexes
 	# http://httpd.apache.org/docs/current/mod/mod_rewrite.html#rewritebase
 	# RewriteBase /
 
+    # Baseline-compatible static media URL; physical root is public/upload/.
+    # Only strictly named Product/Avatar images may pass this alias.
+    RewriteRule ^uploads/(20[0-9]{2})/(20[0-9]{6}(?:product|avatar)[0-9]{7}\.(?:jpg|png|webp))$ public/upload/$1/$2 [L]
+
 	# Redirect Trailing Slashes...
 	RewriteCond %{REQUEST_FILENAME} !-d
 	RewriteCond %{REQUEST_URI} (.+)/$

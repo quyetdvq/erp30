@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Modules\Organization;
 
+use App\Modules\Access\Ports\OrganizationFactsPort;
 use App\Shared\Read\FlatHierarchy;
 use App\Shared\Read\PositiveId;
 use CodeIgniter\Database\BaseConnection;
@@ -13,7 +14,7 @@ use UnexpectedValueException;
  * Private organization reads for M2/M3. These methods do NOT authorize actors.
  * Never serialize raw output from this class to an HTTP response before PBAC.
  */
-final class OrganizationReadRepository
+final class OrganizationReadRepository implements OrganizationFactsPort
 {
     public function __construct(private readonly ?BaseConnection $connection = null)
     {

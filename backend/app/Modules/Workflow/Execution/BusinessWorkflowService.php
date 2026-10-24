@@ -55,7 +55,10 @@ final class BusinessWorkflowService
         $allowed = $this->access->decideMutation($type,'setstate',$row)['allowed'];
         $options = [];
         if ($allowed) {
-            foreach ($this->transitions($type,$row) as $transition) {
+            $transitions = $this->transitions($type,$row);
+            $counts = array_count_values(array_column($transitions, 'action_code'));
+            foreach ($transitions as $transition) {
+                if (($counts[$transition['action_code']] ?? 0) !== 1) continue;
                 if (!$this->transitionAuthorized($type,(string) $transition['action_code'],$row)) continue;
                 $options[] = ['action_code'=>(string) $transition['action_code'], 'status'=>(string) $transition['destination']];
             }
@@ -76,11 +79,7 @@ final class BusinessWorkflowService
             if (!$this->access->decideMutation($type,'setstate',$row)['allowed']) {
                 throw new DomainException('AUTH_POLICY_DENIED',['action'=>'setstate']);
             }
-            $chosen = null;
-            foreach ($this->transitions($type,$row) as $transition) {
-                if ((string) $transition['action_code'] === $action) { $chosen = $transition; break; }
-            }
-            if ($chosen === null) throw new DomainException('WF_INVALID_TRANSITION',['action_code'=>$action]);
+            $chosen = BusinessWorkflowRules::transitionForAction($this->transitions($type,$row), $action);
             if (!$this->transitionAuthorized($type,$action,$row)) {
                 throw new DomainException('AUTH_POLICY_DENIED',['action'=>$action]);
             }

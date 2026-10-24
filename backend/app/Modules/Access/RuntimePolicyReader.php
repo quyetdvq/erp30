@@ -33,10 +33,7 @@ final class RuntimePolicyReader
     public function resourceAction(string $type, string $action): array
     {
         $type = ResourceStateCatalog::normalizedType($type);
-        $action = strtolower(trim($action));
-        if (preg_match('/\A[a-z][a-z0-9_]{0,49}\z/D', $action) !== 1) {
-            throw new UnexpectedValueException('Invalid Resource Action.');
-        }
+        $action = self::actionCode($action);
         $key = $type . '.' . $action;
         if (isset($this->resources[$key])) {
             return $this->resources[$key];
@@ -71,6 +68,19 @@ final class RuntimePolicyReader
             'action_id' => PositiveId::value((string) $actionRow['id']),
         ];
         return $this->resources[$key] = $value;
+    }
+
+    /**
+     * Lifecycle action codes may contain ':' or '-' under the frozen baseline
+     * OpenAPI. Only already-registered resource_actions can authorize them.
+     */
+    public static function actionCode(string $action): string
+    {
+        $action = strtolower(trim($action));
+        if (preg_match('/\A[a-z][a-z0-9_:-]{0,49}\z/D', $action) !== 1) {
+            throw new UnexpectedValueException('Invalid Resource Action.');
+        }
+        return $action;
     }
 
     /**

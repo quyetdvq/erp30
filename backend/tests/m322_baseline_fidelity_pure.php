@@ -72,9 +72,13 @@ $all = array_map(static fn(string $file): string => basename($file), array_keys(
 foreach (['en', 'vi'] as $locale) {
     $actual = array_map('basename', glob($root . '/' . $locale . '/*.php') ?: []);
     $expected = array_map('basename', array_filter(array_keys($manifest['files']), static fn(string $file): bool => str_starts_with($file, $locale . '/')));
+    // Preserve every frozen v1.2.4 catalog byte-for-byte. Permit only the
+    // reviewed ApiRuntime and ProductRuntime overlays introduced after the baseline snapshot.
+    $expected[] = 'ApiRuntime.php';
+    $expected[] = 'ProductRuntime.php';
     sort($actual);
     sort($expected);
-    check322("{$locale} contains no missing or unapproved catalog", $actual === $expected);
+    check322("{$locale} contains pinned baseline plus reviewed runtime overlays", $actual === $expected);
 }
 $en = require $root . '/en/Api.php';
 $vi = require $root . '/vi/Api.php';

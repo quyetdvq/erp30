@@ -1,0 +1,33 @@
+<?php
+
+declare(strict_types=1);
+
+/** Only invokes the previously reviewed SELECT-only M63B1 Spark SQL audit. */
+final class M63B2AvatarAudit
+{
+    public static function target(string $id, ?string $filename): void
+    {
+        $id = M63B1AvatarPlan::userId($id);
+        if ($filename !== null && \App\Shared\Media\ImageUrl::for($filename, 'avatar') === null) {
+            throw new RuntimeException('Unsafe avatar basename.');
+        }
+        $backend = dirname(__DIR__, 2);
+        $command = [PHP_BINARY, $backend.'/spark', 'm63b1:db-audit', $id, $filename ?? 'EMPTY'];
+        $process = proc_open($command,
+            [0 => ['pipe','r'], 1 => ['pipe','w'], 2 => ['pipe','w']], $pipes, $backend);
+        if (!is_resource($process)) throw new RuntimeException('Read-only SQL audit unavailable.');
+        fclose($pipes[0]);
+        $stdout = stream_get_contents($pipes[1]);
+        $stderr = stream_get_contents($pipes[2]);
+        fclose($pipes[1]);
+        fclose($pipes[2]);
+        $exit = proc_close($process);
+        if ($exit !== 0 || !is_string($stdout)
+            || preg_match('/^M63B1_DB_JSON=(\{[^\r\n]+\})\s*$/m', $stdout, $match) !== 1) {
+            throw new RuntimeException('Read-only SQL target Avatar audit failed.');
+        }
+        $data = json_decode($match[1], true, 32, JSON_THROW_ON_ERROR);
+        if (!is_array($data)) throw new RuntimeException('Invalid SQL audit snapshot.');
+        M63B1AvatarPlan::sqlAudit($data, $id, $filename);
+    }
+}

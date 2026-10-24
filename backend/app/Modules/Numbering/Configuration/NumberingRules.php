@@ -83,7 +83,7 @@ final class NumberingRules
         if (($series['status'] ?? '') !== 'ACTIVE') return;
         $pattern = (string) ($series['pattern'] ?? '');
         if ($pattern === '' || strlen($pattern)>255 ||
-            preg_match('/<\?(?:php|=)?|\?>|<%|%>|\{\{|\}\}|\beval\s*\(/i',$pattern)===1) {
+            preg_match('/<\?(?:php|=)?|\?>|<%|%>|\{\{|\}\}|\beval\s*\(|\bselect\s+/i',$pattern)===1) {
             throw new DomainException('NUM_PATTERN_INVALID', ['field'=>'pattern']);
         }
         preg_match_all('/\{([^{}]*)\}/',$pattern,$matches, PREG_SET_ORDER);
@@ -122,6 +122,31 @@ final class NumberingRules
             throw new DomainException('NUM_PATTERN_INVALID', ['field'=>'pattern']);
         }
         if ($minimum>255) throw new DomainException('NUM_PATTERN_INVALID', ['field'=>'pattern']);
+    }
+
+    /**
+     * Baseline canonical pattern collision fingerprint. Sequence padding width
+     * does not make two rendered numbering namespaces independent.
+     * Inactive series are excluded from active-pattern collision checks.
+     * @param array<string,mixed> $series
+     */
+    public static function collisionSignature(array $series): ?string
+    {
+        if (($series['status'] ?? '') !== 'ACTIVE') return null;
+        self::validatePattern($series);
+        $parts = preg_split('/(\{[^{}]+\})/', (string) $series['pattern'], -1,
+            PREG_SPLIT_NO_EMPTY | PREG_SPLIT_DELIM_CAPTURE);
+        if ($parts === false) throw new DomainException('NUM_PATTERN_INVALID', ['field'=>'pattern']);
+        $signature = [];
+        foreach ($parts as $part) {
+            if ($part[0] !== '{') {
+                $signature[] = 'L:'.$part;
+                continue;
+            }
+            $token = substr($part, 1, -1);
+            $signature[] = 'T:'.(str_starts_with($token, 'SEQ:') ? 'SEQ' : $token);
+        }
+        return implode('|', $signature);
     }
 
     /** @param array<string,mixed> $series */

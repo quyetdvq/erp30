@@ -98,7 +98,7 @@ $cases = [
     'unauthenticated denied before a write service is created' => strpos($controller,'! $actor instanceof User') < strpos($controller, 'new AccessMutationService($actor)'),
     'mutation action must not be view' => str_contains($guard, "['create', 'edit', 'setstate', 'delete', 'assign_member', 'assign_permission', 'reset_password', 'configure_numbering']") && str_contains($guard, 'in_array($action, [\'view\',\'create\'], true)'),
     'never trust client State for persisted mutation' => str_contains($guard,'$target = $persistedRow;'),
-    'create State defaults to canonical ACTIVE' => str_contains($guard,"'ACTIVE'];"),
+    'create State uses trusted Lifecycle initial or Native ACTIVE' => str_contains($guard, '$this->states->initialState($type)') && str_contains($guard, "(\$initial ?? 'ACTIVE')"),
     'resource.setstate recovery only' => str_contains($guard,'$type === \'resource\' && $action === \'setstate\''),
     'resource state transition returns limited data' => str_contains($service,'return [\'id\' => $id, \'status\' => $next];'),
     'group permissions require assign_permission' => str_contains($service,'\'assign_permission\', $row'),

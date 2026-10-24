@@ -96,8 +96,11 @@ namespace {
     foreach ([
         'Shared/Read/PositiveId.php', 'Shared/Read/UtcBusinessDate.php',
         'Shared/Read/FlatHierarchy.php',
+        'Modules/Access/Ports/PeopleFactsPort.php',
+        'Modules/Access/Ports/OrganizationFactsPort.php',
         'Modules/People/PeopleReadRepository.php',
         'Modules/Organization/OrganizationReadRepository.php',
+        'Bootstrap/AccessReadAdapters.php',
         'Modules/Access/ScopeFactsReader.php', 'Modules/Access/BasePermissionReader.php',
         'Modules/Access/ResourceStateCatalog.php', 'Modules/Access/ResourceStateValidator.php',
         'Modules/Access/ResourceStateRepository.php', 'Modules/Access/PbacDecision.php',
