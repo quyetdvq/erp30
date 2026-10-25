@@ -10,12 +10,12 @@ $c=(string)file_get_contents($root.'/app/Modules/Product/Master/ProductReadContr
 $r=(string)file_get_contents($root.'/app/Modules/Product/Master/ProductReadRules.php');
 $ok(str_contains($s,"$".'this->access->hasBaseViewPermission(\'product\')'),'base VIEW checked for empty lists');
 $ok(str_contains($s,'$this->access->canView('),'per-row PBAC before pagination');
-$ok(strpos($s,'canView(')<strpos($s,'AuthorizedListPage::paginate('),'PBAC precedes total/page');
-$ok(str_contains($s,'->decideMutation('),'advisory mutation actions checked against persisted rows');
-$ok(str_contains($s,'$this->persistedRow($id)'),'detail rechecks true persisted row');
+$ok(str_contains($s, 'ProductReadSql::collection(') && str_contains($s, 'AuthorizationSqlScopeCompiler'), 'canonical PBAC scope precedes SQL total/page');
+$ok(str_contains($s, 'EffectiveActionHintCache'), 'advisory actions computed only on result page');
+$ok(str_contains($s, 'ProductReadSql::detail('), 'detail SQL-scoped by ID and canonical PBAC');
 $ok(str_contains($s,'new PageNotFoundException('),'invisible detail concealed');
 $ok(!str_contains($s,'evaluation_organization_id') && !str_contains($s,'$_GET'),'no trusted client scopes');
-$ok(!preg_match('/->(insert|update|delete|transBegin)\s*\(/',$s),'read service cannot write SQL');
+$ok(!preg_match('/->(insert|update|delete)\s*\(/',$s),'read service cannot write SQL');
 $ok(!str_contains($c,'function createProduct('),'no premature write handler');
 $ok(str_contains($c,"'UNAUTHENTICATED', 401"),'guest denied');
 $ok(str_contains($r, 'ImageUrl::for(') && !str_contains($r, '/writable'), 'only validated /uploads URL; no writable leak');

@@ -1,3 +1,22 @@
+# CURRENT STATUS - ERP v1.4.0 (2026-10-24)
+
+> This is the current Backend Rewrite checkpoint. Historical M1/M2 notes remain
+> below for audit history; their milestone counts are **not** current totals.
+
+- **Implemented, statically verified:** 129/150 explicit frozen non-OPTIONS APIs. 21 remain unimplemented (Product options/labels, UOM/Combo, Pricing, dependent Product lookups, Import); no extra API operations were registered.
+- **Source/offline:** 107 pure/fixture suites and M3.4D 6/6 source architecture gates were confirmed on the source archive; runtime cutover remains `BLOCKED`. This QA consolidation repairs legacy verification commands and adds M6.3B.2 environment/database-write pin checks, without new API endpoints.
+- **Immutable reference:** Frontend 277/277 and `backend_baseline` 806/806 byte-identical with original `erp_v1.2.4.zip`; OpenAPI unchanged. See `M6_QA_CONSOLIDATION_2026-10-24.md` for details and the pinned SHA-256 manifests.
+- **Historical DEV tests:** M6.2B Product writes and M6.3B.1 self-avatar previously reported PASS on owner's XAMPP. Those reports are not newly reproduced or proof of admin-delegated scope/concurrency.
+- **Newly observed blocker:** `php spark m63b1:db-audit 3 EMPTY` failed on 2026-10-24 because current avatar metadata does not match the empty fixture. **No automatic SQL reset, Avatar delete or overwrite is permitted.** A new disposable DEV owner is required unless independent evidence proves User 3 is safely eligible.
+- **M6.3B.2:** source guard/test validated; authenticated delegated admin/owner HTTP, target-record PBAC and live MariaDB/Apache acceptance remain `NOT_TESTED` in the source environment. `--apply` requires deliberate non-production opt-in and a checked connected database name.
+- **Production:** not approved. Baseline differential HTTP/DB parity, record-PBAC/locale matrix, independent two-writer CAS/fault tests, full M7/M8, and final M9 acceptance are still open.
+
+**Next work:** follow `NEXT_WORK.md` and `M6_3B_2_ADMIN_DELEGATION_AVATAR_QA.md`. Keep `DINKERP_M33B_WRITE_MODE=off` in production. Never turn on DEV mutations against production data.
+
+---
+
+## Archived historical checkpoint (M1/M2, 2026-10-23; superseded for progress tracking)
+
 # M2 status update — 23/10/2026
 
 - **M1 runtime:** the user confirmed login, `auth/me`, refresh-session continuity,

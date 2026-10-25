@@ -37,8 +37,19 @@ try {
     if ($apply && ($options['confirm'] ?? null) !== 'DEV_ADMIN_AVATAR_QA') {
         throw new InvalidArgumentException('Explicit delegated Avatar mutation confirmation required.');
     }
-    $environment = strtolower((string)(getenv('CI_ENVIRONMENT') ?: getenv('APP_ENV') ?: 'development'));
-    if ($environment === 'production') throw new InvalidArgumentException('DEV QA is forbidden in production.');
+    $ciEnv = strtolower(trim((string)(getenv('CI_ENVIRONMENT') ?: '')));
+    $appEnv = strtolower(trim((string)(getenv('APP_ENV') ?: '')));
+    if ($ciEnv === 'production' || $appEnv === 'production') {
+        throw new InvalidArgumentException('DEV QA is forbidden in production.');
+    }
+    $environment = $ciEnv !== '' ? $ciEnv : $appEnv;
+    if ($apply && ($ciEnv !== '' && $appEnv !== '' && $ciEnv !== $appEnv
+        || !in_array($environment, ['development', 'testing'], true)
+        || getenv('M63B2_DEV_QA_WRITE') !== 'YES'
+        || preg_match('/\A[A-Za-z0-9_]{1,64}\z/D',
+            (string)(getenv('M63B2_EXPECTED_DATABASE') ?: '')) !== 1)) {
+        throw new InvalidArgumentException('Explicit DEV environment, write opt-in and database pin are required.');
+    }
 } catch (Throwable) {
     fwrite(STDERR, 'M6.3B.2 BLOCKED: invalid target, mode or environment; no SQL/HTTP performed.'.PHP_EOL);
     exit(2);

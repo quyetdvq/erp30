@@ -11,7 +11,7 @@ use CodeIgniter\Database\BaseConnection;
 /** Trusted owner -> PBAC organization scope; no client-supplied scope is used. */
 final class ContactScope
 {
-    public function __construct(private readonly BaseConnection $db)
+    public function __construct(private readonly BaseConnection $db, private readonly ?string $utcDate = null)
     {
     }
 
@@ -29,7 +29,7 @@ final class ContactScope
             if ($people->employeeById($owner['id']) === null) {
                 throw new DomainException('CONTACT_OWNER_NOT_FOUND');
             }
-            $rows = $people->effectiveAssignments($owner['id'], gmdate('Y-m-d'), true);
+            $rows = $people->effectiveAssignments($owner['id'], $this->utcDate ?? gmdate('Y-m-d'), true);
             $primary = ContactRules::uniqueActivePrimary($rows);
             if ($primary === null) {
                 // Baseline requires exactly one canonical, current primary assignment.

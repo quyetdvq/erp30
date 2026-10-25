@@ -828,6 +828,11 @@ export const en = {
     bottomPagination: 'Bottom Price List pagination',
   },
   productImport: {
+    templates: 'Download import templates',
+    templateCsv: 'Download CSV template',
+    templateXlsx: 'Download Excel template',
+    sizeExceeded: 'The file exceeds 2 MiB.',
+    importSummary: 'Import job {id}: {status}; completed {success}/{total}, errors {errors}.',
     eyebrow: 'Product Import',
     title: 'Import Products',
     description: 'Create or update Products from a file under the current import contract.',

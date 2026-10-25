@@ -4,7 +4,12 @@ One canonical Product business root per System Architecture Standard v1.1.1 and 
 
 - `Catalog/`: Product Group hierarchy and Product UOM master (ten frozen API-050 operations).
 - `Master/`: M6.2A protected Product Master GET list/detail and M6.2B guarded Product mutations (CREATE/PATCH/set-state), with full-catalog derived role, validated public-upload URLs, PBAC-first pagination, lifecycle checks and one Product mutation transaction.
-- **Not implemented yet**: Product selector/resolution/lookups, Avatar media, independent Combo editing, UOM conversion sets or Import. Do not create fake HTTP routes or duplicate `ProductManagement` roots.
+- `Lookup/`: M6.4A read-only Product selectors, bounded Product and UOM label resolution. M6.4A.1 compiles MASTER-domain VIEW decisions by canonical Lifecycle State into bound SQL WHERE predicates before COUNT, page and batch; bounded result rows are rechecked by Access. Product role/name projection uses indexed parent JOIN/EXISTS rather than whole-catalog reads.
+- `Conversion/`: M7.1 Product UOM conversion GET and atomic PUT. PBAC MASTER-State WHERE for Product READ; record-authorized EDIT under Product Master advisory lock; verified InnoDB tables and row locks; exact fixed-point DECIMAL validation without float.
+- `Combo/`: M7.2 SQL-PBAC-owner GET and transactional, ID-preserving PUT of direct COMBO components; bounded nested graph traversal and deterministic cycle rejection, with one shared Product Master advisory lock.
+- `Import/`: M8 Product Adapter for the shared bounded import pipeline, with PRODUCT, UOM_CONVERSION and COMBO_ITEM row types. Each row delegates to the established Product mutation, Conversion and Combo Application Services. ImportJob is ORGANIZATION/GROUP-root-scoped through Access.
+- M7.4 dependent Product detail, relations-preview and sales-UOM resolution are implemented as three frozen read-only operations. Pricing is owned by its separate `Pricing` module, and generic Import orchestration is owned by `Import`.
+- Do not create fake HTTP routes, shadow Product repositories, or a duplicate `ProductManagement` root.
 - All authorization delegates to Access PBAC, and State to the canonical Workflow Lifecycle definition. No client-supplied policy scope/state grants.
 - Product Group edits use one server-side hierarchy mutex plus locked SQL graph; duplicate codes are also enforced by DB UNIQUE(code).
 - Product UOM relies on persisted UNIQUE(code) and transaction rollback, never on a client lock.

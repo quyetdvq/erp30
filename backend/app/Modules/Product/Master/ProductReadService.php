@@ -5,44 +5,60 @@ declare(strict_types=1);
 namespace App\Modules\Product\Master;
 
 use App\Exceptions\DomainException;
+use App\Modules\Access\Query\AuthorizationSqlScopeCompiler;
+use App\Modules\Access\Query\EffectiveActionHintCache;
 use App\Modules\Access\UnifiedAccessService;
-use App\Shared\Http\AuthorizedListPage;
 use App\Shared\Read\PositiveId;
 use CodeIgniter\Database\BaseConnection;
 use CodeIgniter\Exceptions\PageNotFoundException;
 use CodeIgniter\Shield\Entities\User;
 use InvalidArgumentException;
+use Throwable;
+use UnexpectedValueException;
 
-/** Frozen Product Master GET contract, with persisted row authorization before totals/pages. */
+/** M8.5 Product READ: authorization in SQL BEFORE count/page, bounded DTO/hints. */
 final class ProductReadService
 {
     private readonly BaseConnection $db;
-    private readonly UnifiedAccessService $access;
+    private UnifiedAccessService $access;
 
     public function __construct(private readonly User $actor, ?BaseConnection $db = null)
     {
         $this->db = $db ?? db_connect();
-        $this->access = new UnifiedAccessService($actor, $this->db);
     }
 
     /** @param array<string,mixed> $query @return array{data:list<array<string,mixed>>,page:int,page_size:int,total:int} */
     public function list(array $query): array
     {
-        // Explicit base VIEW check even when the Product table is empty.
-        if (! $this->access->hasBaseViewPermission('product')) {
-            throw new DomainException('PRODUCT_AUTHORIZATION_DENIED', ['action' => 'view']);
-        }
-        // One consistent Product snapshot supplies both authority and derived roles.
-        // Hidden rows may describe a child's structure but must never enter the result.
-        $raw = $this->allRows();
-        $all = ProductReadRules::describe($raw);
-        $visible = [];
-        foreach ($raw as $row) {
-            if (! $this->access->canView('product', $row)) continue;
-            $id = (string) $row['id'];
-            $visible[] = $this->withAllowedActions($all[$id], $row);
-        }
-        return AuthorizedListPage::paginate('product', $visible, ProductReadRules::listQuery($query));
+        $parameters = ProductReadSql::normalize(ProductReadRules::listQuery($query));
+        return $this->snapshot(function () use ($parameters): array {
+            if (!$this->access->hasBaseViewPermission('product')) {
+                throw new DomainException('PRODUCT_AUTHORIZATION_DENIED', ['action'=>'view']);
+            }
+            $scope = (new AuthorizationSqlScopeCompiler($this->access))
+                ->compile(new ProductScopeProvider());
+            $plan = ProductReadSql::collection($parameters, $scope, (string) $this->db->DBPrefix);
+            $result = $this->db->query($plan['count_sql'], $plan['count_binds']);
+            if ($result === false) throw new UnexpectedValueException('Product scoped COUNT failed.');
+            $total = $this->validCount($result->getRowArray()['total'] ?? null);
+            if ($total === 0) {
+                return ['data'=>[], 'page'=>$parameters['page'], 'page_size'=>$parameters['page_size'], 'total'=>0];
+            }
+            $result = $this->db->query($plan['rows_sql'], $plan['rows_binds']);
+            if ($result === false) throw new UnexpectedValueException('Product scoped page query failed.');
+            $hints = new EffectiveActionHintCache();
+            $data = [];
+            foreach ($result->getResultArray() as $row) {
+                if (!$this->access->canView('product', $row)) {
+                    throw new UnexpectedValueException('AUTH_SCOPE_PBAC_MISMATCH: Product page row.');
+                }
+                $dto = ProductReadRules::describeJoined($row);
+                $dto['allowed_actions'] = $hints->forProduct($this->access, $row);
+                $data[] = $dto;
+            }
+            return ['data'=>$data, 'page'=>$parameters['page'],
+                'page_size'=>$parameters['page_size'], 'total'=>$total];
+        });
     }
 
     /** @return array<string,mixed> */
@@ -50,39 +66,75 @@ final class ProductReadService
     {
         try { $id = PositiveId::value($rawId); }
         catch (InvalidArgumentException $error) {
-            throw new DomainException('PRODUCT_NOT_FOUND', ['field' => 'id'], $error);
+            throw new DomainException('PRODUCT_NOT_FOUND', ['field'=>'id'], $error);
         }
-        $original = $this->persistedRow($id);
-        if (! $this->access->canView('product', $original)) {
-            throw new PageNotFoundException('Product is not available.');
+        return $this->snapshot(function () use ($id): array {
+            if (!$this->access->hasBaseViewPermission('product')) {
+                throw new DomainException('PRODUCT_AUTHORIZATION_DENIED', ['action'=>'view']);
+            }
+            $scope = (new AuthorizationSqlScopeCompiler($this->access))
+                ->compile(new ProductScopeProvider());
+            $plan = ProductReadSql::detail($id, $scope, (string) $this->db->DBPrefix);
+            $result = $this->db->query($plan['sql'], $plan['binds']);
+            if ($result === false) throw new UnexpectedValueException('Product scoped detail query failed.');
+            $row = $result->getRowArray();
+            if ($row === null) throw new PageNotFoundException('Product is not available.');
+            if (!$this->access->canView('product', $row)) {
+                throw new UnexpectedValueException('AUTH_SCOPE_PBAC_MISMATCH: Product detail row.');
+            }
+            $dto = ProductReadRules::describeJoined($row);
+            $dto['allowed_actions'] = (new EffectiveActionHintCache())->forProduct($this->access, $row);
+            return $dto;
+        }, true);
+    }
+
+    /** Guard COUNT against overflow before casting; no hidden/unauthorized total. */
+    private function validCount(mixed $value): int
+    {
+        $text = is_string($value) || is_int($value) ? (string)$value : '';
+        if (preg_match('/\A[0-9]+\z/D', $text) !== 1
+            || strlen($text) > strlen((string)PHP_INT_MAX)
+            || (strlen($text) === strlen((string)PHP_INT_MAX) && strcmp($text, (string)PHP_INT_MAX) > 0)) {
+            throw new UnexpectedValueException('Invalid or out-of-range Product scoped COUNT.');
         }
-        // Derive structural role against the full catalog, never only current page.
-        $catalog = ProductReadRules::describe($this->allRows());
-        if (! isset($catalog[$id])) throw new DomainException('PRODUCT_NOT_FOUND');
-        return $this->withAllowedActions($catalog[$id], $original);
+        return (int)$text;
     }
 
-    /** @return list<array<string,mixed>> */
-    private function allRows(): array
+    /**
+     * COUNT, page and bounded PBAC re-check must use one DB snapshot.
+     * ProductMutationService::visible() calls show() before its write transaction
+     * commits. In that one reviewed case, borrow the active transaction and
+     * NEVER modify its isolation level, commit it or roll it back. A standalone
+     * list must never borrow an unknown transaction.
+     * @template T @param callable():T $work @return T
+     */
+    private function snapshot(callable $work, bool $allowBorrowedDetail = false): mixed
     {
-        return $this->db->table('products')->orderBy('id', 'ASC')->get()->getResultArray();
-    }
-
-    /** @return array<string,mixed> */
-    private function persistedRow(string $id): array
-    {
-        $row = $this->db->table('products')->where('id', $id)->get()->getRowArray();
-        if ($row === null) throw new DomainException('PRODUCT_NOT_FOUND');
-        return $row;
-    }
-
-    /** @param array<string,mixed> $dto @param array<string,mixed> $persisted @return array<string,mixed> */
-    private function withAllowedActions(array $dto, array $persisted): array
-    {
-        $dto['allowed_actions'] = [
-            'edit' => $this->access->decideMutation('product', 'edit', $persisted)['allowed'],
-            'setstate' => $this->access->decideMutation('product', 'setstate', $persisted)['allowed'],
-        ];
-        return $dto;
+        if ($this->db->transDepth !== 0) {
+            if (!$allowBorrowedDetail || !$this->db->transStatus()) {
+                throw new UnexpectedValueException('Unexpected transaction in Product read.');
+            }
+            // The writer owns the physical transaction and all its rollback
+            // responsibility. Never open/commit a nested CI4 fake transaction.
+            $this->access = new UnifiedAccessService($this->actor, $this->db);
+            return $work();
+        }
+        if ($this->db->query('SET TRANSACTION ISOLATION LEVEL REPEATABLE READ') === false
+            || !$this->db->transBegin()) {
+            throw new UnexpectedValueException('Unable to open Product consistent read snapshot.');
+        }
+        try {
+            // Actor, policies, COUNT, page and cross-check share one InnoDB snapshot.
+            $this->access = new UnifiedAccessService($this->actor, $this->db);
+            $value = $work();
+            if (!$this->db->transStatus() || !$this->db->transCommit()) {
+                throw new UnexpectedValueException('Product read snapshot did not complete.');
+            }
+            return $value;
+        } catch (Throwable $e) {
+            $this->db->transRollback();
+            $this->db->resetTransStatus();
+            throw $e;
+        }
     }
 }

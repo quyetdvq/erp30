@@ -30,7 +30,7 @@ $controller=(string)file_get_contents($root.'/backend/app/Modules/Product/Catalo
 $service=(string)file_get_contents($root.'/backend/app/Modules/Product/Catalog/ProductCatalogService.php');
 $check(str_contains($controller,"env('DINKERP_M33B_WRITE_MODE', 'off')"),'write gate exact');
 $check(str_contains($controller,"'UNAUTHENTICATED', 401"),'anonymous blocked');
-$check(str_contains($service,'AuthorizedListPage::paginate('),'authorized pagination');
+$check(str_contains($service,'ProductCatalogSql::collection(') && str_contains($service,'AuthorizationSqlScopeCompiler'), 'SQL-first authorized pagination (M8.6 reviewed replacement)');
 $check(str_contains($service,'WF_CONCURRENT_STATE_CHANGE'),'state concurrency checked');
 $check(str_contains($service,'GET_LOCK(') && str_contains($service,'RELEASE_LOCK('),'hierarchy domain locking');
 $check(str_contains($service,'transRollback()') && str_contains($service,'->where(\'status\','),'atomic conditional state transition');

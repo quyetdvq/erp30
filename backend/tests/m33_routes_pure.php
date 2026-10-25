@@ -49,6 +49,12 @@ namespace {
     require_once dirname(__DIR__) . '/tools/m6/M62BSourceAcceptance.php';
     require_once dirname(__DIR__) . '/tools/m6/M63SourceAcceptance.php';
     require_once dirname(__DIR__) . '/tools/m6/M63BSourceAcceptance.php';
+    require_once dirname(__DIR__) . '/tools/m6/M64ASourceAcceptance.php';
+    require_once dirname(__DIR__) . '/tools/m7/M71SourceAcceptance.php';
+    require_once dirname(__DIR__) . '/tools/m7/M72SourceAcceptance.php';
+    require_once dirname(__DIR__) . '/tools/m7/M73SourceAcceptance.php';
+    require_once dirname(__DIR__) . '/tools/m7/M74SourceAcceptance.php';
+    require_once dirname(__DIR__) . '/tools/m8/M8SourceAcceptance.php';
     $routes = new \CodeIgniter\Router\RouteCollection();
     require dirname(__DIR__) . '/app/Config/Routes.php';
     $controller = 'App\\Modules\\Access\\Management\\AccessReadController';
@@ -172,9 +178,48 @@ namespace {
         }
     }
     $m4Expected = M4SourceAcceptance::expected();
-    // Check 129 exact routes, then replay 127 M6.3A and earlier footprints.
-    M63BSourceAcceptance::validateRegistered($routes->registered);
-    $m63Projection = M63BSourceAcceptance::projectedPrevious($routes->registered);
+    // M7.1 pins 134 routes. First replay its precise two-route footprint,
+    // then independently replay the unchanged 132/129/... historical gates.
+    // Validate all four frozen Import routes and replay the complete M7.4
+    // footprint after subtracting exactly these four operations.
+    M8SourceAcceptance::validateRegistered($routes->registered);
+    $m74Projection = $routes->registered;
+    foreach (M8SourceAcceptance::operations() as $newKey => $_operation) {
+        [$verb,$path] = explode(' ', $newKey, 2);
+        unset($m74Projection[$verb]['api/v1/'.$path]);
+    }
+    M74SourceAcceptance::validateRegistered($m74Projection);
+    $m73Projection = $m74Projection;
+    foreach (M74SourceAcceptance::operations() as $newKey => $_operation) {
+        [$verb, $path] = explode(' ', $newKey, 2);
+        unset($m73Projection[$verb]['api/v1/'.$path]);
+    }
+    M73SourceAcceptance::validateRegistered($m73Projection);
+    $m72Projection = $m73Projection;
+    foreach (M73SourceAcceptance::operations() as $pricingKey => $_operation) {
+        [$verb, $path] = explode(' ', $pricingKey, 2);
+        unset($m72Projection[$verb]['api/v1/'.$path]);
+    }
+    M72SourceAcceptance::validateRegistered($m72Projection);
+    $m71Projection = $m72Projection;
+    foreach (M72SourceAcceptance::operations() as $comboKey => $_operation) {
+        [$verb,$path] = explode(' ', $comboKey, 2);
+        unset($m71Projection[$verb]['api/v1/'.$path]);
+    }
+    M71SourceAcceptance::validateRegistered($m71Projection);
+    $m64aProjection = $m71Projection;
+    foreach (M71SourceAcceptance::operations() as $conversionKey => $_operation) {
+        [$verb,$path] = explode(' ', $conversionKey, 2);
+        unset($m64aProjection[$verb]['api/v1/'.$path]);
+    }
+    M64ASourceAcceptance::validateRegistered($m64aProjection);
+    $m63bProjection = $m64aProjection;
+    foreach (M64ASourceAcceptance::operations() as $lookupKey => $_operation) {
+        [$verb,$path] = explode(' ', $lookupKey, 2);
+        unset($m63bProjection[$verb]['api/v1/'.$path]);
+    }
+    M63BSourceAcceptance::validateRegistered($m63bProjection);
+    $m63Projection = M63BSourceAcceptance::projectedPrevious($m63bProjection);
     // Check 127 exact routes then peel away two M6.3A media mutations and
     // three M6.2B writes, preserving all prior 125/122/120/... footprints.
     M63SourceAcceptance::validateRegistered($m63Projection);
@@ -247,9 +292,9 @@ namespace {
     foreach ($routes->registered as $method => $entries) {
         if ($method !== 'OPTIONS') { $count += count($entries); }
     }
-    if ($count !== 129 || count($expected) !== 19 || count($mutations) !== 16 || count($userMutations) !== 5 || count($workflowMutations) !== 8) {
-        throw new \RuntimeException('Unexpected registered operation count: ' . $count . ' (expected 70 M3 + 14 M4 + 6 M5.1 + 3 M5.2 + 6 M5.3 + 6 M5.4 + 5 M5.5 + 10 M6.1 + 2 M6.2A + 3 M6.2B + 2 M6.3A + 2 M6.3B).');
+    if ($count !== 150 || count($expected) !== 19 || count($mutations) !== 16 || count($userMutations) !== 5 || count($workflowMutations) !== 8) {
+        throw new \RuntimeException('Unexpected registered operation count: ' . $count . ' (expected 70 M3 + 14 M4 + 6 M5.1 + 3 M5.2 + 6 M5.3 + 6 M5.4 + 5 M5.5 + 10 M6.1 + 2 M6.2A + 3 M6.2B + 2 M6.3A + 2 M6.3B + 3 M6.4A + 2 M7.1 + 2 M7.2 + 7 M7.3 + 3 M7.4 + 4 M8).');
     }
-    echo 'PASS: 70 pinned M3.4D + 14 M4 + 6 M5.1 + 3 M5.2  + 6 M5.3 + 6 M5.4 + 5 M5.5 + 10 M6.1 + 2 M6.2A + 3 M6.2B + 2 M6.3A + 2 M6.3B = 129 approved routes' . PHP_EOL;
+    echo 'PASS: 70 pinned M3.4D + 14 M4 + 6 M5.1 + 3 M5.2  + 6 M5.3 + 6 M5.4 + 5 M5.5 + 10 M6.1 + 2 M6.2A + 3 M6.2B + 2 M6.3A + 2 M6.3B + 3 M6.4A + 2 M7.1 + 2 M7.2 + 7 M7.3 + 3 M7.4 + 4 M8 = 150 approved routes' . PHP_EOL;
     echo 'TOTAL: ' . (++$passed) . ' M3.3 route assertions passed.' . PHP_EOL;
 }

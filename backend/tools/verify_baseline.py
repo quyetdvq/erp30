@@ -1,31 +1,32 @@
 #!/usr/bin/env python3
-"""Prove unchanged v1.2.4 frontend + OpenAPI schema at a supplied source root."""
+"""Fail-closed v1.2.4 Frontend and OpenAPI immutable-source audit; no writes."""
 import argparse
-import hashlib
 import json
 from pathlib import Path
 
-arg = argparse.ArgumentParser()
-arg.add_argument('--v1-root', type=Path, required=True, help='Directory containing frontend/ and contracts/openapi/openapi.yaml')
-args = arg.parse_args()
-out = Path(__file__).resolve().parents[2] / 'docs' / 'backend-rewrite'
-fe = json.loads((out/'frontend-fingerprint-v1.2.4.json').read_text())
-api = json.loads((out/'openapi-operations-v1.2.4.json').read_text())
+from locked_snapshot import load_manifest, sha256, verify_directory
 
-def sha(data): return hashlib.sha256(data).hexdigest()
+parser = argparse.ArgumentParser()
+parser.add_argument('--v1-root', type=Path, default=Path(__file__).resolve().parents[2],
+                    help='Source root with frontend/ and contracts/openapi/openapi.yaml')
+args = parser.parse_args()
+root = args.v1_root.resolve()
+docs = Path(__file__).resolve().parents[2] / 'docs' / 'backend-rewrite'
 
-root = args.v1_root
-files = sorted(p for p in (root/'frontend').rglob('*') if p.is_file())
-paths = {p.relative_to(root/'frontend').as_posix(): p for p in files}
-expected = {item['path']: item['sha256'] for item in fe['files']}
-missing = sorted(set(expected) - set(paths))
-added = sorted(set(paths) - set(expected))
-changed = sorted(path for path in paths.keys() & expected.keys() if sha(paths[path].read_bytes()) != expected[path])
-actual_api = root/'contracts/openapi/openapi.yaml'
-valid_api = actual_api.is_file() and sha(actual_api.read_bytes()) == api['openapi_sha256']
-print('FRONTEND', 'PASS' if not (missing or added or changed) else 'FAIL',
-      'checked=', len(paths), 'missing=', len(missing), 'added=', len(added), 'changed=', len(changed))
-print('OPENAPI', 'PASS' if valid_api else 'FAIL', 'expected operations=', len(api['operations']))
-for reason, seq in [('MISSING', missing),('ADDED', added),('CHANGED', changed)]:
-    for path in seq[:30]: print(reason, path)
-if missing or added or changed or not valid_api: raise SystemExit(1)
+try:
+    reference = load_manifest(docs / 'frontend-fingerprint-v1.2.4.json')
+    verify_directory(root / 'frontend', reference, 'Frontend')
+    operations = json.loads((docs / 'openapi-operations-v1.2.4.json').read_text(encoding='utf-8'))
+    expected_sha = 'f1736a006c2f4e1f529b22b8434be6995bcfbec8e7252d0af8ddc9d739de1728'
+    if (operations.get('openapi_sha256') != expected_sha or len(operations.get('operations', [])) != 150):
+        raise AssertionError('Frozen 150-operation reference manifest changed')
+    api = root / 'contracts/openapi/openapi.yaml'
+    if not api.is_file() or api.is_symlink() or sha256(api.read_bytes()) != expected_sha:
+        raise AssertionError('Original v1.2.4 OpenAPI bytes changed')
+    redocly = root / 'contracts/openapi/redocly.yaml'
+    redocly_sha = 'dae571142679ca126c9fd69cd81c5b8f09ceb6faf154ea53badbc5096c3f1174'
+    if not redocly.is_file() or redocly.is_symlink() or sha256(redocly.read_bytes()) != redocly_sha:
+        raise AssertionError('Original v1.2.4 Redocly configuration bytes changed')
+    print('PASS: both frozen v1.2.4 OpenAPI files byte-identical; 150 operations')
+except (OSError, ValueError, AssertionError) as error:
+    raise SystemExit(f'FAIL: {error}') from error

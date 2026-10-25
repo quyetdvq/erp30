@@ -3,6 +3,7 @@
 declare(strict_types=1);
 
 require_once __DIR__.'/../tools/m63b2/M63B2AvatarPlan.php';
+require_once __DIR__.'/../tools/m63b2/M63B2AvatarAudit.php';
 
 $n = 0;
 $ok = static function (bool $value, string $name) use (&$n): void {
@@ -25,6 +26,15 @@ $actors = M63B2AvatarPlan::actors($me($admin), $me($owner), '3');
 $ok($actors['admin_id'] === '8', 'distinct delegated admin and owner accepted');
 $ok(($actors['owner']['username'] ?? null) === 'test-owner', 'target owner verified');
 $ok(($actors['admin']['username'] ?? null) === 'test-admin', 'delegated admin verified');
+M63B2AvatarAudit::assertDatabase(['database_name'=>'erp_test'], 'erp_test');
+$ok(true, 'explicit fixture DB pin accepted');
+foreach ([['database_name'=>'erp'], ['database_name'=>null], []] as $bad) {
+    $reject(static fn() => M63B2AvatarAudit::assertDatabase($bad, 'erp_test'),
+        'other or absent database rejected');
+}
+$reject(static fn() => M63B2AvatarAudit::assertDatabase(['database_name'=>'erp_test'], '../erp_test'),
+    'invalid database pin rejected');
+
 foreach (['id' => 3, 'active' => false, 'base_permissions' => ['user.view'],
     'username' => 'test-owner'] as $key => $badValue) {
     $bad = $admin; $bad[$key] = $badValue;
@@ -87,6 +97,14 @@ $ok(str_contains($cli, 'PLAN ONLY') && str_contains($cli, 'DEV_ADMIN_AVATAR_QA')
     'CLI dry-run and affirmative mutation token');
 $ok(str_contains($cli, "'production'") && str_contains($cli, '--preflight')
     && str_contains($cli, '--apply'), 'explicit mode and production gates');
+$ok(str_contains($cli, 'M63B2_DEV_QA_WRITE') && str_contains($cli, 'M63B2_EXPECTED_DATABASE')
+    && str_contains($audit, 'assertDatabase($data, $expected)'),
+    'explicit write opt-in and SQL database origin attestation');
+$command=(string)file_get_contents($root.'/app/Commands/M63B1DevAudit.php');
+$ok(str_contains($command, 'SELECT DATABASE() AS database_name')
+    && str_contains($command, "'database_name'=>\$databaseName"),
+    'DB origin is returned by read-only SQL audit');
+
 $ok(str_contains($cli,'M63B2_ADMIN_PASSWORD') && str_contains($cli,'M63B2_TARGET_PASSWORD'),
     'independent credentials for two authenticated actors');
 $ok(!str_contains($cli,"echo \$adminPassword") && !str_contains($cli,"echo \$targetPassword")
@@ -133,8 +151,14 @@ $ok(str_contains($plan,"'USER_NOT_FOUND'")
     && str_contains($plan,"'USER_AUTHORIZATION_DENIED'"),
     'frozen Avatar nonowner denial codes only');
 $run = static function (array $args) use ($root): array {
+    // This pure suite MUST never inherit a live QA write opt-in, even when
+    // launched from a shell used earlier for delegated Avatar mutation tests.
+    $env = getenv();
+    if (!is_array($env)) throw new RuntimeException('Cannot isolate test environment.');
+    unset($env['M63B2_DEV_QA_WRITE'], $env['M63B2_EXPECTED_DATABASE'],
+        $env['M63B2_ADMIN_PASSWORD'], $env['M63B2_TARGET_PASSWORD']);
     $process=proc_open([PHP_BINARY,$root.'/tools/m63b2_dev_admin_avatar.php',...$args],
-        [0=>['pipe','r'],1=>['pipe','w'],2=>['pipe','w']],$pipes,$root);
+        [0=>['pipe','r'],1=>['pipe','w'],2=>['pipe','w']],$pipes,$root,$env);
     if (!is_resource($process)) throw new RuntimeException('Cannot test delegated QA CLI.');
     fclose($pipes[0]);
     $out=stream_get_contents($pipes[1]);$err=stream_get_contents($pipes[2]);
@@ -143,6 +167,10 @@ $run = static function (array $args) use ($root): array {
 };
 [$exit,$stdout]=$run(['--target-user-id=3']);
 $ok($exit===0 && str_contains($stdout,'PLAN ONLY'), 'default is inert');
+[$exit,$stdout]=$run(['--target-user-id=3','--apply','--confirm=DEV_ADMIN_AVATAR_QA']);
+$ok($exit===2 && !str_contains($stdout,'PLAN ONLY'),
+    'valid confirmation alone cannot trigger writes without explicit env and DB pin');
+
 foreach ([['--apply'],['--confirm=DEV_ADMIN_AVATAR_QA'],['--apply','--confirm=BAD'],
     ['--preflight','--apply'],['--preflight','--confirm=DEV_ADMIN_AVATAR_QA'],
     ['--apply','--confirm=DEV_ADMIN_AVATAR_QA','--preflight'],

@@ -65,6 +65,20 @@ try {
         Invoke-PHPChecked -Description 'M6.2B Product Master mutation source acceptance (no DB)' -Arguments @('tools/m62b_accept.php')
         Invoke-PHPChecked -Description 'M6.3A Product Media mutation source acceptance (no DB)' -Arguments @('tools/m63_accept.php')
         Invoke-PHPChecked -Description 'M6.3B Identity Avatar mutation source acceptance (no DB)' -Arguments @('tools/m63b_accept.php')
+        Invoke-PHPChecked -Description 'M6.4A Product selector source acceptance (no DB)' -Arguments @('tools/m64a_accept.php')
+        Invoke-PHPChecked -Description 'M7.1 Product UOM conversion source acceptance (no DB)' -Arguments @('tools/m71_accept.php')
+        Invoke-PHPChecked -Description 'M7.2 Combo item source acceptance (no DB)' -Arguments @('tools/m72_accept.php')
+        Invoke-PHPChecked -Description 'M7.3 Pricing source acceptance (no DB)' -Arguments @('tools/m73_accept.php')
+        Invoke-PHPChecked -Description 'M7.4 Product relationship lookup source acceptance (no DB)' -Arguments @('tools/m74_accept.php')
+        Invoke-PHPChecked -Description 'M8 shared Product Import source acceptance (no DB)' -Arguments @('tools/m8_accept.php')
+        Invoke-PHPChecked -Description 'M8.5 Authorization SQL scope and Product read acceptance (no DB)' -Arguments @('tools/m85_accept.php')
+        Invoke-PHPChecked -Description 'M8.6A Product Group/UOM SQL scope source acceptance (no DB)' -Arguments @('tools/m86_accept.php')
+        Invoke-PHPChecked -Description 'M8.6B Organization/Assignment SQL source acceptance (no DB)' -Arguments @('tools/m86b_accept.php')
+        Invoke-PHPChecked -Description 'M8.6C People MASTER SQL source acceptance (no DB)' -Arguments @('tools/m86c_accept.php')
+        Invoke-PHPChecked -Description 'M8.6D mandatory canonical VIEW/SQL source acceptance (no DB)' -Arguments @('tools/m86d_accept.php')
+        Invoke-PHPChecked -Description 'M8.6E Contact polymorphic SQL PBAC source acceptance (no DB)' -Arguments @('tools/m86e_accept.php')
+        Invoke-PHPChecked -Description 'M8.7 DEV SQL/PBAC audit harness source acceptance (NO DB)' -Arguments @('tools/m87_accept.php')
+        Invoke-PHPChecked -Description 'M8.7A DEV diagnostics and one-run source acceptance (NO DB)' -Arguments @('tools/m87a_accept.php')
     }
 
     if ($suite -in @('DB-READ', 'ALL')) {
@@ -96,6 +110,20 @@ try {
         Invoke-PHPChecked -Description 'M6.2B Product Master mutation source acceptance (no DB)' -Arguments @('tools/m62b_accept.php')
         Invoke-PHPChecked -Description 'M6.3A Product Media mutation source acceptance (no DB)' -Arguments @('tools/m63_accept.php')
         Invoke-PHPChecked -Description 'M6.3B Identity Avatar mutation source acceptance (no DB)' -Arguments @('tools/m63b_accept.php')
+        Invoke-PHPChecked -Description 'M6.4A Product selector source acceptance (no DB)' -Arguments @('tools/m64a_accept.php')
+        Invoke-PHPChecked -Description 'M7.1 Product UOM conversion source acceptance (no DB)' -Arguments @('tools/m71_accept.php')
+        Invoke-PHPChecked -Description 'M7.2 Combo item source acceptance (no DB)' -Arguments @('tools/m72_accept.php')
+        Invoke-PHPChecked -Description 'M7.3 Pricing source acceptance (no DB)' -Arguments @('tools/m73_accept.php')
+        Invoke-PHPChecked -Description 'M7.4 Product relationship lookup source acceptance (no DB)' -Arguments @('tools/m74_accept.php')
+        Invoke-PHPChecked -Description 'M8 shared Product Import source acceptance (no DB)' -Arguments @('tools/m8_accept.php')
+        Invoke-PHPChecked -Description 'M8.5 Authorization SQL scope and Product read acceptance (no DB)' -Arguments @('tools/m85_accept.php')
+        Invoke-PHPChecked -Description 'M8.6A Product Group/UOM SQL scope source acceptance (no DB)' -Arguments @('tools/m86_accept.php')
+        Invoke-PHPChecked -Description 'M8.6B Organization/Assignment SQL source acceptance (no DB)' -Arguments @('tools/m86b_accept.php')
+        Invoke-PHPChecked -Description 'M8.6C People MASTER SQL source acceptance (no DB)' -Arguments @('tools/m86c_accept.php')
+        Invoke-PHPChecked -Description 'M8.6D mandatory canonical VIEW/SQL source acceptance (no DB)' -Arguments @('tools/m86d_accept.php')
+        Invoke-PHPChecked -Description 'M8.6E Contact polymorphic SQL PBAC source acceptance (no DB)' -Arguments @('tools/m86e_accept.php')
+        Invoke-PHPChecked -Description 'M8.7 DEV SQL/PBAC audit harness source acceptance (NO DB)' -Arguments @('tools/m87_accept.php')
+        Invoke-PHPChecked -Description 'M8.7A DEV diagnostics and one-run source acceptance (NO DB)' -Arguments @('tools/m87a_accept.php')
     }
 
     if ($suite -eq 'INTEGRATION') {
@@ -130,6 +158,20 @@ try {
         Invoke-PHPChecked -Description 'M6.2B Product Master mutation source acceptance (no DB)' -Arguments @('tools/m62b_accept.php')
         Invoke-PHPChecked -Description 'M6.3A Product Media mutation source acceptance (no DB)' -Arguments @('tools/m63_accept.php')
         Invoke-PHPChecked -Description 'M6.3B Identity Avatar mutation source acceptance (no DB)' -Arguments @('tools/m63b_accept.php')
+        Invoke-PHPChecked -Description 'M6.4A Product selector source acceptance (no DB)' -Arguments @('tools/m64a_accept.php')
+        Invoke-PHPChecked -Description 'M7.1 Product UOM conversion source acceptance (no DB)' -Arguments @('tools/m71_accept.php')
+        Invoke-PHPChecked -Description 'M7.2 Combo item source acceptance (no DB)' -Arguments @('tools/m72_accept.php')
+        Invoke-PHPChecked -Description 'M7.3 Pricing source acceptance (no DB)' -Arguments @('tools/m73_accept.php')
+        Invoke-PHPChecked -Description 'M7.4 Product relationship lookup source acceptance (no DB)' -Arguments @('tools/m74_accept.php')
+        Invoke-PHPChecked -Description 'M8 shared Product Import source acceptance (no DB)' -Arguments @('tools/m8_accept.php')
+        Invoke-PHPChecked -Description 'M8.5 Authorization SQL scope and Product read acceptance (no DB)' -Arguments @('tools/m85_accept.php')
+        Invoke-PHPChecked -Description 'M8.6A Product Group/UOM SQL scope source acceptance (no DB)' -Arguments @('tools/m86_accept.php')
+        Invoke-PHPChecked -Description 'M8.6B Organization/Assignment SQL source acceptance (no DB)' -Arguments @('tools/m86b_accept.php')
+        Invoke-PHPChecked -Description 'M8.6C People MASTER SQL source acceptance (no DB)' -Arguments @('tools/m86c_accept.php')
+        Invoke-PHPChecked -Description 'M8.6D mandatory canonical VIEW/SQL source acceptance (no DB)' -Arguments @('tools/m86d_accept.php')
+        Invoke-PHPChecked -Description 'M8.6E Contact polymorphic SQL PBAC source acceptance (no DB)' -Arguments @('tools/m86e_accept.php')
+        Invoke-PHPChecked -Description 'M8.7 DEV SQL/PBAC audit harness source acceptance (NO DB)' -Arguments @('tools/m87_accept.php')
+        Invoke-PHPChecked -Description 'M8.7A DEV diagnostics and one-run source acceptance (NO DB)' -Arguments @('tools/m87a_accept.php')
         Write-Host 'INTEGRATION PASS: M3.4D sandbox 29/29; M4/M5.1/M5.2/M5.3/M5.4/M5.5/M6.1/M6.2A are source-only in this suite (use their separate integration checks).'
     }
 

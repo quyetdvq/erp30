@@ -822,6 +822,11 @@ export const vi = {
     bottomPagination: 'Phân trang cuối danh sách Price List',
   },
   productImport: {
+    templates: 'Tải file mẫu import',
+    templateCsv: 'Tải mẫu CSV',
+    templateXlsx: 'Tải mẫu Excel',
+    sizeExceeded: 'File vượt quá 2 MiB.',
+    importSummary: 'Job nhập {id}: {status}; thành công {success}/{total}, lỗi {errors}.',
     eyebrow: 'Product Import',
     title: 'Nhập Product',
     description: 'Tạo hoặc cập nhật Product từ file theo hợp đồng import hiện hành.',

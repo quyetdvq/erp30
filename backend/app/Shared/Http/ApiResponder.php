@@ -53,13 +53,23 @@ final class ApiResponder
         if (str_starts_with($code, 'CONTACT_')) {
             return 'Contact.' . $code;
         }
+        if (str_starts_with($code, 'PRICE_LIST_')) {
+            return 'PriceListRuntime.' . $code;
+        }
         if (str_starts_with($code, 'PRODUCT_GROUP_')) {
             return 'ProductGroup.' . $code;
         }
         if (str_starts_with($code, 'PRODUCT_UOM_')) {
             return 'ProductUomMaster.' . $code;
         }
-        if (str_starts_with($code, 'PRODUCT_') || $code === 'COMBO_SELF_REFERENCE'
+        // Keep the two reviewed v1.2.4 translation keys byte-for-byte.
+        if ($code === 'IMPORT_FILE_TOO_LARGE' || $code === 'IMPORT_ROW_LIMIT_EXCEEDED') {
+            return 'Api.' . self::messageKey($code, $status);
+        }
+        if (str_starts_with($code, 'IMPORT_') || str_starts_with($code, 'PRODUCT_IMPORT_')) {
+            return 'ImportRuntime.' . $code;
+        }
+        if (str_starts_with($code, 'PRODUCT_') || str_starts_with($code, 'COMBO_')
             || str_starts_with($code, 'EVALUATION_ORGANIZATION_HINT_')) {
             return 'ProductRuntime.' . $code;
         }

@@ -113,10 +113,10 @@ final class M32Verify extends BaseCommand
             CLI::write('NOTE: empty resources were not runtime-verified: ' . implode(', ', $empty), 'yellow');
         }
         CLI::write('NOTE: this compares M2.1.1 against M3.2 on persisted data; it does NOT compare against a separately running backend_basline.', 'yellow');
-        CLI::write('NOTE: no writes, no new routes, and no automatic switch to enforce.', 'yellow');
+        CLI::write('NOTE: read-only historical PBAC comparison; runtime always uses UnifiedAccessService.', 'yellow');
         if ($checked === 0 || $mismatch !== 0 || $errors !== 0) {
             CLI::write('FAIL: M3.2 parity is NOT approved for enforcement.', 'red');
-            throw new UnexpectedValueException('M3.2 parity failed; retain DINKERP_M32_READ_MODE=legacy.');
+            throw new UnexpectedValueException('M3.2 parity failed; investigate canonical runtime decisions before production rollout.');
         }
         CLI::write('PASS: sampled M3.2 VIEW decisions equal the accepted M2.1.1 read gate.', 'green');
     }

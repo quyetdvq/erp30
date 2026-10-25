@@ -6,8 +6,8 @@ namespace App\Modules\Product\Catalog;
 
 use App\Exceptions\DomainException;
 use App\Modules\Access\ResourceStateRepository;
+use App\Modules\Access\Query\AuthorizationSqlScopeCompiler;
 use App\Modules\Access\UnifiedAccessService;
-use App\Shared\Http\AuthorizedListPage;
 use CodeIgniter\Database\BaseConnection;
 use CodeIgniter\Exceptions\PageNotFoundException;
 use CodeIgniter\Shield\Entities\User;
@@ -39,25 +39,104 @@ final class ProductCatalogService
     /** @param array<string,mixed>|null $query @return array{data:list<array<string,mixed>>,page:int,page_size:int,total:int} */
     public function list(?array $query = null): array
     {
-        // A base VIEW grant is mandatory even for an empty table; PBAC is also
-        // evaluated per persisted row before pagination and totals are computed.
-        if (! $this->access->hasBaseViewPermission($this->resource)) {
-            throw new DomainException('AUTH_POLICY_DENIED', ['action'=>'view']);
-        }
-        $rows = $this->db->table($this->table)->orderBy('id', 'ASC')->get()->getResultArray();
-        $visible = [];
-        foreach ($rows as $row) {
-            if ($this->access->canView($this->resource, $row)) {
-                $visible[] = $row;
+        $parameters = ProductCatalogSql::normalize($this->resource, $query ?? []);
+        return $this->readSnapshot(function (UnifiedAccessService $access) use ($parameters): array {
+            // Preserve the empty-list base permission gate. The authoritative
+            // SQL scope is compiled from canonical State/MASTER policy decisions.
+            if (!$access->hasBaseViewPermission($this->resource)) {
+                throw new DomainException('AUTH_POLICY_DENIED', ['action'=>'view']);
             }
-        }
-        return AuthorizedListPage::paginate($this->resource, $visible, $query ?? []);
+            $scope = (new AuthorizationSqlScopeCompiler($access))
+                ->compile(new ProductCatalogScopeProvider($this->resource));
+            $plan = ProductCatalogSql::collection($this->resource, $parameters, $scope,
+                (string)$this->db->DBPrefix);
+            $countQuery = $this->db->query($plan['count_sql'], $plan['count_binds']);
+            if ($countQuery === false) throw new UnexpectedValueException('Catalog scoped COUNT failed.');
+            $total = self::validCount($countQuery->getRowArray()['total'] ?? null);
+            if ($total === 0) {
+                return ['data'=>[], 'page'=>$parameters['page'],
+                    'page_size'=>$parameters['page_size'], 'total'=>0];
+            }
+            $result = $this->db->query($plan['rows_sql'], $plan['rows_binds']);
+            if ($result === false) throw new UnexpectedValueException('Catalog scoped page query failed.');
+            $data = $result->getResultArray();
+            if (count($data) > $parameters['page_size']) {
+                throw new UnexpectedValueException('Catalog SQL exceeded requested page size.');
+            }
+            foreach ($data as $row) {
+                // Defense in depth. A scope/canonical decision mismatch must
+                // fail the whole page, NEVER post-filter and misreport total.
+                if (!$access->canView($this->resource, $row)) {
+                    throw new UnexpectedValueException('AUTH_SCOPE_PBAC_MISMATCH: Product catalog page.');
+                }
+            }
+            return ['data'=>$data, 'page'=>$parameters['page'],
+                'page_size'=>$parameters['page_size'], 'total'=>$total];
+        });
     }
 
     /** @return array<string,mixed> */
     public function show(string $id): array
     {
-        return $this->visible($this->target(ProductCatalogRules::id($id, $this->resource)));
+        $id = ProductCatalogRules::id($id, $this->resource);
+        return $this->readSnapshot(function (UnifiedAccessService $access) use ($id): array {
+            $scope = (new AuthorizationSqlScopeCompiler($access))
+                ->compile(new ProductCatalogScopeProvider($this->resource));
+            $plan = ProductCatalogSql::detail($this->resource, $id, $scope,
+                (string)$this->db->DBPrefix);
+            $result = $this->db->query($plan['sql'], $plan['binds']);
+            if ($result === false) throw new UnexpectedValueException('Catalog scoped detail query failed.');
+            $row = $result->getRowArray();
+            if ($row === null) {
+                // Keep the historical missing-id domain error distinct from
+                // a hidden existing row, without retrieving protected columns.
+                $found = $this->db->table($this->table)->select('id')->where('id', $id)
+                    ->limit(1)->get()->getRowArray();
+                if ($found === null) {
+                    throw new DomainException(ProductCatalogRules::codePrefix($this->resource) . 'NOT_FOUND');
+                }
+                throw new PageNotFoundException('Product catalog entry is not available.');
+            }
+            if (!$access->canView($this->resource, $row)) {
+                throw new UnexpectedValueException('AUTH_SCOPE_PBAC_MISMATCH: Product catalog detail.');
+            }
+            return $row;
+        });
+    }
+
+    private static function validCount(mixed $raw): int
+    {
+        $text = is_string($raw) || is_int($raw) ? (string)$raw : '';
+        $max = (string)PHP_INT_MAX;
+        if (preg_match('/\A[0-9]+\z/D', $text) !== 1 || strlen($text) > strlen($max)
+            || (strlen($text) === strlen($max) && strcmp($text, $max) > 0)) {
+            throw new UnexpectedValueException('Invalid Product catalog count.');
+        }
+        return (int)$text;
+    }
+
+    /** A consistent read snapshot owns its transaction and never borrows writers. */
+    private function readSnapshot(callable $work): mixed
+    {
+        if ($this->db->transDepth !== 0) {
+            throw new UnexpectedValueException('Unexpected transaction in catalog GET.');
+        }
+        if ($this->db->query('SET TRANSACTION ISOLATION LEVEL REPEATABLE READ') === false
+            || !$this->db->transBegin()) {
+            throw new UnexpectedValueException('Unable to open catalog consistent read snapshot.');
+        }
+        try {
+            $access = new UnifiedAccessService($this->actor, $this->db);
+            $value = $work($access);
+            if (!$this->db->transStatus() || !$this->db->transCommit()) {
+                throw new UnexpectedValueException('Catalog read snapshot did not complete.');
+            }
+            return $value;
+        } catch (Throwable $e) {
+            $this->db->transRollback();
+            $this->db->resetTransStatus();
+            throw $e;
+        }
     }
 
     /** @param array<string,mixed> $input @return array<string,mixed> */

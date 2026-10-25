@@ -1,3 +1,31 @@
+# CURRENT NEXT WORK - M6.3B.2 + QA consolidation (2026-10-24)
+
+ERP v1.4.0 is at **129/150 frozen HTTP operations**, not at M3. Current source tests are 107/107 offline suites and M3.4D 6/6 static architecture gates. **Live XAMPP delegated Avatar acceptance is still open.**
+
+1. **Now: M6.3B.2.** On owner XAMPP, inspect User 3 metadata with SELECT-only queries and review `writable/m63b1` / `writable/m63b2` reports; do not remove existing Avatar. Select a separate disposable avatar-empty target, active and without base `user.edit`, plus distinct delegated admin. Run DB-pinned preflight. Run `--apply` only after explicit authorization and non-production DB confirmation; review sanitized output and final independent SQL/Apache assertions.
+2. **Then: targeted M5/M6 runtime debt.** Capture authorized/limited/denied actor HTTP+SQL+PBAC, `en`/`vi`, rollback, scope/no-leak total, media/numbering fault cases and independent baseline parity per `M6_QA_CONSOLIDATION_2026-10-24.md`.
+3. **Then: M6.4A** Product options/resolve/UOM-labels (3 operations, 132/150). Preserve frozen schema and row PBAC before lookup filtering/counting.
+4. **M7:** UOM conversions (2, 134), Combo list/replace (2, 136), Price Lists (7, 143), remaining Product relation/detail/sales-UOM resolves (3, 146).
+5. **M8:** Product Import jobs/rows (4, 150). **M9:** final full acceptance, release rehearsal and rollback (no new operations).
+
+Important current gate commands (from repo root):
+
+```powershell
+python backend\tools\verify_baseline.py --v1-root .
+python backend\tools\verify_layout.py
+python backend\tools\verify_routes.py
+php backend\tools\test-unit-check.php
+php backend\tools\m34b_run.php --offline
+php backend\tools\m34d_accept.php
+php backend\tools\m63b_accept.php
+```
+
+Scripts above do not require a database and do not run Avatar mutation tests. `m34d_accept.php` writes only a local acceptance report. Do not treat source PASS as production or live HTTP acceptance. Details: `M6_3B_2_ADMIN_DELEGATION_AVATAR_QA.md`.
+
+---
+
+## Archived M3 plan (2026-10-23; no longer the current next milestone)
+
 # Next milestone - M3 Access/PBAC with canonical State model
 
 ## Accepted runtime baseline (owner confirmation, 2026-10-23)

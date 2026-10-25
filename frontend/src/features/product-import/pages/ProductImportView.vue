@@ -3,65 +3,46 @@ import { computed, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useRouter } from 'vue-router'
 
-import type { ProductImportStart } from '@/api/generated/types.gen'
 import { useBasePermission } from '@/composables/useBasePermission'
 import { reportApiError } from '@/services/errorBoundary'
 import { startProductImportJob } from '@/services/productImport'
+import ImportWizard from '@/features/import/shared/ImportWizard.vue'
+import type { ImportMode } from '@/features/import/shared/ImportWizard.vue'
+import type { ImportJob } from '@/api/generated/types.gen'
 
 const { t } = useI18n()
 const router = useRouter()
 const { hasBasePermission, snapshotState } = useBasePermission()
-const modes = ['CREATE_ONLY', 'UPDATE_ONLY', 'UPSERT'] as const
-
-const file = ref<File | null>(null)
-const mode = ref<ProductImportStart['mode']>('CREATE_ONLY')
 const busy = ref(false)
 const error = ref<unknown | null>(null)
-const clientError = ref('')
+const resultJob = ref<ImportJob | null>(null)
+const canStart = computed(() => hasBasePermission('product', 'import') && snapshotState.value === 'ready')
 
-const canStart = computed(
-  () => hasBasePermission('product', 'import') && snapshotState.value === 'ready',
-)
+const labels = computed(() => Object.fromEntries([
+  'stepFile','stepDescription','file','noFile','mode','modeCreateOnly','modeUpdateOnly',
+  'modeUpsert','fileRequired','invalidFileType','formulaRejected','noPermission',
+  'start','starting','templates','templateCsv','templateXlsx','sizeExceeded',
+].map(key => [key, t(`productImport.${key}`)])) as {
+  stepFile: string; stepDescription: string; file: string; noFile: string; mode: string;
+  modeCreateOnly: string; modeUpdateOnly: string; modeUpsert: string;
+  fileRequired: string; invalidFileType: string; formulaRejected: string;
+  noPermission: string; start: string; starting: string; templates: string;
+  templateCsv: string; templateXlsx: string; sizeExceeded: string;
+})
 
-function onFileChange(event: Event): void {
-  const selected = (event.target as HTMLInputElement).files?.[0] ?? null
-  file.value = selected
-  clientError.value = ''
+async function submit(file: File, mode: ImportMode): Promise<void> {
   error.value = null
-  if (selected && !/\.(csv|xlsx)$/i.test(selected.name)) {
-    clientError.value = t('productImport.invalidFileType')
-    file.value = null
-  }
-}
-
-function hasCsvFormula(candidate: File): Promise<boolean> {
-  if (!/\.csv$/i.test(candidate.name)) return Promise.resolve(false)
-  return candidate
-    .text()
-    .then((value) =>
-      value.split(/\r?\n/).some((line) => line.split(',').some((cell) => /^\s*=/.test(cell))),
-    )
-}
-
-async function submit(): Promise<void> {
-  clientError.value = ''
-  error.value = null
-  if (!file.value) {
-    clientError.value = t('productImport.fileRequired')
-    return
-  }
-  if (!canStart.value) {
-    clientError.value = t('productImport.noPermission')
-    return
-  }
-  if (await hasCsvFormula(file.value)) {
-    clientError.value = t('productImport.formulaRejected')
-    return
-  }
+  resultJob.value = null
+  if (!canStart.value) return
   busy.value = true
   try {
-    const job = await startProductImportJob(file.value, mode.value)
-    await router.push(`/products/import-jobs/${String(job.id)}`)
+    const job = await startProductImportJob(file, mode)
+    resultJob.value = job
+    // Import permission and ImportJob.view are distinct, independently
+    // authorized capabilities. Do not navigate into a known denied read.
+    if (hasBasePermission('import_job', 'view')) {
+      await router.push(`/products/import-jobs/${String(job.id)}`)
+    }
   } catch (caught: unknown) {
     error.value = caught
     reportApiError(caught)
@@ -84,207 +65,43 @@ async function submit(): Promise<void> {
       </button>
     </header>
 
-    <form class="wizard-form" @submit.prevent="submit">
-      <div class="step-heading">
-        <span class="step-number">1</span>
-        <div>
-          <h2>{{ t('productImport.stepFile') }}</h2>
-          <p>{{ t('productImport.stepDescription') }}</p>
-        </div>
-      </div>
-
-      <label class="file-field">
-        <span>{{ t('productImport.file') }}</span>
-        <input
-          type="file"
-          accept=".csv,.xlsx,text/csv,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
-          :disabled="busy"
-          @change="onFileChange"
-        />
-        <small>{{ file?.name ?? t('productImport.noFile') }}</small>
-      </label>
-
-      <fieldset>
-        <legend>{{ t('productImport.mode') }}</legend>
-        <label v-for="option in modes" :key="option">
-          <input v-model="mode" type="radio" name="import-mode" :value="option" :disabled="busy" />
-          <span>{{ option }}</span>
-        </label>
-      </fieldset>
-
-      <aside class="guidance" :aria-label="t('productImport.guidanceTitle')">
-        <h2>{{ t('productImport.guidanceTitle') }}</h2>
-        <ul>
-          <li>{{ t('productImport.guidanceFormat') }}</li>
-          <li>{{ t('productImport.guidanceColumns') }}</li>
-          <li>{{ t('productImport.guidanceSourceKey') }}</li>
-          <li>{{ t('productImport.guidanceCode') }}</li>
-          <li>{{ t('productImport.guidanceNull') }}</li>
-          <li>{{ t('productImport.guidanceFormula') }}</li>
-        </ul>
-      </aside>
-
-      <p v-if="clientError" class="inline-error" role="alert">{{ clientError }}</p>
-      <p v-if="error" class="inline-error" role="alert">{{ t('productImport.requestError') }}</p>
-      <p v-if="!canStart && !clientError" class="permission-note" role="status">
-        {{ t('productImport.noPermission') }}
-      </p>
-      <footer class="form-actions">
-        <button
-          type="button"
-          class="secondary-button"
-          :disabled="busy"
-          @click="router.push('/products')"
-        >
-          {{ t('common.cancel') }}
-        </button>
-        <button type="submit" class="primary-button" :disabled="busy || !canStart">
-          {{ busy ? t('productImport.starting') : t('productImport.start') }}
-        </button>
-      </footer>
-    </form>
+    <ImportWizard :can-start="canStart" :busy="busy" :labels="labels"
+      template-version="1" template-prefix="product" @submit="submit" />
+    <aside class="guidance" :aria-label="t('productImport.guidanceTitle')">
+      <h2>{{ t('productImport.guidanceTitle') }}</h2>
+      <ul>
+        <li>{{ t('productImport.guidanceFormat') }}</li>
+        <li>{{ t('productImport.guidanceColumns') }}</li>
+        <li>{{ t('productImport.guidanceSourceKey') }}</li>
+        <li>{{ t('productImport.guidanceCode') }}</li>
+        <li>{{ t('productImport.guidanceNull') }}</li>
+        <li>{{ t('productImport.guidanceFormula') }}</li>
+      </ul>
+    </aside>
+    <p v-if="resultJob" role="status" class="import-summary">
+      {{ t('productImport.importSummary', {
+        id: String(resultJob.id), status: resultJob.status,
+        success: resultJob.success_rows, total: resultJob.total_rows, errors: resultJob.error_rows,
+      }) }}
+    </p>
+    <p v-if="error" role="alert" class="inline-error">{{ t('productImport.requestError') }}</p>
+    <button type="button" class="secondary-button cancel" @click="router.push('/products')">
+      {{ t('common.cancel') }}
+    </button>
   </section>
 </template>
 
 <style scoped>
-.import-panel {
-  display: grid;
-  gap: 18px;
-  padding: 18px 20px 24px;
-  max-width: 920px;
-}
-.page-header,
-.form-actions,
-.step-heading {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 16px;
-}
-.page-header h1,
-.step-heading h2,
-.guidance h2 {
-  margin: 0;
-}
-.page-description,
-.step-heading p {
-  margin: 6px 0 0;
-  color: #536b7b;
-}
-.eyebrow {
-  margin: 0 0 4px;
-  color: #1876a8;
-  font-size: 11px;
-  font-weight: 700;
-  letter-spacing: 0.04em;
-  text-transform: uppercase;
-}
-.wizard-form {
-  display: grid;
-  gap: 20px;
-  padding: 20px;
-  border: 1px solid #dbe5ea;
-  border-radius: 6px;
-  background: #fff;
-}
-.step-heading {
-  justify-content: flex-start;
-}
-.step-number {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 30px;
-  height: 30px;
-  border-radius: 50%;
-  background: #1876a8;
-  color: #fff;
-  font-weight: 700;
-}
-.file-field,
-fieldset {
-  display: grid;
-  gap: 8px;
-}
-.file-field > span,
-legend {
-  color: #294b65;
-  font-size: 13px;
-  font-weight: 700;
-}
-.file-field input {
-  min-height: 38px;
-}
-.file-field small {
-  color: #536b7b;
-}
-fieldset {
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  border: 0;
-  padding: 0;
-}
-legend {
-  grid-column: 1 / -1;
-  padding: 0;
-}
-fieldset label {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  min-height: 40px;
-  padding: 0 10px;
-  border: 1px solid #c7d6df;
-  border-radius: 4px;
-}
-.guidance {
-  padding: 14px 16px;
-  border-left: 3px solid #1876a8;
-  background: #f4f8fa;
-}
-.guidance ul {
-  display: grid;
-  gap: 6px;
-  margin: 10px 0 0;
-  padding-left: 20px;
-  color: #536b7b;
-  font-size: 13px;
-}
-.inline-error {
-  margin: 0;
-  color: #b64444;
-}
-.permission-note {
-  margin: 0;
-  color: #8a5a00;
-}
-.primary-button,
-.secondary-button {
-  min-height: 36px;
-  border: 1px solid #1876a8;
-  border-radius: 4px;
-  padding: 7px 14px;
-  cursor: pointer;
-}
-.primary-button {
-  background: #1876a8;
-  color: #fff;
-}
-.secondary-button {
-  background: #fff;
-  color: #294b65;
-}
-button:disabled {
-  cursor: not-allowed;
-  opacity: 0.55;
-}
-@media (max-width: 640px) {
-  .page-header,
-  .form-actions {
-    align-items: stretch;
-    flex-direction: column;
-  }
-  fieldset {
-    grid-template-columns: 1fr;
-  }
-}
+.import-panel {display:grid;gap:18px;padding:18px 20px 24px;max-width:920px;}
+.page-header {display:flex;align-items:center;justify-content:space-between;gap:16px;}
+.page-header h1,.guidance h2 {margin:0;}
+.page-description {margin:6px 0 0;color:#536b7b;}
+.eyebrow {margin:0 0 4px;color:#1876a8;font-size:11px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;}
+.guidance {padding:14px 16px;border-left:3px solid #1876a8;background:#f4f8fa;}
+.guidance ul {display:grid;gap:6px;margin:10px 0 0;padding-left:20px;color:#536b7b;font-size:13px;}
+.inline-error {margin:0;color:#b64444;}
+.import-summary {margin:0;padding:12px;border:1px solid #b9d7c9;background:#eff8f3;color:#205a42;}
+.secondary-button {min-height:36px;border:1px solid #1876a8;border-radius:4px;padding:7px 14px;cursor:pointer;background:#fff;color:#294b65;}
+.cancel {justify-self:end;}
+@media(max-width:640px){.page-header {align-items:stretch;flex-direction:column;}}
 </style>

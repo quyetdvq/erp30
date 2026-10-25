@@ -29,5 +29,19 @@ final class M63B2AvatarAudit
         $data = json_decode($match[1], true, 32, JSON_THROW_ON_ERROR);
         if (!is_array($data)) throw new RuntimeException('Invalid SQL audit snapshot.');
         M63B1AvatarPlan::sqlAudit($data, $id, $filename);
+        $expected = getenv('M63B2_EXPECTED_DATABASE');
+        if ($expected !== false && $expected !== '') {
+            self::assertDatabase($data, $expected);
+        }
+    }
+
+    /** @param array<string,mixed> $snapshot */
+    public static function assertDatabase(array $snapshot, string $expected): void
+    {
+        if (preg_match('/\A[A-Za-z0-9_]{1,64}\z/D', $expected) !== 1
+            || !is_string($snapshot['database_name'] ?? null)
+            || !hash_equals($expected, $snapshot['database_name'])) {
+            throw new RuntimeException('Connected DB does not match the approved DEV fixture.');
+        }
     }
 }

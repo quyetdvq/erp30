@@ -40,6 +40,17 @@ describe('Product import wizard', () => {
     })
   }
 
+  it('offers versioned CSV and XLSX templates from the shared wizard', () => {
+    const wrapper = render()
+    const links = wrapper.findAll('.download-templates a')
+    expect(links).toHaveLength(2)
+    expect(links.map(link => link.attributes('href'))).toEqual([
+      '/import-templates/product-v1.xlsx',
+      '/import-templates/product-v1.csv',
+    ])
+    expect(links.every(link => link.attributes('download') !== undefined)).toBe(true)
+  })
+
   it('defaults to CREATE_ONLY and rejects formula-like CSV values before submit', async () => {
     const wrapper = render()
     const input = wrapper.get('input[type="file"]')

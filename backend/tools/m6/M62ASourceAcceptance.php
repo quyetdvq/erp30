@@ -75,8 +75,16 @@ final class M62ASourceAcceptance
         }
         $service = (string) file_get_contents($root . '/backend/app/Modules/Product/Master/ProductReadService.php');
         $rules = (string) file_get_contents($root . '/backend/app/Modules/Product/Master/ProductReadRules.php');
-        foreach (['canView(', 'decideMutation(', 'AuthorizedListPage::paginate(', 'ProductReadRules::describe('] as $guard) {
+        // M8.5: the earlier in-memory paging has been retired. The historical
+        // read gate now requires its stronger SQL-scoped replacement instead.
+        foreach (['hasBaseViewPermission(', 'canView(', 'AuthorizationSqlScopeCompiler',
+            'ProductReadSql::collection(', 'ProductReadSql::detail(',
+            'ProductReadRules::describeJoined(', 'EffectiveActionHintCache'] as $guard) {
             if (! str_contains($service, $guard)) throw new RuntimeException('Product Master lacks read safeguard: ' . $guard);
+        }
+        if (str_contains($service, 'AuthorizedListPage::paginate(')
+            || str_contains($service, 'function allRows(')) {
+            throw new RuntimeException('Product Master must not paginate a complete catalog in PHP.');
         }
         foreach (["'PRODUCT_INVALID_ROLE'", "'full_name'", "'selectable'", "'leaf_transactionable'", "'image_url'", "'product_code'"] as $guard) {
             if (! str_contains($rules, $guard)) throw new RuntimeException('Product read projection missing: ' . $guard);

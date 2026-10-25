@@ -28,12 +28,12 @@ $actual = array_values(array_filter(scandir($modules) ?: [], static fn (string $
     $v !== '.' && $v !== '..' && is_dir($modules . '/' . $v)
 ));
 sort($actual);
-$expected = ['Access', 'Contact', 'Identity', 'Locations', 'Numbering', 'Organization', 'People', 'Product', 'Settings', 'Workflow'];
+$expected = ['Access', 'Contact', 'Identity', 'Import', 'Locations', 'Numbering', 'Organization', 'People', 'Pricing', 'Product', 'Settings', 'Workflow'];
 $check($actual === $expected, 'runtime modules equal the current Backend Rewrite owner list');
 foreach (['OrganizationManagement', 'PeopleManagement', 'EmployeeStructureManagement', 'ReadApi', 'ContactsManagement', 'ProductManagement'] as $obsolete) {
     $check(! file_exists($modules . '/' . $obsolete), 'obsolete root removed: ' . $obsolete);
 }
-foreach (['Access', 'Organization', 'People', 'Locations', 'Contact', 'Product'] as $owner) {
+foreach (['Access', 'Organization', 'People', 'Locations', 'Contact', 'Pricing', 'Product', 'Import'] as $owner) {
     $check(is_file($modules . '/' . $owner . '/MODULE.md'), $owner . ' owner MDR exists');
 }
 foreach ([

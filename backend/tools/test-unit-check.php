@@ -123,6 +123,52 @@ try {
         'm63b_avatar_cas_fixture.php',
         'm63b1_avatar_dev_safety_pure.php',
         'm63b2_admin_avatar_dev_safety_pure.php',
+        'm63c_avatar_race_safety_pure.php',
+        'm63c_avatar_failure_fixture.php',
+        'm63c_avatar_service_fault_fixture.php',
+        'm64a_lookup_rules_pure.php',
+        'm64a_contract_pure.php',
+        'm64a1_sql_scope_pure.php',
+        'm71_conversion_rules_pure.php',
+        'm71_conversion_contract_pure.php',
+        'm71_conversion_plan_fixture.php',
+        'm72_combo_rules_pure.php',
+        'm72_combo_graph_fixture.php',
+        'm72_combo_contract_pure.php',
+        'm73_price_rules_pure.php',
+        'm73_price_sql_pure.php',
+        'm73_price_item_plan_fixture.php',
+        'm73_price_contract_pure.php',
+        'm74_relation_rules_pure.php',
+        'm74_relation_sql_pure.php',
+        'm74_relation_contract_pure.php',
+        'm74_relation_projection_fixture.php',
+        'm8_template_pure.php',
+        'm8_reader_fixture.php',
+        'm8_sql_scope_pure.php',
+        'm8_contract_pure.php',
+        'm85_sql_scope_pure.php',
+        'm85_product_sql_pure.php',
+        'm85_product_projection_fixture.php',
+        'm85_product_snapshot_fixture.php',
+        'm86_catalog_sql_pure.php',
+        'm86_catalog_scope_pure.php',
+        'm86b_org_scope_pure.php',
+        'm86b_org_sql_pure.php',
+        'm86b_controller_contract_pure.php',
+        'm86c_scope_pure.php',
+        'm86c_sql_pure.php',
+        'm86c_controller_contract_pure.php',
+        'm86d_enforce_contract_pure.php',
+        'm86d_enforce_runtime_fixture.php',
+        'm86e_contact_sql_pure.php',
+        'm86e_contact_scope_pure.php',
+        'm86e_contact_contract_pure.php',
+        'm87_plan_pure.php',
+        'm87_sql_contract_pure.php',
+        'm87_http_safety_pure.php',
+        'm87a_preflight_pure.php',
+        'm87a_launcher_pure.php',
     ];
     $present = array_map(static fn (string $path): string => basename($path), $tests);
     $missing = array_values(array_diff($requiredSuites, $present));
@@ -231,11 +277,82 @@ try {
             throw new RuntimeException('Missing or unsafe M6.3B.2 DEV delegated Avatar QA component: '.$qa);
         }
     }
+    foreach (['m63c_dev_avatar_race.php', 'm63c/M63CRacePlan.php',
+        'm63c/M63CAvatarRace.php', 'm63c/M63CRaceWorker.php'] as $qa) {
+        if (!is_file(__DIR__.'/'.$qa) || is_link(__DIR__.'/'.$qa)) {
+            throw new RuntimeException('Missing or unsafe M6.3C Avatar concurrency QA component: '.$qa);
+        }
+    }
     if (!is_file(__DIR__.'/m63b_accept.php') || !is_file(__DIR__.'/m6/M63BSourceAcceptance.php')) {
         throw new RuntimeException('Missing M6.3B User Avatar acceptance gate.');
     }
     require_once __DIR__.'/m6/M63BSourceAcceptance.php';
     M63BSourceAcceptance::verify($root);
+    if (!is_file(__DIR__.'/m64a_accept.php') || !is_file(__DIR__.'/m6/M64ASourceAcceptance.php')) {
+        throw new RuntimeException('Missing M6.4A selector source acceptance gate.');
+    }
+    require_once __DIR__.'/m6/M64ASourceAcceptance.php';
+    M64ASourceAcceptance::verify($root);
+    if (!is_file(__DIR__.'/m71_accept.php') || !is_file(__DIR__.'/m7/M71SourceAcceptance.php')) {
+        throw new RuntimeException('Missing M7.1 Product UOM conversion acceptance gate.');
+    }
+    require_once __DIR__.'/m7/M71SourceAcceptance.php';
+    M71SourceAcceptance::verify($root);
+    if (!is_file(__DIR__.'/m72_accept.php') || !is_file(__DIR__.'/m7/M72SourceAcceptance.php')) {
+        throw new RuntimeException('Missing M7.2 Combo source acceptance gate.');
+    }
+    require_once __DIR__.'/m7/M72SourceAcceptance.php';
+    M72SourceAcceptance::verify($root);
+    if (!is_file(__DIR__.'/m73_accept.php') || !is_file(__DIR__.'/m7/M73SourceAcceptance.php')) {
+        throw new RuntimeException('Missing M7.3 Pricing source acceptance gate.');
+    }
+    require_once __DIR__.'/m7/M73SourceAcceptance.php';
+    M73SourceAcceptance::verify($root);
+    if (!is_file(__DIR__.'/m74_accept.php') || !is_file(__DIR__.'/m7/M74SourceAcceptance.php')) {
+        throw new RuntimeException('Missing M7.4 Product relationship acceptance gate.');
+    }
+    require_once __DIR__.'/m7/M74SourceAcceptance.php';
+    M74SourceAcceptance::verify($root);
+    if (!is_file(__DIR__.'/m8_accept.php') || !is_file(__DIR__.'/m8/M8SourceAcceptance.php')) {
+        throw new RuntimeException('Missing M8 shared import source acceptance gate.');
+    }
+    require_once __DIR__.'/m8/M8SourceAcceptance.php';
+    M8SourceAcceptance::verify($root);
+    if (!is_file(__DIR__.'/m86_accept.php') || !is_file(__DIR__.'/m86/M86SourceAcceptance.php')) {
+        throw new RuntimeException('Missing M8.6A Catalog SQL scope acceptance gate.');
+    }
+    require_once __DIR__.'/m86/M86SourceAcceptance.php';
+    M86SourceAcceptance::verify($root);
+    if (!is_file(__DIR__.'/m86b_accept.php') || !is_file(__DIR__.'/m86b/M86BSourceAcceptance.php')) {
+        throw new RuntimeException('Missing M8.6B Organization SQL scope acceptance gate.');
+    }
+    require_once __DIR__.'/m86b/M86BSourceAcceptance.php';
+    M86BSourceAcceptance::verify($root);
+    if (!is_file(__DIR__.'/m86c_accept.php') || !is_file(__DIR__.'/m86c/M86CSourceAcceptance.php')) {
+        throw new RuntimeException('Missing M8.6C People MASTER SQL acceptance gate.');
+    }
+    require_once __DIR__.'/m86c/M86CSourceAcceptance.php';
+    M86CSourceAcceptance::verify($root);
+    if (!is_file(__DIR__.'/m86d_accept.php') || !is_file(__DIR__.'/m86d/M86DSourceAcceptance.php')) {
+        throw new RuntimeException('Missing M8.6D mandatory canonical/SQL acceptance gate.');
+    }
+    require_once __DIR__.'/m86d/M86DSourceAcceptance.php';
+    M86DSourceAcceptance::verify($root);
+    if (!is_file(__DIR__.'/m86e_accept.php') || !is_file(__DIR__.'/m86e/M86ESourceAcceptance.php')) {
+        throw new RuntimeException('Missing M8.6E Contact SQL source acceptance gate.');
+    }
+    require_once __DIR__.'/m86e/M86ESourceAcceptance.php';
+    M86ESourceAcceptance::verify($root);
+    if (!is_file(__DIR__.'/m87_accept.php') || !is_file(__DIR__.'/m87/M87SourceAcceptance.php')) {
+        throw new RuntimeException('Missing M8.7 DEV SQL/PBAC runtime-audit source gate.');
+    }
+    require_once __DIR__.'/m87/M87SourceAcceptance.php';
+    M87SourceAcceptance::verify($root);
+    if (!is_file(__DIR__.'/m87a_accept.php') || !is_file(__DIR__.'/m87/M87ASourceAcceptance.php')) {
+        throw new RuntimeException('Missing M8.7A DEV one-run acceptance gate.');
+    }
+    require_once __DIR__.'/m87/M87ASourceAcceptance.php';
+    M87ASourceAcceptance::verify($root);
     foreach (['m62b_dev_http.php', 'm62b/M62BDevPlan.php', 'm62b/M62BDevHttp.php'] as $qa) {
         if (! is_file(__DIR__ . '/' . $qa) || is_link(__DIR__ . '/' . $qa)) {
             throw new RuntimeException('Missing or unsafe M6.2B.1 DEV negative HTTP probe: ' . $qa);
@@ -256,7 +373,7 @@ try {
         throw new RuntimeException('M3.4D acceptance auditor missing.');
     }
     echo 'CHECK PASS: ' . count($tests) . ' pure/fixture scripts, '
-        . count($ops) . " pinned M3 mutations + 14 M4 + 6 M5.1 + 3 M5.2 + 6 M5.3 + 6 M5.4 + 5 M5.5 + 10 M6.1 + 2 M6.2A + 3 M6.2B + 2 M6.3A + 2 M6.3B source routes, 7 read-only audit commands.\n";
+        . count($ops) . " pinned M3 mutations + 14 M4 + 6 M5.1 + 3 M5.2 + 6 M5.3 + 6 M5.4 + 5 M5.5 + 10 M6.1 + 2 M6.2A + 3 M6.2B + 2 M6.3A + 2 M6.3B + 3 M6.4A + 2 M7.1 + 2 M7.2 + 7 M7.3 + 3 M7.4 + 4 M8 source routes, 7 read-only audit commands.\n";
 } catch (Throwable $e) {
     fwrite(STDERR, 'CHECK FAILED: ' . $e->getMessage() . "\n");
     exit(1);

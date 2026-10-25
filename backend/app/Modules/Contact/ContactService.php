@@ -5,12 +5,16 @@ declare(strict_types=1);
 namespace App\Modules\Contact;
 
 use App\Exceptions\DomainException;
+use App\Modules\Access\Query\AuthorizationSqlScopeCompiler;
 use App\Modules\Access\ResourceStateRepository;
 use App\Modules\Access\UnifiedAccessService;
-use App\Shared\Http\AuthorizedListPage;
+use App\Shared\Read\UtcBusinessDate;
 use CodeIgniter\Database\BaseConnection;
 use CodeIgniter\Exceptions\PageNotFoundException;
 use CodeIgniter\Shield\Entities\User;
+use DateTimeImmutable;
+use DateTimeZone;
+use UnexpectedValueException;
 use Throwable;
 
 /**
@@ -24,11 +28,15 @@ final class ContactService
     private readonly ResourceStateRepository $states;
     private readonly ContactScope $scope;
     private readonly string $actorId;
+    private readonly DateTimeImmutable $instant;
+    private readonly User $actor;
 
     public function __construct(User $actor, ?BaseConnection $connection = null)
     {
+        $this->actor = $actor;
         $this->db = $connection ?? db_connect();
-        $this->access = new UnifiedAccessService($actor, $this->db);
+        $this->instant = new DateTimeImmutable('now', new DateTimeZone('UTC'));
+        $this->access = new UnifiedAccessService($actor, $this->db, $this->instant);
         $this->states = new ResourceStateRepository($this->db);
         $this->scope = new ContactScope($this->db);
         $this->actorId = ContactRules::id((string) $actor->id, 'actor_user_id');
@@ -37,34 +45,99 @@ final class ContactService
     /** @param array<string,mixed>|null $query @return array{data:list<array<string,mixed>>,page:int,page_size:int,total:int} */
     public function list(?array $query = null): array
     {
-        $rows = $this->db->table('contacts')->orderBy('id', 'ASC')->get()->getResultArray();
-        $authorized = [];
-        foreach ($rows as $row) {
-            try {
-                $scope = $this->scope->resolve($row);
-            } catch (DomainException $exception) {
-                // Malformed/missing owner and ambiguous primary assignment never
-                // grant a contact visible outside its canonical owner scope.
-                if (! in_array($exception->getErrorCode(), [
-                    'CONTACT_OWNER_NOT_FOUND', 'CONTACT_PRIMARY_SCOPE_UNAVAILABLE',
-                    'CONTACT_TYPE_UNSUPPORTED', 'CONTACT_TYPE_REQUIRED',
-                    'CONTACT_OWNER_REFERENCE_REQUIRED',
-                ], true)) {
-                    throw $exception;
+        $params = ContactSql::normalize($query ?? []);
+        return $this->readSnapshot(function(UnifiedAccessService $access) use ($params): array {
+            [$organization, $employee] = $this->compileContactScopes($access);
+            $date = UtcBusinessDate::at($this->instant);
+            $readScope = new ContactScope($this->db, $date);
+            $plan = ContactSql::collection($params, $organization, $employee,
+                $date, (string)$this->db->DBPrefix);
+            $countQuery = $this->db->query($plan['count_sql'], $plan['count_binds']);
+            if ($countQuery === false) throw new UnexpectedValueException('Contact scoped COUNT failed.');
+            $total = self::validCount($countQuery->getRowArray()['total'] ?? null);
+            if ($total === 0) return ['data'=>[], 'page'=>$params['page'], 'page_size'=>$params['page_size'], 'total'=>0];
+            $pageQuery = $this->db->query($plan['rows_sql'], $plan['rows_binds']);
+            if ($pageQuery === false) throw new UnexpectedValueException('Contact scoped page query failed.');
+            $rows = array_values($pageQuery->getResultArray());
+            if (count($rows) > $params['page_size']) throw new UnexpectedValueException('Contact page exceeded requested limit.');
+            foreach ($rows as $row) {
+                // Defense in depth. A mismatch must fail the whole response,
+                // NEVER silently post-filter and corrupt an authorized total.
+                $scope = $readScope->resolve($row);
+                if (!$access->canView($scope['resource'], $scope['target'])) {
+                    throw new UnexpectedValueException('AUTH_SCOPE_PBAC_MISMATCH: Contact list.');
                 }
-                continue;
             }
-            if ($this->access->canView($scope['resource'], $scope['target'])) {
-                $authorized[] = $row; // never expose the synthetic organization_id
-            }
-        }
-        return AuthorizedListPage::paginate('contact', $authorized, $query ?? []);
+            return ['data'=>$rows, 'page'=>$params['page'], 'page_size'=>$params['page_size'], 'total'=>$total];
+        });
     }
 
     /** @return array<string,mixed> */
     public function show(string $id): array
     {
-        return $this->visible($this->target(ContactRules::id($id)));
+        $id = ContactRules::id($id);
+        return $this->readSnapshot(function(UnifiedAccessService $access) use ($id): array {
+            [$organization, $employee] = $this->compileContactScopes($access);
+            $date = UtcBusinessDate::at($this->instant);
+            $readScope = new ContactScope($this->db, $date);
+            $plan = ContactSql::detail($id, $organization, $employee,
+                $date, (string)$this->db->DBPrefix);
+            $result = $this->db->query($plan['sql'], $plan['binds']);
+            if ($result === false) throw new UnexpectedValueException('Contact scoped detail failed.');
+            $row = $result->getRowArray();
+            if ($row === null) throw new PageNotFoundException('Contact record not available.');
+            $scope = $readScope->resolve($row);
+            if (!$access->canView($scope['resource'], $scope['target'])) {
+                throw new UnexpectedValueException('AUTH_SCOPE_PBAC_MISMATCH: Contact detail.');
+            }
+            return $row;
+        });
+    }
+
+    /** @return array{0:\App\Modules\Access\Query\AuthorizedSqlScope,1:\App\Modules\Access\Query\AuthorizedSqlScope} */
+    private function compileContactScopes(UnifiedAccessService $access): array
+    {
+        $compiler = new AuthorizationSqlScopeCompiler($access);
+        // Two DIFFERENT PBAC resources; one generic `contact` grant is invalid.
+        return [
+            $compiler->compile(new ContactScopeProvider('organization_contact', $this->db)),
+            $compiler->compile(new ContactScopeProvider('employee_contact', $this->db)),
+        ];
+    }
+
+    /** Consistent READ snapshot. Never commit or roll back a caller's write transaction. */
+    private function readSnapshot(callable $work): mixed
+    {
+        if ($this->db->transDepth !== 0) {
+            throw new UnexpectedValueException('Contact GET cannot borrow another transaction.');
+        }
+        if ($this->db->query('SET TRANSACTION ISOLATION LEVEL REPEATABLE READ') === false
+            || !$this->db->transBegin()) {
+            throw new UnexpectedValueException('Cannot start Contact consistent read snapshot.');
+        }
+        try {
+            $access = new UnifiedAccessService($this->actor, $this->db, $this->instant);
+            $result = $work($access);
+            if (!$this->db->transStatus() || !$this->db->transCommit()) {
+                throw new UnexpectedValueException('Contact read snapshot failed to complete.');
+            }
+            return $result;
+        } catch (Throwable $exception) {
+            $this->db->transRollback();
+            $this->db->resetTransStatus();
+            throw $exception;
+        }
+    }
+
+    private static function validCount(mixed $value): int
+    {
+        $text = is_string($value) || is_int($value) ? (string)$value : '';
+        $limit = (string)PHP_INT_MAX;
+        if (preg_match('/\A[0-9]+\z/D', $text) !== 1 || strlen($text) > strlen($limit)
+            || (strlen($text) === strlen($limit) && strcmp($text,$limit)>0)) {
+            throw new UnexpectedValueException('Invalid Contact SQL COUNT result.');
+        }
+        return (int)$text;
     }
 
     /** @param array<string,mixed> $input @return array<string,mixed> */

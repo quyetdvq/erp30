@@ -29,7 +29,7 @@ try {
     throw new RuntimeException('invalid type accepted');
 } catch (UnexpectedValueException) { $ok(true, 'malformed type fails closed'); }
 $root=dirname(__DIR__);
-foreach (['Catalog/ProductCatalogService.php' => "$".'this->access->hasBaseViewPermission($this->resource)',
+foreach (['Catalog/ProductCatalogService.php' => "$".'access->hasBaseViewPermission($this->resource)',
     'Master/ProductReadService.php' => "$".'this->access->hasBaseViewPermission(\'product\')'] as $file => $expected) {
     $source = (string)file_get_contents($root.'/app/Modules/Product/'.$file);
     $ok(str_contains($source, $expected), $file.' uses UnifiedAccess snapshot');

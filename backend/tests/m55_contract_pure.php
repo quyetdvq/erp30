@@ -50,8 +50,10 @@ $check(str_contains($service, 'canView(') && str_contains($service, 'decideMutat
     && str_contains($service, 'decideTransitionAction('), 'VIEW and write PBAC both enforced');
 $check(str_contains($service,'transRollback()') && str_contains($service,' FOR UPDATE')
     && str_contains($service,'->where(\'status\','),'row locks and conditional state updates');
-$check(str_contains($service,'AuthorizedListPage::paginate(\'contact\'')
-    && str_contains($service, '$authorized[] = $row'), 'PBAC filters before list/count');
+$check(str_contains($service, 'ContactSql::collection(')
+    && str_contains($service, "['count_sql']")
+    && str_contains($service, "['rows_sql']")
+    && str_contains($service, 'AUTH_SCOPE_PBAC_MISMATCH'), 'SQL PBAC filters before list/count');
 $check(str_contains($service, 'CONTACT_PERSISTENCE_FAILED')
     && str_contains($service, 'WF_CONCURRENT_STATE_CHANGE'), 'database failures and concurrent transitions fail closed');
 $check(str_contains($controller,'listContacts()') && str_contains($controller,'getContact(')

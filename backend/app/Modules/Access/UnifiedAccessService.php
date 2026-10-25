@@ -30,6 +30,10 @@ final class UnifiedAccessService
         'resource' => 'SYSTEM', 'workflow_state' => 'SYSTEM',
         'lifecycle' => 'SYSTEM', 'policy' => 'ORGANIZATION',
         'authorization_log' => 'ORGANIZATION',
+        // Product imports are scoped to the trusted GROUP root (baseline ImportJobScopeResolver).
+        'import_job' => 'ORGANIZATION',
+        // M7.3 Pricing lists are owned by a persisted Organization, never MASTER.
+        'price_list' => 'ORGANIZATION',
     ];
 
     /** @var array<string,mixed> */
@@ -65,6 +69,142 @@ final class UnifiedAccessService
     }
 
     /**
+     * Compile the exact VIEW result for every canonical Lifecycle State of a
+     * MASTER resource. MASTER uses one trusted GROUP-root scope for all rows;
+     * therefore VIEW depends on actor, action, policy lanes and State, but NOT
+     * on the Product/UOM primary key. The caller must constrain SQL by the
+     * returned canonical State codes before COUNT, OFFSET or LIMIT.
+     *
+     * Restricted to explicitly reviewed MASTER resources. ORGANIZATION
+     * resources require a different scope-aware compiler; never fall back to
+     * an unscoped query or approximate ALLOW-policy JOIN.
+     *
+     * @return list<string> Canonical status codes authorized to view.
+     */
+    public function viewableMasterLifecycleStatuses(string $type): array
+    {
+        $type = ResourceStateCatalog::normalizedType($type);
+        if (! in_array($type, ['product', 'product_group', 'product_uom', 'employee', 'department', 'position'], true)) {
+            throw new UnexpectedValueException('SQL VIEW scope is not approved for resource: ' . $type);
+        }
+        $resource = $this->policies->resourceAction($type, 'view');
+        if ($resource['domain'] !== 'MASTER') {
+            throw new UnexpectedValueException('SQL VIEW scope requires MASTER domain: ' . $type);
+        }
+        $definition = $this->states->definitionFor($type);
+        if ($definition['mode'] !== ResourceStateCatalog::LIFECYCLE
+            || $definition['by_code'] === []) {
+            throw new UnexpectedValueException('SQL VIEW scope requires canonical Lifecycle states: ' . $type);
+        }
+        $ancestors = $this->ancestors($this->groupRoot());
+        $allowed = [];
+        foreach ($definition['by_code'] as $status => $stateId) {
+            if ($this->viewDecisionForState($type, $resource, $ancestors, $stateId)['allowed']) {
+                $allowed[] = $status;
+            }
+        }
+        return $allowed;
+    }
+
+    /**
+     * Trusted ORGANIZATION slot compilation for reviewed org-scoped resources.
+     * Organization IDs must come from the persisted Organization catalog,
+     * never from client IDs or the business rows being returned. Each (org, State)
+     * decision uses the SAME ancestry and PBAC lanes as persisted canView().
+     *
+     * @param list<string> $trustedOrganizationIds
+     * @return list<array{organization_id:string,status:string}>
+     */
+    public function viewableOrganizationStateBuckets(string $type, array $trustedOrganizationIds): array
+    {
+        $type = ResourceStateCatalog::normalizedType($type);
+        if (!in_array($type, ['price_list', 'organization', 'employee_assignment'], true)
+            && !in_array($type, ['organization_contact', 'employee_contact'], true)) {
+            throw new UnexpectedValueException('Unsupported ORGANIZATION SQL scope: ' . $type);
+        }
+        $resource = $this->policies->resourceAction($type, 'view');
+        if ($resource['domain'] !== 'ORGANIZATION') {
+            throw new UnexpectedValueException('Reviewed SQL scope requires ORGANIZATION domain.');
+        }
+        $definition = $this->states->definitionFor($type);
+        if ($definition['mode'] !== ($type === 'employee_assignment'
+            ? ResourceStateCatalog::NATIVE : ResourceStateCatalog::LIFECYCLE)
+            || $definition['by_code'] === []) {
+            throw new UnexpectedValueException('Reviewed Organization resource has no canonical States.');
+        }
+        $slots = [];
+        $seen = [];
+        foreach ($trustedOrganizationIds as $rawId) {
+            $id = PositiveId::value($rawId);
+            if (isset($seen[$id])) continue;
+            $seen[$id] = true;
+            $ancestors = $this->ancestors($id);
+            foreach ($definition['by_code'] as $status => $stateId) {
+                if ($this->viewDecisionForState($type, $resource, $ancestors, $stateId)['allowed']) {
+                    $slots[] = ['organization_id'=>$id, 'status'=>$status];
+                    if (count($slots) > 512) {
+                        throw new UnexpectedValueException('AUTH_SCOPE_COMPILATION_UNSUPPORTED: too many organization/State slots.');
+                    }
+                }
+            }
+        }
+        return $slots;
+    }
+
+    /**
+     * The Product import action has no persisted target/State; unlike create or
+     * edit it cannot use decideMutation(), which requires a locked object.
+     * Authorization still applies base permission, active Resource, effective
+     * assignments, GROUP scope and all policy lanes including ABSOLUTE_DENY.
+     */
+    public function canStartProductImport(): bool
+    {
+        $resource = $this->policies->resourceAction('product', 'import');
+        if ($resource['domain'] !== 'MASTER') {
+            throw new UnexpectedValueException('Product import requires MASTER domain.');
+        }
+        $ancestors = $this->ancestors($this->groupRoot());
+        $base = isset($this->actor['permissions']['product.import']);
+        $pre = AccessDecisionCore::decide(
+            $resource['status'] === 'ACTIVE', $base, $this->actor['employee_active'],
+            $this->actor['effective_assignments'], 'MASTER', $ancestors,
+            $this->actor['user_id'], $this->actor['group_ids'], [],
+        );
+        if (in_array($pre['reason'], [
+            'AUTH_RESOURCE_INACTIVE', 'AUTH_NO_BASE_PERMISSION', 'AUTH_EMPLOYEE_INELIGIBLE',
+            'AUTH_NO_EFFECTIVE_ASSIGNMENT', 'AUTH_OUT_OF_ASSIGNMENT_SCOPE',
+        ], true)) return false;
+        $decision = AccessDecisionCore::decide(
+            $resource['status'] === 'ACTIVE', $base, $this->actor['employee_active'],
+            $this->actor['effective_assignments'], 'MASTER', $ancestors,
+            $this->actor['user_id'], $this->actor['group_ids'],
+            $this->policies->applicable($resource, $ancestors, null),
+        );
+        return $decision['allowed'];
+    }
+
+    /** @return list<string> Group-scoped native ImportJob States authorized for VIEW. */
+    public function viewableProductImportStatuses(): array
+    {
+        $resource = $this->policies->resourceAction('import_job', 'view');
+        if ($resource['domain'] !== 'ORGANIZATION') {
+            throw new UnexpectedValueException('Import job view requires ORGANIZATION domain.');
+        }
+        $definition = $this->states->definitionFor('import_job');
+        if ($definition['mode'] !== ResourceStateCatalog::NATIVE || $definition['by_code'] === []) {
+            throw new UnexpectedValueException('Import job requires native States.');
+        }
+        $ancestors = $this->ancestors($this->groupRoot());
+        $allowed = [];
+        foreach ($definition['by_code'] as $status => $stateId) {
+            if ($this->viewDecisionForState('import_job', $resource, $ancestors, $stateId)['allowed']) {
+                $allowed[] = $status;
+            }
+        }
+        return $allowed;
+    }
+
+    /**
      * @param array<string,mixed> $persistedRow A row already fetched by a trusted backend repository.
      * @return array{allowed:bool,reason:string,matched_policy_ids:list<string>,decisive_policy_ids:list<string>}
      */
@@ -88,8 +228,20 @@ final class UnifiedAccessService
         $stateId = $this->states->persistedStateId($type, $persistedRow);
         $scopeId = $this->evaluationOrganization($type, $resource['domain'], $persistedRow);
         $ancestors = $this->ancestors($scopeId);
-        // Bail early on failures before querying policy rows, without ever
-        // treating a missing policy as a permission grant on its own.
+        return $this->viewDecisionForState($type, $resource, $ancestors, $stateId);
+    }
+
+    /**
+     * Shared PBAC decision for a verified VIEW resource, canonical State ID,
+     * and trusted organization ancestry. Used by persisted-row VIEW as well
+     * as its exact MASTER state-scope compilation.
+     *
+     * @param array<string,mixed> $resource
+     * @param list<string> $ancestors
+     * @return array{allowed:bool,reason:string,matched_policy_ids:list<string>,decisive_policy_ids:list<string>}
+     */
+    private function viewDecisionForState(string $type, array $resource, array $ancestors, ?string $stateId): array
+    {
         $pre = AccessDecisionCore::decide(
             $resource['status'] === 'ACTIVE',
             isset($this->actor['permissions'][$type . '.view']),
@@ -107,7 +259,6 @@ final class UnifiedAccessService
         ], true)) {
             return $pre;
         }
-        $policyRows = $this->policies->applicable($resource, $ancestors, $stateId);
         return AccessDecisionCore::decide(
             $resource['status'] === 'ACTIVE',
             isset($this->actor['permissions'][$type . '.view']),
@@ -117,7 +268,7 @@ final class UnifiedAccessService
             $ancestors,
             $this->actor['user_id'],
             $this->actor['group_ids'],
-            $policyRows,
+            $this->policies->applicable($resource, $ancestors, $stateId),
         );
     }
 
@@ -241,7 +392,8 @@ final class UnifiedAccessService
         // Baseline AuthorizationLogScopeResolver maps a NULL *persisted* log
         // organization to the GROUP root. Other ORGANIZATION resources must
         // have their own persisted scope (never from client hints).
-        if ($type === 'authorization_log' && ($row['organization_id'] ?? null) === null) {
+        if (($type === 'authorization_log' && ($row['organization_id'] ?? null) === null)
+            || ($type === 'import_job' && ($row['entity_type'] ?? null) === 'PRODUCT')) {
             return $this->groupRoot();
         }
         $value = $type === 'organization' ? ($row['id'] ?? null) : ($row['organization_id'] ?? null);

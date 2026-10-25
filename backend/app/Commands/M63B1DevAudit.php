@@ -42,7 +42,17 @@ final class M63B1DevAudit extends BaseCommand
         if ($stored!==($expected==='EMPTY'?null:$expected)) {
             throw new RuntimeException('Existing avatar metadata differs from expected value. Never overwrite it with QA.');
         }
-        $result=['status'=>'PASS','id'=>$id,'active'=>true,'avatar_filename'=>$stored];
+        // Extra SELECT-only origin attestation for the delegated DEV QA runner.
+        // A configured .env does not prove the connected database name.
+        $databaseQuery = $db->query('SELECT DATABASE() AS database_name');
+        if ($databaseQuery === false) throw new RuntimeException('Database name SELECT failed.');
+        $databaseRow = $databaseQuery->getRowArray();
+        $databaseName = $databaseRow['database_name'] ?? null;
+        if (!is_string($databaseName) || $databaseName === '') {
+            throw new RuntimeException('Connected database name unavailable.');
+        }
+        $result=['status'=>'PASS','id'=>$id,'active'=>true,'avatar_filename'=>$stored,
+            'database_name'=>$databaseName];
         CLI::write('M6.3B.1 READ-ONLY SQL: '.($stored===null?'PASS_DEV_AVATAR_METADATA_EMPTY':'PASS_DEV_AVATAR_METADATA_MATCH'));
         CLI::write('User id='.$id.'; avatar='.($stored===null?'EMPTY':'MATCHED_PUBLIC_FILENAME').'; no SQL writes.');
         CLI::write('M63B1_DB_JSON='.json_encode($result,JSON_THROW_ON_ERROR|JSON_UNESCAPED_SLASHES));

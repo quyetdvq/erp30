@@ -254,17 +254,18 @@ namespace {
         static fn () => $u2->decidePersisted('organization','delete',['id'=>'3','status'=>'ACTIVE']));
     reject32('new engine does not trust client-like missing persisted status',
         static fn () => $u2->canView('organization',['id'=>'3']));
-    ck32('unset M3.2 mode defaults to accepted legacy evaluator',
+    ck32('bridge always delegates to canonical UnifiedAccessService',
         (new ReadAccessBridge($actor,$db,$today))->canView('organization',['id'=>'3','status'=>'INACTIVE'])
-        === $l2->canView('organization',['id'=>'3','status'=>'INACTIVE']));
-    $bridge = new ReadAccessBridge($actor,$db,$today,'shadow');
-    ck32('shadow returns legacy decision and never broadens',
-        $bridge->canView('organization',['id'=>'3','status'=>'INACTIVE']) === false);
-    reject32('unknown cutover mode fails closed',
+        === $u2->canView('organization',['id'=>'3','status'=>'INACTIVE']));
+    reject32('legacy override is rejected, not silently used',
+        static fn () => new ReadAccessBridge($actor,$db,$today,'legacy'));
+    reject32('shadow override is rejected, not silently used',
+        static fn () => new ReadAccessBridge($actor,$db,$today,'shadow'));
+    reject32('unknown override is rejected',
         static fn () => new ReadAccessBridge($actor,$db,$today,'open_all'));
     $queriesBefore = array_sum($db->calls);
-    $readBridge = new ReadAccessBridge($actor,$db,$today,'enforce');
-    ck32('enforce delegates exclusively to new evaluator',
+    $readBridge = new ReadAccessBridge($actor,$db,$today);
+    ck32('canonical read denies ABSOLUTE_DENY',
         ! $readBridge->canView('organization',['id'=>'3','status'=>'INACTIVE']));
     ck32('query activity occurs only for authoritative local reads', array_sum($db->calls)>$queriesBefore);
     echo "TOTAL: {$assertions} M3.2 runtime fixture assertions passed.\n";

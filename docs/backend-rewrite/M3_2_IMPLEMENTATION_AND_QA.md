@@ -1,3 +1,5 @@
+> **M8.6D supersession notice (2026-10-25):** This document records historical opt-in behavior only. The current source has **no** `DINKERP_M32_READ_MODE`, `DINKERP_M86B_SQL_SCOPE_MODE`, or `DINKERP_M86C_SQL_SCOPE_MODE` runtime switch. Canonical authorization and reviewed Organization/People SQL are mandatory after M8.6D. See `M8_6D_CANONICAL_SQL_ENFORCEMENT_QA.md`. Do not follow the old flag-toggle steps below.
+
 # DinkERP Backend v2 — M3.2 PBAC Runtime Integration
 
 **Bản cập nhật:** M3.2 (23/10/2026). **Trạng thái:** Đã viết và kiểm thử offline; chưa nghiệm thu so sánh Runtime DB và HTTP trên máy chủ của người dùng.

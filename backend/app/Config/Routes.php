@@ -127,6 +127,24 @@ $routes->group('api/v1', ['filter' => 'cors'], static function (RouteCollection 
     // M6.3B Shield User avatar mutation, same public-upload store, no image GET proxy.
     require __DIR__ . '/M63BRoutes.php';
 
+    // M6.4A PBAC-filtered Product selection and batch label reads (3 API-050 routes).
+    require __DIR__ . '/M64ARoutes.php';
+
+    // M7.1 Product UOM conversion list and atomic replace (two frozen routes).
+    require __DIR__ . '/M71Routes.php';
+
+    // M7.2 atomic COMBO composition management (two frozen API-050 routes).
+    require __DIR__ . '/M72Routes.php';
+
+    // M7.3 Price Lists CRUD + atomic Product/UOM item sets (seven frozen routes).
+    require __DIR__ . '/M73Routes.php';
+
+    // M7.4 read-only Product detail, relation preview and SALES UOM resolution.
+    require __DIR__ . '/M74Routes.php';
+
+    // M8 shared Import Framework + Product Adapter: four frozen operations.
+    require __DIR__ . '/M8Routes.php';
+
     // M2.1 read-only Frontend compatibility; every row is PBAC-filtered.
     $routes->get('provinces', [ReadCatalogController::class, 'listProvinces']);
     $routes->get('provinces/(:num)', [ReadCatalogController::class, 'showProvince']);

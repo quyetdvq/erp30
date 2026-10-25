@@ -7,7 +7,7 @@ namespace App\Modules\Product\Master;
 use App\Exceptions\DomainException;
 use App\Shared\Media\ImageUrl;
 
-/** Pure Product role/name projection. The COMPLETE catalog is required to derive roles safely. */
+/** Legacy whole-catalog fixture plus bounded SQL-joined Product role/name projection. */
 final class ProductReadRules
 {
     /**
@@ -57,28 +57,89 @@ final class ProductReadRules
             } else {
                 self::invalid('invalid_product_type');
             }
-            $row['role'] = $role;
-            $row['full_name'] = $fullName;
-            $row['selectable'] = strtoupper((string) ($row['status'] ?? '')) === 'ACTIVE'
-                && in_array($role, ['SIMPLE', 'CHILD', 'COMBO'], true);
-            $row['leaf_transactionable'] = in_array($role, ['SIMPLE', 'CHILD'], true);
-            $row['serial_management_enabled'] = in_array(
-                $row['serial_management_enabled'] ?? null, [true, 1, '1'], true
-            );
-            $row['image_available'] = is_string($row['image_filename'] ?? null)
-                && $row['image_filename'] !== '';
-            // Only validated baseline-shaped filenames are served via public/upload/YYYY.
-            // Old private 40-hex names and arbitrary paths never become static URLs.
-            $row['image_url'] = ImageUrl::for(
-                is_string($row['image_filename'] ?? null) ? $row['image_filename'] : null,
-                'product',
-            );
-            unset($row['image_filename'], $row['image_mime'], $row['image_size_bytes']);
-            $row['product_code'] = $row['code'] ?? null;
-            unset($row['code']);
-            $projected[$id] = $row;
+            $projected[$id] = self::project($row, $role, $fullName);
         }
         return $projected;
+    }
+
+    /**
+     * Project exactly ONE Product from a scoped SQL row with indexed Parent
+     * JOIN and child EXISTS metadata, without hydrating all other products.
+     * @param array<string,mixed> $joined
+     * @return array<string,mixed>
+     */
+    public static function describeJoined(array $joined): array
+    {
+        $id = self::id($joined['id'] ?? null);
+        $type = strtoupper((string) ($joined['product_type'] ?? ''));
+        $parentId = ($joined['parent_product_id'] ?? null) === null
+            ? null : self::id($joined['parent_product_id']);
+        $children = $joined['__has_children'] ?? null;
+        if (!in_array($children, [true,false,0,1,'0','1'], true)) self::invalid('missing_child_structure');
+        $hasChildren = in_array($children, [true,1,'1'], true);
+        if ($type === 'COMBO') {
+            if ($parentId !== null || $hasChildren || ($joined['product_child_name'] ?? null) !== null) {
+                self::invalid('combo_structure');
+            }
+            $role = 'COMBO';
+            $fullName = self::name($joined['product_name'] ?? null);
+        } elseif ($type === 'STANDARD') {
+            if ($parentId !== null) {
+                if ($parentId === $id || $hasChildren || ($joined['product_name'] ?? null) !== null
+                    || strtoupper((string)($joined['__parent_type'] ?? '')) !== 'STANDARD'
+                    || ($joined['__parent_parent_id'] ?? null) !== null
+                    || ($joined['__parent_child_name'] ?? null) !== null) {
+                    self::invalid('parent_not_root_standard');
+                }
+                $role = 'CHILD';
+                // A child may be VIEW-authorized while its parent State is
+                // hidden. Never leak the parent's label via full_name.
+                $parentVisibility = $joined['__parent_visible'] ?? null;
+                if (!in_array($parentVisibility, [true,false,0,1,'0','1'], true)) {
+                    self::invalid('missing_parent_visibility_scope');
+                }
+                $parentVisible = in_array($parentVisibility, [true,1,'1'], true);
+                $childName = self::name($joined['product_child_name'] ?? null);
+                $fullName = $parentVisible
+                    ? self::name($joined['__parent_name'] ?? null) . ' - ' . $childName
+                    : $childName;
+            } else {
+                if (($joined['product_child_name'] ?? null) !== null) self::invalid('root_child_name');
+                $role = $hasChildren ? 'PARENT' : 'SIMPLE';
+                $fullName = self::name($joined['product_name'] ?? null);
+            }
+        } else {
+            self::invalid('invalid_product_type');
+        }
+        foreach (['__parent_name','__parent_visible','__parent_type','__parent_parent_id','__parent_child_name','__has_children'] as $key) {
+            unset($joined[$key]);
+        }
+        return self::project($joined, $role, $fullName);
+    }
+
+    /** @param array<string,mixed> $row @return array<string,mixed> */
+    private static function project(array $row, string $role, string $fullName): array
+    {
+        $row['role'] = $role;
+        $row['full_name'] = $fullName;
+        $row['selectable'] = strtoupper((string) ($row['status'] ?? '')) === 'ACTIVE'
+            && in_array($role, ['SIMPLE', 'CHILD', 'COMBO'], true);
+        $row['leaf_transactionable'] = in_array($role, ['SIMPLE', 'CHILD'], true);
+        $row['serial_management_enabled'] = in_array(
+            $row['serial_management_enabled'] ?? null, [true, 1, '1'], true
+        );
+        $row['image_available'] = is_string($row['image_filename'] ?? null)
+            && $row['image_filename'] !== '';
+        // Only validated baseline-shaped filenames are served via public/upload/YYYY.
+        // Old private 40-hex names and arbitrary paths never become static URLs.
+        $row['image_url'] = ImageUrl::for(
+            is_string($row['image_filename'] ?? null) ? $row['image_filename'] : null,
+            'product',
+        );
+        unset($row['image_filename'], $row['image_mime'], $row['image_size_bytes']);
+        $row['product_code'] = $row['code'] ?? null;
+        unset($row['code']);
+        return $row;
     }
 
     /** @param array<string,mixed> $query @return array<string,mixed> */
