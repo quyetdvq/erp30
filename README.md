@@ -1,3 +1,13 @@
+# DinkERP — Development checkpoint (26/10/2026)
+
+**Hướng phát triển mới:** `backend/` là code CI4 chính để phát triển tính năng từ M11. `backend_baseline/` chỉ là tham chiếu lịch sử của giai đoạn rewrite. Các gate fingerprint, kiểm thử so sánh parity với baseline và yêu cầu giữ cố định 150 routes trước đây đã hoàn thành mục đích và **không còn là điều kiện bắt buộc** khi phát triển tính năng mới. Có thể sửa kiến trúc, API, PBAC và chức năng cũ khi cần; thay bằng kiểm thử dữ liệu, bảo mật, migration, giao dịch, API và UI đúng theo tính năng đang làm.
+
+**Migration/Seeder port:** 18 migration + 4 seeder nghiệp vụ hiện nằm trong `backend/app/Database/`; có Seeder tổng, dependency helper và preflight chỉ đọc. **Chưa có thay đổi database thực tế**. Không chạy trực tiếp 18 migration trên DB ERP có bảng sẵn nếu chưa reconcile lịch sử. Xem [`backend/app/Database/README.md`](backend/app/Database/README.md) và [`docs/Notifications/M11_0_MIGRATION_SEEDER_PORT_DECISIONS_2026-10-26.md`](docs/Notifications/M11_0_MIGRATION_SEEDER_PORT_DECISIONS_2026-10-26.md).
+
+Các phần README bên dưới là lịch sử milestone M0–M9, giữ làm tài liệu tham khảo, không phải policy áp dụng cho M11.
+
+---
+
 # DinkERP — Current Source Checkpoint (M9.3 candidate, 2026-10-25)
 
 - Source base: `erp_v1.5.0.zip` + accepted **M9.1** Employee optimization and E2E correction + **M9.2** read-only QA. **Do not apply the stale M9.0 patch**; the M9.3 source fingerprint incorporates accepted M9.1 changes.

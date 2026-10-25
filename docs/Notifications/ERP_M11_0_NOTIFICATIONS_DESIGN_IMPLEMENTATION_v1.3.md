@@ -1,3 +1,5 @@
+> **Cập nhật quyết định 26/10/2026:** Tài liệu này được viết trong bối cảnh rewrite cũ. Khi triển khai M11 trên ERP v1.6.0, các điều kiện giữ nguyên fingerprint/route count và chạy lại gate parity M0–M9 **không còn bắt buộc**. Migration/Seeder 001–018 đã được port vào `backend/app/Database`; các vấn đề onboarding DB có dữ liệu và giới hạn phần đã hoàn thành được ghi tại [addendum Migration/Seeder](M11_0_MIGRATION_SEEDER_PORT_DECISIONS_2026-10-26.md). Những mục thiết kế Notifications còn lại vẫn là đề xuất/đặc tả, chưa phải code đã triển khai.
+
 # M11.0 — THIẾT KẾ & KẾ HOẠCH TRIỂN KHAI NOTIFICATIONS
 
 **DinkERP · Design / Implementation Specification · v1.3 · 25/10/2026**  

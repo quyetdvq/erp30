@@ -1,3 +1,9 @@
+# Ghi chú phát triển M11 (26/10/2026)
+
+Đây là backend chính để phát triển tính năng sau giai đoạn rewrite. `backend_baseline/` là tư liệu lịch sử; các bài kiểm tra fingerprint/parity legacy không còn là gate bắt buộc. Migration/Seeder nghiệp vụ đã được đưa vào `app/Database/`. **Không** chạy migrate trên DB đã có bảng trước khi đối chiếu schema/migration history; xem [`app/Database/README.md`](app/Database/README.md) và `php spark db:legacy-preflight` (chỉ đọc).
+
+---
+
 # DinkERP Backend v2 — source chính trong `erp/backend/`
 
 - Đây là codebase PHP/CodeIgniter 4 + Shield **mới**, không sử dụng module kinh doanh v1.

@@ -11,6 +11,9 @@
 **/writable/uploads/*
 **/test-results/*
 **/playwright-report/*
+backend/TEMP/**
+*.patch
+*.PATCH
 
 # Dependencies and generated frontend output
 **/vendor/
