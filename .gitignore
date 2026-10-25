@@ -34,3 +34,9 @@ Thumbs.db
 # M3.4 sandbox/session/acceptance outputs must not be committed
 backend/writable/m34b/
 backend/writable/m34d/
+
+# M9.3: never ship Office lock files (especially under frontend/public).
+**/~$*.xlsx
+**/~[0-9]*$*.xlsx
+**/__pycache__/
+*.pyc
