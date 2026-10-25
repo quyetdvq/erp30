@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { rowAllowedActions } from '@/components/lists/rowActionPolicy'
 import { computed, onMounted, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import type { Employee, EmployeeAssignment } from '@/api/generated/types.gen'
@@ -43,7 +44,7 @@ import type { AssignmentMode, EmployeeDetailTab as Tab, Gender } from '../employ
 
 const { t, locale } = useI18n()
 const { hasBasePermission } = useBasePermission()
-const workflowStates = useBusinessWorkflowStates('employee')
+const workflowStates = useBusinessWorkflowStates('employee', ['ACTIVE', 'INACTIVE'], false)
 
 const state = useListState<Employee>((query) => listEmployeePage(query), { sort: 'employee_name' })
 const selectedId = ref<string | null>(null)
@@ -65,7 +66,14 @@ const {
   departments,
   positions,
   employeeLookup,
+  managerDirectoryLoading,
+  managerDirectoryReady,
+  managerDirectoryError,
+  managerName,
   managerSelectOptions,
+  loadPageManagerNames,
+  loadManagerDirectory,
+  invalidateManagerDirectory,
   organizationSelectOptions,
   departmentSelectOptions,
   positionSelectOptions,
@@ -87,7 +95,8 @@ const {
   selectedAssignments,
   currentPrimary,
   loadAssignments,
-  loadAllAssignments,
+  loadPageAssignments,
+  resetSelectedAssignments,
 } = useEmployeeAssignments(selectedId, assignmentMode)
 
 const employeeDraft = useUnsavedChanges(employeeForm, employeeModal)
@@ -109,6 +118,12 @@ function closeAssignmentForm(): void {
 const selected = computed<Employee>(
   () => state.rows.value.find((row) => String(row.id) === selectedId.value) as Employee,
 )
+function displayManager(id?: string | number | bigint): string {
+  if (id === null || id === undefined || id === '') return '—'
+  return state.rows.value.find((row) => String(row.id) === String(id))?.employee_name
+    ?? managerName(id)
+}
+
 const genderLabel = (value: Gender): string =>
   value === 'MALE'
     ? t('people.genderMale')
@@ -182,22 +197,29 @@ const columns: readonly ListColumn<Employee>[] = [
   {
     key: 'manager',
     labelKey: 'people.manager',
-    value: (row) =>
-      employeeLookup.value.find((manager) => String(manager.id) === String(row.manager_employee_id))
-        ?.employee_name ?? '—',
+    value: (row) => displayManager(row.manager_employee_id),
   },
   { key: 'status', labelKey: 'people.status' },
   { key: 'actions', labelKey: 'people.actions' },
 ]
 
+let listRequestVersion = 0
 async function load(): Promise<void> {
+  const version = ++listRequestVersion
   error.value = null
   try {
     await state.apply()
+    if (version !== listRequestVersion) return
     if (!selectedId.value && state.rows.value[0]) selectedId.value = String(state.rows.value[0].id)
     if (selectedId.value && !selected.value)
       selectedId.value = state.rows.value[0] ? String(state.rows.value[0].id) : null
+    // List results render immediately; related labels load independently.
+    const rows = [...state.rows.value]
+    void loadPageManagerNames(rows)
+    void loadPageAssignments(hasBasePermission('employee_assignment', 'view')
+      ? rows.map((row) => String(row.id)) : [])
   } catch (caught: unknown) {
+    if (version !== listRequestVersion) return
     error.value = caught
     reportApiError(caught)
   }
@@ -215,6 +237,8 @@ function resetQuery(): void {
 }
 function openCreate(): void {
   resetUserLookup()
+  void loadManagerDirectory()
+  void workflowStates.refresh()
   editingEmployeeId.value = undefined
   userLinkedAtEdit.value = false
   employeeForm.value = emptyEmployeeForm()
@@ -225,6 +249,7 @@ function openCreate(): void {
 function openEdit(row: Employee | null): void {
   if (!row) return
   resetUserLookup()
+  void loadManagerDirectory()
   editingEmployeeId.value = String(row.id)
   userLinkedAtEdit.value = Boolean(row.user_id)
   employeeForm.value = employeeToForm(row)
@@ -245,6 +270,9 @@ function managerError(): string | null {
   return key ? t(key) : null
 }
 async function saveEmployeeForm(): Promise<void> {
+  // The full scoped manager graph is required for client-side cycle checks.
+  // The backend remains authoritative if another actor changes the graph.
+  if (!managerDirectoryReady.value || managerDirectoryError.value) return
   const managerIssue = managerError()
   if (managerIssue) {
     error.value = new Error(managerIssue)
@@ -267,6 +295,7 @@ async function saveEmployeeForm(): Promise<void> {
   }
 }
 async function afterWorkflowChange(): Promise<void> {
+  invalidateManagerDirectory()
   await load()
 }
 function openAssignmentCreate(): void {
@@ -306,8 +335,7 @@ async function saveAssignmentForm(): Promise<void> {
     await saveAssignment(payload, editingAssignmentId.value)
     assignmentDraft.markClean()
     assignmentModal.value = false
-    await Promise.all([loadAssignments(), loadAllAssignments()])
-    await load()
+    await Promise.all([loadAssignments(), load()])
   } catch (caught: unknown) {
     error.value = caught
     reportApiError(caught)
@@ -320,7 +348,10 @@ async function toggleAssignment(row: EmployeeAssignment): Promise<void> {
   error.value = null
   try {
     await changeAssignmentState(String(row.id), row.status === 'ACTIVE' ? 'INACTIVE' : 'ACTIVE')
-    await Promise.all([loadAssignments(), loadAllAssignments()])
+    await Promise.all([
+      loadAssignments(),
+      loadPageAssignments(state.rows.value.map((employee) => String(employee.id))),
+    ])
   } catch (caught: unknown) {
     error.value = caught
     reportApiError(caught)
@@ -336,12 +367,22 @@ function displayDate(value: string | null | undefined): string {
     day: '2-digit',
   }).format(new Date(`${value}T00:00:00`))
 }
-watch(selectedId, async () => {
+watch(selectedId, () => {
   activeTab.value = 'overview'
-  await loadAssignments()
+  resetSelectedAssignments()
+})
+watch([employeeDetailOpen, activeTab], ([isOpen, tab]) => {
+  if (isOpen && tab === 'assignments' && hasBasePermission('employee_assignment', 'view')) {
+    void loadAssignments()
+  } else {
+    resetSelectedAssignments()
+  }
 })
 onMounted(async () => {
-  await Promise.all([loadLookups(), load(), loadAllAssignments()])
+  // Give the visible Employee page first priority. Catalog lookups may paginate
+  // extensively and must not compete with the first meaningful table render.
+  await load()
+  void loadLookups()
 })
 </script>
 
@@ -380,7 +421,7 @@ onMounted(async () => {
           <strong>{{ row.employee_code }}</strong>
         </template>
         <template #cell-actions="{ row }">
-          <TableRowActions :active="row.status === 'ACTIVE'" :state-target-id="String(row.id)" :busy="busy"
+          <TableRowActions authorization-mode="effective" :view-scope-verified="true" :allowed-actions="rowAllowedActions(row)" :active="row.status === 'ACTIVE'" :state-target-id="String(row.id)" :busy="busy"
             :show-view="true" :show-edit="true" :show-toggle="true" view-permission="employee.view"
             edit-permission="employee.edit" toggle-permission="employee.setstate" :view-label="t('common.view')"
             :edit-label="t('common.edit')" :activate-label="t('common.activate')"
@@ -407,12 +448,12 @@ onMounted(async () => {
   <div v-if="employeeDetailOpen && selected" class="modal-backdrop">
     <section class="employee-detail-modal" role="dialog" aria-modal="true" :aria-label="selected.employee_name">
       <header class="modal-card__header">
-         
+
           <h2 class="modal-card-title">
             <NIcon :size="24" aria-hidden="true"> <PeopleOutline /> </NIcon>
-            
-            {{ selected.employee_name }} - 
-            {{ selected.employee_code }} - 
+
+            {{ selected.employee_name }} -
+            {{ selected.employee_code }} -
             {{ t(`status.${selected.status.toLowerCase()}`) }} ·
             {{ selected.user_id ? t('people.userLinked') : t('people.userNotLinked') }}
           </h2>
@@ -442,8 +483,7 @@ onMounted(async () => {
         </div>
         <div>
           <span>{{ t('people.manager') }}</span><strong>{{
-            state.rows.value.find((row) => String(row.id) === String(selected.manager_employee_id))
-              ?.employee_name ?? '—'
+            displayManager(selected.manager_employee_id)
           }}</strong>
         </div>
         <div class="detail-grid__wide">
@@ -492,7 +532,7 @@ onMounted(async () => {
               <td>{{ displayDate(row.effective_to) }}</td>
               <td>{{ t(`status.${row.status.toLowerCase()}`) }}</td>
               <td class="table-actions">
-                <TableRowActions :active="row.status === 'ACTIVE'" 
+                <TableRowActions authorization-mode="effective" :view-scope-verified="true" :allowed-actions="rowAllowedActions(row)" :active="row.status === 'ACTIVE'"
                   :busy="busy" :show-edit="true" :show-toggle="true"
                   edit-permission="employee_assignment.edit" toggle-permission="employee_assignment.setstate"
                   :edit-label="t('common.edit')" :activate-label="t('common.activate')"
@@ -528,8 +568,7 @@ onMounted(async () => {
           <dt>{{ t('people.manager') }}</dt>
           <dd>
             {{
-              employeeLookup.find((row) => String(row.id) === String(selected.manager_employee_id))
-                ?.employee_name ?? '—'
+              displayManager(selected.manager_employee_id)
             }}
           </dd>
         </dl>
@@ -568,7 +607,7 @@ onMounted(async () => {
             <SearchableSelect v-if="hasBasePermission('user', 'view') && !userLookupError"
               :model-value="employeeForm.user_id" :options="userSelectOptions"
               :placeholder="t('people.userSearchPlaceholder')" :aria-label="t('people.userId')"
-              :disabled="userLookupLoading" :clearable="!userLinkedAtEdit" @update:model-value="
+              :disabled="userLookupLoading || !managerDirectoryReady" :clearable="!userLinkedAtEdit" @update:model-value="
                 (value) => (employeeForm.user_id = typeof value === 'string' ? value : '')
               " />
             <input v-else v-model="employeeForm.user_id" inputmode="numeric" />
@@ -596,9 +635,13 @@ onMounted(async () => {
         <label><span>{{ t('people.placeOfOrigin') }}</span><input
             v-model="employeeForm.place_of_origin" /></label><label><span>{{ t('people.manager') }}</span>
           <SearchableSelect :model-value="employeeForm.manager_employee_id" :options="managerSelectOptions"
+            :disabled="!managerDirectoryReady || managerDirectoryLoading"
             :placeholder="t('people.noManager')" :aria-label="t('people.manager')" @update:model-value="
               (value) => (employeeForm.manager_employee_id = typeof value === 'string' ? value : '')
-            " /><small v-if="managerError()" class="field-error">{{ managerError() }}</small>
+            " />
+          <small v-if="managerDirectoryLoading" role="status">{{ t('people.managerLookupLoading') }}</small>
+          <small v-else-if="managerDirectoryError" class="field-error" role="alert">{{ t('people.managerLookupError') }}</small>
+          <small v-if="managerError()" class="field-error">{{ managerError() }}</small>
         </label><label v-if="editingEmployeeId">
           <span>{{ t('people.status') }}</span>
           <output>{{ employeeForm.status }}</output>
@@ -619,6 +662,7 @@ onMounted(async () => {
           </NIcon>
           {{ t('common.cancel') }}
         </button><button type="submit" class="primary-button" form="employee-form" :disabled="busy ||
+          !managerDirectoryReady || managerDirectoryError ||
           !!managerError() ||
           !hasBasePermission('employee', editingEmployeeId ? 'edit' : 'create')
           ">

@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { rowAllowedActions } from '@/components/lists/rowActionPolicy'
 import { computed, onBeforeUnmount, onMounted, reactive, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 import {
@@ -22,6 +23,7 @@ import UserAvatarManager from '@/components/users/UserAvatarManager.vue'
 import { uploadUserAvatar } from '@/services/userAvatar'
 import { avatarSelectionIssue } from '@/services/userAvatarRules'
 import { useAuthStore } from '@/stores/auth'
+import { changedMembershipGroupIds, mergeMembershipForUser } from '@/features/security/user-editor/userMembership'
 import {
   buildCreateUserPayload,
   buildEditUserPayload,
@@ -43,7 +45,6 @@ import {
   saveSecurityUser,
   saveSecurityUserPermissions,
   type SecurityActionSummary,
-  type SecurityMember,
   type UserState,
 } from '@/services/security'
 import { reportApiError } from '@/services/errorBoundary'
@@ -93,7 +94,11 @@ function chooseCreateAvatar(event: Event): void {
   createAvatarFile.value = file
   createAvatarUrl.value = URL.createObjectURL(file)
 }
-onBeforeUnmount(clearCreateAvatar)
+onBeforeUnmount(() => {
+  clearCreateAvatar()
+  ++groupLookupVersion
+  ++detailVersion
+})
 
 const formNameError = ref<'required' | 'too_long' | null>(null)
 const groupOptions = ref<Array<{ value: string; label: string }>>([])
@@ -132,9 +137,14 @@ const resources = ref<Resource[]>([])
 const resourceActions = ref<Record<string, SecurityActionSummary[]>>({})
 const permissionCatalogLoaded = ref(false)
 const permissionCatalogLoading = ref(false)
-const membersByGroup = ref<Record<string, SecurityMember[]>>({})
-const originalMembersByGroup = ref<Record<string, string[]>>({})
+const groupDraftIds = ref<string[]>([])
+const originalGroupIds = ref<string[]>([])
+const groupDetailState = ref<'idle' | 'loading' | 'ready' | 'error'>('idle')
+const groupMembershipConflict = ref(false)
 const permissionDraft = ref<string[]>([])
+const directPermissionState = ref<'idle' | 'loading' | 'ready' | 'error'>('idle')
+// Invalidate in-flight results when the dialog closes or switches User.
+let detailVersion = 0
 const userStates: UserState[] = ['ACTIVE', 'INACTIVE', 'LOCKED', 'SUSPENDED', 'BANNED', 'DISABLED']
 const filters: readonly ListFilterDefinition[] = [
   {
@@ -162,13 +172,15 @@ const columns: readonly ListColumn<ManagedUser>[] = [
   { key: 'status', labelKey: 'users.status', sortable: true, align: 'center' },
   { key: 'actions', labelKey: 'security.actions', align: 'end' },
 ]
-const selectedGroups = computed(() =>
-  groups.value.filter((group) =>
-    (membersByGroup.value[String(group.id)] ?? []).some(
-      (member) => String(member.id) === selectedId.value,
-    ),
-  ),
-)
+const changedGroupIds = computed(() => changedMembershipGroupIds(
+  originalGroupIds.value,
+  groupDraftIds.value,
+  groups.value.map((group) => String(group.id)),
+))
+function sameDetail(version: number, userId: string, generation: number): boolean {
+  return detailOpen.value && version === detailVersion &&
+    selectedId.value === userId && generation === auth.getSessionGeneration()
+}
 
 function applyQuery(query: ListQuery): void {
   state.setSearch(query.q)
@@ -191,36 +203,59 @@ async function load(): Promise<void> {
     reportApiError(caught)
   }
 }
-async function loadDetail(): Promise<void> {
-  if (!selected.value) return
+async function loadDetailGroups(): Promise<void> {
+  if (!selected.value || !detailOpen.value ||
+      groupDetailState.value === 'ready' || groupDetailState.value === 'loading' ||
+      !hasBasePermission('authorization_group', 'view')) return
+  const version = detailVersion
+  const userId = String(selected.value.id)
+  const generation = auth.getSessionGeneration()
+  groupDetailState.value = 'loading'
+  error.value = null
   try {
-    const [groupPage, direct] = await Promise.all([
-      loadLookupPages(listAuthorizationGroupPage, { sort: 'name' }),
-      getSecurityUserPermissions(String(selected.value.id)),
-    ])
-    groups.value = groupPage
-    permissionDraft.value = direct
-    const entries = await Promise.all(
-      groups.value.map(
-        async (group) => [String(group.id), await getGroupMembers(String(group.id))] as const,
-      ),
-    )
-    membersByGroup.value = Object.fromEntries(entries)
-    originalMembersByGroup.value = Object.fromEntries(
-      entries.map(([id, members]) => [id, members.map((member) => String(member.id))]),
-    )
+    // One paginated catalog, never one GET /members per group on detail open.
+    const result = await loadLookupPages(listAuthorizationGroupPage, { sort: 'name' })
+    if (!sameDetail(version, userId, generation)) return
+    groups.value = result
+    groupDetailState.value = 'ready'
   } catch (caught: unknown) {
+    if (!sameDetail(version, userId, generation)) return
+    groupDetailState.value = 'error'
+    error.value = caught
+    reportApiError(caught)
+  }
+}
+async function loadDirectPermissions(): Promise<void> {
+  if (!selected.value || !detailOpen.value ||
+      directPermissionState.value === 'ready' || directPermissionState.value === 'loading') return
+  const version = detailVersion
+  const userId = String(selected.value.id)
+  const generation = auth.getSessionGeneration()
+  directPermissionState.value = 'loading'
+  error.value = null
+  try {
+    const direct = await getSecurityUserPermissions(userId)
+    if (!sameDetail(version, userId, generation)) return
+    permissionDraft.value = direct
+    directPermissionState.value = 'ready'
+  } catch (caught: unknown) {
+    if (!sameDetail(version, userId, generation)) return
+    directPermissionState.value = 'error'
     error.value = caught
     reportApiError(caught)
   }
 }
 async function loadPermissionCatalog(): Promise<void> {
-  if (permissionCatalogLoaded.value || permissionCatalogLoading.value) return
+  if (!detailOpen.value || permissionCatalogLoaded.value || permissionCatalogLoading.value || !selected.value) return
+  const version = detailVersion
+  const userId = String(selected.value.id)
+  const generation = auth.getSessionGeneration()
   permissionCatalogLoading.value = true
   try {
     const resourcePage = await loadLookupPages((query) => listResourcePage(query, true), {
       sort: 'type',
     })
+    if (!sameDetail(version, userId, generation)) return
     resources.value = resourcePage
     resourceActions.value = resourcePage.reduce<Record<string, SecurityActionSummary[]>>(
       (result, resource) => {
@@ -235,10 +270,11 @@ async function loadPermissionCatalog(): Promise<void> {
     )
     permissionCatalogLoaded.value = true
   } catch (caught: unknown) {
+    if (!sameDetail(version, userId, generation)) return
     error.value = caught
     reportApiError(caught)
   } finally {
-    permissionCatalogLoading.value = false
+    if (version === detailVersion) permissionCatalogLoading.value = false
   }
 }
 function permissionKey(resource: Resource, action: SecurityActionSummary): string {
@@ -246,20 +282,39 @@ function permissionKey(resource: Resource, action: SecurityActionSummary): strin
 }
 function selectTab(nextTab: 'overview' | 'groups' | 'permissions'): void {
   tab.value = nextTab
-  if (nextTab === 'permissions') void loadPermissionCatalog()
+  if (nextTab === 'groups') void loadDetailGroups()
+  if (nextTab === 'permissions') {
+    void loadDirectPermissions()
+    void loadPermissionCatalog()
+  }
 }
 function openDetails(row: ManagedUser): void {
+  ++detailVersion
   selectedId.value = String(row.id)
   tab.value = 'overview'
+  groups.value = []
+  originalGroupIds.value = [...(row.groupIds ?? [])]
+  groupDraftIds.value = [...(row.groupIds ?? [])]
+  groupDetailState.value = 'idle'
+  groupMembershipConflict.value = false
+  error.value = null
+  permissionDraft.value = []
+  directPermissionState.value = 'idle'
   permissionCatalogLoaded.value = false
+  permissionCatalogLoading.value = false
   resources.value = []
   resourceActions.value = {}
   detailOpen.value = true
-  void loadDetail()
+  // Overview is fully backed by the scoped list response; zero detail GETs.
 }
 function closeDetails(): void {
+  if (busy.value) return
+  ++detailVersion
   detailOpen.value = false
+  groupDetailState.value = 'idle'
+  directPermissionState.value = 'idle'
   permissionCatalogLoaded.value = false
+  permissionCatalogLoading.value = false
   resources.value = []
   resourceActions.value = {}
 }
@@ -354,7 +409,6 @@ async function setState(row?: ManagedUser): Promise<void> {
   try {
     await changeSecurityUserState(String(target.id), target.active ? 'INACTIVE' : 'ACTIVE')
     await load()
-    if (detailOpen.value) await loadDetail()
   } catch (caught: unknown) {
     error.value = caught
     reportApiError(caught)
@@ -377,55 +431,70 @@ async function savePassword(): Promise<void> {
   }
 }
 function toggleGroup(groupId: string): void {
-  if (!selected.value) return
-  const members = membersByGroup.value[groupId] ?? []
-  if (selectedGroups.value.some((group) => String(group.id) === groupId))
-    membersByGroup.value[groupId] = members.filter(
-      (member) => String(member.id) !== String(selected.value?.id),
-    )
-  else
-    membersByGroup.value[groupId] = [
-      ...members,
-      {
-        id: String(selected.value.id),
-        username: selected.value.username,
-        active: selected.value.active,
-        status: selected.value.status,
-      },
-    ]
+  if (!selected.value || busy.value || groupDetailState.value !== 'ready' ||
+      !hasBasePermission('authorization_group', 'assign_member') ||
+      !groups.value.some((group) => String(group.id) === groupId)) return
+  if (groupDraftIds.value.includes(groupId)) {
+    groupDraftIds.value = groupDraftIds.value.filter((id) => id !== groupId)
+  } else {
+    groupDraftIds.value = [...groupDraftIds.value, groupId]
+  }
 }
 async function saveMembership(): Promise<void> {
-  if (!selected.value) return
+  if (!selected.value || busy.value || groupDetailState.value !== 'ready' ||
+      !hasBasePermission('authorization_group', 'assign_member')) return
+  const userId = String(selected.value.id)
+  const changeIds = [...changedGroupIds.value]
+  if (!changeIds.length) return
   busy.value = true
+  error.value = null
+  groupMembershipConflict.value = false
   try {
-    for (const group of groups.value) {
-      const groupId = String(group.id)
-      const nextIds = [
-        ...new Set((membersByGroup.value[groupId] ?? []).map((member) => String(member.id))),
-      ].sort()
-      const previousIds = [...(originalMembersByGroup.value[groupId] ?? [])].sort()
-      if (nextIds.join(',') !== previousIds.join(','))
-        membersByGroup.value[groupId] = await saveGroupMembers(groupId, nextIds)
+    for (const groupId of changeIds) {
+      // The existing API replaces a WHOLE group. Read only changed groups
+      // immediately before PUT to retain other users' memberships.
+      const current = await getGroupMembers(groupId)
+      const next = mergeMembershipForUser(
+        current.map((member) => String(member.id)),
+        userId,
+        originalGroupIds.value.includes(groupId),
+        groupDraftIds.value.includes(groupId),
+      )
+      await saveGroupMembers(groupId, next)
+      // Preserve completed writes if a later group fails; retries won't
+      // re-submit earlier groups with an already-stale original snapshot.
+      originalGroupIds.value = groupDraftIds.value.includes(groupId)
+        ? [...new Set([...originalGroupIds.value, groupId])]
+        : originalGroupIds.value.filter((id) => id !== groupId)
     }
-    await refreshBasePermissions(true)
-    await loadDetail()
+    if (userId === String(auth.user?.id ?? '')) await refreshBasePermissions(true)
     await load()
+    // The list result is authoritative after a successful save.
+    if (selected.value && String(selected.value.id) === userId) {
+      originalGroupIds.value = [...(selected.value.groupIds ?? [])]
+      groupDraftIds.value = [...(selected.value.groupIds ?? [])]
+    }
   } catch (caught: unknown) {
-    error.value = caught
-    reportApiError(caught)
+    if (caught instanceof Error && caught.message === 'USER_GROUP_MEMBERSHIP_CHANGED_RELOAD') {
+      groupMembershipConflict.value = true
+    } else {
+      error.value = caught
+      reportApiError(caught)
+    }
   } finally {
     busy.value = false
   }
 }
 async function savePermissions(): Promise<void> {
-  if (!selected.value) return
+  if (!selected.value || busy.value || directPermissionState.value !== 'ready' ||
+      !permissionCatalogLoaded.value || !hasBasePermission('user', 'assign_permission')) return
   busy.value = true
   try {
     permissionDraft.value = await saveSecurityUserPermissions(
       String(selected.value.id),
       permissionDraft.value,
     )
-    await refreshBasePermissions(true)
+    if (String(selected.value.id) === String(auth.user?.id ?? '')) await refreshBasePermissions(true)
     await load()
   } catch (caught: unknown) {
     error.value = caught
@@ -472,7 +541,7 @@ onMounted(() => void load())
           <TableStatus :status="row.status || row.active" />
         </template><template #cell-groups="{ row }"><span class="group-summary">{{ groupLabel(row)
         }}</span></template><template #cell-actions="{ row }">
-          <TableRowActions :active="row.active" :busy="busy" :show-view="true" :show-edit="true" :show-toggle="true"
+          <TableRowActions authorization-mode="effective" :view-scope-verified="true" :allowed-actions="rowAllowedActions(row)" :active="row.active" :busy="busy" :show-view="true" :show-edit="true" :show-toggle="true"
             view-permission="user.view" edit-permission="user.edit" toggle-permission="user.setstate"
             :view-label="t('security.viewDetails')" :edit-label="t('common.edit')"
             :activate-label="t('common.activate')" :deactivate-label="t('security.inactivate')" @view="openDetails(row)"
@@ -523,7 +592,7 @@ onMounted(() => void load())
         <p>{{ t('security.userIdentitySourceNote') }}</p>
         <UserAvatarManager :user-id="String(selected.id)" :has-avatar="selected.has_avatar === true" :avatar-url="selected.avatar_url"
           :label="selected.name || selected.username"
-          :can-edit="hasBasePermission('user', 'edit') || String(auth.user?.id) === String(selected.id)"
+          :can-edit="(hasBasePermission('user', 'edit') && selected.allowed_actions?.edit === true) || String(auth.user?.id) === String(selected.id)"
           @updated="avatarUpdated" />
         <dl class="identity-summary">
           <dt>{{ t('users.id') }}</dt>
@@ -537,17 +606,30 @@ onMounted(() => void load())
 
 
       <div v-else-if="tab === 'groups'" class="modal-card__body security-editor">
-        <p class="security-note">{{ t('security.memberSourceNote') }}</p>
+        <p class="security-note">{{ t('security.userMembershipSourceNote') }}</p>
+        <p v-if="groupMembershipConflict" class="inline-error" role="alert">
+          {{ t('security.userMembershipConflict') }}
+        </p>
+        <p v-if="groupDetailState === 'loading'" role="status">{{ t('common.loading') }}</p>
+        <button v-else-if="groupDetailState === 'error'" type="button" class="secondary-button"
+          @click="void loadDetailGroups()">{{ t('security.retryGroupLookup') }}</button>
         <label v-for="group in groups" :key="group.id" class="check-row"><input type="checkbox"
-            :checked="selectedGroups.some((item) => String(item.id) === String(group.id))"
-            :disabled="busy || !hasBasePermission('authorization_group', 'assign_member')"
+            :checked="groupDraftIds.includes(String(group.id))"
+            :disabled="busy || groupDetailState !== 'ready' || !hasBasePermission('authorization_group', 'assign_member')"
             @change="toggleGroup(String(group.id))" /><span>{{ group.name }} ({{ group.code }})</span></label>
       </div>
 
 
       <div v-else class="modal-card__body security-editor">
         <p class="security-note">{{ t('security.permissionSourceNote') }}</p>
-        <div class="permission-resource-list">
+        <p v-if="directPermissionState === 'loading'" role="status">{{ t('common.loading') }}</p>
+        <button v-else-if="directPermissionState === 'error'" type="button" class="secondary-button"
+          @click="void loadDirectPermissions()">{{ t('security.retryGroupLookup') }}</button>
+        <button v-if="directPermissionState === 'ready' && !permissionCatalogLoaded && !permissionCatalogLoading"
+          type="button" class="secondary-button" @click="void loadPermissionCatalog()">
+          {{ t('security.retryGroupLookup') }}
+        </button>
+        <div v-if="directPermissionState === 'ready'" class="permission-resource-list">
           <details v-for="resource in resources" :key="resource.id" class="permission-resource">
             <summary class="permission-resource__summary">
               <span>{{ resource.name || resource.type }}</span>
@@ -559,7 +641,7 @@ onMounted(() => void load())
             <div v-else class="permission-grid">
               <label v-for="action in resourceActions[String(resource.id)] ?? []" :key="action.id" class="check-row">
                 <input v-model="permissionDraft" type="checkbox" :value="permissionKey(resource, action)"
-                  :disabled="busy || !hasBasePermission('user', 'assign_permission')" />
+                  :disabled="busy || !permissionCatalogLoaded || !hasBasePermission('user', 'assign_permission')" />
                 <code>{{ permissionKey(resource, action) }}</code>
               </label>
               <p v-if="
@@ -576,14 +658,14 @@ onMounted(() => void load())
 
       <footer class="modal-card__footer">
         <template v-if="tab === 'overview'">
-          <button v-if="hasBasePermission('user', 'edit')" type="button" class="secondary-button" :disabled="busy"
+          <button v-if="hasBasePermission('user', 'edit') && selected.allowed_actions?.edit === true" type="button" class="secondary-button" :disabled="busy"
             @click="openEdit()">
             <NIcon :size="16" aria-hidden="true">
               <CreateOutline />
             </NIcon>
             {{ t('common.edit') }}
           </button>
-          <button v-if="hasBasePermission('user', 'setstate')" type="button" class="secondary-button" :disabled="busy"
+          <button v-if="hasBasePermission('user', 'setstate') && selected.allowed_actions?.setstate === true" type="button" class="secondary-button" :disabled="busy"
             @click="void setState()">
             <NIcon :size="16" aria-hidden="true">
               <BanOutline />
@@ -602,7 +684,7 @@ onMounted(() => void load())
 
 
         <button v-else-if="tab === 'groups'" type="button" class="primary-button"
-          :disabled="busy || !hasBasePermission('authorization_group', 'assign_member')" @click="void saveMembership()">
+          :disabled="busy || groupMembershipConflict || groupDetailState !== 'ready' || changedGroupIds.length === 0 || !hasBasePermission('authorization_group', 'assign_member')" @click="void saveMembership()">
           <NIcon :size="16" aria-hidden="true">
             <SaveOutline />
           </NIcon>
@@ -611,7 +693,7 @@ onMounted(() => void load())
 
 
         <button v-else type="button" class="primary-button"
-          :disabled="busy || !hasBasePermission('user', 'assign_permission')" @click="void savePermissions()">
+          :disabled="busy || directPermissionState !== 'ready' || !permissionCatalogLoaded || !hasBasePermission('user', 'assign_permission')" @click="void savePermissions()">
           <NIcon :size="16" aria-hidden="true">
             <SaveOutline />
           </NIcon>

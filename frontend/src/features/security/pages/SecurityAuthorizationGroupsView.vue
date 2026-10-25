@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { rowAllowedActions } from '@/components/lists/rowActionPolicy'
 import { computed, onMounted, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 import type { AuthorizationGroup, Resource } from '@/api/generated/types.gen'
@@ -289,7 +290,7 @@ onMounted(() => void load())
           <TableStatus :status="row.status" />
         </template>
         <template #cell-actions="{ row }">
-          <TableRowActions :active="row.status === 'ACTIVE'" :busy="busy" :show-view="true" :show-edit="true"
+          <TableRowActions authorization-mode="effective" :view-scope-verified="true" :allowed-actions="rowAllowedActions(row)" :active="row.status === 'ACTIVE'" :busy="busy" :show-view="true" :show-edit="true"
             :show-toggle="true" view-permission="authorization_group.view" edit-permission="authorization_group.edit"
             toggle-permission="authorization_group.setstate" :edit-label="t('common.edit')"
             :view-label="t('common.view')" :activate-label="t('common.activate')"

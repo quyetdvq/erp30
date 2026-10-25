@@ -1,0 +1,22 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://dinkerp.local/contracts/extensions/effective-row-actions-v1.schema.json",
+  "title": "M10.2 Authorized Row Action Hints v1",
+  "description": "Additive extension to VIEW-authorized list/detail resource DTOs. This does not alter the frozen OpenAPI baseline. Each enabled resource returns all its reviewed action booleans. Never interpreted as a mutation grant.",
+  "type": "object",
+  "properties": {
+    "allowed_actions": {
+      "type": "object",
+      "properties": {
+        "edit": {"type": "boolean"},
+        "setstate": {"type": "boolean"},
+        "delete": {"type": "boolean"},
+        "configure_numbering": {"type": "boolean"}
+      },
+      "additionalProperties": false,
+      "minProperties": 1
+    }
+  },
+  "required": ["allowed_actions"],
+  "additionalProperties": true
+}

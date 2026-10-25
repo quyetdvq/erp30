@@ -5,6 +5,8 @@ declare(strict_types=1);
 namespace App\Controllers\Api;
 
 use App\Modules\Access\ReadAccessBridge;
+use App\Modules\Access\UnifiedAccessService;
+use App\Modules\Access\Query\EffectiveRowActionHints;
 use App\Modules\People\Read\PeopleMasterReadService;
 use App\Modules\Organization\Read\OrganizationPeopleReadService;
 use App\Shared\Http\ApiResponder;
@@ -125,6 +127,14 @@ final class ReadCatalogController extends Controller
             // resources. Never silently use this path for a migrated resource.
             $rows = $this->authorizedRows($resource, new ReadAccessBridge($user, null, $instant));
             $page = AuthorizedListPage::paginate($resource, $rows, $query);
+            $access = new UnifiedAccessService($user, null, $instant);
+            foreach ($page['data'] as &$row) {
+                if (!$access->canView($resource, $row)) {
+                    throw new \UnexpectedValueException('Location VIEW bridge/PBAC mismatch.');
+                }
+                $row['allowed_actions'] = EffectiveRowActionHints::forViewedRow($access, $resource, $row);
+            }
+            unset($row);
         } else {
             throw new \UnexpectedValueException('Unreviewed catalog resource.');
         }
@@ -176,6 +186,13 @@ final class ReadCatalogController extends Controller
         if ($row === null) {
             // Never disclose existence outside SQL scope or canonical VIEW permission.
             return ApiResponder::error($this->response, 'RESOURCE_NOT_FOUND', 404);
+        }
+        if (in_array($resource, ['province', 'ward'], true)) {
+            $access = new UnifiedAccessService($user);
+            if (!$access->canView($resource, $row)) {
+                return ApiResponder::error($this->response, 'RESOURCE_NOT_FOUND', 404);
+            }
+            $row['allowed_actions'] = EffectiveRowActionHints::forViewedRow($access, $resource, $row);
         }
         return ApiResponder::success($this->response, $row);
     }

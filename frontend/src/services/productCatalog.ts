@@ -36,6 +36,7 @@ import type {
 import { withTypedClient } from '@/api/client'
 import { jsonBodySerializer } from '@/api/generated/client'
 import { i18n } from '@/i18n'
+import { invalidateProductListCatalog } from '@/services/productListCatalogCache'
 import type { ListQuery, ListResponse } from '@/components/lists/listTypes'
 
 function headers() {
@@ -105,7 +106,10 @@ export function saveProductGroup(
           body: payload as ProductGroupCreate,
           throwOnError: true,
         }).then(resource),
-  )
+  ).then((saved) => {
+    invalidateProductListCatalog('groups')
+    return saved
+  })
 }
 
 export function changeProductGroupState(
@@ -120,7 +124,10 @@ export function changeProductGroupState(
       body: { status },
       throwOnError: true,
     }).then(resource),
-  )
+  ).then((saved) => {
+    invalidateProductListCatalog('groups')
+    return saved
+  })
 }
 
 export function listProductUomPage(query: ListQuery): Promise<ListResponse<ProductUom>> {
@@ -153,7 +160,10 @@ export function saveProductUom(
           body: payload as ProductUomCreate,
           throwOnError: true,
         }).then(resource),
-  )
+  ).then((saved) => {
+    invalidateProductListCatalog('uoms')
+    return saved
+  })
 }
 
 export function changeProductUomState(id: string, status: State['status']): Promise<ProductUom> {
@@ -165,7 +175,10 @@ export function changeProductUomState(id: string, status: State['status']): Prom
       body: { status },
       throwOnError: true,
     }).then(resource),
-  )
+  ).then((saved) => {
+    invalidateProductListCatalog('uoms')
+    return saved
+  })
 }
 
 export function listProductPage(query: ListQuery): Promise<ListResponse<Product>> {

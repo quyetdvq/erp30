@@ -357,6 +357,8 @@ export const vi = {
     managerCycleError: 'Không thể tạo chu kỳ quản lý.',
     managerInactiveError: 'Không thể chọn quản lý inactive.',
     managerSelfError: 'Nhân viên không thể là quản lý của chính mình.',
+    managerLookupLoading: 'Đang tải danh sách quản lý...',
+    managerLookupError: 'Không tải được danh sách quản lý. Vui lòng thử mở lại biểu mẫu.',
     name: 'Tên',
     noAssignments: 'Chưa có Assignment.',
     noManager: 'Không có quản lý',
@@ -580,6 +582,7 @@ export const vi = {
     resourceForm: 'Biểu mẫu Resource',
     actionForm: 'Biểu mẫu Action',
     policyForm: 'Biểu mẫu Policy',
+    policyView: 'Chi tiết Policy',
     actionCode: 'Mã Action',
     tabs: {
       overview: 'Tổng quan',
@@ -636,6 +639,8 @@ export const vi = {
       'Base Permission đến từ Group/direct addition; Policy và ABSOLUTE_DENY vẫn được backend áp dụng.',
     memberSourceNote:
       'Danh sách Members lấy từ API của Authorization Group; việc cập nhật chỉ gửi các User được API trả về.',
+    userMembershipSourceNote: 'Nhóm quyền hiển thị từ dữ liệu User đã qua VIEW. Khi lưu, hệ thống chỉ đọc lại nhóm thay đổi và bảo toàn các thành viên khác.',
+    userMembershipConflict: 'Thành viên nhóm đã thay đổi ở nơi khác. Đóng và mở lại chi tiết User trước khi chỉnh sửa tiếp.',
     memberPickerNote: 'Chọn toàn bộ User cần thuộc nhóm; backend vẫn là nơi kiểm tra quyền.',
     permissionSourceNote:
       'Chỉ gán Resource Action canonical. Frontend không tự đánh giá PBAC hoặc effect.',
@@ -813,6 +818,9 @@ export const vi = {
     uom: 'UOM',
     price: 'Giá',
     items: 'Product Price List Items',
+    viewItems: 'Xem chi tiết dòng giá',
+    editItems: 'Chỉnh sửa dòng giá',
+    viewOnly: 'Chế độ xem — chỉ đọc',
     addItem: 'Thêm Product/UOM',
     itemRules: 'PARENT không được chọn; COMBO chỉ dùng Base UOM; UOM PURCHASE-only bị loại.',
     requiredFields: 'Vui lòng nhập đầy đủ trường bắt buộc.',

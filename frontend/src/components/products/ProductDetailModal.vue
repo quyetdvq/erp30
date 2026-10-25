@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { rowAllowedActions } from '@/components/lists/rowActionPolicy'
 import { computed, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import type {
@@ -706,9 +707,9 @@ watch(
                     </span>
                   </td>
                   <td class="child-actions">
-                    <TableRowActions
-                      :show-view="true"
-                      :show-edit="row.allowed_actions?.edit === true"
+                    <TableRowActions authorization-mode="effective" :view-scope-verified="true" :allowed-actions="rowAllowedActions(row)"
+                      :show-view="true" view-permission="product.view" edit-permission="product.edit"
+                      :show-edit="true"
                       :busy="busy"
                       :view-label="`${t('common.view')} ${row.full_name}`"
                       :edit-label="`${t('common.edit')} ${row.full_name}`"

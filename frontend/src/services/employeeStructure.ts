@@ -34,7 +34,7 @@ import type {
 } from '@/api/generated/types.gen'
 import { withTypedClient } from '@/api/client'
 import { i18n } from '@/i18n'
-import type { ListQuery, ListResponse } from '@/components/lists/listTypes'
+import { serializeListQuery, type ListQuery, type ListResponse } from '@/components/lists/listTypes'
 
 function headers() {
   return { 'Accept-Language': i18n.global.locale.value as 'vi' | 'en' }
@@ -164,7 +164,12 @@ export async function changePositionState(id: string, status: State['status']): 
 export async function listEmployeePage(query: ListQuery): Promise<ListResponse<Employee>> {
   return collection(
     await withTypedClient((client) =>
-      listEmployees({ client, headers: headers(), query: apiQuery(query), throwOnError: true }),
+      listEmployees({
+        client, headers: headers(), query: apiQuery(query),
+        // Generated deepObject serializer cannot encode nested filter[id][] arrays.
+        querySerializer: () => serializeListQuery(query),
+        throwOnError: true,
+      }),
     ),
   )
 }
@@ -227,6 +232,7 @@ export async function listAssignmentPage(
         client,
         headers: headers(),
         query: apiQuery(query),
+        querySerializer: () => serializeListQuery(query),
         throwOnError: true,
       }),
     ),

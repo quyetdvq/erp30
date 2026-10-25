@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { rowAllowedActions } from '@/components/lists/rowActionPolicy'
 import { computed, nextTick, onMounted, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { NIcon } from 'naive-ui'
@@ -484,7 +485,7 @@ onMounted(() => {
           }}</template>
         <template #cell-issued="{ row }">{{ issuedLabel(row) }}</template>
         <template #cell-actions="{ row }">
-          <TableRowActions :active="row.status === 'ACTIVE'" :busy="busy" :show-view="canConfigure"
+          <TableRowActions authorization-mode="effective" :view-scope-verified="true" view-action-code="configure_numbering" :allowed-actions="rowAllowedActions(resources.find((item) => String(item.id) === String(row.resource_id)))" :action-codes="{ edit: 'configure_numbering', toggle: 'configure_numbering' }" :active="row.status === 'ACTIVE'" :busy="busy" :show-view="canConfigure"
             :show-edit="canConfigure" :show-toggle="canConfigure" view-permission="resource.configure_numbering"
             edit-permission="resource.configure_numbering" toggle-permission="resource.configure_numbering"
             :view-label="t('common.view')" :edit-label="t('common.edit')" :activate-label="t('common.activate')"

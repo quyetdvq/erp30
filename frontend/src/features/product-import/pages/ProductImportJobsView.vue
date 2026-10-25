@@ -165,7 +165,7 @@ onMounted(() => void load())
         <template #cell-status="{ row }"><TableStatus :status="row.status" /></template>
         <template #cell-created_by="{ row }">{{ row.created_by ?? t('list.noValue') }}</template>
         <template #cell-actions="{ row }">
-          <TableRowActions
+          <TableRowActions authorization-mode="effective" :view-scope-verified="true"
             :show-view="hasBasePermission('import_job', 'view')"
             view-permission="import_job.view"
             :view-label="t('common.view')"

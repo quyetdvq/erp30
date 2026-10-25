@@ -36,7 +36,7 @@ async function childListRoute(route: Route) {
   const query = new URL(route.request().url()).searchParams
   if (!Array.from(query.keys()).some((name) => name.includes('parent_product_id')))
     return route.fallback()
-  const row = { ...child, status: 'DRAFT', full_name: 'E2E Draft Child', product_code: 'E2E-DRAFT' }
+  const row = { ...child, status: 'DRAFT', full_name: 'E2E Draft Child', product_code: 'E2E-DRAFT', allowed_actions: { edit: true, setstate: false } }
   return route.fulfill({
     status: 200,
     contentType: 'application/json',

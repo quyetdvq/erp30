@@ -6,6 +6,7 @@ namespace App\Modules\People\Read;
 
 use App\Modules\Access\Query\AuthorizedSqlScope;
 use App\Shared\Read\UtcBusinessDate;
+use App\Shared\Read\PositiveId;
 use CodeIgniter\HTTP\Exceptions\BadRequestException;
 use DateTimeImmutable;
 use InvalidArgumentException;
@@ -24,7 +25,7 @@ final class PeopleMasterSql
         'employee' => [
             'table' => 'employees',
             'search' => ['employee_code', 'employee_name'],
-            'filter' => ['status'],
+            'filter' => ['id', 'status'],
             'sort' => ['employee_code', 'employee_name', 'status'],
         ],
         'department' => [
@@ -95,6 +96,22 @@ final class PeopleMasterSql
                 $effective[$column] = self::scalarValues($values);
             } elseif (in_array($column, $spec['filter'], true)) {
                 $filters[$column] = self::scalarValues($values);
+                if ($resource === 'employee' && $column === 'id') {
+                    // Page-local manager label lookup: canonical BIGINT IDs only.
+                    // Authorization still runs before this predicate in SQL.
+                    if (count($filters[$column]) > 50) {
+                        throw new BadRequestException('Too many employee IDs.');
+                    }
+                    foreach ($filters[$column] as $id) {
+                        try {
+                            if (PositiveId::value($id) !== $id) {
+                                throw new InvalidArgumentException('Non-canonical ID.');
+                            }
+                        } catch (InvalidArgumentException) {
+                            throw new BadRequestException('Invalid employee ID filter.');
+                        }
+                    }
+                }
             } else {
                 throw new BadRequestException('Unsupported filter field.');
             }
@@ -130,7 +147,10 @@ final class PeopleMasterSql
             $where[] = '(' . implode(' OR ', $terms) . ')';
         }
         foreach ($params['filter'] as $column => $values) {
-            $where[] = self::exactValues('p.' . $column, $values);
+            // Use the primary-key index rather than casting p.id to CHAR.
+            $where[] = $resource === 'employee' && $column === 'id'
+                ? 'p.id IN (' . implode(',', array_fill(0, count($values), '?')) . ')'
+                : self::exactValues('p.' . $column, $values);
             array_push($binds, ...$values);
         }
         if ($resource === 'employee') {

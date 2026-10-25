@@ -153,6 +153,7 @@ async function mockOrganizationApi(
           contact_type: 'ORGANIZATION',
           contact_ref_id: warehouseId,
           name: 'Alice',
+          allowed_actions: { edit: true, setstate: true },
           email: 'alice@test',
           phone: '0900',
           mobile: null,
@@ -296,6 +297,7 @@ test('Ward edit keeps status on set-state only, without changing the canonical P
     name: 'Ward One',
     name_full: 'Ward One, Province One',
     status: 'ACTIVE',
+    allowed_actions: { edit: true, setstate: true },
   }
   const province = { id: '11', code: 'P1', name: 'Province One', status: 'ACTIVE' }
   const patched: { value: Record<string, unknown> | null } = { value: null }

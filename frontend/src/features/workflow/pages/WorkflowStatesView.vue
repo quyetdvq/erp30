@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { rowAllowedActions } from '@/components/lists/rowActionPolicy'
 import { computed, onMounted, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 import type {
@@ -167,7 +168,7 @@ onMounted(() => void load())
           }
         ">
         <template #cell-actions="{ row }">
-          <TableRowActions :active="row.status === 'ACTIVE'" :busy="busy" :show-view="false" :show-edit="true"
+          <TableRowActions authorization-mode="effective" :view-scope-verified="true" :allowed-actions="rowAllowedActions(row)" :active="row.status === 'ACTIVE'" :busy="busy" :show-view="false" :show-edit="true"
             :show-toggle="true" edit-permission="workflow_state.edit" toggle-permission="workflow_state.setstate"
             :edit-label="t('common.edit')" :activate-label="t('common.activate')"
             :deactivate-label="t('common.deactivate')" @edit="openEdit(row)" @toggle="toggle(row)" />

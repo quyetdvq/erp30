@@ -6,6 +6,7 @@ import { getBusinessWorkflowStates, type BusinessWorkflowStates } from '@/servic
 export function useBusinessWorkflowStates(
   resource: string | Ref<string>,
   fallback: readonly string[] = ['ACTIVE', 'INACTIVE'],
+  preload = true,
 ) {
   const metadata = ref<BusinessWorkflowStates | null>(null)
   const resourceName = computed(() => (typeof resource === 'string' ? resource : resource.value))
@@ -28,6 +29,6 @@ export function useBusinessWorkflowStates(
     codes.value.map((code) => ({ value: code, labelKey: 'workflow.stateCode', label: code })),
   )
   watch(resourceName, () => void refresh())
-  onMounted(() => void refresh())
+  onMounted(() => { if (preload) void refresh() })
   return { codes, initial, options, refresh }
 }

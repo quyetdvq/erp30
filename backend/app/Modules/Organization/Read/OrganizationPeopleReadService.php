@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Modules\Organization\Read;
 
 use App\Modules\Access\Query\AuthorizationSqlScopeCompiler;
+use App\Modules\Access\Query\EffectiveRowActionHints;
 use App\Modules\Access\UnifiedAccessService;
 use CodeIgniter\Database\BaseConnection;
 use CodeIgniter\Shield\Entities\User;
@@ -51,6 +52,7 @@ final class OrganizationPeopleReadService
                     // Do not post-filter: doing so corrupts authorized totals.
                     throw new UnexpectedValueException('AUTH_SCOPE_PBAC_MISMATCH: Organization/People page.');
                 }
+                $row['allowed_actions'] = EffectiveRowActionHints::forViewedRow($access, $resource, $row);
                 if ($resource === 'employee_assignment') {
                     $row['is_primary'] = (bool)((int)($row['is_primary'] ?? 0));
                 }
@@ -75,6 +77,7 @@ final class OrganizationPeopleReadService
             if (!$access->canView($resource, $row)) {
                 throw new UnexpectedValueException('AUTH_SCOPE_PBAC_MISMATCH: Organization/People detail.');
             }
+            $row['allowed_actions'] = EffectiveRowActionHints::forViewedRow($access, $resource, $row);
             if ($resource === 'employee_assignment') $row['is_primary'] = (bool)((int)($row['is_primary'] ?? 0));
             return $row;
         });

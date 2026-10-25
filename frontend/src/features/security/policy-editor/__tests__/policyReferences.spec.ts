@@ -7,14 +7,18 @@ import { usePolicyReferences } from '../usePolicyReferences'
 
 const mocks = vi.hoisted(() => ({
   getResourceActions: vi.fn<(id: string) => Promise<SecurityAction[]>>(),
+  listResourcePage: vi.fn(),
+  listAuthorizationGroupPage: vi.fn(),
+  listSecurityUserPage: vi.fn(),
+  withTypedClient: vi.fn(),
 }))
 vi.mock('@/services/security', () => ({
   getResourceActions: mocks.getResourceActions,
-  listAuthorizationGroupPage: vi.fn<(...args: unknown[]) => unknown>(),
-  listResourcePage: vi.fn<(...args: unknown[]) => unknown>(),
-  listSecurityUserPage: vi.fn<(...args: unknown[]) => unknown>(),
+  listAuthorizationGroupPage: mocks.listAuthorizationGroupPage,
+  listResourcePage: mocks.listResourcePage,
+  listSecurityUserPage: mocks.listSecurityUserPage,
 }))
-vi.mock('@/api/client', () => ({ withTypedClient: vi.fn<(...args: unknown[]) => unknown>() }))
+vi.mock('@/api/client', () => ({ withTypedClient: mocks.withTypedClient }))
 vi.mock('@/api/generated/sdk.gen', () => ({
   listDepartments: vi.fn<(...args: unknown[]) => unknown>(),
   listOrganizations: vi.fn<(...args: unknown[]) => unknown>(),
@@ -86,4 +90,45 @@ describe('PBAC Policy references and effect display (V2.4)', () => {
     expect(mocks.getResourceActions).toHaveBeenCalledWith('9')
     expect(lookups.actions.value[0]?.code).toBe('view')
   })
+
+  it('does not load any catalog for an empty Policy page', () => {
+    const lookups = usePolicyReferences(ref(initialPolicyDraft()), ref(null), (key) => key)
+    lookups.loadListReferences([])
+    expect(mocks.listResourcePage).not.toHaveBeenCalled()
+    expect(mocks.withTypedClient).not.toHaveBeenCalled()
+  })
+
+  it('loads only references on the visible Policy page and reuses them for the editor', async () => {
+    mocks.listResourcePage.mockResolvedValue({ data: [{ id: '2', type: 'policy', actions: [] }] })
+    mocks.listAuthorizationGroupPage.mockResolvedValue({ data: [{ id: '25', code: 'OPS', name: 'Ops' }] })
+    mocks.withTypedClient.mockResolvedValue({ data: { data: [{ id: '10', name: 'Root' }] } })
+    const lookups = usePolicyReferences(ref(initialPolicyDraft()), ref(null), (key) => key)
+    lookups.loadListReferences([{
+      ...samplePolicy([]), organization_id: '10', participant_type: 'GROUP', participant_ref_id: '25',
+    }])
+    await vi.waitFor(() => {
+      expect(lookups.labelForParticipant({ ...samplePolicy([]), participant_type: 'GROUP', participant_ref_id: '25' })).toBe('Ops')
+    })
+    expect(mocks.listResourcePage).toHaveBeenCalledTimes(1)
+    expect(mocks.listAuthorizationGroupPage).toHaveBeenCalledTimes(1)
+    expect(mocks.listSecurityUserPage).not.toHaveBeenCalled()
+    expect(mocks.withTypedClient).toHaveBeenCalledTimes(1) // Organization only; no workflow State on this page
+    await lookups.loadEditorReferences()
+    expect(mocks.listResourcePage).toHaveBeenCalledTimes(1)
+    expect(mocks.withTypedClient).toHaveBeenCalledTimes(1)
+  })
+
+  it('deduplicates simultaneous lookups and retries a failed reference request', async () => {
+    const failure = new Error('temporary lookup error')
+    mocks.listResourcePage.mockRejectedValueOnce(failure).mockResolvedValueOnce({ data: [] })
+    mocks.withTypedClient.mockResolvedValue({ data: { data: [] } })
+    const lookups = usePolicyReferences(ref(initialPolicyDraft()), ref(null), (key) => key)
+    const first = await Promise.allSettled([lookups.loadEditorReferences(), lookups.loadEditorReferences()])
+    expect(first.map((result) => result.status)).toEqual(['rejected', 'rejected'])
+    expect(mocks.listResourcePage).toHaveBeenCalledTimes(1)
+    await lookups.loadEditorReferences()
+    expect(mocks.listResourcePage).toHaveBeenCalledTimes(2)
+    expect(mocks.withTypedClient).toHaveBeenCalledTimes(1)
+  })
+
 })

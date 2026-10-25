@@ -1,3 +1,14 @@
+# CURRENT NEXT WORK — M9.3 release check (2026-10-25)
+
+1. On the accepted v1.5.0 + M9.1 + M9.2 worktree, apply the independent **M9.3 release preflight** patch (not the older M9.0 patch).
+2. Run `python backend/tools/m93_release_preflight.py`, then (after `cd frontend && pnpm build`) run the same script with `--require-build` from ERP root. Review any stopped gate rather than weakening it.
+3. Perform short operator UI / deep-link checks and prepare a backup/rollback plan before any production change. Static/source PASS does not replace runtime verification.
+4. Preserve M8.7 and M9.1 accepted functionality. M9.2 live journal, concurrency and recovery tests have documented waivers, **not** passing evidence.
+
+Details: `M9_3_RELEASE_READINESS.md`. The M6.3B.2 plan below is historical.
+
+---
+
 # CURRENT NEXT WORK - M6.3B.2 + QA consolidation (2026-10-24)
 
 ERP v1.4.0 is at **129/150 frozen HTTP operations**, not at M3. Current source tests are 107/107 offline suites and M3.4D 6/6 static architecture gates. **Live XAMPP delegated Avatar acceptance is still open.**

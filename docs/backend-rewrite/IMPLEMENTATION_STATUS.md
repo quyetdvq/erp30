@@ -1,3 +1,14 @@
+# CURRENT SOURCE STATUS — ERP v1.5.0 + M9.1 + M9.2, M9.3 candidate (2026-10-25)
+
+- **150/150** frozen routes source-verified; M8.7 accepted functionally by operator. M9.1 Employee performance/E2E is PASS/CLOSED on operator XAMPP.
+- M9.2 source tests passed; operator accepted its remaining live journal/concurrency checks **with waivers**, not as tested PASS. One DEV audit reported `BLOCKED_DEV_AUDIT`; do not bypass its environment guard.
+- M9.0 was never applied; M9.3 supplies an updated pinned frontend delta for the reviewed v1.5.0/M9.1 source, removes an Office lock from public assets, and adds source/build hygiene checks. No runtime API/frontend logic change.
+- **Production readiness:** NOT ATTESTED by M9.3 static checks. See `M9_3_RELEASE_READINESS.md` for the operator release checklist and limits.
+
+The v1.4.0 milestone history below is archived, not the current status.
+
+---
+
 # CURRENT STATUS - ERP v1.4.0 (2026-10-24)
 
 > This is the current Backend Rewrite checkpoint. Historical M1/M2 notes remain

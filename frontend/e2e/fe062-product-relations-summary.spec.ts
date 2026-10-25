@@ -1,5 +1,6 @@
 import { expect, test, type Page, type Route } from '@playwright/test'
 import { mockLookupBatch, child, combo, parent, simple } from './support/lookupBatchMock'
+import { productRow } from './support/productRows'
 
 type Preview = { product_id: string; total: number; products: (typeof simple)[] }
 
@@ -35,10 +36,6 @@ async function installPreviews(page: Page, parentTotal: number, comboTotal: numb
     await fulfill(route, previews)
   })
 }
-function productRow(page: Page, code: string) {
-  return page.getByRole('row').filter({ has: page.getByRole('cell', { name: code, exact: true }) })
-}
-
 for (const count of [0, 1, 2, 4]) {
   test(`Parent/COMBO preview with ${count} related products remains compact`, async ({ page }) => {
     const api = await mockLookupBatch(page)

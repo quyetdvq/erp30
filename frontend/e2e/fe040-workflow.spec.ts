@@ -3,9 +3,9 @@ import { expect, test, type Page } from '@playwright/test'
 import { mockPagination } from './support/mockPagination'
 
 const workflowStates = [
-  { id: '11', code: 'draft', name: 'Draft', description: null, status: 'ACTIVE' },
-  { id: '12', code: 'approved', name: 'Approved', description: null, status: 'ACTIVE' },
-  { id: '13', code: 'archived', name: 'Archived', description: null, status: 'INACTIVE' },
+  { id: '11', code: 'draft', name: 'Draft', description: null, status: 'ACTIVE', allowed_actions: { edit: true, setstate: true } },
+  { id: '12', code: 'approved', name: 'Approved', description: null, status: 'ACTIVE', allowed_actions: { edit: true, setstate: true } },
+  { id: '13', code: 'archived', name: 'Archived', description: null, status: 'INACTIVE', allowed_actions: { edit: true, setstate: true } },
 ]
 
 const lifecycle = {
@@ -14,6 +14,7 @@ const lifecycle = {
   name: 'Order lifecycle',
   description: 'Order flow',
   status: 'ACTIVE',
+  allowed_actions: { edit: true, setstate: true },
 }
 
 async function mockSession(

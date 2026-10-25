@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Modules\People\Read;
 
 use App\Modules\Access\Query\AuthorizationSqlScopeCompiler;
+use App\Modules\Access\Query\EffectiveRowActionHints;
 use App\Modules\Access\UnifiedAccessService;
 use CodeIgniter\Database\BaseConnection;
 use CodeIgniter\Shield\Entities\User;
@@ -52,12 +53,14 @@ final class PeopleMasterReadService
             if (count($rows) > $params['page_size']) {
                 throw new UnexpectedValueException('People SQL response exceeded page size.');
             }
-            foreach ($rows as $row) {
+            foreach ($rows as &$row) {
                 if (!$access->canView($resource, $row)) {
                     // Never post-filter: it would corrupt the authorized COUNT.
                     throw new UnexpectedValueException('AUTH_SCOPE_PBAC_MISMATCH: People page.');
                 }
+                $row['allowed_actions'] = EffectiveRowActionHints::forViewedRow($access, $resource, $row);
             }
+            unset($row);
             return ['data'=>$rows, 'page'=>$params['page'], 'page_size'=>$params['page_size'], 'total'=>$total];
         });
     }
@@ -76,6 +79,7 @@ final class PeopleMasterReadService
             if ($row !== null && !$access->canView($resource, $row)) {
                 throw new UnexpectedValueException('AUTH_SCOPE_PBAC_MISMATCH: People detail.');
             }
+            if ($row !== null) $row['allowed_actions'] = EffectiveRowActionHints::forViewedRow($access, $resource, $row);
             return $row;
         });
     }

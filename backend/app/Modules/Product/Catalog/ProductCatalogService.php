@@ -7,6 +7,7 @@ namespace App\Modules\Product\Catalog;
 use App\Exceptions\DomainException;
 use App\Modules\Access\ResourceStateRepository;
 use App\Modules\Access\Query\AuthorizationSqlScopeCompiler;
+use App\Modules\Access\Query\EffectiveRowActionHints;
 use App\Modules\Access\UnifiedAccessService;
 use CodeIgniter\Database\BaseConnection;
 use CodeIgniter\Exceptions\PageNotFoundException;
@@ -63,13 +64,15 @@ final class ProductCatalogService
             if (count($data) > $parameters['page_size']) {
                 throw new UnexpectedValueException('Catalog SQL exceeded requested page size.');
             }
-            foreach ($data as $row) {
+            foreach ($data as &$row) {
                 // Defense in depth. A scope/canonical decision mismatch must
                 // fail the whole page, NEVER post-filter and misreport total.
                 if (!$access->canView($this->resource, $row)) {
                     throw new UnexpectedValueException('AUTH_SCOPE_PBAC_MISMATCH: Product catalog page.');
                 }
+                $row['allowed_actions'] = EffectiveRowActionHints::forViewedRow($access, $this->resource, $row);
             }
+            unset($row);
             return ['data'=>$data, 'page'=>$parameters['page'],
                 'page_size'=>$parameters['page_size'], 'total'=>$total];
         });
@@ -100,6 +103,7 @@ final class ProductCatalogService
             if (!$access->canView($this->resource, $row)) {
                 throw new UnexpectedValueException('AUTH_SCOPE_PBAC_MISMATCH: Product catalog detail.');
             }
+            $row['allowed_actions'] = EffectiveRowActionHints::forViewedRow($access, $this->resource, $row);
             return $row;
         });
     }

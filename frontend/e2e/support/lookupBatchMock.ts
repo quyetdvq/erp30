@@ -60,6 +60,7 @@ export const priceList = {
   priority: 10,
   status: 'ACTIVE',
   description: null,
+  allowed_actions: { edit: true, setstate: false },
 }
 
 const organization = {
@@ -90,7 +91,7 @@ export async function mockLookupBatch(
     'price_list.create',
     'organization.view',
   ],
-  config: { legacyItem?: boolean } = {},
+  config: { legacyItem?: boolean; denyProductEdit?: boolean; denyPriceListEdit?: boolean } = {},
 ) {
   const calls: ApiCall[] = []
   const unexpected: string[] = []
@@ -160,7 +161,16 @@ export async function mockLookupBatch(
         states: ['DRAFT', 'ACTIVE', 'INACTIVE', 'CLOSED'],
       })
     } else if (path === '/api/v1/products' && method === 'GET') {
-      await list([parent, combo, simple], 15)
+      // The real Product list returns action hints on each authorized page row.
+      // Keep relation-preview fixtures hint-free: clicking preview-only children
+      // still requires a separately authorized Product detail request.
+      await list(
+        [parent, combo, simple].map((row) => ({
+          ...row,
+          allowed_actions: { edit: permissions.includes('product.edit') && !config.denyProductEdit, setstate: false },
+        })),
+        15,
+      )
     } else if (path === '/api/v1/product-groups' && method === 'GET') {
       await list([{ id: '10', code: 'E2E-GROUP', name: 'Test group', status: 'ACTIVE' }])
     } else if (path === '/api/v1/product-uoms' && method === 'GET') {
@@ -228,7 +238,7 @@ export async function mockLookupBatch(
     } else if (path === '/api/v1/organizations' && method === 'GET') {
       await list([organization])
     } else if (path === '/api/v1/price-lists' && method === 'GET') {
-      await list([priceList], 15)
+      await list([{ ...priceList, allowed_actions: { edit: permissions.includes('price_list.edit') && !config.denyPriceListEdit, setstate: false } }], 15)
     } else if (path === '/api/v1/price-lists/70/items' && method === 'GET') {
       await respond(itemRows)
     } else if (path === '/api/v1/price-lists/70/items' && method === 'PUT') {

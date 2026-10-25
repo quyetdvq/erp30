@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Modules\Access\Management;
 
 use App\Modules\Access\ResourceStateRepository;
+use App\Modules\Access\Query\EffectiveRowActionHints;
 use App\Modules\Access\UnifiedAccessService;
 use App\Shared\Http\AuthorizedListPage;
 use App\Shared\Read\PositiveId;
@@ -54,6 +55,12 @@ final class AccessReadService
                 $type, $page['data'], $this->repository->pageActions($type, $page['data']),
             );
         }
+        if ($type !== 'authorization_log') {
+            foreach ($page['data'] as &$row) {
+                $row['allowed_actions'] = EffectiveRowActionHints::forViewedRow($this->access, $type, $row);
+            }
+            unset($row);
+        }
         return $page;
     }
 
@@ -83,6 +90,9 @@ final class AccessReadService
         }
         if ($type === 'policy') {
             $row['actions'] = AccessReadContract::attachPageActions('policy', [$row], $row['actions'])[0]['actions'];
+        }
+        if ($type !== 'authorization_log') {
+            $row['allowed_actions'] = EffectiveRowActionHints::forViewedRow($this->access, $type, $row);
         }
         return $row;
     }

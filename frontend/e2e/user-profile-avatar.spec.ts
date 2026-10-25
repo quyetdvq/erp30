@@ -6,6 +6,7 @@ type SessionUser = {
   username: string
   name: string | null
   has_avatar: boolean
+  avatar_url?: string | null
   email: string
   active: boolean
   status: string
@@ -20,6 +21,7 @@ async function mockProfileSession(page: Page): Promise<{ user: SessionUser }> {
       username: 'legacy',
       name: null,
       has_avatar: false,
+      avatar_url: null,
       email: 'legacy@example.test',
       active: true,
       status: 'ACTIVE',
@@ -74,42 +76,54 @@ test.describe('User v1.2 private profile and avatar regression', () => {
     expect(session.user.base_permissions).toEqual(['user.view'])
   })
 
-  test('owner uploads, reads and deletes private avatar without supplying a storage filename', async ({ page }) => {
+  test('owner uploads, displays static avatar, and deletes without supplying a storage filename', async ({ page }) => {
     const session = await mockProfileSession(page)
+    // Use a CRC-valid 2x2 RGB PNG. Firefox rejects malformed IDAT chunk CRCs.
     const png = Buffer.from(
-      'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+/j9kAAAAASUVORK5CYII=',
+      'iVBORw0KGgoAAAANSUhEUgAAAAIAAAACCAIAAAD91JpzAAAAFklEQVR42mNULVzNwMDAxMDAwMDAAAAOsAFF/HvYqAAAAABJRU5ErkJggg==',
       'base64',
     )
+    // The mutation endpoint is authenticated; image bytes are served through the
+    // validated, public static URL returned in avatar_url (not an API GET).
+    const avatarUrl = '/uploads/2026/20261023avatar5689523.png'
     let uploaded = 0
-    let downloaded = 0
+    let staticImageReads = 0
+    let legacyApiImageReads = 0
     let deleted = 0
     let multipartPayload = ''
+    await page.route(`**${avatarUrl}`, async (route) => {
+      staticImageReads++
+      expect(route.request().method()).toBe('GET')
+      await route.fulfill({ status: 200, contentType: 'image/png', body: png })
+    })
     await page.route('**/api/v1/users/7/avatar', async (route) => {
       const method = route.request().method()
       if (method === 'POST') {
         uploaded++
         expect(route.request().headers()['content-type']).toContain('multipart/form-data')
         multipartPayload = route.request().postDataBuffer()?.toString('latin1') ?? ''
-        expect(multipartPayload).toContain('name="_method"')
-        expect(multipartPayload).toContain('PUT')
+        expect(multipartPayload).toContain('name="image"; filename="photo.png"')
+        expect(multipartPayload).not.toContain('name="_method"')
         session.user.has_avatar = true
+        session.user.avatar_url = avatarUrl
         return route.fulfill({
           status: 200,
           contentType: 'application/json',
-          body: JSON.stringify({ data: { user_id: '7', has_avatar: true }, meta: {} }),
+          body: JSON.stringify({ data: { user_id: '7', has_avatar: true, avatar_url: avatarUrl }, meta: {} }),
         })
       }
       if (method === 'GET') {
-        downloaded++
-        return route.fulfill({ status: 200, contentType: 'image/png', body: png })
+        legacyApiImageReads++
+        return route.fulfill({ status: 405 })
       }
       if (method === 'DELETE') {
         deleted++
         session.user.has_avatar = false
+        session.user.avatar_url = null
         return route.fulfill({
           status: 200,
           contentType: 'application/json',
-          body: JSON.stringify({ data: { user_id: '7', has_avatar: false }, meta: {} }),
+          body: JSON.stringify({ data: { user_id: '7', has_avatar: false, avatar_url: null }, meta: {} }),
         })
       }
       return route.fulfill({ status: 405 })
@@ -127,13 +141,21 @@ test.describe('User v1.2 private profile and avatar regression', () => {
     })
     await manager.getByRole('button', { name: 'Tải ảnh lên' }).click()
     await expect(manager.getByRole('button', { name: 'Xóa ảnh' })).toBeVisible()
-    await expect.poll(() => downloaded).toBeGreaterThan(0)
+    const displayedAvatar = manager.locator('.user-avatar__image')
+    await expect(displayedAvatar).toBeVisible()
+    expect(await displayedAvatar.getAttribute('src')).toContain(avatarUrl)
+    await expect.poll(() => staticImageReads).toBeGreaterThan(0)
+    await expect.poll(() => displayedAvatar.evaluate((image: HTMLImageElement) =>
+      image.complete && image.naturalWidth > 0,
+    )).toBe(true)
+    expect(legacyApiImageReads).toBe(0)
     expect(uploaded).toBe(1)
     expect(multipartPayload).toContain('name="image"')
     expect(multipartPayload).not.toContain('avatar_filename')
 
     await manager.getByRole('button', { name: 'Xóa ảnh' }).click()
     await expect(manager.getByRole('button', { name: 'Xóa ảnh' })).toHaveCount(0)
+    await expect(manager.locator('.user-avatar__image')).toHaveCount(0)
     expect(deleted).toBe(1)
     expect(session.user.has_avatar).toBe(false)
 

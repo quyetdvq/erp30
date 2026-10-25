@@ -1,15 +1,25 @@
 import { expect, test, type Page, type Route } from '@playwright/test'
 import { mockLookupBatch, type ApiCall } from './support/lookupBatchMock'
+import { productRow } from './support/productRows'
 
 const callsTo = (calls: ApiCall[], path: string, method?: string) =>
   calls.filter((call) => call.path === path && (!method || call.method === method))
 const distinctPaths = (calls: ApiCall[]) =>
   calls.filter((call) => call.path.startsWith('/api/v1/products/')).map((call) => call.path)
 
-async function openPriceItems(page: Page) {
+async function openPriceItems(page: Page, mode: 'view' | 'edit' = 'view') {
   const row = page.getByRole('row').filter({ hasText: 'E2E-RETAIL' })
-  await row.getByRole('button', { name: 'Xem chi tiết' }).click()
-  const dialog = page.getByRole('dialog', { name: 'Product Price List Items' })
+  if (mode === 'view') {
+    await row.getByRole('button', { name: 'Xem chi tiết' }).click()
+  } else {
+    await row.getByRole('button', { name: 'Sửa', exact: true }).click()
+    const form = page.getByRole('dialog', { name: 'Biểu mẫu Price List' })
+    await expect(form).toBeVisible()
+    await form.getByRole('button', { name: 'Chỉnh sửa dòng giá' }).click()
+  }
+  const dialog = page.getByRole('dialog', {
+    name: mode === 'view' ? 'Xem chi tiết dòng giá' : 'Chỉnh sửa dòng giá',
+  })
   await expect(dialog).toBeVisible()
   return dialog
 }
@@ -21,7 +31,7 @@ test.describe('E2E-LOOKUP-BATCH (browser contract, mocked API)', () => {
     const api = await mockLookupBatch(page)
     await page.goto('/products')
     await expect(page.getByRole('heading', { name: 'Sản phẩm' })).toBeVisible()
-    await expect(page.getByRole('cell', { name: 'E2E-PARENT', exact: true })).toBeVisible()
+    await expect(productRow(page, 'E2E-PARENT')).toBeVisible()
     await expect
       .poll(() => callsTo(api.calls, '/api/v1/products/relations-preview', 'POST').length)
       .toBe(1)
@@ -62,14 +72,13 @@ test.describe('E2E-LOOKUP-BATCH (browser contract, mocked API)', () => {
   }) => {
     const api = await mockLookupBatch(page)
     await page.goto('/products')
-    await expect(page.getByRole('cell', { name: 'E2E-SIMPLE', exact: true })).toBeVisible()
-    await page
-      .getByRole('row')
-      .filter({ hasText: 'E2E-SIMPLE' })
-      .getByRole('button', { name: 'E2E Simple' })
-      .click()
+    const simpleRow = productRow(page, 'E2E-SIMPLE')
+    await expect(simpleRow).toBeVisible()
+    await simpleRow.getByRole('button', { name: 'E2E Simple', exact: true }).click()
     const detail = page.getByRole('dialog', { name: 'Chi tiết sản phẩm' })
     await expect(detail).toBeVisible()
+    // A page row already has per-record action hints; opening it is not an N+1 detail GET.
+    expect(callsTo(api.calls, '/api/v1/products/30', 'GET')).toHaveLength(0)
     expect(callsTo(api.calls, '/api/v1/products/30/uom-conversions', 'GET')).toHaveLength(0)
     await detail.getByRole('tab', { name: 'Quy đổi đơn vị' }).click()
     await expect
@@ -108,7 +117,9 @@ test.describe('E2E-LOOKUP-BATCH (browser contract, mocked API)', () => {
     const api = await mockLookupBatch(page)
     await page.goto('/products/price-lists')
     const dialog = await openPriceItems(page)
-    await expect(dialog.getByRole('textbox', { name: 'Giá' })).toHaveValue('125,000.00')
+    await expect(dialog.getByText('125,000.00')).toBeVisible()
+    await expect(dialog.getByRole('textbox', { name: 'Giá' })).toHaveCount(0)
+    await expect(dialog.getByRole('button', { name: 'Lưu' })).toHaveCount(0)
     await expect
       .poll(() => callsTo(api.calls, '/api/v1/product-uoms/labels/resolve', 'POST').length)
       .toBe(1)
@@ -184,7 +195,7 @@ test.describe('E2E-LOOKUP-BATCH (browser contract, mocked API)', () => {
     await expect.poll(() => acceptedTokens.length).toBe(2)
     expect(acceptedTokens).toEqual(['e2e-csrf', 'rotated-csrf-1'])
     expect(csrfFailures).toEqual([])
-    await expect(dialog.getByRole('textbox', { name: 'Giá' })).toHaveValue('125,000.00')
+    await expect(dialog.getByText('125,000.00')).toBeVisible()
     await expect(dialog.locator('.inline-error')).toHaveCount(0)
     expect(api.unexpected).toEqual([])
   })
@@ -217,7 +228,7 @@ test.describe('E2E-LOOKUP-BATCH (browser contract, mocked API)', () => {
     })
 
     await page.goto('/products/price-lists')
-    const dialog = await openPriceItems(page)
+    const dialog = await openPriceItems(page, 'edit')
     const save = dialog.getByRole('button', { name: 'Lưu' })
     await expect(save).toBeEnabled()
     await save.click()
@@ -235,7 +246,7 @@ test.describe('E2E-LOOKUP-BATCH (browser contract, mocked API)', () => {
   }) => {
     const api = await mockLookupBatch(page, undefined, { legacyItem: false })
     await page.goto('/products/price-lists')
-    const dialog = await openPriceItems(page)
+    const dialog = await openPriceItems(page, 'edit')
     await dialog.getByRole('button', { name: 'Thêm Product/UOM' }).click()
     const item = dialog.locator('tbody tr').last()
     await item.locator('.n-base-selection').first().click()

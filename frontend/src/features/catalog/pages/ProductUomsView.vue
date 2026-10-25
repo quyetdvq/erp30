@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { rowAllowedActions } from '@/components/lists/rowActionPolicy'
 import { computed, onMounted, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 import type { ProductUom, ProductUomCreate, ProductUomPatch } from '@/api/generated/types.gen'
@@ -241,7 +242,7 @@ onMounted(() => void load())
         @sort-change="handleSortChange"
       >
         <template #cell-actions="{ row }">
-          <TableRowActions
+          <TableRowActions authorization-mode="effective" :view-scope-verified="true" :allowed-actions="rowAllowedActions(row)"
             :active="row.status === 'ACTIVE'"
             :state-target-id="String(row.id)"
             :busy="busy"

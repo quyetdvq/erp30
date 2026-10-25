@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { rowAllowedActions } from '@/components/lists/rowActionPolicy'
 import { computed, onMounted, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { NIcon } from 'naive-ui'
@@ -24,8 +25,10 @@ import {
 import type { ListColumn, ListQuery } from '@/components/lists/listTypes'
 import { useBasePermission } from '@/composables/useBasePermission'
 import { useFormatters } from '@/composables/useFormatters'
+import { usePresentationSettings } from '@/composables/usePresentationSettings'
 import { useListState } from '@/composables/useListState'
 import { toApiDateTime, toDateTimeLocal } from '@/modules/priceListDateTime'
+import { formatEditableDecimal } from '@/presentation/formatters'
 import { listOrganizationPage } from '@/services/foundation'
 import { reportApiError } from '@/services/errorBoundary'
 import { useUnsavedChanges } from '@/composables/useUnsavedChanges'
@@ -52,12 +55,14 @@ import {
 } from '@/services/pricingCatalog'
 
 type ItemDraft = { product_id: string; uom_id: string; price: string }
+type ItemDialogMode = 'view' | 'edit'
 
 const { t } = useI18n()
 const { hasBasePermission } = useBasePermission()
 const workflowStates = useBusinessWorkflowStates('price_list')
 const auth = useAuthStore()
 const formatters = useFormatters()
+const presentation = usePresentationSettings()
 const state = useListState<PriceList>((query) => listPriceListPage(query), { sort: 'priority' })
 const organizations = ref<Organization[]>([])
 const products = ref<ProductOption[]>([])
@@ -66,7 +71,9 @@ const salesUoms = ref<Record<string, SalesUomOption[]>>({})
 const uomLabels = ref<Record<string, UomLabel>>({})
 const modalOpen = ref(false)
 const detailOpen = ref(false)
+const detailMode = ref<ItemDialogMode>('view')
 const editingId = ref<string>()
+const editingRow = ref<PriceList | null>(null)
 const detailRow = ref<PriceList | null>(null)
 const itemRows = ref<ItemDraft[]>([])
 const busy = ref(false)
@@ -90,8 +97,13 @@ const form = ref({
 })
 const unsaved = useUnsavedChanges(form, modalOpen)
 const itemsUnsaved = useUnsavedChanges(itemRows, detailOpen)
+function mayEditRow(row: PriceList | null): boolean {
+  return row !== null && hasBasePermission('price_list', 'edit') &&
+    rowAllowedActions(row)?.edit === true
+}
+const canEditItems = computed(() => detailMode.value === 'edit' && mayEditRow(detailRow.value))
 function closeDetail(): void {
-  if (!itemsUnsaved.confirmDiscard()) return
+  if (detailMode.value === 'edit' && !itemsUnsaved.confirmDiscard()) return
   detailOpen.value = false
   ++detailEpoch
   itemsUnsaved.markClean()
@@ -270,6 +282,7 @@ function resetQuery(): void {
 }
 function openCreate(): void {
   editingId.value = undefined
+  editingRow.value = null
   form.value = {
     code: '',
     name: '',
@@ -286,7 +299,9 @@ function openCreate(): void {
   void ensureOrganizationLookup()
 }
 function openEdit(row: PriceList): void {
+  if (!mayEditRow(row)) return
   editingId.value = String(row.id)
+  editingRow.value = row
   form.value = {
     code: row.code,
     name: row.name,
@@ -302,8 +317,17 @@ function openEdit(row: PriceList): void {
   modalOpen.value = true
   void ensureOrganizationLookup()
 }
+function editPriceListItems(): void {
+  const row = editingRow.value
+  if (!row || !modalOpen.value || busy.value || !mayEditRow(row)) return
+  if (!unsaved.confirmDiscard()) return
+  modalOpen.value = false
+  unsaved.markClean()
+  void openDetail(row, 'edit')
+}
 async function save(): Promise<void> {
-  if (!organizationLookupReady.value) return
+  if (!organizationLookupReady.value || busy.value ||
+      (editingId.value && !mayEditRow(editingRow.value))) return
   error.value = null
   const effectiveFrom = toApiDateTime(form.value.effective_from)
   const effectiveTo = form.value.effective_to ? toApiDateTime(form.value.effective_to) : ''
@@ -342,11 +366,13 @@ async function save(): Promise<void> {
 async function afterWorkflowChange(): Promise<void> {
   await load()
 }
-async function openDetail(row: PriceList): Promise<void> {
+async function openDetail(row: PriceList, mode: ItemDialogMode = 'view'): Promise<void> {
+  if (mode === 'edit' && !mayEditRow(row)) return
   const epoch = ++detailEpoch
   const generation = auth.getSessionGeneration()
   itemRows.value = []
   itemsUnsaved.markClean()
+  detailMode.value = mode
   detailRow.value = row
   detailOpen.value = true
   itemBusy.value = true
@@ -377,13 +403,27 @@ async function openDetail(row: PriceList): Promise<void> {
     if (epoch === detailEpoch) itemBusy.value = false
   }
 }
+function itemProductLabel(productId: string): string {
+  const row = products.value.find((product) => String(product.id) === productId)
+  return row ? `${row.full_name} (${row.role})` : productId
+}
+function itemUomLabel(item: ItemDraft): string {
+  const option = (salesUoms.value[item.product_id] ?? []).find((uom) => uom.id === item.uom_id)
+  return option?.code ?? uomLabels.value[item.uom_id]?.code ?? item.uom_id
+}
+function itemPriceLabel(price: string): string {
+  return formatEditableDecimal(price, presentation.runtime.value, 'money')
+}
 function addItem(): void {
+  if (!canEditItems.value || itemBusy.value) return
   itemRows.value.push({ product_id: '', uom_id: '', price: '' })
 }
 function removeItem(index: number): void {
+  if (!canEditItems.value || itemBusy.value) return
   itemRows.value = itemRows.value.filter((_, current) => current !== index)
 }
 async function productChanged(index: number, value: string): Promise<void> {
+  if (!canEditItems.value || itemBusy.value) return
   const row = itemRows.value[index]
   if (!row) return
   row.product_id = value
@@ -399,7 +439,10 @@ async function productChanged(index: number, value: string): Promise<void> {
   }
 }
 async function saveItems(): Promise<void> {
-  if (!detailRow.value || !itemLookupsReady.value) return
+  if (!canEditItems.value || !detailRow.value || !itemLookupsReady.value || itemBusy.value) return
+  const epoch = detailEpoch
+  const generation = auth.getSessionGeneration()
+  const priceListId = String(detailRow.value.id)
   itemError.value = null
   if (
     itemRows.value.some((row) => !row.product_id || !row.uom_id || !decimalNonNegative(row.price))
@@ -414,7 +457,8 @@ async function saveItems(): Promise<void> {
       uom_id: row.uom_id,
       price: row.price,
     }))
-    const saved = await replacePriceListItemRows(String(detailRow.value.id), payload)
+    const saved = await replacePriceListItemRows(priceListId, payload)
+    if (epoch !== detailEpoch || generation !== auth.getSessionGeneration()) return
     itemRows.value = saved.map((item) => ({
       product_id: String(item.product_id),
       uom_id: String(item.uom_id),
@@ -422,10 +466,11 @@ async function saveItems(): Promise<void> {
     }))
     itemsUnsaved.markClean()
   } catch (caught: unknown) {
+    if (epoch !== detailEpoch || generation !== auth.getSessionGeneration()) return
     itemError.value = caught
     reportApiError(caught)
   } finally {
-    itemBusy.value = false
+    if (epoch === detailEpoch && generation === auth.getSessionGeneration()) itemBusy.value = false
   }
 }
 onMounted(() => void load())
@@ -506,7 +551,7 @@ onMounted(() => void load())
           <TableStatus :status="row.status" />
         </template>
         <template #cell-actions="{ row }">
-          <TableRowActions
+          <TableRowActions authorization-mode="effective" :view-scope-verified="true" :allowed-actions="rowAllowedActions(row)"
             :active="row.status === 'ACTIVE'"
             :state-target-id="String(row.id)"
             :busy="busy"
@@ -609,6 +654,15 @@ onMounted(() => void load())
           {{ t('common.cancel') }}
         </button>
         <button
+          v-if="editingId && mayEditRow(editingRow)"
+          type="button"
+          class="secondary-button"
+          :disabled="busy"
+          @click="editPriceListItems"
+        >
+          {{ t('pricing.editItems') }}
+        </button>
+        <button
           type="submit"
           form="create-pricing-list"
           class="primary-button"
@@ -626,12 +680,15 @@ onMounted(() => void load())
       class="modal-card price-items-modal"
       role="dialog"
       aria-modal="true"
-      :aria-label="t('pricing.items')"
+      :aria-label="detailMode === 'view' ? t('pricing.viewItems') : t('pricing.editItems')"
     >
       <header class="modal-card__header">
         <div>
           <p class="eyebrow">{{ detailRow.code }}</p>
           <h2>{{ detailRow.name }}</h2>
+          <p class="field-note" role="note">
+            {{ detailMode === 'view' ? t('pricing.viewOnly') : t('pricing.editItems') }}
+          </p>
         </div>
         <button
           type="button"
@@ -658,6 +715,8 @@ onMounted(() => void load())
           </dd>
           <dt>{{ t('pricing.priority') }}</dt>
           <dd>{{ detailRow.priority }}</dd>
+          <dt>{{ t('pricing.descriptionField') }}</dt>
+          <dd>{{ detailRow.description || t('list.noValue') }}</dd>
           <dt>{{ t('pricing.status') }}</dt>
           <dd>
             <TableStatus :status="detailRow.status" />
@@ -667,15 +726,16 @@ onMounted(() => void load())
           <header class="section-header">
             <h3>{{ t('pricing.items') }}</h3>
             <button
-              v-if="hasBasePermission('price_list', 'edit')"
+              v-if="canEditItems"
               type="button"
               class="secondary-button"
+              :disabled="itemBusy || !itemLookupsReady"
               @click="addItem"
             >
               {{ t('pricing.addItem') }}
             </button>
           </header>
-          <p class="field-note">{{ t('pricing.itemRules') }}</p>
+          <p v-if="canEditItems" class="field-note">{{ t('pricing.itemRules') }}</p>
           <p v-if="itemError" class="inline-error" role="alert">{{ t('pricing.requestError') }}</p>
           <p v-if="itemBusy" class="field-note">{{ t('common.loading') }}</p>
           <div class="table-wrap">
@@ -685,22 +745,25 @@ onMounted(() => void load())
                   <th>{{ t('pricing.product') }}</th>
                   <th>{{ t('pricing.uom') }}</th>
                   <th>{{ t('pricing.price') }}</th>
-                  <th>{{ t('pricing.actions') }}</th>
+                  <th v-if="canEditItems">{{ t('pricing.actions') }}</th>
                 </tr>
               </thead>
               <tbody>
                 <tr v-for="(item, index) in itemRows" :key="`${item.product_id}-${index}`">
                   <td>
                     <RemoteSearchableSelect
+                      v-if="canEditItems"
                       :model-value="item.product_id"
                       :selected-options="selectedProductOptions"
                       :search="searchPriceListProducts"
                       :aria-label="t('pricing.product')"
                       @update:model-value="(value) => void productChanged(index, value)"
                     />
+                    <span v-else>{{ itemProductLabel(item.product_id) }}</span>
                   </td>
                   <td>
                     <SearchableSelect
+                      v-if="canEditItems"
                       :model-value="item.uom_id"
                       :options="optionsForProduct(item.product_id)"
                       :aria-label="t('pricing.uom')"
@@ -708,18 +771,20 @@ onMounted(() => void load())
                         (value) => (item.uom_id = typeof value === 'string' ? value : '')
                       "
                     />
+                    <span v-else>{{ itemUomLabel(item) }}</span>
                   </td>
                   <td>
                     <DecimalInput
+                      v-if="canEditItems"
                       v-model="item.price"
                       kind="money"
                       :max-decimals="2"
                       :aria-label="t('pricing.price')"
                     />
+                    <span v-else>{{ itemPriceLabel(item.price) }}</span>
                   </td>
-                  <td>
+                  <td v-if="canEditItems">
                     <button
-                      v-if="hasBasePermission('price_list', 'edit')"
                       type="button"
                       class="icon-button danger"
                       :aria-label="t('common.delete')"
@@ -730,13 +795,13 @@ onMounted(() => void load())
                   </td>
                 </tr>
                 <tr v-if="!itemBusy && itemRows.length === 0">
-                  <td colspan="4">{{ t('list.noResults') }}</td>
+                  <td :colspan="canEditItems ? 4 : 3">{{ t('list.noResults') }}</td>
                 </tr>
               </tbody>
             </table>
           </div>
           <button
-            v-if="hasBasePermission('price_list', 'edit')"
+            v-if="canEditItems"
             type="button"
             class="primary-button"
             :disabled="itemBusy || !itemLookupsReady"
@@ -760,8 +825,25 @@ onMounted(() => void load())
 <style scoped>
 .pricing-panel {
   display: grid;
+  min-width: 0;
   gap: 14px;
   padding: 18px 20px 20px;
+}
+
+/* On narrow workspaces the action cell must remain reachable without
+   relying on nested horizontal scroll gestures (notably WebKit). */
+.pricing-panel :deep(.list-table th:last-child),
+.pricing-panel :deep(.list-table td:last-child) {
+  position: sticky;
+  right: 0;
+  z-index: 1;
+  background: #fff;
+  box-shadow: -1px 0 0 #dbe5ea;
+}
+
+.pricing-panel :deep(.list-table th:last-child) {
+  z-index: 2;
+  background: #f7fafb;
 }
 
 .pricing-query-toolbar {
@@ -834,13 +916,24 @@ onMounted(() => void load())
   font: inherit;
 }
 
+/* Keep header/footer visible and scroll the BODY of the item editor.
+   Previously the body and footer could exceed the clipped modal in WebKit. */
 .price-items-modal {
+  display: flex;
+  flex-direction: column;
   width: min(1060px, 100%);
   max-height: calc(100vh - 36px);
 }
 
 .price-items-modal .modal-card__body {
-  max-height: calc(100vh - 160px);
+  flex: 1 1 auto;
+  min-height: 0;
+  max-height: none;
+  overflow-y: auto;
+}
+
+.price-items-modal .items-section {
+  min-width: 0;
 }
 
 .eyebrow {

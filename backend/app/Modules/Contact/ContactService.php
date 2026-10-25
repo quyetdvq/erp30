@@ -6,6 +6,7 @@ namespace App\Modules\Contact;
 
 use App\Exceptions\DomainException;
 use App\Modules\Access\Query\AuthorizationSqlScopeCompiler;
+use App\Modules\Access\Query\EffectiveRowActionHints;
 use App\Modules\Access\ResourceStateRepository;
 use App\Modules\Access\UnifiedAccessService;
 use App\Shared\Read\UtcBusinessDate;
@@ -60,14 +61,16 @@ final class ContactService
             if ($pageQuery === false) throw new UnexpectedValueException('Contact scoped page query failed.');
             $rows = array_values($pageQuery->getResultArray());
             if (count($rows) > $params['page_size']) throw new UnexpectedValueException('Contact page exceeded requested limit.');
-            foreach ($rows as $row) {
+            foreach ($rows as &$row) {
                 // Defense in depth. A mismatch must fail the whole response,
                 // NEVER silently post-filter and corrupt an authorized total.
                 $scope = $readScope->resolve($row);
                 if (!$access->canView($scope['resource'], $scope['target'])) {
                     throw new UnexpectedValueException('AUTH_SCOPE_PBAC_MISMATCH: Contact list.');
                 }
+                $row['allowed_actions'] = EffectiveRowActionHints::forViewedRow($access, $scope['resource'], $scope['target']);
             }
+            unset($row);
             return ['data'=>$rows, 'page'=>$params['page'], 'page_size'=>$params['page_size'], 'total'=>$total];
         });
     }
@@ -90,6 +93,7 @@ final class ContactService
             if (!$access->canView($scope['resource'], $scope['target'])) {
                 throw new UnexpectedValueException('AUTH_SCOPE_PBAC_MISMATCH: Contact detail.');
             }
+            $row['allowed_actions'] = EffectiveRowActionHints::forViewedRow($access, $scope['resource'], $scope['target']);
             return $row;
         });
     }

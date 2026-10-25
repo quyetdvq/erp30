@@ -12,6 +12,18 @@ import ListShell from '@/components/lists/ListShell.vue'
 import ListTable from '@/components/lists/ListTable.vue'
 import TableDetailModal from '@/components/lists/TableDetailModal.vue'
 import TableRowActions from '@/components/lists/TableRowActions.vue'
+import { useAuthStore } from '@/stores/auth'
+
+function grantRowPermissions(): void {
+  useAuthStore().$patch({
+    permissionSnapshotState: 'ready',
+    user: {
+      id: 7, username: 'test', name: null, email: null,
+      has_avatar: false, active: true, status: 'ACTIVE', groups: [],
+      base_permissions: ['product.view', 'product.edit', 'product.setstate', 'product.delete'],
+    },
+  })
+}
 
 describe('shared list components', () => {
   it('exposes distinct shell states and preserves data during refresh', () => {
@@ -51,6 +63,7 @@ describe('shared list components', () => {
 
   it('disables all row mutations and sort controls during a pending request', async () => {
     setActivePinia(createPinia())
+    grantRowPermissions()
     const actions = mount(TableRowActions, {
       props: {
         busy: true,
@@ -59,6 +72,12 @@ describe('shared list components', () => {
         showToggle: true,
         showDelete: true,
         active: true,
+        viewScopeVerified: true,
+        allowedActions: { edit: true, setstate: true, delete: true },
+        viewPermission: 'product.view',
+        editPermission: 'product.edit',
+        togglePermission: 'product.setstate',
+        deletePermission: 'product.delete',
       },
       global: { plugins: [i18n] },
     })
@@ -149,26 +168,34 @@ describe('shared list components', () => {
     expect(wrapper.find('button').exists()).toBe(false)
   })
 
-  it('uses server-authorized row controls without inferring Product edit or state permission', async () => {
+  it('requires both base permission and effective row hints to show Product controls', async () => {
     setActivePinia(createPinia())
-    // No base_permissions snapshot: these are trusted per-row Product hints.
+    grantRowPermissions()
     const actions = mount(TableRowActions, {
       props: {
+        viewScopeVerified: true,
         showView: true,
-        showEdit: false,
-        showToggle: false,
+        showEdit: true,
+        showToggle: true,
+        viewPermission: 'product.view',
+        editPermission: 'product.edit',
+        togglePermission: 'product.setstate',
         stateTargetId: '123',
         stateResource: 'product',
+        allowedActions: { edit: false, setstate: false },
       },
       global: { plugins: [i18n] },
     })
     expect(actions.findAll('button')).toHaveLength(1)
-    await actions.setProps({ showEdit: true, showToggle: true })
+    await actions.setProps({ allowedActions: { edit: true, setstate: true } })
     expect(actions.findAll('button')).toHaveLength(3)
     await actions.get('button[title="Sửa"]').trigger('click')
     expect(actions.emitted('edit')).toHaveLength(1)
-    await actions.setProps({ showEdit: false, showToggle: false })
+    await actions.setProps({ allowedActions: null })
     expect(actions.findAll('button')).toHaveLength(1)
+    useAuthStore().markPermissionSnapshotStale()
+    await nextTick()
+    expect(actions.findAll('button')).toHaveLength(0)
   })
 
   it('right-aligns shared actions columns unless the caller overrides them', () => {

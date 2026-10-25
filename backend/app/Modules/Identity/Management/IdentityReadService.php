@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Modules\Identity\Management;
 
 use App\Modules\Access\UnifiedAccessService;
+use App\Modules\Access\Query\EffectiveRowActionHints;
 use App\Shared\Http\AuthorizedListPage;
 use App\Shared\Read\PositiveId;
 use CodeIgniter\Database\BaseConnection;
@@ -36,7 +37,12 @@ final class IdentityReadService
                 $visible[] = $row;
             }
         }
-        return AuthorizedListPage::paginate('security_user', $visible, $query);
+        $page = AuthorizedListPage::paginate('security_user', $visible, $query);
+        foreach ($page['data'] as &$row) {
+            $row['allowed_actions'] = EffectiveRowActionHints::forViewedRow($this->access, 'user', $row);
+        }
+        unset($row);
+        return $page;
     }
 
     /** Direct grants are NOT inherited group permissions.

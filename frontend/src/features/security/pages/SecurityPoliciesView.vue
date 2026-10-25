@@ -1,8 +1,9 @@
 <script setup lang="ts">
+import { rowAllowedActions } from '@/components/lists/rowActionPolicy'
 import { computed, onMounted, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { NIcon, NSelect } from 'naive-ui'
-import { TrashOutline } from '@vicons/ionicons5'
+import { TrashOutline, ShieldCheckmarkOutline, RefreshOutline, SaveOutline, Refresh } from '@vicons/ionicons5'
 import type { Policy } from '@/api/generated/types.gen'
 import OrganizationTreeSelect from '@/components/organizations/OrganizationTreeSelect.vue'
 import {
@@ -30,8 +31,13 @@ import { usePolicyWorkflowStates } from '../policy-editor/usePolicyWorkflowState
 const { t } = useI18n()
 const { hasBasePermission } = useBasePermission()
 const state = useListState<Policy>((query) => listPolicyPage(query), { sort: 'id' })
-const selectedId = ref<string | null>(null)
 const modalOpen = ref(false)
+const viewingPolicy = ref<Policy | null>(null)
+const editingPolicy = ref<Policy | null>(null)
+const preparingForm = ref(false)
+const canWriteForm = computed(() => editingPolicy.value
+  ? hasBasePermission('policy', 'edit') && rowAllowedActions(editingPolicy.value)?.edit === true
+  : hasBasePermission('policy', 'create'))
 const editingId = ref<string | undefined>()
 const busy = ref(false)
 const error = ref<unknown | null>(null)
@@ -46,10 +52,14 @@ const {
   positions,
   workflowStates,
   actionOptions,
-  loadReferences,
+  loadListReferences,
+  loadEditorReferences,
+  waitForPendingParticipantCatalog,
   loadActions,
   labelForOrganization,
   labelForResource,
+  labelForState,
+  labelForAction,
   labelForParticipant,
   effectsSummary,
 } = usePolicyReferences(form, error, t)
@@ -62,7 +72,7 @@ const {
   onParticipantTypeChange,
   searchParticipants,
   currentParticipantRequestId,
-} = usePolicyParticipants(form, error, { organizations, groups, users, departments, positions })
+} = usePolicyParticipants(form, error, { organizations, groups, users, departments, positions, waitForPendingParticipantCatalog })
 const {
   workflowStateOptions,
   workflowStatesLoading,
@@ -76,6 +86,7 @@ function closeForm(): void {
   if (busy.value || !confirmDiscard()) return
   markClean()
   modalOpen.value = false
+  editingPolicy.value = null
 }
 const columns: readonly ListColumn<Policy>[] = [
   { key: 'organization_id', labelKey: 'security.organizationScope' },
@@ -102,7 +113,7 @@ async function load(): Promise<void> {
   error.value = null
   try {
     await state.apply()
-    if (!selectedId.value && state.rows.value[0]) selectedId.value = String(state.rows.value[0].id)
+    loadListReferences(state.rows.value)
   } catch (caught: unknown) {
     error.value = caught
     reportApiError(caught)
@@ -113,62 +124,99 @@ function onResourceChange(resourceId: string): void {
   form.value.actions = []
   void Promise.all([loadActions(resourceId), loadWorkflowStates(resourceId)])
 }
-function openCreate(): void {
-  editingId.value = undefined
-  form.value = createPolicyDraft(organizations.value, resources.value)
-  // Choosing the first participant is an API-driven default, not a user edit.
-  // Rebase the pristine draft only if no other field or selection changed while loading.
-  const initialFields = JSON.stringify({ ...form.value, participant_ref_id: '' })
-  const initialParticipantLoad = loadParticipantOptions(form.value.participant_type, '', true)
-  const requestId = currentParticipantRequestId()
-  void Promise.all([
-    loadActions(form.value.resource_id),
-    loadWorkflowStates(form.value.resource_id),
-    initialParticipantLoad,
-  ])
-    .then(() => {
-      if (
-        modalOpen.value &&
-        editingId.value === undefined &&
+/** View is a separate read-only surface, even for actors who can edit. */
+function openView(policy: Policy): void {
+  viewingPolicy.value = policy
+}
+function closeView(): void {
+  viewingPolicy.value = null
+}
+async function openCreate(): Promise<void> {
+  if (preparingForm.value || busy.value || !hasBasePermission('policy', 'create')) return
+  preparingForm.value = true
+  error.value = null
+  try {
+    await loadEditorReferences()
+    editingId.value = undefined
+    editingPolicy.value = null
+    form.value = createPolicyDraft(organizations.value, resources.value)
+    if (!form.value.resource_id || !form.value.organization_id) {
+      throw new Error('Policy editor reference catalog is incomplete.')
+    }
+    markClean()
+    modalOpen.value = true
+    // Choosing the first participant is an API-driven default, not a user edit.
+    // Rebase pristine state only when selection has not been edited meanwhile.
+    const initialFields = JSON.stringify({ ...form.value, participant_ref_id: '' })
+    const initialParticipantLoad = loadParticipantOptions(form.value.participant_type, '', true)
+    const requestId = currentParticipantRequestId()
+    void Promise.all([
+      loadActions(form.value.resource_id),
+      loadWorkflowStates(form.value.resource_id),
+      initialParticipantLoad,
+    ]).then(() => {
+      if (modalOpen.value && editingId.value === undefined &&
         currentParticipantRequestId() === requestId &&
         JSON.stringify({ ...form.value, participant_ref_id: '' }) === initialFields &&
-        form.value.participant_ref_id === (participantOptions.value[0]?.id ?? '')
-      )
+        form.value.participant_ref_id === (participantOptions.value[0]?.id ?? '')) {
         markClean()
-    })
-    .catch(reportApiError)
-  markClean()
-  modalOpen.value = true
+      }
+    }).catch(reportApiError)
+  } catch (caught: unknown) {
+    error.value = caught
+    reportApiError(caught)
+  } finally {
+    preparingForm.value = false
+  }
 }
-function openEdit(policy: Policy): void {
-  editingId.value = String(policy.id)
-  form.value = policyToDraft(policy)
-  void Promise.all([
-    loadActions(form.value.resource_id),
-    loadWorkflowStates(form.value.resource_id),
-    loadParticipantOptions(form.value.participant_type, ''),
-  ])
-  markClean()
-  modalOpen.value = true
+async function openEdit(policy: Policy): Promise<void> {
+  if (preparingForm.value || busy.value || !hasBasePermission('policy', 'edit') ||
+    rowAllowedActions(policy)?.edit !== true) return
+  preparingForm.value = true
+  error.value = null
+  try {
+    await loadEditorReferences()
+    editingPolicy.value = policy
+    editingId.value = String(policy.id)
+    form.value = policyToDraft(policy)
+    markClean()
+    modalOpen.value = true
+    void Promise.all([
+      loadActions(form.value.resource_id),
+      loadWorkflowStates(form.value.resource_id),
+      loadParticipantOptions(form.value.participant_type, ''),
+    ]).catch(reportApiError)
+  } catch (caught: unknown) {
+    error.value = caught
+    reportApiError(caught)
+  } finally {
+    preparingForm.value = false
+  }
 }
 function addAction(): void {
+  if (!canWriteForm.value) return
   const candidate = actionOptions.value.find(
     (action) => !form.value.actions.some((row) => row.resource_action_id === action.id),
   )
   if (candidate) form.value.actions.push({ resource_action_id: candidate.id, effect: 'ALLOW' })
 }
 function removeAction(index: number): void {
+  if (!canWriteForm.value) return
   form.value.actions.splice(index, 1)
 }
 async function save(): Promise<void> {
+  if (!modalOpen.value || busy.value || !canWriteForm.value ||
+      workflowStatesLoading.value || workflowStatesUnavailable.value ||
+      !form.value.participant_ref_id || !form.value.actions.length ||
+      form.value.actions.some((row) => !row.resource_action_id || !row.effect)) return
   busy.value = true
   error.value = null
   duplicateScopeConflict.value = false
   try {
-    if (workflowStatesLoading.value || workflowStatesUnavailable.value) return
     await savePolicy(policyPayload(form.value), editingId.value)
     markClean()
     modalOpen.value = false
+    editingPolicy.value = null
     await load()
   } catch (caught: unknown) {
     error.value = caught
@@ -179,6 +227,8 @@ async function save(): Promise<void> {
   }
 }
 async function toggle(row: Policy): Promise<void> {
+  if (busy.value || !hasBasePermission('policy', 'setstate') ||
+      rowAllowedActions(row)?.setstate !== true) return
   const status = row.status === 'ACTIVE' ? 'INACTIVE' : 'ACTIVE'
   const label = t(status === 'ACTIVE' ? 'common.activate' : 'common.deactivate')
   const message = `${label}: ${t('security.policy')} #${row.id}?`
@@ -200,9 +250,8 @@ async function reloadAfterDuplicate(): Promise<void> {
   duplicateScopeConflict.value = false
   await load()
 }
-onMounted(async () => {
-  await loadReferences()
-  await load()
+onMounted(() => {
+  void load()
 })
 </script>
 
@@ -213,11 +262,11 @@ onMounted(async () => {
       <p>{{ t('security.policiesDescription') }}</p>
     </div>
     <button v-if="hasBasePermission('policy', 'create')" type="button" class="btn-add primary-button"
-      @click="openCreate">
+      :disabled="preparingForm" @click="openCreate">
       <NIcon :size="16">
         <ShieldCheckmarkOutline />
       </NIcon>
-      {{ t('common.create') }}
+      {{ preparingForm ? t('common.loading') : t('common.create') }}
     </button>
   </div>
   <p v-if="error && !duplicateScopeConflict" class="inline-error" role="alert">
@@ -248,8 +297,7 @@ onMounted(async () => {
           <template
           #cell-state_id="{ row }">{{
             row.state_id
-              ? (workflowStates.find((item) => String(item.id) === String(row.state_id))?.name ??
-                `#${row.state_id}`)
+              ? labelForState(String(row.state_id))
               : t('security.allStates')
           }}</template>
           <template #cell-status="{ row }">
@@ -258,10 +306,10 @@ onMounted(async () => {
           labelForParticipant(row) || `#${row.participant_ref_id}`
         }}</template><template #cell-actions="{ row }"><span class="effect-summary">{{ effectsSummary(row)
           }}</span></template><template #cell-row_actions="{ row }">
-          <TableRowActions :active="row.status === 'ACTIVE'" :busy="busy" :show-view="true" :show-edit="true"
+          <TableRowActions authorization-mode="effective" :view-scope-verified="true" :allowed-actions="rowAllowedActions(row)" :active="row.status === 'ACTIVE'" :busy="busy || preparingForm" :show-view="true" :show-edit="true"
             :show-toggle="true" view-permission="policy.view" edit-permission="policy.edit"
             toggle-permission="policy.setstate" :edit-label="t('common.edit')" :view-label="t('common.view')"
-            :activate-label="t('common.activate')" :deactivate-label="t('common.deactivate')" @view="openEdit(row)"
+            :activate-label="t('common.activate')" :deactivate-label="t('common.deactivate')" @view="openView(row)"
             @edit="openEdit(row)" @toggle="toggle(row)" />
         </template></ListTable>
       <ListPagination :page="state.query.page" :page-size="state.query.page_size" :total="state.total.value"
@@ -278,6 +326,40 @@ onMounted(async () => {
         " />
     </ListShell>
   </section>
+
+  <!-- View is never an editor: render plain values and no mutation controls. -->
+  <div v-if="viewingPolicy" class="modal-backdrop">
+    <section class="modal-card policy-view-modal" role="dialog" aria-modal="true"
+      :aria-label="t('security.policyView')">
+      <header class="modal-card__header">
+        <h2 class="modal-card-title">{{ t('security.policyView') }} #{{ viewingPolicy.id }}</h2>
+        <button type="button" class="modal-card-button-close" :aria-label="t('common.close')"
+          @click="closeView"></button>
+      </header>
+      <div class="modal-card__body policy-view-body">
+        <dl class="policy-view-fields">
+          <div><dt>{{ t('security.organizationScope') }}</dt>
+            <dd>{{ labelForOrganization(String(viewingPolicy.organization_id)) }}</dd></div>
+          <div><dt>{{ t('security.resource') }}</dt>
+            <dd>{{ labelForResource(String(viewingPolicy.resource_id)) }}</dd></div>
+          <div><dt>{{ t('security.workflowState') }}</dt>
+            <dd>{{ viewingPolicy.state_id ? labelForState(String(viewingPolicy.state_id)) : t('security.allStates') }}</dd></div>
+          <div><dt>{{ t('security.status') }}</dt><dd>{{ viewingPolicy.status }}</dd></div>
+          <div><dt>{{ t('security.participantType') }}</dt><dd>{{ viewingPolicy.participant_type }}</dd></div>
+          <div><dt>{{ t('security.participant') }}</dt><dd>{{ labelForParticipant(viewingPolicy) }}</dd></div>
+        </dl>
+        <h3>{{ t('security.actionEffects') }}</h3>
+        <div v-for="(action, index) in viewingPolicy.actions" :key="index"
+          class="policy-view-action">
+          <code>{{ labelForAction(String(action.resource_action_id)) }}</code>
+          <span>{{ action.effect }}</span>
+        </div>
+      </div>
+      <footer class="modal-card__footer">
+        <button type="button" class="secondary-button" @click="closeView">{{ t('common.close') }}</button>
+      </footer>
+    </section>
+  </div>
 
   <div v-if="modalOpen" class="modal-backdrop">
     <section class="modal-card policy-form-modal" role="dialog" aria-modal="true"
@@ -296,7 +378,7 @@ onMounted(async () => {
       </header>
 
       <form id="policy-form-input" class="modal-card__body" @submit.prevent="
-        !busy &&
+        !busy && canWriteForm &&
         form.actions.length > 0 &&
         form.actions.every(row => row.resource_action_id && row.effect) &&
         save()
@@ -371,12 +453,7 @@ onMounted(async () => {
           <div class="detail-actions">
             <strong>{{ t('security.actionEffects') }}</strong>
 
-            <button v-if="
-              hasBasePermission(
-                'policy',
-                editingId ? 'edit' : 'create'
-              )
-            " type="button" class="secondary-button" @click="addAction">
+            <button v-if="canWriteForm" type="button" class="secondary-button" @click="addAction">
               ＋ {{ t('security.addAction') }}
             </button>
           </div>
@@ -395,12 +472,7 @@ onMounted(async () => {
               </option>
             </select>
 
-            <button v-if="
-              hasBasePermission(
-                'policy',
-                editingId ? 'edit' : 'create'
-              )
-            " type="button" class="icon-button action-delete-button" :aria-label="t('common.delete')"
+            <button v-if="canWriteForm" type="button" class="icon-button action-delete-button" :aria-label="t('common.delete')"
               :title="t('common.delete')" @click="removeAction(index)">
               <NIcon :component="TrashOutline" aria-hidden="true" />
             </button>
@@ -440,10 +512,7 @@ onMounted(async () => {
             row => !row.resource_action_id || !row.effect
           ) ||
           !form.participant_ref_id ||
-          !hasBasePermission(
-            'policy',
-            editingId ? 'edit' : 'create'
-          )
+          !canWriteForm
           ">
           <NIcon :size="20" aria-hidden="true"> <SaveOutline /> </NIcon>
           {{ busy ? t('common.saving') : t('common.save') }}
@@ -475,6 +544,11 @@ onMounted(async () => {
   font-size: 11px;
 }
 
+.policy-view-body { overflow-y: auto; min-height: 0; }
+.policy-view-fields { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; margin: 0; }
+.policy-view-fields dt { color: #536b7b; font-size: 12px; font-weight: 600; }
+.policy-view-fields dd { margin: 4px 0 0; overflow-wrap: anywhere; }
+.policy-view-action { display: flex; gap: 12px; padding: 6px 0; }
 .security-note {
   margin: 0;
   color: #536b7b;
@@ -574,7 +648,8 @@ code {
 @media (max-width: 700px) {
 
   .form-grid,
-  .action-edit-row {
+  .action-edit-row,
+  .policy-view-fields {
     grid-template-columns: 1fr;
   }
 }

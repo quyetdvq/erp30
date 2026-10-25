@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { rowAllowedActions } from '@/components/lists/rowActionPolicy'
 import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { onBeforeRouteUpdate, useRoute } from 'vue-router'
@@ -326,7 +327,7 @@ onUnmounted(() => {
           }
         ">
         <template #cell-actions="{ row }">
-          <TableRowActions :active="row.status === 'ACTIVE'" :state-target-id="String(row.id)" :busy="mutationBusy"
+          <TableRowActions authorization-mode="effective" :view-scope-verified="true" :allowed-actions="rowAllowedActions(row)" :active="row.status === 'ACTIVE'" :state-target-id="String(row.id)" :busy="mutationBusy"
             :show-view="true" :show-edit="true" :show-toggle="true"
             :view-permission="isWards ? 'ward.view' : 'province.view'"
             :edit-permission="isWards ? 'ward.edit' : 'province.edit'"

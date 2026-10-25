@@ -13,6 +13,8 @@ export function useEmployeeAssignments(
 ) {
   const assignments = ref<EmployeeAssignment[]>([])
   const selectedEmployeeAssignments = ref<EmployeeAssignment[]>([])
+  let pageRequestVersion = 0
+  let detailRequestVersion = 0
   const selectedAssignments = computed(() =>
     selectedEmployeeAssignments.value.filter((row) =>
       assignmentMode.value === 'active' ? row.status === 'ACTIVE' : row.status !== 'ACTIVE',
@@ -27,34 +29,70 @@ export function useEmployeeAssignments(
         (!row.effective_to || row.effective_to >= today()) &&
         String(row.employee_id) === String(employeeId),
     )
+  function resetSelectedAssignments(): void {
+    ++detailRequestVersion
+    selectedEmployeeAssignments.value = []
+  }
+
+  /** Fetch assignment history only when its detail tab is opened. */
   async function loadAssignments(): Promise<void> {
-    if (!selectedId.value) {
+    const id = selectedId.value
+    const version = ++detailRequestVersion
+    if (!id) {
       selectedEmployeeAssignments.value = []
       return
     }
     try {
-      selectedEmployeeAssignments.value = await loadLookupPages(listAssignmentPage, {
-        filter: { employee_id: selectedId.value },
-      })
+      const items = await loadLookupPages(listAssignmentPage, { filter: { employee_id: id } })
+      if (version === detailRequestVersion && selectedId.value === id) {
+        selectedEmployeeAssignments.value = items
+      }
     } catch (caught: unknown) {
-      selectedEmployeeAssignments.value = []
-      reportApiError(caught)
+      if (version === detailRequestVersion) {
+        selectedEmployeeAssignments.value = []
+        reportApiError(caught)
+      }
     }
   }
-  async function loadAllAssignments(): Promise<void> {
+
+  /**
+   * Table-first projection using the existing PBAC-scoped list endpoint.
+   * Never read all assignments of the organization at page entry.
+   * The backend's effective_at filter uses the same UTC date as today().
+   */
+  async function loadPageAssignments(employeeIds: readonly string[]): Promise<void> {
+    const version = ++pageRequestVersion
+    assignments.value = []
+    if (employeeIds.length === 0) return
     try {
-      assignments.value = await loadLookupPages(listAssignmentPage)
+      // Cap URL and IN-clause size; 200-row page means at most 4 requests.
+      const batches = await Promise.all(Array.from(
+        { length: Math.ceil(employeeIds.length / 50) },
+        (_, i) => loadLookupPages(listAssignmentPage, {
+          filter: {
+            employee_id: employeeIds.slice(i * 50, (i + 1) * 50),
+            status: 'ACTIVE',
+            is_primary: '1',
+            effective_at: today(),
+          },
+        }),
+      ))
+      if (version === pageRequestVersion) assignments.value = batches.flat()
     } catch (caught: unknown) {
-      assignments.value = []
-      reportApiError(caught)
+      if (version === pageRequestVersion) {
+        assignments.value = []
+        reportApiError(caught)
+      }
     }
   }
+
   return {
     assignments,
     selectedEmployeeAssignments,
     selectedAssignments,
     currentPrimary,
     loadAssignments,
-    loadAllAssignments,
+    loadPageAssignments,
+    resetSelectedAssignments,
   }
 }

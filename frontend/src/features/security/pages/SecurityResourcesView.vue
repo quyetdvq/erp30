@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { rowAllowedActions } from '@/components/lists/rowActionPolicy'
 import { computed, onMounted, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import type { Lifecycle, Resource } from '@/api/generated/types.gen'
@@ -333,7 +334,7 @@ onMounted(() => {
           <TableStatus :status="row.status" />
         </template><template #cell-lifecycle_id="{ row }">{{ resourceLifecycleLabel(row) }}</template><template
           #cell-action_count="{ row }">{{ row.actions?.length ?? 0 }}</template><template #cell-actions="{ row }">
-          <TableRowActions :active="row.status === 'ACTIVE'" :busy="busy" :show-view="true" :show-edit="true"
+          <TableRowActions authorization-mode="effective" :view-scope-verified="true" :allowed-actions="rowAllowedActions(row)" :active="row.status === 'ACTIVE'" :busy="busy" :show-view="true" :show-edit="true"
             :show-toggle="true" :show-delete="true" view-permission="resource.view" edit-permission="resource.edit"
             toggle-permission="resource.setstate" delete-permission="resource.delete" :edit-label="t('common.edit')"
             :view-label="t('common.view')" :activate-label="t('common.activate')"

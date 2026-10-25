@@ -57,6 +57,7 @@ const priceList = {
   priority: 10,
   status: 'ACTIVE',
   description: null,
+  allowed_actions: { edit: true, setstate: true },
 }
 
 async function mockSession(
@@ -396,10 +397,22 @@ test.describe('P1-FE-070 Pricing/COMBO UI', () => {
       .filter({ hasText: 'RETAIL' })
       .getByRole('button', { name: 'Xem chi tiết' })
       .click()
-    const itemDialog = page.getByRole('dialog', { name: 'Product Price List Items' })
+    const viewDialog = page.getByRole('dialog', { name: 'Xem chi tiết dòng giá' })
+    await expect(viewDialog).toBeVisible()
+    await expect(viewDialog.getByText('125,000.00')).toBeVisible()
+    await expect(viewDialog.getByRole('textbox', { name: 'Giá' })).toHaveCount(0)
+    await expect(viewDialog.getByRole('button', { name: 'Thêm Product/UOM' })).toHaveCount(0)
+    await expect(viewDialog.getByRole('button', { name: 'Lưu' })).toHaveCount(0)
+    await viewDialog.locator('.modal-card__footer').getByRole('button', { name: 'Đóng', exact: true }).click()
+
+    const activeRow = page.getByRole('row').filter({ hasText: 'RETAIL' })
+    await activeRow.getByRole('button', { name: 'Sửa', exact: true }).click()
+    const editForm = page.getByRole('dialog', { name: 'Biểu mẫu Price List' })
+    await editForm.getByRole('button', { name: 'Chỉnh sửa dòng giá' }).click()
+    const itemDialog = page.getByRole('dialog', { name: 'Chỉnh sửa dòng giá' })
     await expect(itemDialog).toBeVisible()
     await expect(itemDialog.getByRole('textbox', { name: 'Giá' }).first()).toHaveValue('125,000.00')
-    await page.getByRole('button', { name: 'Thêm Product/UOM' }).click()
+    await itemDialog.getByRole('button', { name: 'Thêm Product/UOM' }).click()
     const itemRow = itemDialog.locator('tbody tr').last()
     const productSelect = itemRow.locator('.n-base-selection').first()
     await productSelect.click()
@@ -433,5 +446,10 @@ test.describe('P1-FE-070 Pricing/COMBO UI', () => {
     await expect(row.getByRole('button', { name: 'Xem chi tiết' })).toBeVisible()
     await expect(row.getByRole('button', { name: 'Sửa' })).toHaveCount(0)
     await expect(row.getByRole('button', { name: 'Chuyển trạng thái' })).toHaveCount(0)
+    await row.getByRole('button', { name: 'Xem chi tiết' }).click()
+    const viewDialog = page.getByRole('dialog', { name: 'Xem chi tiết dòng giá' })
+    await expect(viewDialog).toBeVisible()
+    await expect(viewDialog.getByRole('button', { name: 'Thêm Product/UOM' })).toHaveCount(0)
+    await expect(viewDialog.getByRole('button', { name: 'Lưu' })).toHaveCount(0)
   })
 })

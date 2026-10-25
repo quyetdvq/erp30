@@ -13,9 +13,13 @@ import { usePolicyParticipants } from '../usePolicyParticipants'
 
 const mocks = vi.hoisted(() => ({
   listSecurityUserPage: vi.fn<(query: unknown) => Promise<{ data: ManagedUser[] }>>(),
+  listAuthorizationGroupPage: vi.fn(),
   reportApiError: vi.fn<(error: unknown) => void>(),
 }))
-vi.mock('@/services/security', () => ({ listSecurityUserPage: mocks.listSecurityUserPage }))
+vi.mock('@/services/security', () => ({
+  listSecurityUserPage: mocks.listSecurityUserPage,
+  listAuthorizationGroupPage: mocks.listAuthorizationGroupPage,
+}))
 vi.mock('@/services/errorBoundary', () => ({ reportApiError: mocks.reportApiError }))
 vi.mock('@/api/client', () => ({ withTypedClient: vi.fn<(...args: unknown[]) => unknown>() }))
 vi.mock('@/api/generated/sdk.gen', () => ({
@@ -64,17 +68,43 @@ describe('PBAC participant selector (V2.4)', () => {
     vi.resetAllMocks()
   })
 
-  it('GROUP uses the local authorization group list and does not search remotely', async () => {
+  it('GROUP reuses cached group catalog and supports remote search beyond page one', async () => {
     const h = createHarness()
     h.groups.value = [{ id: '25', code: 'OPS', name: 'Operations' } as AuthorizationGroup]
     h.form.value.participant_type = 'GROUP'
     await h.policy.loadParticipantOptions('GROUP', '', true)
-    expect(h.policy.isRemoteParticipant.value).toBe(false)
+    expect(h.policy.isRemoteParticipant.value).toBe(true)
     expect(h.policy.participantSelectOptions.value).toEqual([
       { value: '25', label: 'OPS · Operations' },
     ])
     expect(h.form.value.participant_ref_id).toBe('25')
     expect(mocks.listSecurityUserPage).not.toHaveBeenCalled()
+    h.wrapper.unmount()
+  })
+
+  it('GROUP supports remote searching beyond the cached first page', async () => {
+    const h = createHarness()
+    h.groups.value = [{ id: '25', code: 'OPS', name: 'Operations' } as AuthorizationGroup]
+    h.form.value.participant_type = 'GROUP'
+    mocks.listAuthorizationGroupPage.mockResolvedValue({
+      data: [{ id: '300', code: 'REMOTE', name: 'Remote group' }],
+    })
+    await h.policy.loadParticipantOptions('GROUP', 'remote')
+    expect(mocks.listAuthorizationGroupPage).toHaveBeenCalledTimes(1)
+    expect(h.policy.participantSelectOptions.value).toEqual([
+      { value: '300', label: 'REMOTE · Remote group' },
+    ])
+    h.wrapper.unmount()
+  })
+
+  it('USER default options load one page only when no catalog was already fetched', async () => {
+    const h = createHarness()
+    mocks.listSecurityUserPage.mockResolvedValue({
+      data: [{ id: '30', username: 'admin', name: 'Admin' } as ManagedUser],
+    })
+    await h.policy.loadParticipantOptions('USER', '', true)
+    expect(mocks.listSecurityUserPage).toHaveBeenCalledTimes(1)
+    expect(h.form.value.participant_ref_id).toBe('30')
     h.wrapper.unmount()
   })
 

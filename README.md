@@ -1,3 +1,14 @@
+# DinkERP — Current Source Checkpoint (M9.3 candidate, 2026-10-25)
+
+- Source base: `erp_v1.5.0.zip` + accepted **M9.1** Employee optimization and E2E correction + **M9.2** read-only QA. **Do not apply the stale M9.0 patch**; the M9.3 source fingerprint incorporates accepted M9.1 changes.
+- `python backend/tools/m93_release_preflight.py` runs safe, no-DB source checks: 281 reviewed frontend files, frozen v1.2.4 OpenAPI, 150 API routes, backend baseline/upload layout and public templates.
+- After `cd frontend && pnpm build`, run `python backend/tools/m93_release_preflight.py --require-build` from ERP root to check the built SPA artifact. No database mutation or HTTP calls occur.
+- M8.7 functional PASS; M9.1 CLOSED/PASS; M9.2 CLOSED with explicit live-audit/concurrency **waivers**; M9.3 release source checks are **not** production authorization. See `docs/backend-rewrite/M9_3_RELEASE_READINESS.md`.
+
+The historical milestone history below reflects older checkpoints; follow the M9.3 note above for current source status.
+
+---
+
 # DinkERP — Backend Rewrite workspace (M0/M1/M2)
 
 Workspace theo bố cục đã chốt ngày 23/10/2026. **Frontend và Backend baseline giữ nguyên byte-for-byte**;

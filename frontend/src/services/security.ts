@@ -62,6 +62,8 @@ import { apiClient } from '@/services/api'
 import { i18n } from '@/i18n'
 import type { ListQuery, ListResponse } from '@/components/lists/listTypes'
 import { getCurrentUser, type AuthUser } from '@/services/auth'
+import { rowAllowedActions, type AllowedRowActions } from '@/components/lists/rowActionPolicy'
+import { userGroupIds } from '@/features/security/user-editor/userMembership'
 
 export type ManagedUser = {
   id: number | string
@@ -74,7 +76,9 @@ export type ManagedUser = {
   active: boolean
   created_at: string | null
   groups: string[]
+  groupIds?: string[]
   direct_permission_count?: number
+  allowed_actions?: AllowedRowActions | null
 }
 
 export type SecurityAction = {
@@ -174,7 +178,9 @@ function mapSecurityUser(user: SecurityUser): ManagedUser {
     active: user.active,
     created_at: user.created_at,
     groups: user.groups.map((group) => group.name ?? group.code),
+    groupIds: userGroupIds(user.groups),
     direct_permission_count: user.direct_permission_count,
+    allowed_actions: rowAllowedActions(user),
   }
 }
 

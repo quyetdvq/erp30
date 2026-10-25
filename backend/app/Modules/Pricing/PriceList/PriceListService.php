@@ -6,6 +6,7 @@ namespace App\Modules\Pricing\PriceList;
 
 use App\Exceptions\DomainException;
 use App\Modules\Access\ResourceStateRepository;
+use App\Modules\Access\Query\EffectiveRowActionHints;
 use App\Modules\Access\UnifiedAccessService;
 use CodeIgniter\Database\BaseConnection;
 use CodeIgniter\Exceptions\PageNotFoundException;
@@ -61,7 +62,8 @@ final class PriceListService
                 if (!$access->canView('price_list',$row)) {
                     throw new UnexpectedValueException('Pricing SQL/PBAC scope disagreement.');
                 }
-                $data[]=$this->project($row);
+                $data[]=[...$this->project($row), 'allowed_actions'=>
+                    EffectiveRowActionHints::forViewedRow($access,'price_list',$row)];
             }
             return ['data'=>$data,'page'=>$query['page'],'page_size'=>$query['page_size'],'total'=>(int)$total];
         });
@@ -72,7 +74,8 @@ final class PriceListService
         $this->requireBaseView();
         $row=$this->row(PriceListRules::id($rawId));
         $this->assertVisible($row);
-        return $this->project($row);
+        return [...$this->project($row), 'allowed_actions'=>
+            EffectiveRowActionHints::forViewedRow($this->access,'price_list',$row)];
     }
 
     /** @param array<string,mixed> $request @return array<string,mixed> */

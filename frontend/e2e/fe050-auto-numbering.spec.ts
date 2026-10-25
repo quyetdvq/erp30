@@ -2,8 +2,8 @@ import AxeBuilder from '@axe-core/playwright'
 import { expect, test, type Page } from '@playwright/test'
 
 const resources = [
-  { id: '2', type: 'PRODUCT', name: 'Products', domain: 'MASTER' },
-  { id: '3', type: 'ORDER', name: 'Orders', domain: 'MASTER' },
+  { id: '2', type: 'PRODUCT', name: 'Products', domain: 'MASTER', allowed_actions: { edit: false, setstate: false, delete: false, configure_numbering: true } },
+  { id: '3', type: 'ORDER', name: 'Orders', domain: 'MASTER', allowed_actions: { edit: false, setstate: false, delete: false, configure_numbering: true } },
 ]
 
 const series = {

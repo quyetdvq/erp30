@@ -1,5 +1,6 @@
 <script setup lang="ts">
-import { computed, nextTick, onMounted, ref } from 'vue'
+import { rowAllowedActions } from '@/components/lists/rowActionPolicy'
+import { computed, nextTick, onMounted, onUnmounted, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useRouter } from 'vue-router'
 import type { ComboItem, Product, ProductGroup, ProductUom } from '@/api/generated/types.gen'
@@ -29,9 +30,12 @@ import {
 import { reportApiError } from '@/services/errorBoundary'
 import { useBusinessWorkflowStates } from '@/composables/useBusinessWorkflowStates'
 import { loadLookupPages } from '@/services/listLookups'
+import { loadProductListCatalog, productListCatalogScope } from '@/services/productListCatalogCache'
+import { i18n } from '@/i18n'
 import { databaseFlagEnabled, productRoleLabel } from '@/services/productPresentation'
 import { chunks, previewProductRelations, resolveProductDetails } from '@/services/productLookups'
 import { DEFAULT_PRODUCT_SORT, productSortOptions } from '@/features/catalog/productSortOptions'
+import { loadProductRelationBatches } from '@/features/catalog/productRelationTraffic'
 import {
   buildProductInlineRows,
   type ProductInlineRelation,
@@ -302,40 +306,42 @@ async function loadRelations(rows: readonly Product[], epoch: number): Promise<v
       },
     ]),
   )
-  const previews = (
-    await Promise.all(
-      chunks(
-        targets.map((row) => String(row.id)),
-        50,
-      ).map(previewProductRelations),
-    )
-  ).flat()
-  if (epoch !== listEpoch || generation !== auth.getSessionGeneration()) return
-  for (const preview of previews) {
-    const owner = targets.find((row) => String(row.id) === preview.product_id)
-    if (!owner) continue
-    relations.value[preview.product_id] = {
-      children: owner.role === 'PARENT' ? preview.products : [],
-      components: owner.role === 'COMBO' ? preview.products : [],
-      componentItems: [],
-      total: preview.total,
-      full: preview.total <= 2,
-      loading: false,
-    }
-  }
-  for (const row of targets) {
-    const key = String(row.id)
-    if (relations.value[key]?.loading) {
-      relations.value[key] = {
-        children: [],
-        components: [],
-        componentItems: [],
-        total: 0,
-        full: true,
-        loading: false,
+  const owners = new Map(targets.map((row) => [String(row.id), row]))
+  // Publish the first 50 owners as soon as their preview arrives, without
+  // waiting for later batches when the user selects page_size=100/200.
+  await loadProductRelationBatches(
+    [...owners.keys()],
+    previewProductRelations,
+    (ids, previews) => {
+      const received = new Set<string>()
+      const batchIds = new Set(ids)
+      for (const preview of previews) {
+        const owner = owners.get(preview.product_id)
+        if (!owner || !batchIds.has(preview.product_id)) continue
+        received.add(preview.product_id)
+        relations.value[preview.product_id] = {
+          children: owner.role === 'PARENT' ? preview.products : [],
+          components: owner.role === 'COMBO' ? preview.products : [],
+          componentItems: [],
+          total: preview.total,
+          full: preview.total <= 2,
+          loading: false,
+        }
       }
-    }
-  }
+      for (const id of ids) {
+        if (received.has(id)) continue
+        relations.value[id] = {
+          children: [],
+          components: [],
+          componentItems: [],
+          total: 0,
+          full: true,
+          loading: false,
+        }
+      }
+    },
+    () => epoch === listEpoch && generation === auth.getSessionGeneration(),
+  )
 }
 async function load(): Promise<void> {
   const epoch = ++listEpoch
@@ -372,26 +378,47 @@ function resetQuery(): void {
 async function afterWorkflowChange(): Promise<void> {
   await load()
 }
-onMounted(async () => {
-  await Promise.all([
-    load(),
-    loadLookupPages(listProductGroupPage, { sort: 'name' })
-      .then((result) => {
-        groups.value = result
-      })
-      .catch((caught) => {
-        error.value = caught
-        reportApiError(caught)
-      }),
-    loadLookupPages(listProductUomPage, { sort: 'code' })
-      .then((result) => {
-        uoms.value = result
-      })
-      .catch((caught) => {
-        error.value = caught
-        reportApiError(caught)
-      }),
-  ])
+let mounted = false
+function catalogScope(): string | null {
+  return productListCatalogScope({
+    userId: auth.user?.id,
+    sessionGeneration: auth.getSessionGeneration(),
+    permissionState: auth.permissionSnapshotState,
+    permissions: auth.user?.base_permissions ?? [],
+    locale: i18n.global.locale.value,
+  })
+}
+onMounted(() => {
+  mounted = true
+  const generation = auth.getSessionGeneration()
+  const userId = auth.user?.id
+  const scope = catalogScope()
+  const current = () =>
+    mounted && generation === auth.getSessionGeneration() && userId === auth.user?.id && scope === catalogScope()
+  void load()
+  void loadProductListCatalog('groups', scope, () =>
+    loadLookupPages(listProductGroupPage, { sort: 'name' }),
+  )
+    .then((result) => { if (current()) groups.value = result })
+    .catch((caught: unknown) => {
+      if (!current()) return
+      error.value = caught
+      reportApiError(caught)
+    })
+  void loadProductListCatalog('uoms', scope, () =>
+    loadLookupPages(listProductUomPage, { sort: 'code' }),
+  )
+    .then((result) => { if (current()) uoms.value = result })
+    .catch((caught: unknown) => {
+      if (!current()) return
+      error.value = caught
+      reportApiError(caught)
+    })
+})
+onUnmounted(() => {
+  mounted = false
+  ++listEpoch
+  ++detailRequest
 })
 </script>
 
@@ -556,14 +583,14 @@ onMounted(async () => {
                 </td>
                 <td><TableStatus :status="entry.product.status" /></td>
                 <td class="table-actions">
-                  <TableRowActions
+                  <TableRowActions authorization-mode="effective" :view-scope-verified="true" :allowed-actions="rowAllowedActions(entry.product)"
                     :active="entry.product.status === 'ACTIVE'"
                     :state-target-id="String(entry.product.id)"
                     :busy="busy"
                     :show-view="true"
-                    :show-edit="entry.product.allowed_actions?.edit === true"
-                    :show-toggle="entry.product.allowed_actions?.setstate === true"
-                    state-resource="product"
+                    :show-edit="true"
+                    :show-toggle="true"
+                    state-resource="product" view-permission="product.view" edit-permission="product.edit" toggle-permission="product.setstate"
                     :view-label="t('common.view')"
                     :edit-label="t('common.edit')"
                     :activate-label="t('common.activate')"

@@ -358,6 +358,8 @@ export const en = {
     managerCycleError: 'A management cycle is not allowed.',
     managerInactiveError: 'An inactive employee cannot be selected as manager.',
     managerSelfError: 'An employee cannot manage themselves.',
+    managerLookupLoading: 'Loading manager directory...',
+    managerLookupError: 'Unable to load managers. Close and reopen the form to retry.',
     name: 'Name',
     noAssignments: 'No assignments.',
     noManager: 'No manager',
@@ -582,6 +584,7 @@ export const en = {
     resourceForm: 'Resource form',
     actionForm: 'Action form',
     policyForm: 'Policy form',
+    policyView: 'Policy details',
     actionCode: 'Action code',
     tabs: {
       overview: 'Overview',
@@ -638,6 +641,8 @@ export const en = {
       'Base Permission comes from groups/direct additions; Policy and ABSOLUTE_DENY still apply on the backend.',
     memberSourceNote:
       'Members come from the Authorization Group API; updates submit only users returned by the API.',
+    userMembershipSourceNote: 'Group membership comes from the VIEW-scoped User row. On save, only changed groups are re-read to preserve other members.',
+    userMembershipConflict: 'Group membership changed elsewhere. Close and reopen the User details before editing again.',
     memberPickerNote:
       'Select every User who should belong to the group; the backend remains authoritative.',
     permissionSourceNote:
@@ -819,6 +824,9 @@ export const en = {
     uom: 'UOM',
     price: 'Price',
     items: 'Product Price List Items',
+    viewItems: 'View Price List Items',
+    editItems: 'Edit Price List Items',
+    viewOnly: 'View mode — read only',
     addItem: 'Add Product/UOM',
     itemRules: 'PARENT is unavailable; COMBO uses Base UOM only; PURCHASE-only UOMs are excluded.',
     requiredFields: 'Enter all required fields.',

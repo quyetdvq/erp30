@@ -60,15 +60,52 @@ def load_manifest(file: Path) -> dict[str, str]:
     return mapping
 
 
-def verify_directory(directory: Path, expected: dict[str, str], label: str) -> None:
+def verify_directory(directory: Path, expected: dict[str, str], label: str,
+                     *, reference_label: str = 'v1.2.4',
+                     ignored_root_dirs: tuple[str, ...] = (),
+                     ignored_root_files: tuple[str, ...] = (),
+                     ignored_root_prefixes: tuple[str, ...] = (),
+                     ignored_root_suffixes: tuple[str, ...] = (),
+                     ignored_local_editor_files: tuple[str, ...] = ()) -> None:
+    """Match all source bytes; optionally prune known generated/editor metadata.
+
+    Root-level build output may be omitted. For the frontend only, the two
+    explicit .vscode editor metadata files may be omitted, never their entire
+    directory. Source files and symlinks remain subject to fail-closed checks.
+    """
     if not directory.is_dir() or directory.is_symlink():
         raise AssertionError(f'{label}: directory missing or symbolic link')
+    safe_editor_files = {'.vscode/extensions.json', '.vscode/settings.json'}
+    if (any(name not in safe_editor_files or name in expected
+            for name in ignored_local_editor_files)):
+        raise AssertionError(f'{label}: unsafe local editor-file exclusion')
     actual: dict[str, str] = {}
-    for item in directory.rglob('*'):
-        if item.is_symlink():
-            raise AssertionError(f'{label}: symbolic link forbidden: {item.relative_to(directory)}')
-        if item.is_file():
-            actual[item.relative_to(directory).as_posix()] = sha256(item.read_bytes())
+    pending = [directory]
+    while pending:
+        current = pending.pop()
+        for item in current.iterdir():
+            relative = item.relative_to(directory)
+            is_root_child = len(relative.parts) == 1
+            if is_root_child and (
+                    item.name in ignored_root_dirs or
+                    (not item.is_dir() and (
+                        item.name in ignored_root_files or
+                        item.name.startswith(ignored_root_prefixes) or
+                        item.name.endswith(ignored_root_suffixes)
+                    ))):
+                continue
+            if item.is_symlink():
+                raise AssertionError(f'{label}: symbolic link forbidden: {relative}')
+            if relative.as_posix() in ignored_local_editor_files:
+                if not item.is_file():
+                    raise AssertionError(f'{label}: editor metadata is not a file: {relative}')
+                continue
+            if item.is_dir():
+                pending.append(item)
+            elif item.is_file():
+                actual[relative.as_posix()] = sha256(item.read_bytes())
+            else:
+                raise AssertionError(f'{label}: unsupported file type: {relative}')
     missing = sorted(expected.keys() - actual.keys())
     added = sorted(actual.keys() - expected.keys())
     changed = sorted(path for path in expected.keys() & actual.keys()
@@ -77,4 +114,4 @@ def verify_directory(directory: Path, expected: dict[str, str], label: str) -> N
         details = '; '.join(f'{name}={len(paths)} example={paths[:4]}' for name, paths
                             in [('missing', missing), ('added', added), ('changed', changed)])
         raise AssertionError(f'{label}: SHA-256 mismatch; {details}')
-    print(f'PASS: {label} byte-identical to v1.2.4 ({len(actual)}/{len(expected)} files)')
+    print(f'PASS: {label} matches {reference_label} ({len(actual)}/{len(expected)} files)')

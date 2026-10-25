@@ -9,7 +9,7 @@ import type { ListQuery } from '@/components/lists/listTypes'
 import { withTypedClient } from '@/api/client'
 import { listDepartments, listOrganizations, listPositions } from '@/api/generated/sdk.gen'
 import { i18n } from '@/i18n'
-import { listSecurityUserPage, type ManagedUser } from '@/services/security'
+import { listAuthorizationGroupPage, listSecurityUserPage, type ManagedUser } from '@/services/security'
 import { reportApiError } from '@/services/errorBoundary'
 import type { ParticipantOption, ParticipantType, PolicyDraft } from './types'
 
@@ -19,13 +19,14 @@ type ParticipantLookups = {
   users: Ref<ManagedUser[]>
   departments: Ref<Department[]>
   positions: Ref<Position[]>
+  waitForPendingParticipantCatalog?: (type: ParticipantType) => Promise<void>
 }
 
 /** Remote participant options retain the original request-id guard and debounce semantics. */
 export function usePolicyParticipants(
   form: Ref<PolicyDraft>,
   error: Ref<unknown | null>,
-  { organizations, groups, users, departments, positions }: ParticipantLookups,
+  { organizations, groups, users, departments, positions, waitForPendingParticipantCatalog }: ParticipantLookups,
 ) {
   const participantOptions = ref<ParticipantOption[]>([])
   const participantLoading = ref(false)
@@ -34,7 +35,7 @@ export function usePolicyParticipants(
   const participantSelectOptions = computed(() =>
     participantOptions.value.map((option) => ({ value: option.id, label: option.label })),
   )
-  const isRemoteParticipant = computed(() => form.value.participant_type !== 'GROUP')
+  const isRemoteParticipant = computed(() => true) // GROUP also supports remote search beyond page 1
 
   function preserveParticipantSelection(): void {
     const id = form.value.participant_ref_id
@@ -51,10 +52,12 @@ export function usePolicyParticipants(
     participantLoading.value = true
     const listQuery: ListQuery = { q: query, page: 1, page_size: 50, sort: 'name', filter: {} }
     try {
+      if (!query) await waitForPendingParticipantCatalog?.(type)
+      if (requestId !== participantRequestId || type !== form.value.participant_type) return
       let options: ParticipantOption[]
       switch (type) {
         case 'USER': {
-          if (!query) {
+          if (!query && users.value.length) {
             options = users.value.map((user) => ({
               id: String(user.id),
               label: user.name || user.username,
@@ -69,7 +72,7 @@ export function usePolicyParticipants(
           break
         }
         case 'POSITION': {
-          if (!query) {
+          if (!query && positions.value.length) {
             options = positions.value.map((item) => ({
               id: String(item.id),
               label: `${item.code} · ${item.name}`,
@@ -91,7 +94,7 @@ export function usePolicyParticipants(
           break
         }
         case 'DEPARTMENT': {
-          if (!query) {
+          if (!query && departments.value.length) {
             options = departments.value.map((item) => ({
               id: String(item.id),
               label: `${item.code} · ${item.name}`,
@@ -113,7 +116,7 @@ export function usePolicyParticipants(
           break
         }
         case 'ORGANIZATION': {
-          if (!query) {
+          if (!query && organizations.value.length) {
             options = organizations.value.map((item) => ({
               id: String(item.id),
               label: `${item.code} · ${item.name}`,
@@ -134,12 +137,16 @@ export function usePolicyParticipants(
           }
           break
         }
-        case 'GROUP':
-          options = groups.value.map((group) => ({
+        case 'GROUP': {
+          const catalog = !query && groups.value.length
+            ? groups.value
+            : (await listAuthorizationGroupPage(listQuery)).data
+          options = catalog.map((group) => ({
             id: String(group.id),
             label: `${group.code} · ${group.name}`,
           }))
           break
+        }
       }
       if (requestId !== participantRequestId || type !== form.value.participant_type) return
       participantOptions.value = options
@@ -155,14 +162,18 @@ export function usePolicyParticipants(
     }
   }
   function onParticipantTypeChange(type: ParticipantType): void {
+    if (participantSearchTimer) clearTimeout(participantSearchTimer)
+    participantSearchTimer = undefined
     form.value.participant_ref_id = ''
+    participantOptions.value = []
     void loadParticipantOptions(type, '', true)
   }
   function searchParticipants(query: string): void {
     if (!isRemoteParticipant.value) return
     if (participantSearchTimer) clearTimeout(participantSearchTimer)
+    const type = form.value.participant_type
     participantSearchTimer = setTimeout(() => {
-      void loadParticipantOptions(form.value.participant_type, query)
+      if (form.value.participant_type === type) void loadParticipantOptions(type, query)
     }, 250)
   }
 

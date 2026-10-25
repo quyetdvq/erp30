@@ -51,10 +51,10 @@ async function mockBase(page: Page, status = 200, canViewUsers = false): Promise
     }),
   )
   const departments = [
-    { id: '11', code: 'D-01', name: 'Operations', parent_id: null, status: 'ACTIVE' },
-    { id: '12', code: 'D-02', name: 'Field team', parent_id: '11', status: 'INACTIVE' },
+    { id: '11', code: 'D-01', name: 'Operations', parent_id: null, status: 'ACTIVE', allowed_actions: { edit: true, setstate: true } },
+    { id: '12', code: 'D-02', name: 'Field team', parent_id: '11', status: 'INACTIVE', allowed_actions: { edit: true, setstate: true } },
   ]
-  const positions = [{ id: '21', code: 'P-01', name: 'Manager', level: 2, status: 'ACTIVE' }]
+  const positions = [{ id: '21', code: 'P-01', name: 'Manager', level: 2, status: 'ACTIVE', allowed_actions: { edit: true, setstate: true } }]
   const organizations = [
     { id: '31', code: 'C-01', name: 'Main Company', type: 'COMPANY', status: 'ACTIVE' },
   ]
@@ -65,6 +65,7 @@ async function mockBase(page: Page, status = 200, canViewUsers = false): Promise
       employee_name: 'Nguyen Van A',
       gender: null,
       status: 'ACTIVE',
+      allowed_actions: { edit: true, setstate: true },
     },
     {
       id: '42',
@@ -72,6 +73,7 @@ async function mockBase(page: Page, status = 200, canViewUsers = false): Promise
       employee_name: 'Tran Thi B',
       gender: 'FEMALE',
       status: 'ACTIVE',
+      allowed_actions: { edit: true, setstate: true },
     },
   ]
   const assignments = [
@@ -85,6 +87,7 @@ async function mockBase(page: Page, status = 200, canViewUsers = false): Promise
       effective_from: '2026-01-01',
       effective_to: null,
       status: 'ACTIVE',
+      allowed_actions: { edit: true, setstate: true },
     },
     {
       id: '52',
@@ -96,6 +99,7 @@ async function mockBase(page: Page, status = 200, canViewUsers = false): Promise
       effective_from: '2026-03-01',
       effective_to: null,
       status: 'ACTIVE',
+      allowed_actions: { edit: true, setstate: true },
     },
   ]
   const contacts = [
@@ -348,4 +352,74 @@ test('Employee User picker preserves manual entry without user.view', async ({ p
   await dialog.getByLabel('User ID').fill('101')
   await expect(dialog.getByLabel('User ID')).toHaveValue('101')
   expect(userRequests).toBe(0)
+})
+
+test('Employee entry loads page-scoped assignments and defers history, manager directory and workflow metadata', async ({ page }) => {
+  await mockBase(page)
+  const assignmentUrls: string[] = []
+  const employeeUrls: string[] = []
+  const workflowUrls: string[] = []
+  // Installed after the existing mocks so these handlers can record and check calls.
+  await page.route('**/api/v1/employees**', (route) => {
+    employeeUrls.push(route.request().url())
+    const data = [
+      { id: '41', employee_code: 'E-01', employee_name: 'Nguyen Van A', status: 'ACTIVE' },
+      { id: '42', employee_code: 'E-02', employee_name: 'Tran Thi B', status: 'ACTIVE' },
+    ]
+    return route.fulfill({ status: 200, contentType: 'application/json', body: collection(route, data) })
+  })
+  await page.route('**/api/v1/employee-assignments**', (route) => {
+    assignmentUrls.push(route.request().url())
+    const assignments = [{
+      id: '51', employee_id: '41', organization_id: '31', department_id: '11', position_id: '21',
+      is_primary: true, effective_from: '2000-01-01', effective_to: null, status: 'ACTIVE',
+    }]
+    return route.fulfill({ status: 200, contentType: 'application/json', body: collection(route, assignments) })
+  })
+  await page.route('**/api/v1/business-workflow/employee/states', (route) => {
+    workflowUrls.push(route.request().url())
+    return route.fallback()
+  })
+
+  await page.goto('/people/employees')
+  await expect(page.getByRole('cell', { name: 'Nguyen Van A' }).first()).toBeVisible()
+  await expect.poll(() => assignmentUrls.length).toBe(1)
+  expect(employeeUrls).toHaveLength(1)
+  const params = new URL(assignmentUrls[0]!).searchParams
+  expect(params.getAll('filter[employee_id][]')).toEqual(['41', '42'])
+  expect(params.get('filter[status]')).toBe('ACTIVE')
+  expect(params.get('filter[is_primary]')).toBe('1')
+  expect(params.get('filter[effective_at]')).toMatch(/^\d{4}-\d{2}-\d{2}$/)
+  expect(workflowUrls).toHaveLength(0)
+
+  await page.getByRole('button', { name: 'Xem chi tiết' }).first().click()
+  await expect(page.getByRole('dialog', { name: 'Nguyen Van A' })).toBeVisible()
+  expect(assignmentUrls).toHaveLength(1) // Opening overview cannot fetch history.
+  await page.getByRole('tab', { name: 'Assignments' }).click()
+  await expect.poll(() => assignmentUrls.length).toBe(2)
+  const detail = new URL(assignmentUrls[1]!).searchParams
+  expect(detail.get('filter[employee_id]')).toBe('41')
+  expect(detail.has('filter[effective_at]')).toBe(false) // History remains complete.
+
+  await page.getByRole('dialog', { name: 'Nguyen Van A' })
+    .getByRole('button', { name: 'Đóng', exact: true }).last().click()
+  await page.getByRole('button', { name: 'Tạo' }).click()
+  // The table and manager directory both sort by employee_name. Distinguish
+  // the 15-row table request from the lazy 200-row editor lookup.
+  const managerDirectoryRequests = () => employeeUrls.filter((url) => {
+    const query = new URL(url).searchParams
+    return query.get('sort') === 'employee_name'
+      && query.get('page_size') === '200'
+      && !query.has('filter[id][]')
+  })
+  await expect.poll(() => managerDirectoryRequests().length).toBe(1)
+  expect(employeeUrls).toHaveLength(2) // Table page + editor directory, not duplicate GETs.
+
+  // Reopening the editor must reuse the loaded manager directory.
+  const editor = page.getByRole('dialog', { name: 'Biểu mẫu nhân viên' })
+  await expect(editor.getByRole('button', { name: 'Lưu' })).toBeEnabled()
+  await editor.getByRole('button', { name: 'Đóng', exact: true }).last().click()
+  await page.getByRole('button', { name: 'Tạo' }).click()
+  await expect(editor).toBeVisible()
+  expect(managerDirectoryRequests()).toHaveLength(1)
 })

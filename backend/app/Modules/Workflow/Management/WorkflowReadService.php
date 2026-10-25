@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Modules\Workflow\Management;
 
 use App\Modules\Access\UnifiedAccessService;
+use App\Modules\Access\Query\EffectiveRowActionHints;
 use App\Shared\Http\AuthorizedListPage;
 use App\Shared\Read\PositiveId;
 use CodeIgniter\Database\BaseConnection;
@@ -44,7 +45,12 @@ final class WorkflowReadService
                 $visible[] = $row;
             }
         }
-        return AuthorizedListPage::paginate($type, $visible, $query);
+        $page = AuthorizedListPage::paginate($type, $visible, $query);
+        foreach ($page['data'] as &$row) {
+            $row['allowed_actions'] = EffectiveRowActionHints::forViewedRow($this->access, $type, $row);
+        }
+        unset($row);
+        return $page;
     }
 
     /** @return array<string,mixed>|null */
@@ -57,7 +63,9 @@ final class WorkflowReadService
             return null;
         }
         $row = $this->repository->one($type, $key);
-        return $row !== null && $this->access->canView($type, $row) ? $row : null;
+        if ($row === null || !$this->access->canView($type, $row)) return null;
+        $row['allowed_actions'] = EffectiveRowActionHints::forViewedRow($this->access, $type, $row);
+        return $row;
     }
 
     /** @return list<array<string,mixed>>|null */

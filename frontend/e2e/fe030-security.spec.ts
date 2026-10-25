@@ -87,6 +87,7 @@ test.describe('P1-FE-030 security surfaces', () => {
                 },
               ],
               direct_permission_count: 0,
+              allowed_actions: { edit: true, setstate: true },
             },
             {
               id: '8',
@@ -98,6 +99,7 @@ test.describe('P1-FE-030 security surfaces', () => {
               created_at: null,
               groups: [],
               direct_permission_count: 0,
+              allowed_actions: { edit: true, setstate: true },
             },
           ],
           meta: mockPagination(route, 2, 'test-security-users'),
@@ -117,7 +119,7 @@ test.describe('P1-FE-030 security surfaces', () => {
         contentType: 'application/json',
         body: JSON.stringify({
           data: [
-            { id: '1', code: 'SECURITY_ADMIN', name: 'Security administrators', status: 'ACTIVE' },
+            { id: '1', code: 'SECURITY_ADMIN', name: 'Security administrators', status: 'ACTIVE', allowed_actions: { edit: true, setstate: true } },
           ],
           meta: mockPagination(route, 1, 'test-group'),
         }),
@@ -161,6 +163,7 @@ test.describe('P1-FE-030 security surfaces', () => {
               domain: 'ORGANIZATION',
               status: 'ACTIVE',
               lifecycle_id: null,
+              allowed_actions: { edit: true, setstate: true, delete: true, configure_numbering: false },
               ...(includeActions
                 ? { actions: [{ id: '20', code: 'view', description: null }] }
                 : {}),
@@ -246,6 +249,7 @@ test.describe('P1-FE-030 security surfaces', () => {
                 name: 'Product flow',
                 description: 'Product lifecycle',
                 status: 'ACTIVE',
+                allowed_actions: { edit: true, setstate: true },
               },
             ],
             meta: mockPagination(route, 1, 'test-lifecycle'),
@@ -266,6 +270,7 @@ test.describe('P1-FE-030 security surfaces', () => {
               participant_type: 'GROUP',
               participant_ref_id: '1',
               actions: [{ resource_action_id: '20', effect: 'ABSOLUTE_DENY' }],
+              allowed_actions: { edit: true, setstate: true },
             },
           ],
           meta: { page: 1, page_size: 25, total: 1, request_id: 'test-policy' },
@@ -339,10 +344,10 @@ test.describe('P1-FE-030 security surfaces', () => {
         contentType: 'application/json',
         body: JSON.stringify({
           data: [
-            { id: '31', code: 'DRAFT', name: 'Draft', status: 'ACTIVE' },
-            { id: '32', code: 'APPROVED', name: 'Approved', status: 'ACTIVE' },
-            { id: '33', code: 'ACTIVE', name: 'ACTIVE', status: 'ACTIVE' },
-            { id: '34', code: 'INACTIVE', name: 'INACTIVE', status: 'ACTIVE' },
+            { id: '31', code: 'DRAFT', name: 'Draft', status: 'ACTIVE', allowed_actions: { edit: true, setstate: true } },
+            { id: '32', code: 'APPROVED', name: 'Approved', status: 'ACTIVE', allowed_actions: { edit: true, setstate: true } },
+            { id: '33', code: 'ACTIVE', name: 'ACTIVE', status: 'ACTIVE', allowed_actions: { edit: true, setstate: true } },
+            { id: '34', code: 'INACTIVE', name: 'INACTIVE', status: 'ACTIVE', allowed_actions: { edit: true, setstate: true } },
           ],
           meta: { page: 1, page_size: 200, total: 4, request_id: 'test-state' },
         }),
@@ -400,6 +405,16 @@ test.describe('P1-FE-030 security surfaces', () => {
     expect(tableAccessibility.violations).toEqual([])
     const createButton = page.getByRole('button', { name: /Tạo|Create/ })
     await expect(createButton).toHaveCount(1)
+    // The accessibility scan above can leave nested workspace scrollers below
+    // the page heading in WebKit. Scroll back as a user would; do not force-click
+    // an element that is clipped outside the viewport.
+    await createButton.evaluate((button) => {
+      for (let ancestor = button.parentElement; ancestor; ancestor = ancestor.parentElement) {
+        ancestor.scrollTop = 0
+        ancestor.scrollLeft = 0
+      }
+    })
+    await expect(createButton).toBeInViewport()
     await createButton.click()
     const createDialog = page.getByRole('dialog', { name: 'Biểu mẫu người dùng' })
     await expect(createDialog).toBeVisible()
@@ -426,6 +441,7 @@ test.describe('P1-FE-030 security surfaces', () => {
     await expect.poll(() => resourceWithActionsRequests).toBe(1)
     expect(resourceActionCatalogRequests).toBe(0)
     expect(resourceActionRequests).toBe(0)
+    await expect(detailDialog.locator('details').first()).toBeVisible()
     await detailDialog.locator('details').first().locator('summary').click()
     await detailDialog.getByRole('checkbox').first().check()
     await detailDialog.getByRole('button', { name: 'Lưu quyền' }).click()
@@ -437,8 +453,90 @@ test.describe('P1-FE-030 security surfaces', () => {
     expect(resourceActionRequests).toBe(0)
     const detailAccessibility = await new AxeBuilder({ page }).include('.modal-card').analyze()
     expect(detailAccessibility.violations).toEqual([])
-    expect(memberRequests).toBeGreaterThan(0)
-    expect(securityUserRequests).toBe(2)
+    expect(memberRequests).toBe(0) // Overview/Direct Permissions never fetch every group's members
+    await expect.poll(() => securityUserRequests).toBe(2)
+  })
+
+
+  test('User group tab loads one catalog; PUT only touched group without dropping other members', async ({ page }) => {
+    let groupCatalogGets = 0
+    let memberGets = 0
+    let memberPuts = 0
+    let directPermissionGets = 0
+    let submittedIds: string[] = []
+    page.on('request', (request) => {
+      const url = new URL(request.url())
+      if (url.pathname === '/api/v1/authorization-groups' && request.method() === 'GET') groupCatalogGets++
+      if (url.pathname === '/api/v1/authorization-groups/1/members' && request.method() === 'GET') memberGets++
+      if (url.pathname === '/api/v1/users/7/permissions' && request.method() === 'GET') directPermissionGets++
+    })
+    // This PUT endpoint replaces the entire group. Confirm other users survive.
+    await page.route('**/api/v1/authorization-groups/1/members', async (route) => {
+      if (route.request().method() === 'PUT') {
+        memberPuts++
+        submittedIds = (route.request().postDataJSON() as { user_ids: string[] }).user_ids
+        return route.fulfill({
+          status: 200, contentType: 'application/json',
+          body: JSON.stringify({ data: [{ id: '8', username: 'linhpt', status: 'ACTIVE', active: true }] }),
+        })
+      }
+      return route.fulfill({
+        status: 200, contentType: 'application/json',
+        body: JSON.stringify({ data: [
+          { id: '7', username: 'quyetdv', status: 'ACTIVE', active: true },
+          { id: '8', username: 'linhpt', status: 'ACTIVE', active: true },
+        ] }),
+      })
+    })
+    await page.goto('/security/users')
+    const row = page.getByRole('row', { name: /7 quyetdv/ })
+    await row.getByRole('button', { name: 'Xem chi tiết' }).click()
+    const dialog = page.getByRole('dialog', { name: /Chi tiết người dùng/ })
+    await expect(dialog).toBeVisible()
+    expect(groupCatalogGets).toBe(0)
+    expect(memberGets).toBe(0)
+    expect(directPermissionGets).toBe(0)
+
+    await dialog.getByRole('button', { name: 'Authorization Groups', exact: true }).click()
+    const groupCheckbox = dialog.getByRole('checkbox').first()
+    await expect(groupCheckbox).toBeChecked()
+    expect(groupCatalogGets).toBe(1)
+    expect(memberGets).toBe(0)
+    expect(directPermissionGets).toBe(0)
+    await expect(dialog.getByRole('button', { name: 'Lưu thành viên' })).toBeDisabled()
+    await groupCheckbox.uncheck()
+    await dialog.getByRole('button', { name: 'Lưu thành viên' }).click()
+    await expect.poll(() => memberPuts).toBe(1)
+    expect(memberGets).toBe(1)
+    expect(submittedIds).toEqual(['8'])
+  })
+
+
+  test('User membership editor rejects stale membership and never sends destructive PUT', async ({ page }) => {
+    let puts = 0
+    await page.route('**/api/v1/authorization-groups/1/members', async (route) => {
+      if (route.request().method() === 'PUT') {
+        puts++
+        return route.fulfill({ status: 500, body: 'Unexpected PUT' })
+      }
+      // The list said User 7 was a member, but someone else removed User 7.
+      return route.fulfill({
+        status: 200, contentType: 'application/json',
+        body: JSON.stringify({ data: [{ id: '8', username: 'linhpt', active: true, status: 'ACTIVE' }] }),
+      })
+    })
+    await page.goto('/security/users')
+    await page.getByRole('row', { name: /7 quyetdv/ })
+      .getByRole('button', { name: 'Xem chi tiết' }).click()
+    const dialog = page.getByRole('dialog', { name: /Chi tiết người dùng/ })
+    await dialog.getByRole('button', { name: 'Authorization Groups' }).click()
+    const checkbox = dialog.getByRole('checkbox').first()
+    await expect(checkbox).toBeChecked()
+    await checkbox.uncheck()
+    await dialog.getByRole('button', { name: 'Lưu thành viên' }).click()
+    await expect(dialog.getByText(/Thành viên nhóm đã thay đổi ở nơi khác/)).toBeVisible()
+    expect(puts).toBe(0)
+    await expect(dialog.getByRole('button', { name: 'Lưu thành viên' })).toBeDisabled()
   })
 
   test('create account retries multipart Avatar upload without creating another user', async ({ page }) => {
@@ -462,11 +560,12 @@ test.describe('P1-FE-030 security surfaces', () => {
     await page.route('**/api/v1/users/99/avatar', async (route) => {
       const request = route.request()
       if (request.method() !== 'POST') return route.continue()
-      // PHP 8.3 parses multipart uploads from POST; CI4 routes _method=PUT as PUT.
+      // The frozen Avatar upload route is native POST; PHP receives the image in $_FILES.
+      // Method spoofing to PUT is not part of the upload transport contract.
       expect(request.headers()['content-type']).toContain('multipart/form-data')
       const multipart = request.postDataBuffer()?.toString('latin1') ?? ''
-      expect(multipart).toMatch(/name="_method"\r?\n\r?\nPUT\r?\n/)
       expect(multipart).toContain('name="image"; filename="avatar.png"')
+      expect(multipart).not.toContain('name="_method"')
       uploads++
       await route.fulfill({
         status: uploads === 1 ? 403 : 200,
@@ -606,6 +705,60 @@ test.describe('P1-FE-030 security surfaces', () => {
     await expect(page.getByRole('button', { name: /Xóa|Delete/ })).toHaveCount(1)
     const accessibility = await new AxeBuilder({ page }).include('.modal-card').analyze()
     expect(accessibility.violations).toEqual([])
+  })
+
+  test('Policy opens the scoped page first and keeps View read-only, Edit PBAC-gated', async ({ page }) => {
+    const requests: string[] = []
+    page.on('request', (request) => {
+      if (request.method() === 'GET') requests.push(new URL(request.url()).pathname)
+    })
+    await page.goto('/security/policies')
+    await expect(page.getByRole('heading', { name: 'Policy PBAC' })).toBeVisible()
+    await expect(page.getByRole('cell', { name: 'Security administrators' })).toBeVisible()
+    const policyIndex = requests.indexOf('/api/v1/policies')
+    const resourceIndex = requests.indexOf('/api/v1/resources')
+    expect(policyIndex).toBeGreaterThanOrEqual(0)
+    expect(resourceIndex).toBeGreaterThan(policyIndex)
+
+    await page.getByRole('button', { name: 'Xem chi tiết', exact: true }).click()
+    const view = page.getByRole('dialog', { name: 'Chi tiết Policy' })
+    await expect(view).toBeVisible()
+    await expect(view.getByText('ABSOLUTE_DENY')).toBeVisible()
+    await expect(view.locator('input, select, textarea')).toHaveCount(0)
+    await expect(view.getByRole('button', { name: 'Lưu' })).toHaveCount(0)
+    await expect(view.getByRole('button', { name: /Thêm Action|Add Action/ })).toHaveCount(0)
+    await view.locator('.modal-card__footer').getByRole('button', { name: 'Đóng' }).click()
+
+    await page.getByRole('button', { name: 'Sửa', exact: true }).click()
+    const editor = page.getByRole('dialog', { name: 'Biểu mẫu Policy' })
+    await expect(editor).toBeVisible()
+    await expect(editor.getByRole('button', { name: 'Lưu' })).toBeVisible()
+  })
+
+  test('Policy PBAC denial hides edit without hiding read-only View', async ({ page }) => {
+    await page.route((url) => url.pathname === '/api/v1/policies', async (route) =>
+      route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({
+          data: [{
+            id: '3', organization_id: '10', resource_id: '2', status: 'ACTIVE',
+            participant_type: 'GROUP', participant_ref_id: '1',
+            actions: [{ resource_action_id: '20', effect: 'DENY' }],
+            allowed_actions: { edit: false, setstate: false },
+          }],
+          meta: { page: 1, page_size: 25, total: 1, request_id: 'policy-denied' },
+        }),
+      }),
+    )
+    await page.goto('/security/policies')
+    await expect(page.getByRole('heading', { name: 'Policy PBAC' })).toBeVisible()
+    await expect(page.getByRole('button', { name: 'Xem chi tiết', exact: true })).toBeVisible()
+    await expect(page.getByRole('button', { name: 'Sửa', exact: true })).toHaveCount(0)
+    await page.getByRole('button', { name: 'Xem chi tiết', exact: true }).click()
+    const view = page.getByRole('dialog', { name: 'Chi tiết Policy' })
+    await expect(view).toBeVisible()
+    await expect(view.getByRole('button', { name: 'Lưu' })).toHaveCount(0)
   })
 
   test('the exact 10 independent Resource types never offer Lifecycle selection', async ({
