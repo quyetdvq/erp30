@@ -36,3 +36,14 @@
 - Replace milestone-fingerprint/frozen-route rewrite checks with feature-oriented migration, PBAC, transaction, HTTP/CSRF, worker and frontend tests. Previous rewrite-milestone gates are historical, not release criteria for new M11 code.
 
 **Verification for this source port:** PHP syntax and static cross-tree inventory can be checked offline. No MariaDB schema migration, seed execution, HTTP integration or M11 notifications were executed by the source port.
+
+## M11.1A Notifications (new in v1.4)
+
+The migration ledger on the user's `erp` DB shows all 18 legacy App migrations present and 31/31 business tables (`db:legacy-preflight`, 26 Oct 2026). This is **not** proof that new M11 schema has been applied.
+
+- Work on a **backed-up DEV clone**. Verify `DBPrefix=dinktech_`, exact `SHOW CREATE TABLE` for `users`, `resources`, `resource_actions`, `configuration_audit_events`, and isolation/engine before applying schema 019.
+- Run `php spark migrate:status`, then `php spark migrate` to apply `2026-10-26-000019_CreateNotificationTables`. MariaDB 10.4 may leave **partial DDL** if interrupted; if it fails, inspect all four new tables and ledger, rather than blindly retrying. By default `down()` refuses to delete notification data. Destructive DEV rollback requires `DINKERP_M11_ALLOW_SCHEMA_DROP=DEV_CLONE_ONLY` and must not be used in production.
+- Run `php spark db:seed NotificationSeeder`, then repeat and verify six policy keys and exactly one `notification_setting` Resource with `view/edit` actions. Re-seeding must not reset an administrator's current defaults or re-grant revoked permissions.
+- **No implicit PBAC grant:** provision `notification_setting.view/edit` for an authorized pilot actor using existing Access management. Personal Preferences need only an authenticated Shield session; policy endpoints still require PBAC.
+- Use `DINKERP_M11_SETTINGS_WRITE_MODE=enabled` only in the intended DEV environment for PATCH; reads remain available after migration and seeding. This is independent of `DINKERP_M33B_WRITE_MODE`. All Import event producers and worker are still inactive in M11.1A.
+- Validate HTTP 401/403/409/422, atomic multi-key PATCH and no-op/audit behavior, duplicate preference insert race, epoch lock/unlock, CSRF token refresh, and migration rollback procedure; then execute `pnpm openapi:generate`, `pnpm type-check` and frontend smoke tests in the full project environment. The ZIP environment for this patch lacks Composer/vendor and frontend node_modules, so runtime checks were **not** executed here.

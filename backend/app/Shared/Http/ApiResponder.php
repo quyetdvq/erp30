@@ -50,6 +50,9 @@ final class ApiResponder
         if ($code === 'CONTACT_STATE_REQUIRES_SETSTATE') {
             return 'ApiRuntime.contactStateRequiresSetstate';
         }
+        if (str_starts_with($code, 'NOTIFICATION_')) {
+            return 'NotificationRuntime.' . $code;
+        }
         if (str_starts_with($code, 'CONTACT_')) {
             return 'Contact.' . $code;
         }

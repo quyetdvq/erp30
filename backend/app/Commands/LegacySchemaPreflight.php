@@ -19,6 +19,9 @@ final class LegacySchemaPreflight extends BaseCommand
     protected $name = 'db:legacy-preflight';
     protected $description = 'Read-only check of inherited ERP schema and CI4 migration history.';
 
+    /** Last migration inherited from backend_baseline; M11 and newer migrations are outside this legacy check. */
+    private const LAST_INHERITED_MIGRATION = '2026-10-15-000018';
+
     /** Tables created by legacy migrations 001-008 and 011; excludes Shield tables. */
     private const TABLES = [
         'provinces', 'wards', 'organizations', 'contacts',
@@ -107,6 +110,11 @@ final class LegacySchemaPreflight extends BaseCommand
             if (! preg_match('/\A(\d{4}-\d{2}-\d{2}-\d{6})_[A-Za-z][A-Za-z0-9]*\.php\z/D', basename($file), $m)) {
                 continue;
             }
+            // Only verify the original 18 inherited migrations. New feature migrations
+            // are checked by `php spark migrate:status`, not this onboarding diagnostic.
+            if (strcmp($m[1], self::LAST_INHERITED_MIGRATION) > 0) {
+                continue;
+            }
             $ported[] = basename($file);
             $expectedClass = substr(basename($file), strlen($m[1]) + 1, -4);
             $matches = false;
@@ -135,7 +143,7 @@ final class LegacySchemaPreflight extends BaseCommand
         if ($found === 0 && count($pending) === count($ported)) {
             CLI::write('EMPTY BUSINESS SCHEMA: run migrations only on a deliberately disposable database, with Shield installed.', 'yellow');
         } elseif ($found === count(self::TABLES) && $pending === []) {
-            CLI::write('PRELIMINARY READY: inherited tables and version rows present; still compare SHOW CREATE TABLE before M11.', 'green');
+            CLI::write('PRELIMINARY READY: inherited tables and version rows present; review feature migrations via php spark migrate:status.', 'green');
         } elseif ($found === count(self::TABLES) && $pending !== []) {
             throw new RuntimeException('STOP: existing business tables but inherited migration versions missing. Reconcile schema/history first.');
         } else {

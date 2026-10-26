@@ -36,6 +36,12 @@ final class ApiErrorMapper
             if ($code === 'DISPLAY_SETTING_NOT_FOUND') {
                 return 422;
             }
+            if ($code === 'NOTIFICATION_CONFIGURATION_INVALID' || $code === 'NOTIFICATION_STORAGE_FAILED') {
+                return 500;
+            }
+            if (in_array($code, ['NOTIFICATION_SETTINGS_DISABLED', 'NOTIFICATION_OVERRIDE_LOCKED'], true)) {
+                return 403;
+            }
             return match (true) {
                 str_contains($code, 'NOT_FOUND') || str_contains($code, 'NOTFOUND') => 404,
                 str_contains($code, 'UNAUTHENTICATED') || str_contains($code, 'INVALID_CREDENTIAL') => 401,

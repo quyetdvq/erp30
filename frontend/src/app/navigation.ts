@@ -40,6 +40,7 @@ export type NavigationItem = {
   to: string
   icon: object
   permission?: string
+  permissionAny?: string[]
   children?: NavigationItem[]
   disabled?: boolean
 }
@@ -106,7 +107,7 @@ export const navItems: NavigationItem[] = [
     labelKey: 'nav.displaySettings',
     to: '/system/display-settings',
     icon: OptionsOutline,
-    permission: 'display_setting.view',
+    permissionAny: ['display_setting.view', 'notification_setting.view'],
   },
   {
     labelKey: 'nav.securityUsers',

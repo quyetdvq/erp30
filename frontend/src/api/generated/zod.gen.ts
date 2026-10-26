@@ -3,6 +3,64 @@
 import * as z from 'zod';
 
 /**
+ * Canonical unsigned BIGINT decimal as string; epoch/revision must be greater than zero, except absent user_revision=0.
+ */
+export const zNotificationRevision = z.string().regex(/^(0|[1-9][0-9]{0,19})$/);
+
+export const zNotificationPolicy = z.object({
+    key: z.string().max(150),
+    default_value: z.boolean(),
+    allow_user_override: z.boolean(),
+    mandatory: z.boolean(),
+    capability: z.enum(['AVAILABLE', 'UNAVAILABLE']),
+    producer_state: z.enum(['INACTIVE', 'ACTIVE']),
+    revision: zNotificationRevision,
+    override_epoch: zNotificationRevision
+});
+
+export const zNotificationPreference = z.object({
+    key: z.string().max(150),
+    system_default: z.boolean(),
+    allow_user_override: z.boolean(),
+    user_override: z.boolean().nullable(),
+    effective_value: z.boolean(),
+    effective_source: z.enum([
+        'CHANNEL_UNAVAILABLE',
+        'MANDATORY',
+        'SYSTEM_LOCKED',
+        'SYSTEM_DEFAULT',
+        'USER'
+    ]),
+    override_epoch: zNotificationRevision,
+    user_revision: zNotificationRevision,
+    locked: z.boolean(),
+    capability: z.enum(['AVAILABLE', 'UNAVAILABLE']),
+    producer_state: z.enum(['INACTIVE', 'ACTIVE'])
+});
+
+export const zNotificationPolicyChange = z.object({
+    key: z.string().max(150),
+    default_value: z.boolean(),
+    allow_user_override: z.boolean(),
+    expected_revision: zNotificationRevision
+});
+
+export const zNotificationPreferenceChange = z.object({
+    key: z.string().max(150),
+    value: z.boolean().nullable(),
+    expected_override_epoch: zNotificationRevision,
+    expected_user_revision: zNotificationRevision
+});
+
+export const zNotificationPoliciesPatch = z.object({
+    changes: z.array(zNotificationPolicyChange).min(1).max(6)
+});
+
+export const zNotificationPreferencesPatch = z.object({
+    changes: z.array(zNotificationPreferenceChange).min(1).max(6)
+});
+
+/**
  * Lifecycle member code when bound; otherwise a permitted fallback native code.
  */
 export const zBusinessWorkflowStatus = z.string().min(1).max(50).regex(/^[A-Z][A-Z0-9_:-]*$/);
@@ -66,6 +124,14 @@ export const zSuccessResponse = z.object({
     data: z.unknown(),
     meta: zMeta
 });
+
+export const zNotificationPoliciesResponse = zSuccessResponse.and(z.object({
+    data: z.array(zNotificationPolicy).optional()
+}));
+
+export const zNotificationPreferencesResponse = zSuccessResponse.and(z.object({
+    data: z.array(zNotificationPreference).optional()
+}));
 
 export const zBusinessWorkflowStatesResponse = zSuccessResponse.and(z.object({
     data: zBusinessWorkflowStates.optional()
@@ -203,7 +269,7 @@ export const zAuthUser = z.object({
     username: z.string(),
     name: z.string().nullable(),
     has_avatar: z.boolean(),
-    avatar_url: z.string().nullable().optional(),
+    avatar_url: z.string().nullish(),
     email: z.email().nullable(),
     active: z.boolean(),
     status: z.string().nullable(),
@@ -295,7 +361,7 @@ export const zProduct = z.object({
     manual_standard_cost: zDecimal.nullish(),
     serial_management_enabled: z.boolean().optional(),
     image_available: z.boolean().optional(),
-    image_url: z.string().nullable().optional(),
+    image_url: z.string().nullish(),
     allowed_actions: z.object({
         edit: z.boolean(),
         setstate: z.boolean()
@@ -1078,7 +1144,7 @@ export const zSecurityUser = z.object({
     username: z.string(),
     name: z.string().nullable(),
     has_avatar: z.boolean(),
-    avatar_url: z.string().nullable().optional(),
+    avatar_url: z.string().nullish(),
     email: z.string().nullable(),
     active: z.boolean(),
     status: z.string().nullable(),
@@ -1096,7 +1162,7 @@ export const zUserIdentity = z.object({
     username: z.string(),
     name: z.string().nullable(),
     has_avatar: z.boolean(),
-    avatar_url: z.string().nullable().optional(),
+    avatar_url: z.string().nullish(),
     email: z.email(),
     active: z.boolean(),
     status: z.enum([
@@ -1158,7 +1224,8 @@ export const zUserIdentityResponse = zSuccessResponse.and(z.object({
 
 export const zUserAvatarMutation = z.object({
     user_id: zBigInt,
-    has_avatar: z.boolean()
+    has_avatar: z.boolean(),
+    avatar_url: z.string().nullish()
 });
 
 export const zUserAvatarMutationResponse = zSuccessResponse.and(z.object({
@@ -1573,6 +1640,10 @@ export const zFilter = z.record(z.string(), z.union([
 export const zDisplayOrganizationId = zPositiveBigInt;
 
 export const zDisplayContextType = z.enum(['SYSTEM', 'ORGANIZATION']);
+
+export const zNotificationPoliciesPatch2 = zNotificationPoliciesPatch;
+
+export const zNotificationPreferencesPatch2 = zNotificationPreferencesPatch;
 
 export const zAuthLogin2 = zAuthLogin;
 
@@ -3473,3 +3544,47 @@ export const zExecuteBusinessWorkflowActionPath = z.object({
  * State changed via a configured transition.
  */
 export const zExecuteBusinessWorkflowActionResponse = zBusinessWorkflowMutationResponse;
+
+export const zListNotificationPoliciesHeaders = z.object({
+    'Accept-Language': z.enum(['vi', 'en']).optional().default('vi'),
+    'X-Request-ID': zRequestId.optional()
+});
+
+/**
+ * System notification policies.
+ */
+export const zListNotificationPoliciesResponse = zNotificationPoliciesResponse;
+
+export const zUpdateNotificationPoliciesBody = zNotificationPoliciesPatch2;
+
+export const zUpdateNotificationPoliciesHeaders = z.object({
+    'Accept-Language': z.enum(['vi', 'en']).optional().default('vi'),
+    'X-Request-ID': zRequestId.optional()
+});
+
+/**
+ * System notification policies.
+ */
+export const zUpdateNotificationPoliciesResponse = zNotificationPoliciesResponse;
+
+export const zListOwnNotificationPreferencesHeaders = z.object({
+    'Accept-Language': z.enum(['vi', 'en']).optional().default('vi'),
+    'X-Request-ID': zRequestId.optional()
+});
+
+/**
+ * Shield-owned notification preferences and effective policy.
+ */
+export const zListOwnNotificationPreferencesResponse = zNotificationPreferencesResponse;
+
+export const zUpdateOwnNotificationPreferencesBody = zNotificationPreferencesPatch2;
+
+export const zUpdateOwnNotificationPreferencesHeaders = z.object({
+    'Accept-Language': z.enum(['vi', 'en']).optional().default('vi'),
+    'X-Request-ID': zRequestId.optional()
+});
+
+/**
+ * Shield-owned notification preferences and effective policy.
+ */
+export const zUpdateOwnNotificationPreferencesResponse = zNotificationPreferencesResponse;

@@ -145,6 +145,9 @@ $routes->group('api/v1', ['filter' => 'cors'], static function (RouteCollection 
     // M8 shared Import Framework + Product Adapter: four frozen operations.
     require __DIR__ . '/M8Routes.php';
 
+    // M11.1A: only Settings/Preferences. No Inbox routes or producer until M11.1B.
+    require __DIR__ . '/M11Routes.php';
+
     // M2.1 read-only Frontend compatibility; every row is PBAC-filtered.
     $routes->get('provinces', [ReadCatalogController::class, 'listProvinces']);
     $routes->get('provinces/(:num)', [ReadCatalogController::class, 'showProvince']);

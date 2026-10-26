@@ -5,6 +5,66 @@ export type ClientOptions = {
 };
 
 /**
+ * Canonical unsigned BIGINT decimal as string; epoch/revision must be greater than zero, except absent user_revision=0.
+ */
+export type NotificationRevision = string;
+
+export type NotificationPolicy = {
+    key: string;
+    default_value: boolean;
+    allow_user_override: boolean;
+    mandatory: boolean;
+    capability: 'AVAILABLE' | 'UNAVAILABLE';
+    producer_state: 'INACTIVE' | 'ACTIVE';
+    revision: NotificationRevision;
+    override_epoch: NotificationRevision;
+};
+
+export type NotificationPreference = {
+    key: string;
+    system_default: boolean;
+    allow_user_override: boolean;
+    user_override: boolean | null;
+    effective_value: boolean;
+    effective_source: 'CHANNEL_UNAVAILABLE' | 'MANDATORY' | 'SYSTEM_LOCKED' | 'SYSTEM_DEFAULT' | 'USER';
+    override_epoch: NotificationRevision;
+    user_revision: NotificationRevision;
+    locked: boolean;
+    capability: 'AVAILABLE' | 'UNAVAILABLE';
+    producer_state: 'INACTIVE' | 'ACTIVE';
+};
+
+export type NotificationPolicyChange = {
+    key: string;
+    default_value: boolean;
+    allow_user_override: boolean;
+    expected_revision: NotificationRevision;
+};
+
+export type NotificationPreferenceChange = {
+    key: string;
+    value: boolean | null;
+    expected_override_epoch: NotificationRevision;
+    expected_user_revision: NotificationRevision;
+};
+
+export type NotificationPoliciesPatch = {
+    changes: Array<NotificationPolicyChange>;
+};
+
+export type NotificationPreferencesPatch = {
+    changes: Array<NotificationPreferenceChange>;
+};
+
+export type NotificationPoliciesResponse = SuccessResponse & {
+    data?: Array<NotificationPolicy>;
+};
+
+export type NotificationPreferencesResponse = SuccessResponse & {
+    data?: Array<NotificationPreference>;
+};
+
+/**
  * Lifecycle member code when bound; otherwise a permitted fallback native code.
  */
 export type BusinessWorkflowStatus = string;
@@ -207,9 +267,12 @@ export type AuthUser = {
      */
     name: string | null;
     /**
-     * Whether private avatar metadata is present; no storage filename is exposed.
+     * Whether an avatar filename is stored; URL is separate and null for legacy files.
      */
     has_avatar: boolean;
+    /**
+     * Public static /uploads/YYYY/... URL; null until a legacy image is migrated.
+     */
     avatar_url?: string | null;
     email: string | null;
     active: boolean;
@@ -308,9 +371,12 @@ export type Product = {
      * Whether this Product has an uploaded representative image.
      */
     image_available?: boolean;
+    /**
+     * Public static URL for a migrated/new image; null for legacy filenames.
+     */
     image_url?: string | null;
     /**
-     * Advisory record-specific PBAC for list/detail GET; mutations reauthorize.
+     * Advisory record-specific PBAC decisions for Product list and detail GET responses. Absent on other Product responses. edit and setstate reflect current persisted State; setstate is not a promise that a workflow transition exists. Mutation endpoints always reauthorize against current data.
      */
     allowed_actions?: {
         edit: boolean;
@@ -1447,6 +1513,10 @@ export type Filter = {
 export type DisplayOrganizationId = PositiveBigInt;
 
 export type DisplayContextType = 'SYSTEM' | 'ORGANIZATION';
+
+export type NotificationPoliciesPatch2 = NotificationPoliciesPatch;
+
+export type NotificationPreferencesPatch2 = NotificationPreferencesPatch;
 
 export type AuthLogin2 = AuthLogin;
 
@@ -7611,3 +7681,187 @@ export type ExecuteBusinessWorkflowActionResponses = {
 };
 
 export type ExecuteBusinessWorkflowActionResponse = ExecuteBusinessWorkflowActionResponses[keyof ExecuteBusinessWorkflowActionResponses];
+
+export type ListNotificationPoliciesData = {
+    body?: never;
+    headers?: {
+        /**
+         * Supported request language. Unsupported values fall back to vi.
+         */
+        'Accept-Language'?: 'vi' | 'en';
+        /**
+         * Client request correlation identifier; invalid or missing values are replaced by a generated UUID.
+         */
+        'X-Request-ID'?: RequestId;
+    };
+    path?: never;
+    query?: never;
+    url: '/api/v1/notification-settings';
+};
+
+export type ListNotificationPoliciesErrors = {
+    /**
+     * Unauthenticated or invalid authentication.
+     */
+    401: ErrorResponse;
+    /**
+     * Visible target but action denied.
+     */
+    403: ErrorResponse;
+    /**
+     * Unexpected server error without internal diagnostics.
+     */
+    500: ErrorResponse;
+};
+
+export type ListNotificationPoliciesError = ListNotificationPoliciesErrors[keyof ListNotificationPoliciesErrors];
+
+export type ListNotificationPoliciesResponses = {
+    /**
+     * System notification policies.
+     */
+    200: NotificationPoliciesResponse;
+};
+
+export type ListNotificationPoliciesResponse = ListNotificationPoliciesResponses[keyof ListNotificationPoliciesResponses];
+
+export type UpdateNotificationPoliciesData = {
+    body: NotificationPoliciesPatch2;
+    headers?: {
+        /**
+         * Supported request language. Unsupported values fall back to vi.
+         */
+        'Accept-Language'?: 'vi' | 'en';
+        /**
+         * Client request correlation identifier; invalid or missing values are replaced by a generated UUID.
+         */
+        'X-Request-ID'?: RequestId;
+    };
+    path?: never;
+    query?: never;
+    url: '/api/v1/notification-settings';
+};
+
+export type UpdateNotificationPoliciesErrors = {
+    /**
+     * Unauthenticated or invalid authentication.
+     */
+    401: ErrorResponse;
+    /**
+     * Visible target but action denied.
+     */
+    403: ErrorResponse;
+    /**
+     * Conflict, concurrency, uniqueness, or current-state failure.
+     */
+    409: ErrorResponse;
+    /**
+     * Semantically invalid request.
+     */
+    422: ErrorResponse;
+    /**
+     * Unexpected server error without internal diagnostics.
+     */
+    500: ErrorResponse;
+};
+
+export type UpdateNotificationPoliciesError = UpdateNotificationPoliciesErrors[keyof UpdateNotificationPoliciesErrors];
+
+export type UpdateNotificationPoliciesResponses = {
+    /**
+     * System notification policies.
+     */
+    200: NotificationPoliciesResponse;
+};
+
+export type UpdateNotificationPoliciesResponse = UpdateNotificationPoliciesResponses[keyof UpdateNotificationPoliciesResponses];
+
+export type ListOwnNotificationPreferencesData = {
+    body?: never;
+    headers?: {
+        /**
+         * Supported request language. Unsupported values fall back to vi.
+         */
+        'Accept-Language'?: 'vi' | 'en';
+        /**
+         * Client request correlation identifier; invalid or missing values are replaced by a generated UUID.
+         */
+        'X-Request-ID'?: RequestId;
+    };
+    path?: never;
+    query?: never;
+    url: '/api/v1/notifications/preferences';
+};
+
+export type ListOwnNotificationPreferencesErrors = {
+    /**
+     * Unauthenticated or invalid authentication.
+     */
+    401: ErrorResponse;
+    /**
+     * Unexpected server error without internal diagnostics.
+     */
+    500: ErrorResponse;
+};
+
+export type ListOwnNotificationPreferencesError = ListOwnNotificationPreferencesErrors[keyof ListOwnNotificationPreferencesErrors];
+
+export type ListOwnNotificationPreferencesResponses = {
+    /**
+     * Shield-owned notification preferences and effective policy.
+     */
+    200: NotificationPreferencesResponse;
+};
+
+export type ListOwnNotificationPreferencesResponse = ListOwnNotificationPreferencesResponses[keyof ListOwnNotificationPreferencesResponses];
+
+export type UpdateOwnNotificationPreferencesData = {
+    body: NotificationPreferencesPatch2;
+    headers?: {
+        /**
+         * Supported request language. Unsupported values fall back to vi.
+         */
+        'Accept-Language'?: 'vi' | 'en';
+        /**
+         * Client request correlation identifier; invalid or missing values are replaced by a generated UUID.
+         */
+        'X-Request-ID'?: RequestId;
+    };
+    path?: never;
+    query?: never;
+    url: '/api/v1/notifications/preferences';
+};
+
+export type UpdateOwnNotificationPreferencesErrors = {
+    /**
+     * Unauthenticated or invalid authentication.
+     */
+    401: ErrorResponse;
+    /**
+     * Visible target but action denied.
+     */
+    403: ErrorResponse;
+    /**
+     * Conflict, concurrency, uniqueness, or current-state failure.
+     */
+    409: ErrorResponse;
+    /**
+     * Semantically invalid request.
+     */
+    422: ErrorResponse;
+    /**
+     * Unexpected server error without internal diagnostics.
+     */
+    500: ErrorResponse;
+};
+
+export type UpdateOwnNotificationPreferencesError = UpdateOwnNotificationPreferencesErrors[keyof UpdateOwnNotificationPreferencesErrors];
+
+export type UpdateOwnNotificationPreferencesResponses = {
+    /**
+     * Shield-owned notification preferences and effective policy.
+     */
+    200: NotificationPreferencesResponse;
+};
+
+export type UpdateOwnNotificationPreferencesResponse = UpdateOwnNotificationPreferencesResponses[keyof UpdateOwnNotificationPreferencesResponses];

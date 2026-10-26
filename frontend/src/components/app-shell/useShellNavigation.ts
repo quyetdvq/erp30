@@ -41,7 +41,9 @@ export function useShellNavigation() {
       const children = item.children ? visibleNavItems(item.children) : undefined
       if (item.children && children?.length) return [{ ...item, children }]
       if (item.children) return []
-      return !item.permission || hasBasePermissionKey(item.permission) ? [item] : []
+      const hasRequired = !item.permission || hasBasePermissionKey(item.permission)
+      const hasAny = !item.permissionAny || item.permissionAny.some(hasBasePermissionKey)
+      return hasRequired && hasAny ? [item] : []
     })
   }
 

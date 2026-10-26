@@ -7,8 +7,8 @@ namespace App\Modules\Access;
 use UnexpectedValueException;
 
 /**
- * M3-STATE-001: the ONLY ten independent resource types.
- * All unknown/future resources are lifecycle-managed. Never infer Native State
+ * Independent Resource State catalog extended for M11.1A.
+ * Only registered independent types bypass lifecycle binding. Never infer Native State
  * from a business table's `status` column.
  */
 final class ResourceStateCatalog
@@ -21,6 +21,7 @@ final class ResourceStateCatalog
         'authorization_group' => ['ACTIVE', 'INACTIVE'],
         'authorization_log' => [],
         'display_setting' => [],
+        'notification_setting' => [],
         'employee_assignment' => ['ACTIVE', 'INACTIVE'],
         'import_job' => ['PENDING', 'PROCESSING', 'COMPLETED', 'COMPLETED_WITH_ERRORS', 'FAILED'],
         'lifecycle' => ['ACTIVE', 'INACTIVE'],
