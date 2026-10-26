@@ -3,6 +3,8 @@
 declare(strict_types=1);
 
 require_once __DIR__ . '/../../app/Exceptions/DomainException.php';
+require_once __DIR__ . '/../../app/Modules/Notifications/NotificationRuntimeConfigRules.php';
+require_once __DIR__ . '/../../app/Modules/Notifications/NotificationFlags.php';
 require_once __DIR__ . '/../../app/Modules/Notifications/NotificationCatalog.php';
 require_once __DIR__ . '/../../app/Modules/Notifications/NotificationRules.php';
 require_once __DIR__ . '/../../app/Modules/Notifications/NotificationPolicyResolver.php';
@@ -31,9 +33,15 @@ function error(string $code, callable $fn): void
 }
 
 $all = NotificationCatalog::definitions();
-check(count($all) === 6, 'six catalog keys including future channels');
-check(count(array_filter($all, static fn (array $v): bool => $v['capability'] === 'AVAILABLE')) === 3, 'three configurable import keys');
-check(count(array_filter($all, static fn (array $v): bool => $v['producer_state'] === 'ACTIVE')) === 0, 'M11.1A cannot produce notifications');
+check(count($all) === 7, 'seven catalog keys including Browser Push');
+check(count(array_filter($all, static fn (array $v): bool => $v['capability'] === 'AVAILABLE')) === 6, 'three Import, Workflow, Email and Push available; Security future');
+check(count(array_filter($all, static fn (array $v): bool => $v['producer_state'] === 'ACTIVE'))
+    === ((\App\Modules\Notifications\NotificationFlags::producerEnabled() ? 3 : 0)
+        + (\App\Modules\Notifications\NotificationFlags::workflowProducerEnabled() ? 1 : 0)
+        + (\App\Modules\Notifications\NotificationFlags::producerEnabled()
+            && \App\Modules\Notifications\NotificationFlags::emailQueueEnabled() ? 1 : 0)
+        + (\App\Modules\Notifications\NotificationFlags::producerEnabled()
+            && \App\Modules\Notifications\NotificationFlags::pushQueueEnabled() ? 1 : 0)), 'M11 producer gates');
 $key = 'import.completed.in_app';
 $definition = $all[$key];
 $policy = ['default_value' => 1, 'allow_user_override' => 1, 'revision' => '3', 'override_epoch' => '4'];
@@ -63,7 +71,10 @@ check(! Rules::version('02') && ! Rules::version(2) && Rules::version('0', true)
 $change = ['key'=>$key,'default_value'=>false,'allow_user_override'=>true,'expected_revision'=>'3'];
 check(Rules::policyChanges(['changes'=>[$change]])[0]['key'] === $key, 'valid policy change');
 error('NOTIFICATION_INVALID_KEY', static fn () => Rules::policyChanges(['changes'=>[$change,$change]]));
-error('NOTIFICATION_INVALID_KEY', static fn () => Rules::policyChanges(['changes'=>[array_replace($change,['key'=>'import.completed.email'])]]));
+check(Rules::policyChanges(['changes'=>[array_replace($change,['key'=>'import.completed.email'])]])[0]['key']
+    === 'import.completed.email', 'M11.3B Email policy can be managed with default OFF');
+error('NOTIFICATION_INVALID_REQUEST', static fn () => Rules::policyChanges(['changes'=>[
+    array_replace($change,['key'=>'import.completed.email','default_value'=>true])]]));
 error('NOTIFICATION_INVALID_REQUEST', static fn () => Rules::policyChanges(['changes'=>[array_replace($change,['expected_revision'=>3])]]));
 error('NOTIFICATION_INVALID_REQUEST', static fn () => Rules::policyChanges(['changes'=>[array_replace($change,['user_id'=>1])]]));
 $userChange = ['key'=>$key,'value'=>null,'expected_override_epoch'=>'4','expected_user_revision'=>'0'];

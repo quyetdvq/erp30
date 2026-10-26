@@ -10,6 +10,7 @@ import {
   type AuthUser,
 } from '@/services/auth'
 import { useDisplaySettingsStore } from '@/stores/displaySettings'
+import { useNotificationsStore } from '@/stores/notifications'
 import { useWorkspaceStore } from '@/stores/workspace'
 
 export const useAuthStore = defineStore('auth', () => {
@@ -40,6 +41,7 @@ export const useAuthStore = defineStore('auth', () => {
     user.value = null
     permissionSnapshotState.value = 'unavailable'
     useDisplaySettingsStore().clearSession()
+    useNotificationsStore().clearSession()
     useWorkspaceStore().clearSession()
   }
 

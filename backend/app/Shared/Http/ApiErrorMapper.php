@@ -39,7 +39,8 @@ final class ApiErrorMapper
             if ($code === 'NOTIFICATION_CONFIGURATION_INVALID' || $code === 'NOTIFICATION_STORAGE_FAILED') {
                 return 500;
             }
-            if (in_array($code, ['NOTIFICATION_SETTINGS_DISABLED', 'NOTIFICATION_OVERRIDE_LOCKED'], true)) {
+            if (in_array($code, ['NOTIFICATION_SETTINGS_DISABLED', 'NOTIFICATION_OVERRIDE_LOCKED',
+                'NOTIFICATION_PUSH_DISABLED', 'NOTIFICATION_PUSH_CONSENT_REQUIRED'], true)) {
                 return 403;
             }
             return match (true) {

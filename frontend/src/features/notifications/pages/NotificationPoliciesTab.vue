@@ -20,6 +20,7 @@ const labelKeys: Record<string, string> = {
   'workflow.action_required.in_app': 'workflowActionRequired',
   'security.permission_changed.in_app': 'securityPermissionChanged',
   'import.completed.email': 'importCompletedEmail',
+  'import.completed.push': 'importCompletedPush',
 }
 function labelFor(key: string): string { return labelKeys[key] ? t(`notificationSettings.keys.${labelKeys[key]}`) : key }
 const rows = ref<NotificationPolicy[]>([])
@@ -87,11 +88,13 @@ onMounted(() => void load())
       <div>
         <strong>{{ labelFor(row.key) }}</strong>
         <small>{{ row.key }}</small>
+        <small v-if="row.key === 'import.completed.email'">{{ t('notificationSettings.emailOptInAdmin') }}</small>
+        <small v-if="row.key === 'import.completed.push'">{{ t('notificationSettings.pushOptInAdmin') }}</small>
         <small v-if="row.capability === 'UNAVAILABLE'">{{ t('notificationSettings.unavailable') }}</small>
         <small v-else-if="row.producer_state === 'INACTIVE'">{{ t('notificationSettings.inactive') }}</small>
       </div>
       <label>
-        <input v-model="draft.default_value" type="checkbox" :disabled="row.capability !== 'AVAILABLE' || !hasBasePermission('notification_setting', 'edit')" />
+        <input v-model="draft.default_value" type="checkbox" :disabled="row.capability !== 'AVAILABLE' || (row.key === 'import.completed.email' || row.key === 'import.completed.push') || !hasBasePermission('notification_setting', 'edit')" />
         {{ t('notificationSettings.defaultValue') }}
       </label>
       <label>

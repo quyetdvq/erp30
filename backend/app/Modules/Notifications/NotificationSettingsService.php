@@ -12,7 +12,7 @@ use CodeIgniter\Shield\Entities\User;
 use RuntimeException;
 use Throwable;
 
-/** M11.1A only: registry, audited System policy and Shield-owned preferences. */
+/** M11 System policy and Shield-owned preference management. */
 final class NotificationSettingsService
 {
     private readonly BaseConnection $db;

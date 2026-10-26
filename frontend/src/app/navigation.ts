@@ -46,6 +46,7 @@ export type NavigationItem = {
 }
 
 export const SYSTEM_NAV_PATHS = new Set([
+  '/system/configuration-settings',
   '/system/display-settings',
   '/security/users',
   '/security/authorization-groups',
@@ -102,6 +103,12 @@ export const navItems: NavigationItem[] = [
     to: '/people/employees',
     icon: IdCardOutline,
     permission: 'employee.view',
+  },
+  {
+    labelKey: 'nav.configurationSettings',
+    to: '/system/configuration-settings',
+    icon: OptionsOutline,
+    permission: 'notification_setting.view',
   },
   {
     labelKey: 'nav.displaySettings',

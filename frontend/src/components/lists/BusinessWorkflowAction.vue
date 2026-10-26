@@ -6,9 +6,13 @@ import { GitCompareOutline } from '@vicons/ionicons5'
 import {
   executeBusinessWorkflowOption,
   getBusinessWorkflowOptions,
+  getWorkflowNotificationAssignees,
+  replaceWorkflowNotificationAssignees,
+  type WorkflowNotificationAssignees,
   type BusinessWorkflowOptions,
 } from '@/services/businessWorkflow'
 import { reportApiError } from '@/services/errorBoundary'
+import { inboxUiEnabled } from '@/features/notifications/featureFlags'
 
 const props = withDefaults(
   defineProps<{
@@ -26,6 +30,10 @@ const working = ref(false)
 const failed = ref(false)
 const metadata = ref<BusinessWorkflowOptions | null>(null)
 const selected = ref('')
+const assignees = ref<WorkflowNotificationAssignees | null>(null)
+const assigneeDraft = ref('')
+const assigneeFailed = ref(false)
+const assigneeSaved = ref(false)
 const disabled = computed(() => working.value || props.busy)
 
 async function open(): Promise<void> {
@@ -34,11 +42,46 @@ async function open(): Promise<void> {
   failed.value = false
   metadata.value = null
   selected.value = ''
+  assignees.value = null
+  assigneeDraft.value = ''
+  assigneeFailed.value = false
+  assigneeSaved.value = false
   working.value = true
   try {
     metadata.value = await getBusinessWorkflowOptions(props.resource, props.targetId)
+    if (inboxUiEnabled && metadata.value.mode === 'LIFECYCLE') {
+      try {
+        const loadedAssignees = await getWorkflowNotificationAssignees(props.resource, props.targetId)
+        assignees.value = loadedAssignees
+        assigneeDraft.value = loadedAssignees.user_ids.join(', ')
+      } catch (error: unknown) {
+        assigneeFailed.value = true
+        reportApiError(error)
+      }
+    }
   } catch (error: unknown) {
     failed.value = true
+    reportApiError(error)
+  } finally {
+    working.value = false
+  }
+}
+
+async function saveAssignees(): Promise<void> {
+  if (disabled.value || !assignees.value) return
+  working.value = true
+  assigneeFailed.value = false
+  assigneeSaved.value = false
+  try {
+    const ids = assigneeDraft.value.trim() === '' ? [] : assigneeDraft.value.split(',').map(id => id.trim())
+    const result = await replaceWorkflowNotificationAssignees(
+      props.resource, props.targetId, assignees.value.revision, ids,
+    )
+    assignees.value = result
+    assigneeDraft.value = result.user_ids.join(', ')
+    assigneeSaved.value = true
+  } catch (error: unknown) {
+    assigneeFailed.value = true
     reportApiError(error)
   } finally {
     working.value = false
@@ -107,6 +150,16 @@ async function apply(): Promise<void> {
           </select>
         </label>
         <p v-else role="status">{{ t('workflow.noAvailableTransition') }}</p>
+        <div v-if="assignees" class="workflow-assignees">
+          <label for="workflow-m11-assignees">{{ t('workflow.notificationAssignees') }}</label>
+          <p>{{ t('workflow.notificationAssigneesHint') }}</p>
+          <input id="workflow-m11-assignees" v-model="assigneeDraft" type="text" maxlength="300"
+            :disabled="disabled" :placeholder="t('workflow.notificationAssigneesPlaceholder')" />
+          <button type="button" class="secondary-button" :disabled="disabled"
+            @click="void saveAssignees()">{{ t('workflow.saveNotificationAssignees') }}</button>
+          <p v-if="assigneeSaved" role="status">{{ t('workflow.notificationAssigneesSaved') }}</p>
+        </div>
+        <p v-if="assigneeFailed" role="alert" class="workflow-error">{{ t('workflow.notificationAssigneesError') }}</p>
       </template>
       <p v-if="failed" class="workflow-error" role="alert">
         {{ t('workflow.transitionRequestFailed') }}
@@ -183,6 +236,10 @@ async function apply(): Promise<void> {
   border: 1px solid #a9b9c7;
   border-radius: 4px;
 }
+.workflow-assignees { margin-top: 18px; display: grid; gap: 8px; border-top: 1px solid #dbe5ea; padding-top: 14px; }
+.workflow-assignees input { padding: 8px; width: 100%; border: 1px solid #a9b9c7; border-radius: 4px; }
+.workflow-assignees p { font-size: 12px; margin: 0; }
+.workflow-assignees button { justify-self: start; }
 .workflow-dialog footer {
   display: flex;
   justify-content: flex-end;

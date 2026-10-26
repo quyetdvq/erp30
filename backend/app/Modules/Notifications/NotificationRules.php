@@ -55,7 +55,8 @@ final class NotificationRules
                     || ! self::version($change['expected_revision'])) {
                     throw new DomainException('NOTIFICATION_INVALID_REQUEST', ['field' => "changes.{$index}"]);
                 }
-                if ($definition['mandatory'] && (!$change['default_value'] || $change['allow_user_override'])) {
+                if (($definition['mandatory'] && (!$change['default_value'] || $change['allow_user_override']))
+                    || (in_array($key, ['import.completed.email','import.completed.push'], true) && $change['default_value'])) {
                     throw new DomainException('NOTIFICATION_INVALID_REQUEST', ['field' => "changes.{$index}"]);
                 }
             } else {

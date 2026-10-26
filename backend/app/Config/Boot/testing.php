@@ -36,3 +36,12 @@ defined('SHOW_DEBUG_BACKTRACE') || define('SHOW_DEBUG_BACKTRACE', true);
  | release of the framework.
  */
 defined('CI_DEBUG') || define('CI_DEBUG', true);
+
+/*
+ * Spark may also run an explicit test-only schema preparation command with
+ * CI_ENVIRONMENT=testing. Unlike PHPUnit's Test/bootstrap.php, spark does not
+ * define SUPPORTPATH; CodeIgniter 4.7.x's AutoloadConfig expects it whenever
+ * $_SERVER['CI_ENVIRONMENT'] is testing. Define the same tests support path
+ * before the framework loads its autoloader. No database connection is made.
+ */
+defined('SUPPORTPATH') || define('SUPPORTPATH', TESTPATH . '_support' . DIRECTORY_SEPARATOR);

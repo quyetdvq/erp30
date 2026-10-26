@@ -9,6 +9,11 @@
 #   .\tools\test-unit.ps1 RUN ACCEPTANCE      # source/golden-master gates; no SQL/HTTP
 #   .\tools\test-unit.ps1 RUN M4-INTEGRATION  # opt-in M4 14-route HTTP/SQL sandbox
 #   .\tools\test-unit.ps1 RUN M4-CONCURRENCY  # opt-in two-writer Numbering config race
+#   .\tools\test-unit.ps1 RUN M11-UNIT         # M11 PHPUnit unit, no DB
+#   .\tools\test-unit.ps1 RUN M11-INTEGRATION  # M11 MariaDB E2E, uses database.tests
+#   .\tools\test-unit.ps1 RUN M11-RELIABILITY # M11.3A two-process + failure-injection, commits isolated test fixture
+#   .\tools\test-unit.ps1 PREPARE M11          # one-time test-only Migrations 019-021
+#   .\tools\test-unit.ps1 RUN M11              # both suites
 # Optional '-' separator is accepted, like the baseline runner.
 # NO-DROP is not an alias: the baseline's data attestation is NOT reproduced here.
 
@@ -16,10 +21,10 @@ Set-StrictMode -Version Latest
 $ErrorActionPreference = 'Stop'
 
 $tokens = @($args)
-$usage = 'Usage: .\tools\test-unit.ps1 CHECK|RUN [UNIT-STANDARD|DB-READ|ALL|INTEGRATION|ACCEPTANCE|M4-INTEGRATION|M4-CONCURRENCY] (optional separator: RUN - DB-READ)'
+$usage = 'Usage: .\tools\test-unit.ps1 CHECK|RUN [UNIT-STANDARD|DB-READ|ALL|INTEGRATION|ACCEPTANCE|M4-INTEGRATION|M4-CONCURRENCY|M11|M11-UNIT|M11-INTEGRATION|M11-RELIABILITY] OR PREPARE M11'
 if ($tokens.Count -lt 1 -or $tokens.Count -gt 3) { throw $usage }
 $action = ([string]$tokens[0]).ToUpperInvariant()
-if ($action -notin @('CHECK', 'RUN')) { throw $usage }
+if ($action -notin @('CHECK', 'RUN', 'PREPARE')) { throw $usage }
 $suite = 'UNIT-STANDARD'
 if ($tokens.Count -eq 2) {
     $suite = [string]$tokens[1]
@@ -28,7 +33,8 @@ if ($tokens.Count -eq 2) {
     $suite = [string]$tokens[2]
 }
 $suite = $suite.TrimStart('-').ToUpperInvariant()
-if ($suite -notin @('UNIT-STANDARD', 'DB-READ', 'ALL', 'INTEGRATION', 'ACCEPTANCE', 'M4-INTEGRATION', 'M4-CONCURRENCY')) { throw $usage }
+if ($action -eq 'PREPARE' -and $suite -ne 'M11') { throw $usage }
+if ($suite -notin @('UNIT-STANDARD', 'DB-READ', 'ALL', 'INTEGRATION', 'ACCEPTANCE', 'M4-INTEGRATION', 'M4-CONCURRENCY', 'M11', 'M11-UNIT', 'M11-INTEGRATION', 'M11-RELIABILITY')) { throw $usage }
 
 function Invoke-PHPChecked {
     param([string[]]$Arguments, [string]$Description)
@@ -41,6 +47,79 @@ function Invoke-PHPChecked {
 $backend = Split-Path -Parent $PSScriptRoot
 Push-Location $backend
 try {
+    # M11 is ongoing product development; historical pinned rewrite inventory is
+    # intentionally not a prerequisite for its standalone PHPUnit suites.
+    if ($suite -in @('M11', 'M11-UNIT', 'M11-INTEGRATION', 'M11-RELIABILITY')) {
+        if (-not (Test-Path -LiteralPath '.\phpunit.m11.xml' -PathType Leaf)) {
+            throw 'M11 PHPUnit configuration phpunit.m11.xml is missing.'
+        }
+        if ($suite -eq 'M11-RELIABILITY' -and -not (Test-Path -LiteralPath '.\phpunit.m11.reliability.xml' -PathType Leaf)) {
+            throw 'M11 reliability PHPUnit configuration phpunit.m11.reliability.xml is missing.'
+        }
+        if ($action -eq 'CHECK') {
+            $oldEnvironment = [Environment]::GetEnvironmentVariable('CI_ENVIRONMENT', 'Process')
+            try {
+                $env:CI_ENVIRONMENT = 'testing'
+                Invoke-PHPChecked -Description 'M11 isolated Spark bootstrap check' -Arguments @(
+                    'tools/m11-test-spark.php', '--check-bootstrap'
+                )
+            } finally {
+                if ($null -eq $oldEnvironment) {
+                    Remove-Item Env:CI_ENVIRONMENT -ErrorAction SilentlyContinue
+                } else {
+                    $env:CI_ENVIRONMENT = $oldEnvironment
+                }
+            }
+            Write-Host 'M11 CHECK PASS: PHPUnit configuration and isolated Spark bootstrap. No database connection.'
+            return
+        }
+        if ($action -eq 'PREPARE') {
+            # Explicit opt-in schema migration. Do not add this to RUN: PHPUnit
+            # fixture tests must remain DML-only and rollback all their changes.
+            $oldEnvironment = [Environment]::GetEnvironmentVariable('CI_ENVIRONMENT', 'Process')
+            try {
+                $env:CI_ENVIRONMENT = 'testing'
+                Write-Warning 'PREPARE M11 may CREATE tables ONLY in validated database.tests=erp_test. No DROP/refresh.'
+                # The isolated entrypoint sets both PHP environment superglobals
+                # and SUPPORTPATH before CodeIgniter 4.7.x builds its autoloader.
+                # Do not use bare `php spark` here: .env may override ENVIRONMENT.
+                Invoke-PHPChecked -Description 'M11 erp_test schema preparation' -Arguments @(
+                    'tools/m11-test-spark.php', 'm11:test-db-prepare', 'CONFIRM_ERP_TEST'
+                )
+            } finally {
+                if ($null -eq $oldEnvironment) {
+                    Remove-Item Env:CI_ENVIRONMENT -ErrorAction SilentlyContinue
+                } else {
+                    $env:CI_ENVIRONMENT = $oldEnvironment
+                }
+            }
+            Write-Host 'M11 PREPARE PASS: schema checked/prepared ONLY on erp_test.'
+            return
+        }
+        if (-not (Test-Path -LiteralPath '.\vendor\bin\phpunit' -PathType Leaf)) {
+            throw 'PHPUnit not installed: run composer install (with dev dependencies) in backend first.'
+        }
+        if ($suite -in @('M11', 'M11-UNIT')) {
+            Invoke-PHPChecked -Description 'M11 unit PHPUnit' -Arguments @(
+                'vendor/bin/phpunit', '-c', 'phpunit.m11.xml', '--testsuite', 'M11 unit', '--testdox'
+            )
+        }
+        if ($suite -in @('M11', 'M11-INTEGRATION')) {
+            Write-Warning 'M11 integration writes temporary fixture rows ONLY to configured database.tests=erp_test; changes are rolled back. Run serially.'
+            Invoke-PHPChecked -Description 'M11 MariaDB integration PHPUnit' -Arguments @(
+                'vendor/bin/phpunit', '-c', 'phpunit.m11.xml', '--testsuite', 'M11 MariaDB integration', '--testdox'
+            )
+        }
+        if ($suite -eq 'M11-RELIABILITY') {
+            Write-Warning 'M11.3A reliability uses TWO real PHP workers and COMMITTED short-lived DML fixtures in guarded erp_test. Cleanup by generated IDs in finally. Do not run concurrently or on a shared test database.'
+            Invoke-PHPChecked -Description 'M11.3A two-worker MariaDB reliability PHPUnit' -Arguments @(
+                'vendor/bin/phpunit', '-c', 'phpunit.m11.reliability.xml', '--testsuite', 'M11 worker reliability', '--testdox'
+            )
+        }
+        Write-Host "TEST-UNIT RUN PASS: $suite."
+        return
+    }
+
     Invoke-PHPChecked -Description 'Pinned source and test inventory' -Arguments @('tools/test-unit-check.php')
 
     if ($action -eq 'CHECK') {

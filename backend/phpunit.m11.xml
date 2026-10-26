@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<phpunit xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:noNamespaceSchemaLocation="vendor/phpunit/phpunit/phpunit.xsd"
+    bootstrap="vendor/codeigniter4/framework/system/Test/bootstrap.php"
+    colors="true" beStrictAboutOutputDuringTests="true"
+    failOnRisky="true" failOnWarning="true"
+    cacheDirectory="build/.phpunit-m11-cache">
+    <testsuites>
+        <testsuite name="M11 unit">
+            <directory suffix="Test.php">./tests/m11/Unit</directory>
+        </testsuite>
+        <testsuite name="M11 MariaDB integration">
+            <directory suffix="Test.php">./tests/m11/Integration</directory>
+        </testsuite>
+    </testsuites>
+    <php>
+        <env name="CI_ENVIRONMENT" value="testing" force="true"/>
+        <server name="app.baseURL" value="http://localhost/"/>
+        <server name="CODEIGNITER_SCREAM_DEPRECATIONS" value="0"/>
+        <const name="HOMEPATH" value="./"/>
+        <const name="CONFIGPATH" value="./app/Config/"/>
+        <const name="PUBLICPATH" value="./public/"/>
+    </php>
+</phpunit>

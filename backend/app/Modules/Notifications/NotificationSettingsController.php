@@ -11,7 +11,7 @@ use CodeIgniter\Controller;
 use CodeIgniter\HTTP\ResponseInterface;
 use CodeIgniter\Shield\Entities\User;
 
-/** Four authenticated M11.1A endpoints. Inbox and Worker are M11.1B. */
+/** Four authenticated M11.1A System/User policy endpoints; Inbox is a separate controller. */
 final class NotificationSettingsController extends Controller
 {
     public function listPolicies(): ResponseInterface
@@ -63,7 +63,7 @@ final class NotificationSettingsController extends Controller
     private function allowWrites(): void
     {
         // Independent M11 gate. Do not turn on legacy M33B mutations for Notifications.
-        if (strtolower((string) env('DINKERP_M11_SETTINGS_WRITE_MODE', 'off')) !== 'enabled') {
+        if (! NotificationFlags::settingsWriteEnabled(db_connect())) {
             throw new DomainException('NOTIFICATION_SETTINGS_DISABLED');
         }
     }

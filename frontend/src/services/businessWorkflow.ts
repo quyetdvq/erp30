@@ -71,3 +71,25 @@ export async function executeBusinessWorkflowOption(
   }
   await apiClient.post(`/api/v1/${path}/${id}/actions/set-state`, { status: option.status })
 }
+
+export interface WorkflowNotificationAssignees {
+  revision: string
+  user_ids: string[]
+}
+
+export async function getWorkflowNotificationAssignees(resource: string, id: string): Promise<WorkflowNotificationAssignees> {
+  const response = await apiClient.get<{ data: WorkflowNotificationAssignees }>(
+    `/api/v1/business-workflow/${encodeURIComponent(resource)}/${encodeURIComponent(id)}/notification-assignees`,
+  )
+  return response.data.data
+}
+
+export async function replaceWorkflowNotificationAssignees(
+  resource: string, id: string, expected_revision: string, user_ids: string[],
+): Promise<WorkflowNotificationAssignees> {
+  const response = await apiClient.put<{ data: WorkflowNotificationAssignees }>(
+    `/api/v1/business-workflow/${encodeURIComponent(resource)}/${encodeURIComponent(id)}/notification-assignees`,
+    { expected_revision, user_ids },
+  )
+  return response.data.data
+}

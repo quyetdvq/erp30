@@ -8,6 +8,7 @@ use App\Exceptions\DomainException;
 use App\Modules\Access\BasePermissionReader;
 use App\Modules\Access\ResourceStateRepository;
 use App\Modules\Access\UnifiedAccessService;
+use App\Modules\Notifications\NotificationOutboxProducer;
 use CodeIgniter\Database\BaseConnection;
 use CodeIgniter\Shield\Entities\User;
 use RuntimeException;
@@ -91,6 +92,9 @@ final class BusinessWorkflowService
                 'updated_at'=>gmdate('Y-m-d H:i:s'),
             ]);
             if (!$ok || $this->db->affectedRows()!==1) throw new DomainException('WF_CONCURRENT_STATE_CHANGE');
+            // The transition and its immutable recipient snapshot share one transaction.
+            // No notification is emitted without explicit record-level assignments.
+            NotificationOutboxProducer::enqueueWorkflowTransition($this->db, $type, $id, $old, $new, $action);
             if (!$this->db->transStatus() || !$this->db->transCommit()) {
                 throw new RuntimeException('Workflow transaction commit failed');
             }

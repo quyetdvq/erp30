@@ -17,6 +17,8 @@ $cases = [
     'NOTIFICATION_SETTINGS_DISABLED' => 403,
     'NOTIFICATION_CONFIGURATION_INVALID' => 500,
     'NOTIFICATION_STORAGE_FAILED' => 500,
+    'NOTIFICATION_NOT_FOUND' => 404,
+    'NOTIFICATION_INVALID_CURSOR' => 422,
 ];
 foreach ($cases as $code => $status) {
     $actual = ApiErrorMapper::map(new DomainException($code));

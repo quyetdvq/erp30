@@ -25,3 +25,7 @@ $routes->post('resources/(:num)/numbering-series/actions/validate-config', [\App
 $routes->get('business-workflow/(:segment)/states', [\App\Modules\Workflow\Execution\BusinessWorkflowController::class,'states']);
 $routes->get('business-workflow/(:segment)/(:num)/options', [\App\Modules\Workflow\Execution\BusinessWorkflowController::class,'options']);
 $routes->post('business-workflow/(:segment)/(:num)/actions/(:segment)', [\App\Modules\Workflow\Execution\BusinessWorkflowController::class,'execute']);
+
+// M11.2: explicit per-target assignment API. The write handler is independently gated.
+$routes->get('business-workflow/(:segment)/(:num)/notification-assignees', [\App\Modules\Notifications\WorkflowNotificationAssigneesController::class,'listing']);
+$routes->put('business-workflow/(:segment)/(:num)/notification-assignees', [\App\Modules\Notifications\WorkflowNotificationAssigneesController::class,'replace']);

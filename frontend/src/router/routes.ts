@@ -23,6 +23,12 @@ export const routes: RouteRecordRaw[] = [
         meta: { labelKey: 'nav.dashboard', closable: false },
       },
       {
+        path: 'notifications',
+        name: 'notifications-inbox',
+        component: () => import('@/features/notifications/pages/NotificationsInboxView.vue'),
+        meta: { labelKey: 'notificationsInbox.title', breadcrumbTrail: breadcrumbTrails.account },
+      },
+      {
         path: 'profile',
         name: 'profile',
         component: () => import('@/features/account/pages/ProfileView.vue'),
@@ -36,6 +42,12 @@ export const routes: RouteRecordRaw[] = [
           labelKey: 'shell.displayPreferences',
           breadcrumbTrail: breadcrumbTrails.displayPreferences,
         },
+      },
+      {
+        path: 'system/configuration-settings',
+        name: 'configuration-settings',
+        component: () => import('@/features/settings/pages/ConfigurationSettingsView.vue'),
+        meta: { labelKey: 'nav.configurationSettings', breadcrumbTrail: breadcrumbTrails.configuration },
       },
       {
         path: 'system/display-settings',

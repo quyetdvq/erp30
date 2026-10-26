@@ -7,6 +7,81 @@ import * as z from 'zod';
  */
 export const zNotificationRevision = z.string().regex(/^(0|[1-9][0-9]{0,19})$/);
 
+export const zNotificationPushConfig = z.object({
+    available: z.boolean(),
+    public_key: z.string().nullable(),
+    queue_enabled: z.boolean(),
+    send_enabled: z.boolean()
+});
+
+export const zNotificationPushSubscriptionKeys = z.object({
+    p256dh: z.string().max(100),
+    auth: z.string().max(32)
+});
+
+export const zNotificationPushSubscriptionPost = z.object({
+    endpoint: z.url().max(2048),
+    keys: zNotificationPushSubscriptionKeys
+});
+
+export const zNotificationRuntimeSwitch = z.object({
+    key: z.enum([
+        'DINKERP_M11_SETTINGS_WRITE_MODE',
+        'DINKERP_M11_IMPORT_PRODUCER_ENABLED',
+        'DINKERP_M11_WORKFLOW_WRITE_MODE',
+        'DINKERP_M11_WORKFLOW_PRODUCER_ENABLED',
+        'DINKERP_NOTIFICATIONS_DELIVERY_ENABLED',
+        'DINKERP_M11_EMAIL_QUEUE_ENABLED',
+        'DINKERP_M11_EMAIL_SEND_ENABLED',
+        'DINKERP_M11_PUSH_QUEUE_ENABLED',
+        'DINKERP_M11_PUSH_SEND_ENABLED'
+    ]),
+    section: z.enum([
+        'administration',
+        'producers',
+        'delivery',
+        'email',
+        'push'
+    ]),
+    enabled: z.boolean(),
+    source: z.enum(['legacy_env_or_default', 'database'])
+});
+
+export const zNotificationRuntimeSnapshot = z.object({
+    revision: z.string().regex(/^(0|[1-9][0-9]*)$/),
+    items: z.tuple([
+        zNotificationRuntimeSwitch,
+        zNotificationRuntimeSwitch,
+        zNotificationRuntimeSwitch,
+        zNotificationRuntimeSwitch,
+        zNotificationRuntimeSwitch,
+        zNotificationRuntimeSwitch,
+        zNotificationRuntimeSwitch,
+        zNotificationRuntimeSwitch,
+        zNotificationRuntimeSwitch
+    ])
+});
+
+export const zNotificationRuntimeChange = z.object({
+    key: z.enum([
+        'DINKERP_M11_SETTINGS_WRITE_MODE',
+        'DINKERP_M11_IMPORT_PRODUCER_ENABLED',
+        'DINKERP_M11_WORKFLOW_WRITE_MODE',
+        'DINKERP_M11_WORKFLOW_PRODUCER_ENABLED',
+        'DINKERP_NOTIFICATIONS_DELIVERY_ENABLED',
+        'DINKERP_M11_EMAIL_QUEUE_ENABLED',
+        'DINKERP_M11_EMAIL_SEND_ENABLED',
+        'DINKERP_M11_PUSH_QUEUE_ENABLED',
+        'DINKERP_M11_PUSH_SEND_ENABLED'
+    ]),
+    enabled: z.boolean()
+});
+
+export const zNotificationRuntimePatch = z.object({
+    expected_revision: z.string().regex(/^(0|[1-9][0-9]*)$/),
+    changes: z.array(zNotificationRuntimeChange).min(1).max(9)
+});
+
 export const zNotificationPolicy = z.object({
     key: z.string().max(150),
     default_value: z.boolean(),
@@ -53,11 +128,57 @@ export const zNotificationPreferenceChange = z.object({
 });
 
 export const zNotificationPoliciesPatch = z.object({
-    changes: z.array(zNotificationPolicyChange).min(1).max(6)
+    changes: z.array(zNotificationPolicyChange).min(1).max(7)
 });
 
 export const zNotificationPreferencesPatch = z.object({
-    changes: z.array(zNotificationPreferenceChange).min(1).max(6)
+    changes: z.array(zNotificationPreferenceChange).min(1).max(7)
+});
+
+export const zWorkflowNotificationAssigneesPut = z.object({
+    expected_revision: zNotificationRevision,
+    user_ids: z.array(z.string().regex(/^[1-9][0-9]{0,9}$/)).max(25)
+});
+
+export const zWorkflowNotificationAssignees = z.object({
+    revision: zNotificationRevision,
+    user_ids: z.array(z.string().regex(/^[1-9][0-9]{0,9}$/)).max(25)
+});
+
+export const zNotificationInboxItem = z.object({
+    id: z.string().regex(/^[1-9][0-9]{0,19}$/),
+    type: z.enum([
+        'import.completed',
+        'import.completed_with_errors',
+        'import.failed',
+        'workflow.action_required'
+    ]),
+    priority: z.enum(['NORMAL']),
+    title_key: z.string(),
+    body_key: z.string(),
+    params: z.union([
+        z.object({
+            success_rows: z.int().gte(0),
+            error_rows: z.int().gte(0)
+        }),
+        z.object({
+            resource_type: z.string(),
+            state_code: z.string()
+        })
+    ]),
+    target: z.union([
+        z.object({
+            type: z.literal('import_job'),
+            id: z.string()
+        }),
+        z.object({
+            type: z.literal('workflow_target'),
+            resource_type: z.string(),
+            id: z.string()
+        })
+    ]),
+    read_at: z.iso.datetime().nullable(),
+    created_at: z.iso.datetime()
 });
 
 /**
@@ -97,6 +218,11 @@ export const zRequestId = z.string().min(1).max(128).regex(/^[0-9A-Za-z][0-9A-Za
  */
 export const zBigInt = z.string().regex(/^-?[0-9]+$/);
 
+export const zNotificationPushDevice = z.object({
+    id: zBigInt,
+    created_at: z.string()
+});
+
 export const zNullableBigInt = zBigInt.nullable();
 
 /**
@@ -125,12 +251,65 @@ export const zSuccessResponse = z.object({
     meta: zMeta
 });
 
+export const zNotificationPushConfigResponse = zSuccessResponse.and(z.object({
+    data: zNotificationPushConfig.optional()
+}));
+
+export const zNotificationPushDevicesResponse = zSuccessResponse.and(z.object({
+    data: z.array(zNotificationPushDevice).optional()
+}));
+
+export const zNotificationPushDeviceResponse = zSuccessResponse.and(z.object({
+    data: zNotificationPushDevice.optional()
+}));
+
+export const zNotificationPushRevokeResponse = zSuccessResponse.and(z.object({
+    data: z.object({
+        removed: z.boolean()
+    }).optional()
+}));
+
+export const zWorkflowNotificationAssigneesResponse = zSuccessResponse.and(z.object({
+    data: zWorkflowNotificationAssignees.optional()
+}));
+
+export const zNotificationRuntimeResponse = zSuccessResponse.and(z.object({
+    data: zNotificationRuntimeSnapshot.optional()
+}));
+
 export const zNotificationPoliciesResponse = zSuccessResponse.and(z.object({
     data: z.array(zNotificationPolicy).optional()
 }));
 
 export const zNotificationPreferencesResponse = zSuccessResponse.and(z.object({
     data: z.array(zNotificationPreference).optional()
+}));
+
+export const zNotificationSummaryResponse = zSuccessResponse.and(z.object({
+    data: z.object({
+        unread_count: z.int().gte(0)
+    }).optional()
+}));
+
+export const zNotificationInboxResponse = zSuccessResponse.and(z.object({
+    data: z.object({
+        items: z.array(zNotificationInboxItem),
+        next_cursor: z.string().nullable()
+    }).optional()
+}));
+
+export const zNotificationReadResponse = zSuccessResponse.and(z.object({
+    data: z.object({
+        id: z.string(),
+        read_at: z.iso.datetime()
+    }).optional()
+}));
+
+export const zNotificationReadAllResponse = zSuccessResponse.and(z.object({
+    data: z.object({
+        updated_count: z.int().gte(0),
+        cutoff: z.iso.datetime()
+    }).optional()
 }));
 
 export const zBusinessWorkflowStatesResponse = zSuccessResponse.and(z.object({
@@ -1640,6 +1819,12 @@ export const zFilter = z.record(z.string(), z.union([
 export const zDisplayOrganizationId = zPositiveBigInt;
 
 export const zDisplayContextType = z.enum(['SYSTEM', 'ORGANIZATION']);
+
+export const zWorkflowNotificationAssigneesPut2 = zWorkflowNotificationAssigneesPut;
+
+export const zNotificationRuntimePatch2 = zNotificationRuntimePatch;
+
+export const zNotificationPushSubscriptionPost2 = zNotificationPushSubscriptionPost;
 
 export const zNotificationPoliciesPatch2 = zNotificationPoliciesPatch;
 
@@ -3545,6 +3730,76 @@ export const zExecuteBusinessWorkflowActionPath = z.object({
  */
 export const zExecuteBusinessWorkflowActionResponse = zBusinessWorkflowMutationResponse;
 
+export const zGetWorkflowNotificationAssigneesPath = z.object({
+    resource: z.enum([
+        'province',
+        'ward',
+        'organization',
+        'department',
+        'position',
+        'employee',
+        'product_group',
+        'product_uom',
+        'product',
+        'price_list',
+        'organization_contact',
+        'employee_contact'
+    ]),
+    id: zBigInt
+});
+
+/**
+ * Explicit per-target assignee set and optimistic revision.
+ */
+export const zGetWorkflowNotificationAssigneesResponse = zWorkflowNotificationAssigneesResponse;
+
+export const zReplaceWorkflowNotificationAssigneesBody = zWorkflowNotificationAssigneesPut2;
+
+export const zReplaceWorkflowNotificationAssigneesPath = z.object({
+    resource: z.enum([
+        'province',
+        'ward',
+        'organization',
+        'department',
+        'position',
+        'employee',
+        'product_group',
+        'product_uom',
+        'product',
+        'price_list',
+        'organization_contact',
+        'employee_contact'
+    ]),
+    id: zBigInt
+});
+
+/**
+ * Explicit per-target assignee set and optimistic revision.
+ */
+export const zReplaceWorkflowNotificationAssigneesResponse = zWorkflowNotificationAssigneesResponse;
+
+export const zGetNotificationRuntimeConfigurationHeaders = z.object({
+    'Accept-Language': z.enum(['vi', 'en']).optional().default('vi'),
+    'X-Request-ID': zRequestId.optional()
+});
+
+/**
+ * Audited Notification runtime configuration snapshot.
+ */
+export const zGetNotificationRuntimeConfigurationResponse = zNotificationRuntimeResponse;
+
+export const zUpdateNotificationRuntimeConfigurationBody = zNotificationRuntimePatch2;
+
+export const zUpdateNotificationRuntimeConfigurationHeaders = z.object({
+    'Accept-Language': z.enum(['vi', 'en']).optional().default('vi'),
+    'X-Request-ID': zRequestId.optional()
+});
+
+/**
+ * Audited Notification runtime configuration snapshot.
+ */
+export const zUpdateNotificationRuntimeConfigurationResponse = zNotificationRuntimeResponse;
+
 export const zListNotificationPoliciesHeaders = z.object({
     'Accept-Language': z.enum(['vi', 'en']).optional().default('vi'),
     'X-Request-ID': zRequestId.optional()
@@ -3588,3 +3843,99 @@ export const zUpdateOwnNotificationPreferencesHeaders = z.object({
  * Shield-owned notification preferences and effective policy.
  */
 export const zUpdateOwnNotificationPreferencesResponse = zNotificationPreferencesResponse;
+
+export const zGetOwnBrowserPushConfigHeaders = z.object({
+    'Accept-Language': z.enum(['vi', 'en']).optional().default('vi'),
+    'X-Request-ID': zRequestId.optional()
+});
+
+/**
+ * Public VAPID configuration; no secrets.
+ */
+export const zGetOwnBrowserPushConfigResponse = zNotificationPushConfigResponse;
+
+export const zListOwnBrowserPushDevicesHeaders = z.object({
+    'Accept-Language': z.enum(['vi', 'en']).optional().default('vi'),
+    'X-Request-ID': zRequestId.optional()
+});
+
+/**
+ * Own device identifiers
+ */
+export const zListOwnBrowserPushDevicesResponse = zNotificationPushDevicesResponse;
+
+export const zRegisterOwnBrowserPushDeviceBody = zNotificationPushSubscriptionPost2;
+
+export const zRegisterOwnBrowserPushDeviceHeaders = z.object({
+    'Accept-Language': z.enum(['vi', 'en']).optional().default('vi'),
+    'X-Request-ID': zRequestId.optional()
+});
+
+/**
+ * Own registered device ID.
+ */
+export const zRegisterOwnBrowserPushDeviceResponse = zNotificationPushDeviceResponse;
+
+export const zRevokeOwnBrowserPushDeviceHeaders = z.object({
+    'Accept-Language': z.enum(['vi', 'en']).optional().default('vi'),
+    'X-Request-ID': zRequestId.optional()
+});
+
+export const zRevokeOwnBrowserPushDevicePath = z.object({
+    id: z.string().regex(/^[1-9][0-9]{0,19}$/)
+});
+
+/**
+ * Own device revoked.
+ */
+export const zRevokeOwnBrowserPushDeviceResponse = zNotificationPushRevokeResponse;
+
+export const zGetNotificationSummaryHeaders = z.object({
+    'Accept-Language': z.enum(['vi', 'en']).optional().default('vi'),
+    'X-Request-ID': zRequestId.optional()
+});
+
+/**
+ * Own unread count.
+ */
+export const zGetNotificationSummaryResponse = zNotificationSummaryResponse;
+
+export const zListOwnNotificationsHeaders = z.object({
+    'Accept-Language': z.enum(['vi', 'en']).optional().default('vi'),
+    'X-Request-ID': zRequestId.optional()
+});
+
+export const zListOwnNotificationsQuery = z.object({
+    filter: z.enum(['all', 'unread']).optional().default('all'),
+    page_size: z.int().gte(1).lte(50).optional().default(20),
+    cursor: z.string().max(1024).optional()
+});
+
+/**
+ * Own Inbox and next signed cursor.
+ */
+export const zListOwnNotificationsResponse = zNotificationInboxResponse;
+
+export const zMarkOwnNotificationReadHeaders = z.object({
+    'Accept-Language': z.enum(['vi', 'en']).optional().default('vi'),
+    'X-Request-ID': zRequestId.optional()
+});
+
+export const zMarkOwnNotificationReadPath = z.object({
+    id: z.string().regex(/^[1-9][0-9]{0,19}$/)
+});
+
+/**
+ * Read status of own notification.
+ */
+export const zMarkOwnNotificationReadResponse = zNotificationReadResponse;
+
+export const zMarkAllOwnNotificationsReadHeaders = z.object({
+    'Accept-Language': z.enum(['vi', 'en']).optional().default('vi'),
+    'X-Request-ID': zRequestId.optional()
+});
+
+/**
+ * Bulk read cutoff result.
+ */
+export const zMarkAllOwnNotificationsReadResponse = zNotificationReadAllResponse;

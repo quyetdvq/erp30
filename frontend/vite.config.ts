@@ -20,29 +20,12 @@ export default defineConfig({
   build: {
     rolldownOptions: {
       output: {
-        // Short, consistent filenames without changing chunk boundaries.
+        // Keep readable hashed names, but let Rolldown choose chunk boundaries.
+        // The forced naive-ui/vendor/vue groups risk circular cross-chunk
+        // initialization; the deployed bundle fails at lib-vendor -> lib-ui.
+        // The dev server does not exercise that production-only split graph.
         entryFileNames: 'assets/app-[name]-[hash:8].js',
         chunkFileNames: buildChunkFileName,
-        codeSplitting: {
-          minSize: 10_000,
-          groups: [
-            {
-              name: 'naive-ui',
-              test: /[\\/]node_modules[\\/]naive-ui[\\/]/,
-              // Do not ship every Naive UI component to routes that only need a few.
-              // Split by dynamic-entry usage, with a bounded chunk-size target.
-              entriesAware: true,
-              minSize: 20_000,
-              maxSize: 260_000,
-            },
-            {
-              name: 'vue-runtime',
-              test: /[\\/]node_modules[\\/](?:vue|@vue|vue-router|pinia)[\\/]/,
-            },
-            { name: 'icons', test: /[\\/]node_modules[\\/]@vicons[\\/]/ },
-            { name: 'vendor', test: /[\\/]node_modules[\\/]/ },
-          ],
-        },
       },
     },
   },

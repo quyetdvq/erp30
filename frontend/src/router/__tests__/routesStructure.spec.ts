@@ -24,9 +24,9 @@ function label(locale: 'vi' | 'en', key: string): unknown {
 }
 
 describe('named routes and lazy UI pages', () => {
-  it('preserves the 29 named routes, distinct names and translation keys', () => {
+  it('preserves the 30 named routes, distinct names and translation keys', () => {
     const named = flatten(routes).filter((route) => route.name)
-    expect(named).toHaveLength(29)
+    expect(named).toHaveLength(30)
     expect(new Set(named.map((route) => route.name)).size).toBe(named.length)
     for (const route of named) {
       if (!route.meta?.labelKey) continue

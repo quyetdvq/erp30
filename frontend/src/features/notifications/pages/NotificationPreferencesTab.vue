@@ -1,6 +1,7 @@
 <script setup lang="ts">
-import { onMounted, ref } from 'vue'
+import { computed, onMounted, ref } from 'vue'
 import axios from 'axios'
+import PushDevicesPanel from './PushDevicesPanel.vue'
 import { useI18n } from 'vue-i18n'
 import { useAuthStore } from '@/stores/auth'
 import {
@@ -18,9 +19,12 @@ const labelKeys: Record<string, string> = {
   'workflow.action_required.in_app': 'workflowActionRequired',
   'security.permission_changed.in_app': 'securityPermissionChanged',
   'import.completed.email': 'importCompletedEmail',
+  'import.completed.push': 'importCompletedPush',
 }
 function labelFor(key: string): string { return labelKeys[key] ? t(`notificationSettings.keys.${labelKeys[key]}`) : key }
 const rows = ref<NotificationPreference[]>([])
+const pushConsented = computed(() => rows.value.some((row) => row.key === 'import.completed.push'
+  && row.user_override === true && row.effective_value === true))
 const drafts = ref<Record<string, string>>({})
 const loading = ref(false)
 const saving = ref<string | null>(null)
@@ -83,6 +87,8 @@ onMounted(() => void load())
       <div>
         <strong>{{ labelFor(row.key) }}</strong>
         <small>{{ row.key }}</small>
+        <small v-if="row.key === 'import.completed.email'">{{ t('notificationSettings.emailOptInUser') }}</small>
+        <small v-if="row.key === 'import.completed.push'">{{ t('notificationSettings.pushOptInUser') }}</small>
         <small v-if="row.capability === 'UNAVAILABLE'">{{ t('notificationSettings.unavailable') }}</small>
         <small v-else-if="row.producer_state === 'INACTIVE'">{{ t('notificationSettings.inactive') }}</small>
       </div>
@@ -99,6 +105,7 @@ onMounted(() => void load())
         {{ saving === row.key ? t('notificationSettings.saving') : t('notificationSettings.save') }}
       </button>
     </div>
+    <PushDevicesPanel :consented="pushConsented" />
   </section>
 </template>
 

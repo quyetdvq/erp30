@@ -16,7 +16,8 @@ final class NotificationPolicyResolver
             || ! in_array((string) ($row['allow_user_override'] ?? ''), ['0', '1'], true)
             || ! NotificationRules::version((string) ($row['revision'] ?? ''))
             || ! NotificationRules::version((string) ($row['override_epoch'] ?? ''))
-            || ($definition['mandatory'] && ((string) $row['default_value'] !== '1' || (string) $row['allow_user_override'] !== '0'))) {
+            || ($definition['mandatory'] && ((string) $row['default_value'] !== '1' || (string) $row['allow_user_override'] !== '0'))
+            || (in_array(($row['setting_key'] ?? ''), ['import.completed.email','import.completed.push'], true) && (string) $row['default_value'] !== '0')) {
             throw new DomainException('NOTIFICATION_CONFIGURATION_INVALID');
         }
     }

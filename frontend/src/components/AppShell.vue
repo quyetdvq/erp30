@@ -76,7 +76,8 @@ const {
   auth,
   userMenuOpen,
   notificationsOpen,
-  notificationsRead,
+  inbox,
+  inboxUiEnabled,
   localeOptions,
   userOptions,
   localeLabel,
@@ -86,6 +87,7 @@ const {
   handleLocale,
   toggleTheme,
   markNotificationsRead,
+  openInbox,
   handleUserAction,
 } = useShellHeader(currentTabKey)
 </script>
@@ -127,7 +129,7 @@ const {
         </div>
 
         <div class="header-actions">
-          <NPopover v-model:show="notificationsOpen" trigger="click" placement="bottom-end">
+          <NPopover v-if="inboxUiEnabled" v-model:show="notificationsOpen" trigger="click" placement="bottom-end">
             <template #trigger>
               <NBadge :value="unreadNotifications" :max="99" type="error">
                 <NButton quaternary circle :aria-label="t('shell.notifications')">
@@ -143,25 +145,25 @@ const {
                 <NButton
                   text
                   size="tiny"
-                  :disabled="notificationsRead"
+                  :disabled="unreadNotifications === 0"
                   @click="markNotificationsRead"
                 >
-                  {{ notificationsRead ? t('shell.allRead') : t('shell.markAllRead') }}
+                  {{ unreadNotifications === 0 ? t('shell.allRead') : t('shell.markAllRead') }}
                 </NButton>
               </header>
               <div class="notification-list">
-                <article
-                  v-for="item in notificationItems"
-                  :key="item.key"
-                  class="notification-item"
-                >
-                  <span class="notification-dot" aria-hidden="true" />
+                <p v-if="inbox.busy" aria-busy="true">{{ t('notificationsInbox.loading') }}</p>
+                <p v-else-if="inbox.error" role="alert">{{ t('notificationsInbox.requestError') }}</p>
+                <p v-else-if="notificationItems.length === 0">{{ t('notificationsInbox.empty') }}</p>
+                <article v-for="item in notificationItems" :key="item.id" class="notification-item">
+                  <span v-if="item.read_at === null" class="notification-dot" aria-hidden="true" />
                   <div>
-                    <strong>{{ item.title }}</strong>
-                    <p>{{ item.detail }}</p>
+                    <strong>{{ t(item.title_key, item.params) }}</strong>
+                    <p>{{ t(item.body_key, item.params) }}</p>
                   </div>
                 </article>
               </div>
+              <NButton text size="small" @click="openInbox">{{ t('notificationsInbox.viewAll') }}</NButton>
             </section>
           </NPopover>
           <NButton quaternary circle :aria-label="t('shell.theme')" @click="toggleTheme">

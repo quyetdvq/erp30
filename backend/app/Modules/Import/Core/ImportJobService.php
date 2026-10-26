@@ -6,6 +6,8 @@ namespace App\Modules\Import\Core;
 
 use App\Exceptions\DomainException;
 use App\Modules\Access\UnifiedAccessService;
+use App\Modules\Notifications\NotificationFlags;
+use App\Modules\Notifications\NotificationOutboxProducer;
 use App\Shared\Read\PositiveId;
 use CodeIgniter\Database\BaseConnection;
 use CodeIgniter\Exceptions\PageNotFoundException;
@@ -61,20 +63,27 @@ final class ImportJobService
                 if ($result['status']==='ERROR') $errors++;
                 $this->setJob($id,['success_rows'=>$success,'error_rows'=>$errors]);
             }
-            $status=$fatal?'FAILED':($errors>0?'COMPLETED_WITH_ERRORS':'COMPLETED');
-            $this->setJob($id,['status'=>$status,'success_rows'=>$success,'error_rows'=>$errors,
-                'completed_at'=>gmdate('Y-m-d H:i:s')]);
         } catch (Throwable $e) {
             // An earlier business mutation may already have committed.
             // Never auto-retry; preserve the partial journal for manual review.
             try {
-                $this->setJob($id,['status'=>'FAILED','success_rows'=>$success,
-                    'error_rows'=>$errors,'completed_at'=>gmdate('Y-m-d H:i:s')]);
-            } catch (Throwable) {
+                $this->finalizeTerminal($id,'FAILED',$success,$errors);
+            } catch (Throwable $finalizeError) {
+                log_message('error', 'M11 Import terminal FAILED finalize failed; job={job}: {error}', [
+                    'job' => $id, 'error' => $finalizeError->getMessage(),
+                ]);
                 // Database may be unavailable. The PROCESSING journal remains
                 // visible for an operator to investigate and reconcile.
             }
             throw new DomainException('IMPORT_JOB_FAILED',['phase'=>'journal'], $e);
+        }
+        // NEVER put successful finalize inside the row-processing catch block.
+        // If the outbox INSERT fails, terminal UPDATE rolls back to PROCESSING.
+        $status=$fatal?'FAILED':($errors>0?'COMPLETED_WITH_ERRORS':'COMPLETED');
+        try {
+            $this->finalizeTerminal($id,$status,$success,$errors);
+        } catch (Throwable $e) {
+            throw new DomainException('IMPORT_JOB_FAILED',['phase'=>'finalize'], $e);
         }
         // The creator is entitled to the 201 job envelope by product.import;
         // import_job.view is independently required by the three GET routes.
@@ -171,6 +180,41 @@ final class ImportJobService
         catch (\InvalidArgumentException $e) { throw new DomainException('IMPORT_JOB_NOT_FOUND',[], $e); }
     }
 
+    /** Atomic terminal transition and outbox creation; does NOT wrap individual row business commits. */
+    private function finalizeTerminal(string $id, string $terminal, int $success, int $errors): void
+    {
+        if (! in_array($terminal, ['COMPLETED', 'COMPLETED_WITH_ERRORS', 'FAILED'], true)) {
+            throw new DomainException('IMPORT_JOB_FAILED');
+        }
+        $table = $this->db->prefixTable('import_jobs');
+        if (preg_match('/\A[A-Za-z_][A-Za-z0-9_]*\z/D', $table) !== 1) {
+            throw new DomainException('IMPORT_JOB_FAILED');
+        }
+        $this->db->transBegin();
+        try {
+            $result = $this->db->query("SELECT id,status,created_by FROM `{$table}` WHERE id = ? FOR UPDATE", [$id]);
+            $row = $result === false ? null : $result->getRowArray();
+            if ($row === null || $row['status'] !== 'PROCESSING') {
+                throw new DomainException('IMPORT_JOB_FAILED', ['phase' => 'terminal_state']);
+            }
+            $ok = $this->db->table('import_jobs')->where('id', $id)->where('status', 'PROCESSING')
+                ->set('completed_at', 'UTC_TIMESTAMP(6)', false)
+                ->set('updated_at', 'UTC_TIMESTAMP(6)', false)
+                ->update(['status' => $terminal, 'success_rows' => $success, 'error_rows' => $errors,
+                    'updated_by' => (string) $this->actor->id]);
+            if (! $ok || $this->db->affectedRows() !== 1) {
+                throw new DomainException('IMPORT_JOB_FAILED', ['phase' => 'terminal_update']);
+            }
+            NotificationOutboxProducer::enqueueImportTerminal($this->db, $id, $terminal);
+            if ($this->db->transStatus() === false || ! $this->db->transCommit()) {
+                throw new DomainException('IMPORT_JOB_FAILED', ['phase' => 'terminal_commit']);
+            }
+        } catch (Throwable $e) {
+            $this->db->transRollback();
+            throw $e;
+        }
+    }
+
     /** @param array<string,mixed> $changes */
     private function setJob(string $id,array $changes):void
     {
@@ -197,7 +241,8 @@ final class ImportJobService
     /** Fail closed if any import/business/numbering table cannot roll back. */
     private function assertInnoDb(ImportAdapter $adapter):void
     {
-        $names=array_values(array_unique(['import_jobs','import_job_rows',...$adapter->transactionalTables()]));
+        $names=array_values(array_unique(['import_jobs','import_job_rows',...$adapter->transactionalTables(),
+            ...(NotificationFlags::producerEnabled($this->db) ? ['notification_outbox'] : [])]));
         if (count($names)<3 || count($names)>40) throw new DomainException('IMPORT_STORAGE_NOT_TRANSACTIONAL');
         foreach ($names as $name) {
             if (!is_string($name) || !preg_match('/\A[a-z][a-z0-9_]*\z/D',$name)) {

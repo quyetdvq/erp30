@@ -1,7 +1,7 @@
 # M11.0 — THIẾT KẾ & KẾ HOẠCH TRIỂN KHAI NOTIFICATIONS
 
 **DinkERP · Design / Implementation Specification · v1.4 · 26/10/2026**
-**Trạng thái:** M11.0 v1.4 cập nhật theo ERP v1.6.0 và checkpoint Migration/Seeder port. Bản PATCH M11.1A đi kèm có schema, seeder, resolver, bốn API và hai tab cấu hình; **chưa chạy migration/HTTP trên DB thực, chưa có producer/dispatcher/Inbox**. Những điều kiện kiểm thử runtime ở §12 chưa được đánh dấu PASS.
+**Trạng thái (26/10/2026):** Thiết kế v1.4; người dùng đã xác nhận Migration 019, Seeder, OpenAPI codegen, type-check, build và nghiệm thu HTTP/PBAC/UI của **M11.1A**. Bản Git PATCH **M11.1B** bổ sung Inbox/Outbox/Import terminal/UI/CLI, **chưa chạy với MariaDB của người dùng và chưa nghiệm thu HTTP, concurrency, fault-injection hoặc browser E2E M11.1B**. Các công tắc producer/delivery/UI mặc định OFF.
 **Nền đối chiếu:** ERP v1.6.0 (đã port 18 Migration + 4 Seeder) và kết quả `db:legacy-preflight`/`migrate:status` do người dùng chạy ngày 26/10/2026: 31/31 business tables, 18/18 migration phiên bản đã ghi ledger, prefix `dinktech_`. Các log này không thay thế `SHOW CREATE TABLE`/backup và DEV clone rehearsal trước DDL mới.
 
 ## Thay đổi bắt buộc v1.4 so với v1.3
@@ -347,7 +347,7 @@ created_at        = UTC timestamp as DATETIME (seconds, matching existing DDL)
 
 ## 7. API Contract — 8 operations dự kiến
 
-Tất cả đường dẫn dưới đây có tiền tố `/api/v1`, dùng session Shield, CSRF với PATCH/POST, chuẩn `ApiResponder`/`ApiEnvelope` hiện có. **Bốn Settings/Preferences operations đã có code trong patch M11.1A, chưa kiểm thử runtime; bốn Inbox operations chỉ là thiết kế M11.1B.** Giữ 8 operations, không bổ sung endpoint quản trị User khác, không có POST phát Notification tùy ý.
+Tất cả đường dẫn dưới đây có tiền tố `/api/v1`, dùng session Shield, CSRF với PATCH/POST, chuẩn `ApiResponder`/`ApiEnvelope` hiện có. **Bốn Settings/Preferences operations đã qua kiểm thử runtime M11.1A do người dùng xác nhận; bốn Inbox operations được triển khai bằng PATCH M11.1B, còn chờ nghiệm thu runtime.** Giữ 8 operations, không bổ sung endpoint quản trị User khác, không có POST phát Notification tùy ý.
 
 | Method | Path | Kết quả chính | Authorization |
 |---|---|---|---|
@@ -783,3 +783,29 @@ Migration CI4 thao tác tên logical kết hợp `DBPrefix` của runtime; nếu
 ---
 
 **Kết luận M11.0 v1.4:** đã xác minh **DDL năm bảng thực tế**, prefix `dinktech_`, MariaDB **10.4.32**, `READ-COMMITTED`, session UTC, User PK INT UNSIGNED và Import/Audit actor BIGINT UNSIGNED; tái sử dụng audit chung và giảm từ **5 xuống 4 bảng mới**. Thiết kế kỹ thuật sẵn sàng làm baseline M11.1A, nhưng vẫn cần DEV clone migration/locking rehearsal và duyệt mặc định nghiệp vụ trước khi phát thông báo. Bản PATCH chỉ cung cấp implementation M11.1A ở mức source; chưa có runtime validation trên MariaDB/Shield/Vue hoặc performance benchmark; Worker/Inbox thuộc M11.1B.
+
+
+## 13. Checkpoint triển khai M11.1B (Git PATCH, cần nghiệm thu DEV)
+
+- **Migration:** không có DDL mới. Sử dụng nguyên 4 bảng Migration 019 đã có ledger, tuyệt đối không chạy lại hoặc reset Seeder chỉ vì PATCH M11.1B.
+- **8 HTTP operations:** 4 Settings/Preferences giữ nguyên và bổ sung `GET /notifications/summary`, `GET /notifications`, `POST /notifications/{id}/actions/mark-read`, `POST /notifications/actions/mark-all-read`; tổng OpenAPI 158 operations. Tất cả Inbox ràng buộc Shield User, no-store; không có endpoint gửi thông báo tùy ý.
+- **Import:** chuyển từ trạng thái PROCESSING sang terminal trong transaction ngắn có khóa row; `notification_outbox` được INSERT cùng transaction chỉ khi `DINKERP_M11_IMPORT_PRODUCER_ENABLED=enabled`. Nếu INSERT lỗi, trạng thái terminal rollback về PROCESSING, journal của từng dòng đã commit vẫn được giữ nguyên. Lỗi finalize không bị xử lý nhầm thành FAILED. Không backfill event quá khứ.
+- **Worker:** `php spark notifications:dispatch --once --batch=25`, default delivery OFF. MariaDB 10.4 dùng SELECT FOR UPDATE, lease 120 giây, ACK cùng transaction với ghi Inbox, token guard, UNIQUE recipient+event. Retry tối đa 6 attempts; 1/5/15/60/240 phút; DEAD sau 6. SUPPRESSED ghi lý do (không có creator, user disabled/deleted, effective preference=false). Flag delivery OFF không ACK hay suppress. Event đã commit vẫn có thể được phát khi producer đổi về INACTIVE: producer chỉ là admission gate.
+- **CLI vận hành:** `notifications:inspect` đọc tổng hợp không có PII; `notifications:requeue` ghi audit vào `configuration_audit_events`, chỉ trên DEV clone, cần `DINKERP_M11_OPERATIONS_WRITE_MODE=enabled`, xác nhận `--confirm=DEV_CLONE_ONLY`, event DEAD và Shield User ID active để gắn attribution. Quyền chạy Spark phải được kiểm soát ở hệ điều hành; CLI actor-id do operator cung cấp, không phải cơ chế xác thực Shield HTTP.
+- **Cursor:** HMAC-SHA256 ký payload có User ID, filter, page size, sort key và hạn sử dụng 24 giờ. Bắt buộc cấu hình secret **riêng** `DINKERP_M11_CURSOR_SECRET` tối thiểu 32 ký tự, không commit giá trị secret vào Git, không trả secret qua HTTP. GET list lỗi server có kiểm soát khi thiếu secret.
+- **Frontend:** chuông lấy unread summary và danh sách thật (không còn hai mock khi bật), Pinia session invalidation, poll summary 60 giây khi tab visible, reload lúc focus/mở chuông; `/notifications` lọc all/unread, phân trang, mark read/all. `VITE_M11_NOTIFICATIONS_ENABLED=true` mới bật UI; mặc định ẩn chuông thật khi chưa nghiệm thu. Đích `import_job` chỉ đi theo allowlist nội bộ; API Import Job luôn kiểm tra PBAC riêng.
+- **Đặc tính triển khai:** PATCH chưa được chạy trên DEV MariaDB; không tuyên bố exactly-once, test concurrency hoặc E2E đã PASS chỉ dựa trên kiểm tra thuần PHP/lint. Giữ worker và producer OFF đến khi có backup, xác nhận schema, `notifications:inspect` và chạy scenario.
+
+### 13.1 Checklist nghiệm thu M11.1B cần thực hiện trên DEV clone
+
+1. Bật `DINKERP_NOTIFICATIONS_DELIVERY_ENABLED=enabled` trước, chạy `notifications:dispatch --once --batch=25` với queue rỗng: báo 0, không ghi sai Inbox. Bật `DINKERP_M11_IMPORT_PRODUCER_ENABLED=enabled` và thực hiện Import mới bằng UI (đã cấp quyền Import).
+2. Kiểm tra Import terminal có chính xác một outbox `import-job:{id}:terminal`, chạy Worker lần một/tái chạy; chính xác một Inbox của creator, không duplicates. Kiểm tra ba terminal types bằng fixture `COMPLETED`, `COMPLETED_WITH_ERRORS`, `FAILED`.
+3. User A nhận thông báo, User B không thể xem/mark read ID A (404); trang Preferences của User A tắt event → Worker SUPPRESSED có `last_error_code`, không có Inbox mới. User inactive/deleted suppress; source invalid/missing DEAD; job system creator null suppress.
+4. Chạy hai worker song song, kết hợp worker crash sau claim, lease hết hạn và retry/DEAD. Không dùng `SKIP LOCKED`; không ACK lease token cũ và không duplicate. Fault-inject Outbox INSERT ở cuối Import, xác nhận trạng thái vẫn PROCESSING, row journal đã commit, sau đó operator điều tra và reconcile, không tự đổi SUCCESS thành FAILED.
+5. HTTP GET summary/list, phân trang cursor HMAC, cursor khác User/filter/size => 422; mark-read idempotent, mark-all cutoff DB, no-store và CSRF. Kiểm tra responsive/dark mode/i18n, logout/đổi User không lộ thông báo phiên trước.
+6. Trước khi bật theo lịch Windows Task Scheduler, kiểm tra giám sát `notifications:inspect`, kho lưu secret, sao lưu/khôi phục, log và quy trình requeue. Requeue chỉ test trên clone và chỉ sau khi phân tích nguyên nhân DEAD.
+
+
+## Phụ lục sau M11.1B — Quyết định M11.2
+
+M11.2 Workflow Notifications được triển khai theo ADR `docs/Notifications/ERP_M11_2_WORKFLOW_NOTIFICATIONS_ADR_2026-10-26.md`. Phần §8.2 của v1.4 là mục tiêu thiết kế trước khi code; ADR mới là quyết định cụ thể về assignment API, schema Migration 020, recipient snapshot/fanout và gate. Các thông số trạng thái/nghiệm thu M11.1B ở đầu tài liệu là lịch sử tại thời điểm v1.4 được ban hành, không phải kết quả nghiệm thu M11.2.

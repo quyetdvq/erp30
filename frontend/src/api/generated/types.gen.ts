@@ -9,6 +9,84 @@ export type ClientOptions = {
  */
 export type NotificationRevision = string;
 
+export type NotificationPushConfig = {
+    available: boolean;
+    /**
+     * VAPID public P-256 point in base64url
+     */
+    public_key: string | null;
+    queue_enabled: boolean;
+    send_enabled: boolean;
+};
+
+export type NotificationPushDevice = {
+    id: BigInt;
+    created_at: string;
+};
+
+export type NotificationPushSubscriptionKeys = {
+    p256dh: string;
+    auth: string;
+};
+
+export type NotificationPushSubscriptionPost = {
+    /**
+     * HTTPS endpoint from a browser PushSubscription; encrypted at rest.
+     */
+    endpoint: string;
+    keys: NotificationPushSubscriptionKeys;
+};
+
+export type NotificationPushConfigResponse = SuccessResponse & {
+    data?: NotificationPushConfig;
+};
+
+export type NotificationPushDevicesResponse = SuccessResponse & {
+    data?: Array<NotificationPushDevice>;
+};
+
+export type NotificationPushDeviceResponse = SuccessResponse & {
+    data?: NotificationPushDevice;
+};
+
+export type NotificationPushRevokeResponse = SuccessResponse & {
+    data?: {
+        removed: boolean;
+    };
+};
+
+export type NotificationRuntimeSwitch = {
+    key: 'DINKERP_M11_SETTINGS_WRITE_MODE' | 'DINKERP_M11_IMPORT_PRODUCER_ENABLED' | 'DINKERP_M11_WORKFLOW_WRITE_MODE' | 'DINKERP_M11_WORKFLOW_PRODUCER_ENABLED' | 'DINKERP_NOTIFICATIONS_DELIVERY_ENABLED' | 'DINKERP_M11_EMAIL_QUEUE_ENABLED' | 'DINKERP_M11_EMAIL_SEND_ENABLED' | 'DINKERP_M11_PUSH_QUEUE_ENABLED' | 'DINKERP_M11_PUSH_SEND_ENABLED';
+    section: 'administration' | 'producers' | 'delivery' | 'email' | 'push';
+    enabled: boolean;
+    source: 'legacy_env_or_default' | 'database';
+};
+
+export type NotificationRuntimeSnapshot = {
+    revision: string;
+    items: [
+        NotificationRuntimeSwitch,
+        NotificationRuntimeSwitch,
+        NotificationRuntimeSwitch,
+        NotificationRuntimeSwitch,
+        NotificationRuntimeSwitch,
+        NotificationRuntimeSwitch,
+        NotificationRuntimeSwitch,
+        NotificationRuntimeSwitch,
+        NotificationRuntimeSwitch
+    ];
+};
+
+export type NotificationRuntimeChange = {
+    key: 'DINKERP_M11_SETTINGS_WRITE_MODE' | 'DINKERP_M11_IMPORT_PRODUCER_ENABLED' | 'DINKERP_M11_WORKFLOW_WRITE_MODE' | 'DINKERP_M11_WORKFLOW_PRODUCER_ENABLED' | 'DINKERP_NOTIFICATIONS_DELIVERY_ENABLED' | 'DINKERP_M11_EMAIL_QUEUE_ENABLED' | 'DINKERP_M11_EMAIL_SEND_ENABLED' | 'DINKERP_M11_PUSH_QUEUE_ENABLED' | 'DINKERP_M11_PUSH_SEND_ENABLED';
+    enabled: boolean;
+};
+
+export type NotificationRuntimePatch = {
+    expected_revision: string;
+    changes: Array<NotificationRuntimeChange>;
+};
+
 export type NotificationPolicy = {
     key: string;
     default_value: boolean;
@@ -56,12 +134,82 @@ export type NotificationPreferencesPatch = {
     changes: Array<NotificationPreferenceChange>;
 };
 
+export type WorkflowNotificationAssigneesPut = {
+    expected_revision: NotificationRevision;
+    user_ids: Array<string>;
+};
+
+export type WorkflowNotificationAssignees = {
+    revision: NotificationRevision;
+    user_ids: Array<string>;
+};
+
+export type WorkflowNotificationAssigneesResponse = SuccessResponse & {
+    data?: WorkflowNotificationAssignees;
+};
+
+export type NotificationRuntimeResponse = SuccessResponse & {
+    data?: NotificationRuntimeSnapshot;
+};
+
 export type NotificationPoliciesResponse = SuccessResponse & {
     data?: Array<NotificationPolicy>;
 };
 
 export type NotificationPreferencesResponse = SuccessResponse & {
     data?: Array<NotificationPreference>;
+};
+
+export type NotificationInboxItem = {
+    id: string;
+    type: 'import.completed' | 'import.completed_with_errors' | 'import.failed' | 'workflow.action_required';
+    priority: 'NORMAL';
+    title_key: string;
+    body_key: string;
+    params: {
+        success_rows: number;
+        error_rows: number;
+    } | {
+        resource_type: string;
+        state_code: string;
+    };
+    target: {
+        type: 'import_job';
+        id: string;
+    } | {
+        type: 'workflow_target';
+        resource_type: string;
+        id: string;
+    };
+    read_at: string | null;
+    created_at: string;
+};
+
+export type NotificationSummaryResponse = SuccessResponse & {
+    data?: {
+        unread_count: number;
+    };
+};
+
+export type NotificationInboxResponse = SuccessResponse & {
+    data?: {
+        items: Array<NotificationInboxItem>;
+        next_cursor: string | null;
+    };
+};
+
+export type NotificationReadResponse = SuccessResponse & {
+    data?: {
+        id: string;
+        read_at: string;
+    };
+};
+
+export type NotificationReadAllResponse = SuccessResponse & {
+    data?: {
+        updated_count: number;
+        cutoff: string;
+    };
 };
 
 /**
@@ -1513,6 +1661,12 @@ export type Filter = {
 export type DisplayOrganizationId = PositiveBigInt;
 
 export type DisplayContextType = 'SYSTEM' | 'ORGANIZATION';
+
+export type WorkflowNotificationAssigneesPut2 = WorkflowNotificationAssigneesPut;
+
+export type NotificationRuntimePatch2 = NotificationRuntimePatch;
+
+export type NotificationPushSubscriptionPost2 = NotificationPushSubscriptionPost;
 
 export type NotificationPoliciesPatch2 = NotificationPoliciesPatch;
 
@@ -7682,6 +7836,172 @@ export type ExecuteBusinessWorkflowActionResponses = {
 
 export type ExecuteBusinessWorkflowActionResponse = ExecuteBusinessWorkflowActionResponses[keyof ExecuteBusinessWorkflowActionResponses];
 
+export type GetWorkflowNotificationAssigneesData = {
+    body?: never;
+    path: {
+        resource: 'province' | 'ward' | 'organization' | 'department' | 'position' | 'employee' | 'product_group' | 'product_uom' | 'product' | 'price_list' | 'organization_contact' | 'employee_contact';
+        id: BigInt;
+    };
+    query?: never;
+    url: '/api/v1/business-workflow/{resource}/{id}/notification-assignees';
+};
+
+export type GetWorkflowNotificationAssigneesErrors = {
+    /**
+     * Unauthenticated or invalid authentication.
+     */
+    401: ErrorResponse;
+    /**
+     * Visible target but action denied.
+     */
+    403: ErrorResponse;
+    /**
+     * Target not found or not visible.
+     */
+    404: ErrorResponse;
+};
+
+export type GetWorkflowNotificationAssigneesError = GetWorkflowNotificationAssigneesErrors[keyof GetWorkflowNotificationAssigneesErrors];
+
+export type GetWorkflowNotificationAssigneesResponses = {
+    /**
+     * Explicit per-target assignee set and optimistic revision.
+     */
+    200: WorkflowNotificationAssigneesResponse;
+};
+
+export type GetWorkflowNotificationAssigneesResponse = GetWorkflowNotificationAssigneesResponses[keyof GetWorkflowNotificationAssigneesResponses];
+
+export type ReplaceWorkflowNotificationAssigneesData = {
+    body: WorkflowNotificationAssigneesPut2;
+    path: {
+        resource: 'province' | 'ward' | 'organization' | 'department' | 'position' | 'employee' | 'product_group' | 'product_uom' | 'product' | 'price_list' | 'organization_contact' | 'employee_contact';
+        id: BigInt;
+    };
+    query?: never;
+    url: '/api/v1/business-workflow/{resource}/{id}/notification-assignees';
+};
+
+export type ReplaceWorkflowNotificationAssigneesErrors = {
+    /**
+     * Unauthenticated or invalid authentication.
+     */
+    401: ErrorResponse;
+    /**
+     * Visible target but action denied.
+     */
+    403: ErrorResponse;
+    /**
+     * Target not found or not visible.
+     */
+    404: ErrorResponse;
+    /**
+     * Conflict, concurrency, uniqueness, or current-state failure.
+     */
+    409: ErrorResponse;
+    /**
+     * Semantically invalid request.
+     */
+    422: ErrorResponse;
+};
+
+export type ReplaceWorkflowNotificationAssigneesError = ReplaceWorkflowNotificationAssigneesErrors[keyof ReplaceWorkflowNotificationAssigneesErrors];
+
+export type ReplaceWorkflowNotificationAssigneesResponses = {
+    /**
+     * Explicit per-target assignee set and optimistic revision.
+     */
+    200: WorkflowNotificationAssigneesResponse;
+};
+
+export type ReplaceWorkflowNotificationAssigneesResponse = ReplaceWorkflowNotificationAssigneesResponses[keyof ReplaceWorkflowNotificationAssigneesResponses];
+
+export type GetNotificationRuntimeConfigurationData = {
+    body?: never;
+    headers?: {
+        /**
+         * Supported request language. Unsupported values fall back to vi.
+         */
+        'Accept-Language'?: 'vi' | 'en';
+        /**
+         * Client request correlation identifier; invalid or missing values are replaced by a generated UUID.
+         */
+        'X-Request-ID'?: RequestId;
+    };
+    path?: never;
+    query?: never;
+    url: '/api/v1/configuration-settings/notifications';
+};
+
+export type GetNotificationRuntimeConfigurationErrors = {
+    /**
+     * Unauthenticated or invalid authentication.
+     */
+    401: ErrorResponse;
+    /**
+     * Visible target but action denied.
+     */
+    403: ErrorResponse;
+};
+
+export type GetNotificationRuntimeConfigurationError = GetNotificationRuntimeConfigurationErrors[keyof GetNotificationRuntimeConfigurationErrors];
+
+export type GetNotificationRuntimeConfigurationResponses = {
+    /**
+     * Audited Notification runtime configuration snapshot.
+     */
+    200: NotificationRuntimeResponse;
+};
+
+export type GetNotificationRuntimeConfigurationResponse = GetNotificationRuntimeConfigurationResponses[keyof GetNotificationRuntimeConfigurationResponses];
+
+export type UpdateNotificationRuntimeConfigurationData = {
+    body: NotificationRuntimePatch2;
+    headers?: {
+        /**
+         * Supported request language. Unsupported values fall back to vi.
+         */
+        'Accept-Language'?: 'vi' | 'en';
+        /**
+         * Client request correlation identifier; invalid or missing values are replaced by a generated UUID.
+         */
+        'X-Request-ID'?: RequestId;
+    };
+    path?: never;
+    query?: never;
+    url: '/api/v1/configuration-settings/notifications';
+};
+
+export type UpdateNotificationRuntimeConfigurationErrors = {
+    /**
+     * Unauthenticated or invalid authentication.
+     */
+    401: ErrorResponse;
+    /**
+     * Visible target but action denied.
+     */
+    403: ErrorResponse;
+    /**
+     * Conflict, concurrency, uniqueness, or current-state failure.
+     */
+    409: ErrorResponse;
+    /**
+     * Semantically invalid request.
+     */
+    422: ErrorResponse;
+};
+
+export type UpdateNotificationRuntimeConfigurationError = UpdateNotificationRuntimeConfigurationErrors[keyof UpdateNotificationRuntimeConfigurationErrors];
+
+export type UpdateNotificationRuntimeConfigurationResponses = {
+    /**
+     * Audited Notification runtime configuration snapshot.
+     */
+    200: NotificationRuntimeResponse;
+};
+
+export type UpdateNotificationRuntimeConfigurationResponse = UpdateNotificationRuntimeConfigurationResponses[keyof UpdateNotificationRuntimeConfigurationResponses];
+
 export type ListNotificationPoliciesData = {
     body?: never;
     headers?: {
@@ -7865,3 +8185,327 @@ export type UpdateOwnNotificationPreferencesResponses = {
 };
 
 export type UpdateOwnNotificationPreferencesResponse = UpdateOwnNotificationPreferencesResponses[keyof UpdateOwnNotificationPreferencesResponses];
+
+export type GetOwnBrowserPushConfigData = {
+    body?: never;
+    headers?: {
+        /**
+         * Supported request language. Unsupported values fall back to vi.
+         */
+        'Accept-Language'?: 'vi' | 'en';
+        /**
+         * Client request correlation identifier; invalid or missing values are replaced by a generated UUID.
+         */
+        'X-Request-ID'?: RequestId;
+    };
+    path?: never;
+    query?: never;
+    url: '/api/v1/notifications/push/config';
+};
+
+export type GetOwnBrowserPushConfigErrors = {
+    /**
+     * Unauthenticated or invalid authentication.
+     */
+    401: ErrorResponse;
+};
+
+export type GetOwnBrowserPushConfigError = GetOwnBrowserPushConfigErrors[keyof GetOwnBrowserPushConfigErrors];
+
+export type GetOwnBrowserPushConfigResponses = {
+    /**
+     * Public VAPID configuration; no secrets.
+     */
+    200: NotificationPushConfigResponse;
+};
+
+export type GetOwnBrowserPushConfigResponse = GetOwnBrowserPushConfigResponses[keyof GetOwnBrowserPushConfigResponses];
+
+export type ListOwnBrowserPushDevicesData = {
+    body?: never;
+    headers?: {
+        /**
+         * Supported request language. Unsupported values fall back to vi.
+         */
+        'Accept-Language'?: 'vi' | 'en';
+        /**
+         * Client request correlation identifier; invalid or missing values are replaced by a generated UUID.
+         */
+        'X-Request-ID'?: RequestId;
+    };
+    path?: never;
+    query?: never;
+    url: '/api/v1/notifications/push/subscriptions';
+};
+
+export type ListOwnBrowserPushDevicesErrors = {
+    /**
+     * Unauthenticated or invalid authentication.
+     */
+    401: ErrorResponse;
+};
+
+export type ListOwnBrowserPushDevicesError = ListOwnBrowserPushDevicesErrors[keyof ListOwnBrowserPushDevicesErrors];
+
+export type ListOwnBrowserPushDevicesResponses = {
+    /**
+     * Own device identifiers
+     */
+    200: NotificationPushDevicesResponse;
+};
+
+export type ListOwnBrowserPushDevicesResponse = ListOwnBrowserPushDevicesResponses[keyof ListOwnBrowserPushDevicesResponses];
+
+export type RegisterOwnBrowserPushDeviceData = {
+    body: NotificationPushSubscriptionPost2;
+    headers?: {
+        /**
+         * Supported request language. Unsupported values fall back to vi.
+         */
+        'Accept-Language'?: 'vi' | 'en';
+        /**
+         * Client request correlation identifier; invalid or missing values are replaced by a generated UUID.
+         */
+        'X-Request-ID'?: RequestId;
+    };
+    path?: never;
+    query?: never;
+    url: '/api/v1/notifications/push/subscriptions';
+};
+
+export type RegisterOwnBrowserPushDeviceErrors = {
+    /**
+     * Unauthenticated or invalid authentication.
+     */
+    401: ErrorResponse;
+    /**
+     * Visible target but action denied.
+     */
+    403: ErrorResponse;
+    /**
+     * Semantically invalid request.
+     */
+    422: ErrorResponse;
+};
+
+export type RegisterOwnBrowserPushDeviceError = RegisterOwnBrowserPushDeviceErrors[keyof RegisterOwnBrowserPushDeviceErrors];
+
+export type RegisterOwnBrowserPushDeviceResponses = {
+    /**
+     * Own registered device ID.
+     */
+    201: NotificationPushDeviceResponse;
+};
+
+export type RegisterOwnBrowserPushDeviceResponse = RegisterOwnBrowserPushDeviceResponses[keyof RegisterOwnBrowserPushDeviceResponses];
+
+export type RevokeOwnBrowserPushDeviceData = {
+    body?: never;
+    headers?: {
+        /**
+         * Supported request language. Unsupported values fall back to vi.
+         */
+        'Accept-Language'?: 'vi' | 'en';
+        /**
+         * Client request correlation identifier; invalid or missing values are replaced by a generated UUID.
+         */
+        'X-Request-ID'?: RequestId;
+    };
+    path: {
+        id: string;
+    };
+    query?: never;
+    url: '/api/v1/notifications/push/subscriptions/{id}';
+};
+
+export type RevokeOwnBrowserPushDeviceErrors = {
+    /**
+     * Unauthenticated or invalid authentication.
+     */
+    401: ErrorResponse;
+    /**
+     * Target not found or not visible.
+     */
+    404: ErrorResponse;
+};
+
+export type RevokeOwnBrowserPushDeviceError = RevokeOwnBrowserPushDeviceErrors[keyof RevokeOwnBrowserPushDeviceErrors];
+
+export type RevokeOwnBrowserPushDeviceResponses = {
+    /**
+     * Own device revoked.
+     */
+    200: NotificationPushRevokeResponse;
+};
+
+export type RevokeOwnBrowserPushDeviceResponse = RevokeOwnBrowserPushDeviceResponses[keyof RevokeOwnBrowserPushDeviceResponses];
+
+export type GetNotificationSummaryData = {
+    body?: never;
+    headers?: {
+        /**
+         * Supported request language. Unsupported values fall back to vi.
+         */
+        'Accept-Language'?: 'vi' | 'en';
+        /**
+         * Client request correlation identifier; invalid or missing values are replaced by a generated UUID.
+         */
+        'X-Request-ID'?: RequestId;
+    };
+    path?: never;
+    query?: never;
+    url: '/api/v1/notifications/summary';
+};
+
+export type GetNotificationSummaryErrors = {
+    /**
+     * Unauthenticated or invalid authentication.
+     */
+    401: ErrorResponse;
+    /**
+     * Unexpected server error without internal diagnostics.
+     */
+    500: ErrorResponse;
+};
+
+export type GetNotificationSummaryError = GetNotificationSummaryErrors[keyof GetNotificationSummaryErrors];
+
+export type GetNotificationSummaryResponses = {
+    /**
+     * Own unread count.
+     */
+    200: NotificationSummaryResponse;
+};
+
+export type GetNotificationSummaryResponse = GetNotificationSummaryResponses[keyof GetNotificationSummaryResponses];
+
+export type ListOwnNotificationsData = {
+    body?: never;
+    headers?: {
+        /**
+         * Supported request language. Unsupported values fall back to vi.
+         */
+        'Accept-Language'?: 'vi' | 'en';
+        /**
+         * Client request correlation identifier; invalid or missing values are replaced by a generated UUID.
+         */
+        'X-Request-ID'?: RequestId;
+    };
+    path?: never;
+    query?: {
+        filter?: 'all' | 'unread';
+        page_size?: number;
+        cursor?: string;
+    };
+    url: '/api/v1/notifications';
+};
+
+export type ListOwnNotificationsErrors = {
+    /**
+     * Unauthenticated or invalid authentication.
+     */
+    401: ErrorResponse;
+    /**
+     * Semantically invalid request.
+     */
+    422: ErrorResponse;
+    /**
+     * Unexpected server error without internal diagnostics.
+     */
+    500: ErrorResponse;
+};
+
+export type ListOwnNotificationsError = ListOwnNotificationsErrors[keyof ListOwnNotificationsErrors];
+
+export type ListOwnNotificationsResponses = {
+    /**
+     * Own Inbox and next signed cursor.
+     */
+    200: NotificationInboxResponse;
+};
+
+export type ListOwnNotificationsResponse = ListOwnNotificationsResponses[keyof ListOwnNotificationsResponses];
+
+export type MarkOwnNotificationReadData = {
+    body?: never;
+    headers?: {
+        /**
+         * Supported request language. Unsupported values fall back to vi.
+         */
+        'Accept-Language'?: 'vi' | 'en';
+        /**
+         * Client request correlation identifier; invalid or missing values are replaced by a generated UUID.
+         */
+        'X-Request-ID'?: RequestId;
+    };
+    path: {
+        id: string;
+    };
+    query?: never;
+    url: '/api/v1/notifications/{id}/actions/mark-read';
+};
+
+export type MarkOwnNotificationReadErrors = {
+    /**
+     * Unauthenticated or invalid authentication.
+     */
+    401: ErrorResponse;
+    /**
+     * Target not found or not visible.
+     */
+    404: ErrorResponse;
+    /**
+     * Unexpected server error without internal diagnostics.
+     */
+    500: ErrorResponse;
+};
+
+export type MarkOwnNotificationReadError = MarkOwnNotificationReadErrors[keyof MarkOwnNotificationReadErrors];
+
+export type MarkOwnNotificationReadResponses = {
+    /**
+     * Read status of own notification.
+     */
+    200: NotificationReadResponse;
+};
+
+export type MarkOwnNotificationReadResponse = MarkOwnNotificationReadResponses[keyof MarkOwnNotificationReadResponses];
+
+export type MarkAllOwnNotificationsReadData = {
+    body?: never;
+    headers?: {
+        /**
+         * Supported request language. Unsupported values fall back to vi.
+         */
+        'Accept-Language'?: 'vi' | 'en';
+        /**
+         * Client request correlation identifier; invalid or missing values are replaced by a generated UUID.
+         */
+        'X-Request-ID'?: RequestId;
+    };
+    path?: never;
+    query?: never;
+    url: '/api/v1/notifications/actions/mark-all-read';
+};
+
+export type MarkAllOwnNotificationsReadErrors = {
+    /**
+     * Unauthenticated or invalid authentication.
+     */
+    401: ErrorResponse;
+    /**
+     * Unexpected server error without internal diagnostics.
+     */
+    500: ErrorResponse;
+};
+
+export type MarkAllOwnNotificationsReadError = MarkAllOwnNotificationsReadErrors[keyof MarkAllOwnNotificationsReadErrors];
+
+export type MarkAllOwnNotificationsReadResponses = {
+    /**
+     * Bulk read cutoff result.
+     */
+    200: NotificationReadAllResponse;
+};
+
+export type MarkAllOwnNotificationsReadResponse = MarkAllOwnNotificationsReadResponses[keyof MarkAllOwnNotificationsReadResponses];
