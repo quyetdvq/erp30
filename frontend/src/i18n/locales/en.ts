@@ -450,10 +450,11 @@ export const en = {
   },
   runtimeConfiguration: {
     title: 'System runtime configuration',
-    description: 'Manage operational Notification producers, Email and Browser Push in the database.',
+    description: 'Manage Notification producers, Email, Browser Push and automated scheduling in the database.',
     migrationNote: 'Migration mode: settings not yet stored inherit the previous .env value. Use Save all to persist each switch before removing legacy .env entries.',
     secretNote: 'SMTP credentials, HMAC/VAPID private keys, Push endpoint encryption keys and emergency security guards stay server-side.',
-    sections: { push: 'Browser Push', administration: 'Administration', producers: 'Event producers', delivery: 'In-App delivery', email: 'Email' },
+    sections: { push: 'Browser Push', administration: 'Administration', producers: 'Event producers', delivery: 'In-App delivery', email: 'Email', scheduler: 'Automated scheduling (Tasks / Cron)' },
+    schedulerNote: 'These switches register scheduled jobs when cron runs php spark tasks:run; they do not install a Cron Job. Push may send real notifications when Push Send is on. Check tasks:list and cron logs. Automated Email is registered only when the Email task flag and Email Send are both ON and SMTP configuration is valid. Review old PENDING emails before enabling.',
     flags: {
       DINKERP_M11_SETTINGS_WRITE_MODE: 'Allow editing notification policies',
       DINKERP_M11_IMPORT_PRODUCER_ENABLED: 'Produce notifications from Imports',
@@ -464,6 +465,9 @@ export const en = {
       DINKERP_M11_EMAIL_SEND_ENABLED: 'Allow SMTP Email Worker to send',
       DINKERP_M11_PUSH_QUEUE_ENABLED: 'Queue Push signals for registered opted-in devices',
       DINKERP_M11_PUSH_SEND_ENABLED: 'Allow Browser Push Worker to send',
+      DINKERP_M11_TASKS_INAPP_ENABLED: 'Run In-App Dispatcher every minute',
+      DINKERP_M11_TASKS_PUSH_ENABLED: 'Run Push Dispatcher every minute',
+      DINKERP_M11_TASKS_EMAIL_ENABLED: 'Run SMTP Email Dispatcher automatically (after backlog review)',
     },
     database: 'Stored in database', legacy: 'Inherited from .env or default Off',
     revision: 'Revision', reload: 'Reload', loading: 'Loading...',
@@ -473,6 +477,9 @@ export const en = {
     conflict: 'Another session changed these settings. Reload before saving.',
     confirmPushSend: 'Enable real Browser Push delivery? Queued signals may be sent when the Worker runs.',
     confirmEmailSend: 'Enable real SMTP sending? Queued emails may be sent on the next Worker run.',
+    confirmTasksInApp: 'Enable automated In-App scheduling? Eligible notifications will be delivered when Cron runs.',
+    confirmTasksPush: 'Enable automated Push scheduling? If Push Send is on, Cron may send real notifications to opted-in devices.',
+    confirmTasksEmail: 'Enable automated Email? When Email Send is ON and SMTP is ready, existing PENDING/RETRY emails (including old receipts) can be sent. Review the backlog first.',
   },
   notificationSettings: {
     tabs: "Settings tabs",

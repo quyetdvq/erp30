@@ -10,10 +10,11 @@
         "slack": "https://codeigniterchat.slack.com"
     },
     "require": {
-        "php": "^8.2",
         "codeigniter4/framework": "^4.7",
         "codeigniter4/settings": "^2.4",
         "codeigniter4/shield": "^1.4",
+        "codeigniter4/tasks": "^1.0.1",
+        "php": "^8.2",
         "phpoffice/phpspreadsheet": "^5.10",
         "smalot/pdfparser": "^2.13"
     },

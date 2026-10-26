@@ -22,6 +22,9 @@ final class NotificationRuntimeConfigRules
             'DINKERP_M11_EMAIL_SEND_ENABLED' => 'email',
             'DINKERP_M11_PUSH_QUEUE_ENABLED' => 'push',
             'DINKERP_M11_PUSH_SEND_ENABLED' => 'push',
+            'DINKERP_M11_TASKS_INAPP_ENABLED' => 'scheduler',
+            'DINKERP_M11_TASKS_PUSH_ENABLED' => 'scheduler',
+            'DINKERP_M11_TASKS_EMAIL_ENABLED' => 'scheduler',
         ];
     }
 
@@ -71,7 +74,14 @@ final class NotificationRuntimeConfigRules
         if (! isset(self::definitions()[$key])) {
             return false;
         }
-        $value = function_exists('env') ? (string) env($key, 'off') : (string) (getenv($key) ?: 'off');
-        return strtolower($value) === 'enabled';
+        $value = function_exists('env') ? env($key, 'off') : (getenv($key) ?: 'off');
+        // M11.5 Tasks used explicit 1/0 from the beginning, while the existing
+        // nine delivery/admin switches use the legacy 'enabled' convention.
+        // Preserve both contracts during migration to persisted settings.
+        if (in_array($key, ['DINKERP_M11_TASKS_INAPP_ENABLED', 'DINKERP_M11_TASKS_PUSH_ENABLED',
+            'DINKERP_M11_TASKS_EMAIL_ENABLED'], true)) {
+            return NotificationTasksPlan::enabled($value);
+        }
+        return strtolower((string) $value) === 'enabled';
     }
 }

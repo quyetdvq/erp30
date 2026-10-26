@@ -10,7 +10,7 @@ use App\Modules\Notifications\NotificationFlags;
 use CodeIgniter\CLI\BaseCommand;
 use CodeIgniter\CLI\CLI;
 
-/** Schedule --once in Windows Task Scheduler. Never run a long-lived HTTP worker. */
+/** Schedule bounded --once runs via CodeIgniter Tasks + CLI cron; never use an HTTP worker. */
 final class NotificationsDispatch extends BaseCommand
 {
     protected $group = 'DinkERP';

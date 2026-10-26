@@ -7,6 +7,7 @@ namespace App\Modules\Notifications;
 use Config\Email as EmailConfig;
 use CodeIgniter\Email\Email;
 use RuntimeException;
+use Throwable;
 
 /** CodeIgniter SMTP adapter. No network I/O from PHPUnit or domain transactions. */
 final class NotificationSmtpSender implements NotificationEmailSender
@@ -35,8 +36,12 @@ final class NotificationSmtpSender implements NotificationEmailSender
             && strtolower($config->protocol) === 'smtp'
             && trim($config->SMTPHost) !== '' && trim($config->SMTPUser) !== ''
             && trim($config->SMTPPass) !== ''
-            && in_array(strtolower($config->SMTPCrypto), ['tls', 'ssl'], true)
             && $config->SMTPPort >= 1 && $config->SMTPPort <= 65535
+            // CI4 port 465 uses implicit TLS; STARTTLS on 465 often fails.
+            // Other ports must explicitly upgrade with STARTTLS.
+            && ($config->SMTPPort === 465
+                ? in_array(strtolower($config->SMTPCrypto), ['', 'ssl'], true)
+                : strtolower($config->SMTPCrypto) === 'tls')
             && $config->SMTPTimeout >= 1 && $config->SMTPTimeout <= 30;
     }
 
@@ -45,14 +50,19 @@ final class NotificationSmtpSender implements NotificationEmailSender
         if (NotificationEmailRules::address($recipientAddress) === null) {
             throw new RuntimeException('M11_EMAIL_ADDRESS_INVALID');
         }
-        $mail = new Email($this->config);
-        $mail->setMailType('text');
-        $mail->setFrom($this->from, 'DinkERP');
-        $mail->setTo($recipientAddress);
-        $mail->setSubject($subject);
-        $mail->setMessage($body);
-        if (! $mail->send(false)) {
-            // Never log SMTP debug output, addresses, credentials or user content.
+        try {
+            $mail = new Email($this->config);
+            $mail->setMailType('text');
+            $mail->setFrom($this->from, 'DinkERP');
+            $mail->setTo($recipientAddress);
+            $mail->setSubject($subject);
+            $mail->setMessage($body);
+            if (! $mail->send(false)) {
+                throw new RuntimeException('M11_EMAIL_SMTP_SEND_FAILED');
+            }
+        } catch (Throwable) {
+            // Do not expose server transcripts, SMTP credentials or recipient data,
+            // including when a transport throws rather than returning false.
             throw new RuntimeException('M11_EMAIL_SMTP_SEND_FAILED');
         }
     }

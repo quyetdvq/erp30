@@ -7,6 +7,7 @@ namespace Tests\M11\Integration;
 use App\Exceptions\DomainException;
 use App\Modules\Notifications\NotificationFlags;
 use App\Modules\Notifications\NotificationRuntimeConfigService;
+use App\Modules\Notifications\NotificationTasksPlan;
 use CodeIgniter\Database\BaseConnection;
 use PHPUnit\Framework\TestCase;
 use Tests\M11\Support\M11DatabaseGuard;
@@ -88,11 +89,11 @@ final class NotificationRuntimeConfigIntegrationTest extends TestCase
         }
     }
 
-    public function testPersistsAllNineFlagsWithRevisionAndTransactionalAudit(): void
+    public function testPersistsAllTwelveFlagsWithRevisionAndTransactionalAudit(): void
     {
         $service = new NotificationRuntimeConfigService($this->fixture->actor(), $this->db);
         $initial = $service->listing();
-        self::assertCount(9, $initial['items']);
+        self::assertCount(12, $initial['items']);
         $input = array_map(static fn (array $item): array => [
             'key' => $item['key'], 'enabled' => $item['enabled'],
         ], $initial['items']);
@@ -118,6 +119,105 @@ final class NotificationRuntimeConfigIntegrationTest extends TestCase
         } catch (DomainException $e) {
             self::assertSame('NOTIFICATION_REVISION_CONFLICT', $e->getErrorCode());
         }
+    }
+
+
+    public function testSchedulerFlagsPersistWithPbacAuditRevisionAndControlJobPlan(): void
+    {
+        $service = new NotificationRuntimeConfigService($this->fixture->actor(), $this->db);
+        $inApp = 'DINKERP_M11_TASKS_INAPP_ENABLED';
+        $push = 'DINKERP_M11_TASKS_PUSH_ENABLED';
+        // Isolate scheduler keys even if the guarded erp_test DB contains
+        // prior operator fixtures. This DELETE is inside the outer rollback.
+        $this->db->table('settings')->where('class', 'NotificationRuntime')
+            ->where('context', 'system')->whereIn('key', [$inApp, $push])->delete();
+        $initial = $service->listing();
+        $auditBefore = $this->db->table('configuration_audit_events')
+            ->where('configuration_type', 'NOTIFICATION_RUNTIME')->countAllResults();
+        $updated = $service->update(['expected_revision' => $initial['revision'], 'changes' => [
+            ['key' => $push, 'enabled' => true],
+            ['key' => $inApp, 'enabled' => true],
+        ]]);
+        self::assertTrue(NotificationFlags::enabled($inApp, $this->db));
+        self::assertTrue(NotificationFlags::enabled($push, $this->db));
+        self::assertSame(['m11-inapp-dispatch', 'm11-push-dispatch'], array_column(
+            NotificationTasksPlan::definitions(
+                NotificationFlags::enabled($inApp, $this->db),
+                NotificationFlags::enabled($push, $this->db),
+            ), 'name',
+        ));
+        self::assertSame($auditBefore + 2, $this->db->table('configuration_audit_events')
+            ->where('configuration_type', 'NOTIFICATION_RUNTIME')->countAllResults());
+        self::assertSame((string) ((int) $initial['revision'] + 1), $updated['revision']);
+
+        $off = $service->update(['expected_revision' => $updated['revision'], 'changes' => [
+            ['key' => $push, 'enabled' => false],
+        ]]);
+        self::assertTrue(NotificationFlags::enabled($inApp, $this->db));
+        self::assertFalse(NotificationFlags::enabled($push, $this->db));
+        self::assertSame(['m11-inapp-dispatch'], array_column(NotificationTasksPlan::definitions(
+            NotificationFlags::enabled($inApp, $this->db),
+            NotificationFlags::enabled($push, $this->db),
+        ), 'name'));
+        self::assertSame((string) ((int) $updated['revision'] + 1), $off['revision']);
+        self::assertSame($auditBefore + 3, $this->db->table('configuration_audit_events')
+            ->where('configuration_type', 'NOTIFICATION_RUNTIME')->countAllResults());
+        $bothOff = $service->update(['expected_revision' => $off['revision'], 'changes' => [
+            ['key' => $inApp, 'enabled' => false],
+        ]]);
+        self::assertFalse(NotificationFlags::enabled($inApp, $this->db));
+        self::assertSame([], NotificationTasksPlan::definitions(
+            NotificationFlags::enabled($inApp, $this->db),
+            NotificationFlags::enabled($push, $this->db),
+        ));
+        self::assertSame($auditBefore + 4, $this->db->table('configuration_audit_events')
+            ->where('configuration_type', 'NOTIFICATION_RUNTIME')->countAllResults());
+        self::assertSame((string) ((int) $off['revision'] + 1), $bothOff['revision']);
+        $this->expectException(DomainException::class);
+        $service->update(['expected_revision' => $updated['revision'], 'changes' => [
+            ['key' => $inApp, 'enabled' => false],
+        ]]);
+    }
+
+    public function testEmailTaskFlagIsAuditedAndOffByDefaultUntilExplicitOperatorOptIn(): void
+    {
+        $key = 'DINKERP_M11_TASKS_EMAIL_ENABLED';
+        $this->db->table('settings')->where('class', 'NotificationRuntime')
+            ->where('context', 'system')->where('key', $key)->delete();
+        $service = new NotificationRuntimeConfigService($this->fixture->actor(), $this->db);
+        $before = $service->listing();
+        self::assertSame(\App\Modules\Notifications\NotificationRuntimeConfigRules::legacyEnabled($key),
+            NotificationFlags::enabled($key, $this->db));
+        $auditBefore = $this->db->table('configuration_audit_events')
+            ->where('configuration_type', 'NOTIFICATION_RUNTIME')->countAllResults();
+        $on = $service->update(['expected_revision' => $before['revision'], 'changes' => [
+            ['key' => $key, 'enabled' => true],
+        ]]);
+        self::assertTrue(NotificationFlags::enabled($key, $this->db));
+        self::assertSame((string) ((int) $before['revision'] + 1), $on['revision']);
+        self::assertSame($auditBefore + 1, $this->db->table('configuration_audit_events')
+            ->where('configuration_type', 'NOTIFICATION_RUNTIME')->countAllResults());
+        $off = $service->update(['expected_revision' => $on['revision'], 'changes' => [
+            ['key' => $key, 'enabled' => false],
+        ]]);
+        self::assertFalse(NotificationFlags::enabled($key, $this->db));
+        self::assertSame((string) ((int) $on['revision'] + 1), $off['revision']);
+    }
+
+    public function testCorruptSchedulerSettingFailsClosedWithoutRegisteringJob(): void
+    {
+        $inApp = 'DINKERP_M11_TASKS_INAPP_ENABLED';
+        $this->db->table('settings')->where('class', 'NotificationRuntime')
+            ->where('context', 'system')->where('key', $inApp)->delete();
+        $this->db->table('settings')->insert([
+            'class' => 'NotificationRuntime', 'key' => $inApp,
+            'context' => 'system', 'value' => '1', 'type' => 'string',
+            'created_at' => gmdate('Y-m-d H:i:s'), 'updated_at' => gmdate('Y-m-d H:i:s'),
+        ]);
+        self::assertFalse(NotificationFlags::enabled($inApp, $this->db));
+        $service = new NotificationRuntimeConfigService($this->fixture->actor(), $this->db);
+        $this->expectException(DomainException::class);
+        $service->listing();
     }
 
     public function testReadAndMutationBothRequireRealPbac(): void

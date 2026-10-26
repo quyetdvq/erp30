@@ -12,7 +12,7 @@ export type NotificationRevision = string;
 export type NotificationPushConfig = {
     available: boolean;
     /**
-     * VAPID public P-256 point in base64url
+     * VAPID public P-256 point in base64url, never a secret.
      */
     public_key: string | null;
     queue_enabled: boolean;
@@ -56,8 +56,8 @@ export type NotificationPushRevokeResponse = SuccessResponse & {
 };
 
 export type NotificationRuntimeSwitch = {
-    key: 'DINKERP_M11_SETTINGS_WRITE_MODE' | 'DINKERP_M11_IMPORT_PRODUCER_ENABLED' | 'DINKERP_M11_WORKFLOW_WRITE_MODE' | 'DINKERP_M11_WORKFLOW_PRODUCER_ENABLED' | 'DINKERP_NOTIFICATIONS_DELIVERY_ENABLED' | 'DINKERP_M11_EMAIL_QUEUE_ENABLED' | 'DINKERP_M11_EMAIL_SEND_ENABLED' | 'DINKERP_M11_PUSH_QUEUE_ENABLED' | 'DINKERP_M11_PUSH_SEND_ENABLED';
-    section: 'administration' | 'producers' | 'delivery' | 'email' | 'push';
+    key: 'DINKERP_M11_SETTINGS_WRITE_MODE' | 'DINKERP_M11_IMPORT_PRODUCER_ENABLED' | 'DINKERP_M11_WORKFLOW_WRITE_MODE' | 'DINKERP_M11_WORKFLOW_PRODUCER_ENABLED' | 'DINKERP_NOTIFICATIONS_DELIVERY_ENABLED' | 'DINKERP_M11_EMAIL_QUEUE_ENABLED' | 'DINKERP_M11_EMAIL_SEND_ENABLED' | 'DINKERP_M11_PUSH_QUEUE_ENABLED' | 'DINKERP_M11_PUSH_SEND_ENABLED' | 'DINKERP_M11_TASKS_INAPP_ENABLED' | 'DINKERP_M11_TASKS_PUSH_ENABLED' | 'DINKERP_M11_TASKS_EMAIL_ENABLED';
+    section: 'administration' | 'producers' | 'delivery' | 'email' | 'push' | 'scheduler';
     enabled: boolean;
     source: 'legacy_env_or_default' | 'database';
 };
@@ -73,12 +73,15 @@ export type NotificationRuntimeSnapshot = {
         NotificationRuntimeSwitch,
         NotificationRuntimeSwitch,
         NotificationRuntimeSwitch,
+        NotificationRuntimeSwitch,
+        NotificationRuntimeSwitch,
+        NotificationRuntimeSwitch,
         NotificationRuntimeSwitch
     ];
 };
 
 export type NotificationRuntimeChange = {
-    key: 'DINKERP_M11_SETTINGS_WRITE_MODE' | 'DINKERP_M11_IMPORT_PRODUCER_ENABLED' | 'DINKERP_M11_WORKFLOW_WRITE_MODE' | 'DINKERP_M11_WORKFLOW_PRODUCER_ENABLED' | 'DINKERP_NOTIFICATIONS_DELIVERY_ENABLED' | 'DINKERP_M11_EMAIL_QUEUE_ENABLED' | 'DINKERP_M11_EMAIL_SEND_ENABLED' | 'DINKERP_M11_PUSH_QUEUE_ENABLED' | 'DINKERP_M11_PUSH_SEND_ENABLED';
+    key: 'DINKERP_M11_SETTINGS_WRITE_MODE' | 'DINKERP_M11_IMPORT_PRODUCER_ENABLED' | 'DINKERP_M11_WORKFLOW_WRITE_MODE' | 'DINKERP_M11_WORKFLOW_PRODUCER_ENABLED' | 'DINKERP_NOTIFICATIONS_DELIVERY_ENABLED' | 'DINKERP_M11_EMAIL_QUEUE_ENABLED' | 'DINKERP_M11_EMAIL_SEND_ENABLED' | 'DINKERP_M11_PUSH_QUEUE_ENABLED' | 'DINKERP_M11_PUSH_SEND_ENABLED' | 'DINKERP_M11_TASKS_INAPP_ENABLED' | 'DINKERP_M11_TASKS_PUSH_ENABLED' | 'DINKERP_M11_TASKS_EMAIL_ENABLED';
     enabled: boolean;
 };
 
@@ -8249,7 +8252,7 @@ export type ListOwnBrowserPushDevicesError = ListOwnBrowserPushDevicesErrors[key
 
 export type ListOwnBrowserPushDevicesResponses = {
     /**
-     * Own device identifiers
+     * Own device identifiers, no endpoints.
      */
     200: NotificationPushDevicesResponse;
 };

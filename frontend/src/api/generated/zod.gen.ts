@@ -34,14 +34,18 @@ export const zNotificationRuntimeSwitch = z.object({
         'DINKERP_M11_EMAIL_QUEUE_ENABLED',
         'DINKERP_M11_EMAIL_SEND_ENABLED',
         'DINKERP_M11_PUSH_QUEUE_ENABLED',
-        'DINKERP_M11_PUSH_SEND_ENABLED'
+        'DINKERP_M11_PUSH_SEND_ENABLED',
+        'DINKERP_M11_TASKS_INAPP_ENABLED',
+        'DINKERP_M11_TASKS_PUSH_ENABLED',
+        'DINKERP_M11_TASKS_EMAIL_ENABLED'
     ]),
     section: z.enum([
         'administration',
         'producers',
         'delivery',
         'email',
-        'push'
+        'push',
+        'scheduler'
     ]),
     enabled: z.boolean(),
     source: z.enum(['legacy_env_or_default', 'database'])
@@ -50,6 +54,9 @@ export const zNotificationRuntimeSwitch = z.object({
 export const zNotificationRuntimeSnapshot = z.object({
     revision: z.string().regex(/^(0|[1-9][0-9]*)$/),
     items: z.tuple([
+        zNotificationRuntimeSwitch,
+        zNotificationRuntimeSwitch,
+        zNotificationRuntimeSwitch,
         zNotificationRuntimeSwitch,
         zNotificationRuntimeSwitch,
         zNotificationRuntimeSwitch,
@@ -72,14 +79,17 @@ export const zNotificationRuntimeChange = z.object({
         'DINKERP_M11_EMAIL_QUEUE_ENABLED',
         'DINKERP_M11_EMAIL_SEND_ENABLED',
         'DINKERP_M11_PUSH_QUEUE_ENABLED',
-        'DINKERP_M11_PUSH_SEND_ENABLED'
+        'DINKERP_M11_PUSH_SEND_ENABLED',
+        'DINKERP_M11_TASKS_INAPP_ENABLED',
+        'DINKERP_M11_TASKS_PUSH_ENABLED',
+        'DINKERP_M11_TASKS_EMAIL_ENABLED'
     ]),
     enabled: z.boolean()
 });
 
 export const zNotificationRuntimePatch = z.object({
     expected_revision: z.string().regex(/^(0|[1-9][0-9]*)$/),
-    changes: z.array(zNotificationRuntimeChange).min(1).max(9)
+    changes: z.array(zNotificationRuntimeChange).min(1).max(12)
 });
 
 export const zNotificationPolicy = z.object({
@@ -3860,7 +3870,7 @@ export const zListOwnBrowserPushDevicesHeaders = z.object({
 });
 
 /**
- * Own device identifiers
+ * Own device identifiers, no endpoints.
  */
 export const zListOwnBrowserPushDevicesResponse = zNotificationPushDevicesResponse;
 

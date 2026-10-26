@@ -449,10 +449,11 @@ export const vi = {
   },
   runtimeConfiguration: {
     title: 'Cấu hình vận hành hệ thống',
-    description: 'Bật hoặc tắt nguồn thông báo, Email và Push trên database.',
+    description: 'Bật hoặc tắt nguồn thông báo, Email, Push và lịch chạy tự động trong database.',
     migrationNote: 'Chế độ chuyển đổi: giá trị chưa lưu trong database vẫn dùng .env cũ. Nhấn Lưu tất cả để ghi toàn bộ các công tắc vào database trước khi xóa dòng cũ trong .env.',
     secretNote: 'Mật khẩu SMTP, khóa HMAC và các giới hạn bảo mật khẩn cấp vẫn thuộc cấu hình máy chủ, không hiển thị tại đây.',
-    sections: { push: 'Push trình duyệt', administration: 'Quản trị', producers: 'Nguồn phát sự kiện', delivery: 'Phân phối In-App', email: 'Email' },
+    sections: { push: 'Push trình duyệt', administration: 'Quản trị', producers: 'Nguồn phát sự kiện', delivery: 'Phân phối In-App', email: 'Email', scheduler: 'Lịch chạy tự động (Tasks / Cron)' },
+    schedulerNote: 'Các công tắc này đăng ký lịch chạy khi cron gọi php spark tasks:run; không tự tạo Cron Job. Push có thể gửi thật nếu Push Send đang bật. Cần kiểm tra tasks:list và log cron. Email tự động chỉ được đăng ký khi cả lịch Email, Email Send và cấu hình SMTP đều hợp lệ. Cần duyệt Email PENDING cũ trước khi bật lịch.',
     flags: {
       DINKERP_M11_SETTINGS_WRITE_MODE: 'Cho phép sửa chính sách thông báo',
       DINKERP_M11_IMPORT_PRODUCER_ENABLED: 'Phát thông báo từ Import',
@@ -463,6 +464,9 @@ export const vi = {
       DINKERP_M11_EMAIL_SEND_ENABLED: 'Cho phép Worker gửi Email SMTP',
       DINKERP_M11_PUSH_QUEUE_ENABLED: 'Tạo hàng đợi Push cho thiết bị đã đăng ký',
       DINKERP_M11_PUSH_SEND_ENABLED: 'Cho phép Worker gửi Push đến trình duyệt',
+      DINKERP_M11_TASKS_INAPP_ENABLED: 'Tự động chạy In-App Dispatcher mỗi phút',
+      DINKERP_M11_TASKS_PUSH_ENABLED: 'Tự động chạy Push Dispatcher mỗi phút',
+      DINKERP_M11_TASKS_EMAIL_ENABLED: 'Tự động chạy Email SMTP Dispatcher (sau khi duyệt Email tồn đọng)',
     },
     database: 'Lưu trong database', legacy: 'Đang kế thừa .env hoặc mặc định Tắt',
     revision: 'Phiên bản', reload: 'Tải lại', loading: 'Đang tải...',
@@ -472,6 +476,9 @@ export const vi = {
     conflict: 'Cấu hình đã được sửa ở phiên khác. Hãy tải lại trước khi lưu.',
     confirmPushSend: 'Bật gửi Push thật? Các thông báo đang chờ có thể được gửi ngay khi Worker chạy.',
     confirmEmailSend: 'Bật gửi Email SMTP thật? Các Email đang chờ có thể được gửi ngay khi Worker chạy.',
+    confirmTasksInApp: 'Bật lịch tự động In-App? Khi Cron chạy, các thông báo đủ điều kiện sẽ được phân phối.',
+    confirmTasksPush: 'Bật lịch tự động Push? Nếu Push Send đang bật, Cron có thể gửi thông báo thật đến các thiết bị đã đồng ý.',
+    confirmTasksEmail: 'Bật lịch Email tự động? Nếu Email Send đang ON và SMTP hợp lệ, các Email PENDING/RETRY (kể cả Email cũ) có thể được gửi thật. Hãy duyệt tồn đọng trước khi xác nhận.',
   },
   notificationSettings: {
     tabs: "Các tab cấu hình",

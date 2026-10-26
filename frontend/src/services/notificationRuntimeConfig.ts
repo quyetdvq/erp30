@@ -2,7 +2,7 @@ import { apiClient } from '@/services/api'
 
 export type NotificationRuntimeItem = {
   key: string
-  section: 'administration' | 'producers' | 'delivery' | 'email' | 'push'
+  section: 'administration' | 'producers' | 'delivery' | 'email' | 'push' | 'scheduler'
   enabled: boolean
   source: 'legacy_env_or_default' | 'database'
 }

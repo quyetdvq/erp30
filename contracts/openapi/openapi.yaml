@@ -1458,7 +1458,7 @@ components:
     WorkflowNotificationAssigneesResponse: {description: Explicit per-target assignee set and optimistic revision., content: {application/json: {schema: {$ref: '#/components/schemas/WorkflowNotificationAssigneesResponse'}}}}
     NotificationRuntimeResponse: {description: Audited Notification runtime configuration snapshot., content: {application/json: {schema: {$ref: '#/components/schemas/NotificationRuntimeResponse'}}}}
     NotificationPushConfigResponse: {description: Public VAPID configuration; no secrets., content: {application/json: {schema: {$ref: '#/components/schemas/NotificationPushConfigResponse'}}}}
-    NotificationPushDevicesResponse: {description: Own device identifiers, no endpoints., content: {application/json: {schema: {$ref: '#/components/schemas/NotificationPushDevicesResponse'}}}}
+    NotificationPushDevicesResponse: {description: 'Own device identifiers, no endpoints.', content: {application/json: {schema: {$ref: '#/components/schemas/NotificationPushDevicesResponse'}}}}
     NotificationPushDeviceResponse: {description: Own registered device ID., content: {application/json: {schema: {$ref: '#/components/schemas/NotificationPushDeviceResponse'}}}}
     NotificationPushRevokeResponse: {description: Own device revoked., content: {application/json: {schema: {$ref: '#/components/schemas/NotificationPushRevokeResponse'}}}}
     NotificationPoliciesResponse: {description: System notification policies., content: {application/json: {schema: {$ref: '#/components/schemas/NotificationPoliciesResponse'}}}}
@@ -1657,7 +1657,7 @@ components:
       required: [available, public_key, queue_enabled, send_enabled]
       properties:
         available: {type: boolean}
-        public_key: {type: [string, 'null'], description: VAPID public P-256 point in base64url, never a secret.}
+        public_key: {type: [string, 'null'], description: 'VAPID public P-256 point in base64url, never a secret.'}
         queue_enabled: {type: boolean}
         send_enabled: {type: boolean}
     NotificationPushDevice:
@@ -1704,8 +1704,8 @@ components:
       properties:
         key:
           type: string
-          enum: [DINKERP_M11_SETTINGS_WRITE_MODE, DINKERP_M11_IMPORT_PRODUCER_ENABLED, DINKERP_M11_WORKFLOW_WRITE_MODE, DINKERP_M11_WORKFLOW_PRODUCER_ENABLED, DINKERP_NOTIFICATIONS_DELIVERY_ENABLED, DINKERP_M11_EMAIL_QUEUE_ENABLED, DINKERP_M11_EMAIL_SEND_ENABLED, DINKERP_M11_PUSH_QUEUE_ENABLED, DINKERP_M11_PUSH_SEND_ENABLED]
-        section: {type: string, enum: [administration, producers, delivery, email, push]}
+          enum: [DINKERP_M11_SETTINGS_WRITE_MODE, DINKERP_M11_IMPORT_PRODUCER_ENABLED, DINKERP_M11_WORKFLOW_WRITE_MODE, DINKERP_M11_WORKFLOW_PRODUCER_ENABLED, DINKERP_NOTIFICATIONS_DELIVERY_ENABLED, DINKERP_M11_EMAIL_QUEUE_ENABLED, DINKERP_M11_EMAIL_SEND_ENABLED, DINKERP_M11_PUSH_QUEUE_ENABLED, DINKERP_M11_PUSH_SEND_ENABLED, DINKERP_M11_TASKS_INAPP_ENABLED, DINKERP_M11_TASKS_PUSH_ENABLED, DINKERP_M11_TASKS_EMAIL_ENABLED]
+        section: {type: string, enum: [administration, producers, delivery, email, push, scheduler]}
         enabled: {type: boolean}
         source: {type: string, enum: [legacy_env_or_default, database]}
     NotificationRuntimeSnapshot:
@@ -1714,13 +1714,13 @@ components:
       required: [revision, items]
       properties:
         revision: {type: string, pattern: '^(0|[1-9][0-9]*)$'}
-        items: {type: array, minItems: 9, maxItems: 9, items: {$ref: '#/components/schemas/NotificationRuntimeSwitch'}}
+        items: {type: array, minItems: 12, maxItems: 12, items: {$ref: '#/components/schemas/NotificationRuntimeSwitch'}}
     NotificationRuntimeChange:
       type: object
       additionalProperties: false
       required: [key, enabled]
       properties:
-        key: {type: string, enum: [DINKERP_M11_SETTINGS_WRITE_MODE, DINKERP_M11_IMPORT_PRODUCER_ENABLED, DINKERP_M11_WORKFLOW_WRITE_MODE, DINKERP_M11_WORKFLOW_PRODUCER_ENABLED, DINKERP_NOTIFICATIONS_DELIVERY_ENABLED, DINKERP_M11_EMAIL_QUEUE_ENABLED, DINKERP_M11_EMAIL_SEND_ENABLED, DINKERP_M11_PUSH_QUEUE_ENABLED, DINKERP_M11_PUSH_SEND_ENABLED]}
+        key: {type: string, enum: [DINKERP_M11_SETTINGS_WRITE_MODE, DINKERP_M11_IMPORT_PRODUCER_ENABLED, DINKERP_M11_WORKFLOW_WRITE_MODE, DINKERP_M11_WORKFLOW_PRODUCER_ENABLED, DINKERP_NOTIFICATIONS_DELIVERY_ENABLED, DINKERP_M11_EMAIL_QUEUE_ENABLED, DINKERP_M11_EMAIL_SEND_ENABLED, DINKERP_M11_PUSH_QUEUE_ENABLED, DINKERP_M11_PUSH_SEND_ENABLED, DINKERP_M11_TASKS_INAPP_ENABLED, DINKERP_M11_TASKS_PUSH_ENABLED, DINKERP_M11_TASKS_EMAIL_ENABLED]}
         enabled: {type: boolean}
     NotificationRuntimePatch:
       type: object
@@ -1731,7 +1731,7 @@ components:
         changes:
           type: array
           minItems: 1
-          maxItems: 9
+          maxItems: 12
           uniqueItems: true
           items: {$ref: '#/components/schemas/NotificationRuntimeChange'}
     NotificationPolicy:

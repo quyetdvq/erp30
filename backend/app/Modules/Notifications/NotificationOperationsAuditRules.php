@@ -40,8 +40,15 @@ final class NotificationOperationsAuditRules
         $flags = $snapshot['flags'];
         $emailQueue = self::on($flags, 'DINKERP_M11_EMAIL_QUEUE_ENABLED');
         $emailSend = self::on($flags, 'DINKERP_M11_EMAIL_SEND_ENABLED');
+        $emailTask = self::on($flags, 'DINKERP_M11_TASKS_EMAIL_ENABLED');
         $pushQueue = self::on($flags, 'DINKERP_M11_PUSH_QUEUE_ENABLED');
         $pushSend = self::on($flags, 'DINKERP_M11_PUSH_SEND_ENABLED');
+        if ($emailTask && ! $checks['smtp']) {
+            $blockers[] = 'EMAIL_TASKS_ON_WITHOUT_VALID_SMTP_CONFIG';
+        }
+        if ($emailTask && ! $emailSend) {
+            $warnings[] = 'EMAIL_TASKS_ON_SEND_OFF_NO_SCHEDULE';
+        }
         if (! $checks['smtp']) {
             if ($emailSend) {
                 $blockers[] = 'EMAIL_SEND_ON_WITHOUT_VALID_SMTP_CONFIG';

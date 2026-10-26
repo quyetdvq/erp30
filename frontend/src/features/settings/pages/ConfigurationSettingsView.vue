@@ -22,7 +22,7 @@ const loading = ref(false)
 const saving = ref(false)
 const error = ref('')
 const success = ref('')
-const sections = ['administration', 'producers', 'delivery', 'email', 'push'] as const
+const sections = ['administration', 'producers', 'delivery', 'email', 'push', 'scheduler'] as const
 const grouped = computed(() => sections.map((section) => ({
   section,
   items: snapshot.value?.items.filter((item) => item.section === section) ?? [],
@@ -63,6 +63,15 @@ async function save() {
   const oldPush = snapshot.value.items.find((item) => item.key === 'DINKERP_M11_PUSH_SEND_ENABLED')
   if (oldPush && !oldPush.enabled && draft[oldPush.key]
     && !window.confirm(t('runtimeConfiguration.confirmPushSend'))) return
+  const oldInAppTask = snapshot.value.items.find((item) => item.key === 'DINKERP_M11_TASKS_INAPP_ENABLED')
+  if (oldInAppTask && !oldInAppTask.enabled && draft[oldInAppTask.key]
+    && !window.confirm(t('runtimeConfiguration.confirmTasksInApp'))) return
+  const oldPushTask = snapshot.value.items.find((item) => item.key === 'DINKERP_M11_TASKS_PUSH_ENABLED')
+  if (oldPushTask && !oldPushTask.enabled && draft[oldPushTask.key]
+    && !window.confirm(t('runtimeConfiguration.confirmTasksPush'))) return
+  const oldEmailTask = snapshot.value.items.find((item) => item.key === 'DINKERP_M11_TASKS_EMAIL_ENABLED')
+  if (oldEmailTask && !oldEmailTask.enabled && draft[oldEmailTask.key]
+    && !window.confirm(t('runtimeConfiguration.confirmTasksEmail'))) return
   saving.value = true
   error.value = ''
   success.value = ''
@@ -109,6 +118,9 @@ onMounted(() => { void reload() })
       <div v-if="snapshot" class="sections">
         <section v-for="group in grouped" :key="group.section" class="group">
           <h2>{{ t(`runtimeConfiguration.sections.${group.section}`) }}</h2>
+          <p v-if="group.section === 'scheduler'" class="scheduler-note">
+            {{ t('runtimeConfiguration.schedulerNote') }}
+          </p>
           <label v-for="item in group.items" :key="item.key" class="flag">
             <input v-model="draft[item.key]" type="checkbox" :disabled="!canEdit || saving" />
             <span>
@@ -138,6 +150,7 @@ onMounted(() => { void reload() })
 .flag span { display: flex; flex-direction: column; gap: 4px; overflow-wrap: anywhere; }
 .flag small { opacity: .75; }
 .key { font-family: monospace; }
+.scheduler-note { font-size: .9rem; opacity: .85; }
 .actions { display: flex; flex-wrap: wrap; align-items: center; gap: 12px; margin-top: 18px; }
 .actions button { padding: 8px 16px; border-radius: 6px; border: 1px solid #8297a9; background: transparent; color: inherit; cursor: pointer; }
 .actions button:disabled { opacity: .5; cursor: not-allowed; }

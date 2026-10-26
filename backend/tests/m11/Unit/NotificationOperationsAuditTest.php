@@ -81,6 +81,23 @@ final class NotificationOperationsAuditTest extends TestCase
         self::assertContains('EMAIL_QUEUE_ON_SMTP_NOT_CONFIGURED', $result['warnings']);
     }
 
+    public function testEmailSchedulerRequiresValidSmtpAndWarnsWhileSendIsOff(): void
+    {
+        $snapshot = self::base();
+        $snapshot['flags']['DINKERP_M11_TASKS_EMAIL_ENABLED']['enabled'] = true;
+        $snapshot['credentials']['smtp'] = false;
+        $result = NotificationOperationsAuditRules::assess($snapshot);
+        self::assertContains('EMAIL_TASKS_ON_WITHOUT_VALID_SMTP_CONFIG', $result['blockers']);
+        self::assertContains('EMAIL_TASKS_ON_SEND_OFF_NO_SCHEDULE', $result['warnings']);
+        $snapshot['credentials']['smtp'] = true;
+        $result = NotificationOperationsAuditRules::assess($snapshot);
+        self::assertTrue($result['configuration_pass']);
+        self::assertContains('EMAIL_TASKS_ON_SEND_OFF_NO_SCHEDULE', $result['warnings']);
+        $snapshot['flags']['DINKERP_M11_EMAIL_SEND_ENABLED']['enabled'] = true;
+        $result = NotificationOperationsAuditRules::assess($snapshot);
+        self::assertNotContains('EMAIL_TASKS_ON_SEND_OFF_NO_SCHEDULE', $result['warnings']);
+    }
+
     public function testPushOnWithBrokenStorageKeyOrMissingVapidIsBlocking(): void
     {
         $snapshot = self::base();
@@ -135,7 +152,14 @@ final class NotificationOperationsAuditTest extends TestCase
         self::assertFalse(NotificationSmtpSender::configurationReady($config, "sender@example.test\r\nBcc:test@example.test"));
         $config->SMTPCrypto = '';
         self::assertFalse(NotificationSmtpSender::configurationReady($config, 'sender@example.test'));
+        // Port 465 is implicit TLS in CodeIgniter; STARTTLS on 465 is rejected.
+        $config->SMTPPort = 465;
+        self::assertTrue(NotificationSmtpSender::configurationReady($config, 'sender@example.test'));
+        $config->SMTPCrypto = 'ssl';
+        self::assertTrue(NotificationSmtpSender::configurationReady($config, 'sender@example.test'));
         $config->SMTPCrypto = 'tls';
+        self::assertFalse(NotificationSmtpSender::configurationReady($config, 'sender@example.test'));
+        $config->SMTPPort = 587;
         $config->SMTPPass = '';
         self::assertFalse(NotificationSmtpSender::configurationReady($config, 'sender@example.test'));
     }
