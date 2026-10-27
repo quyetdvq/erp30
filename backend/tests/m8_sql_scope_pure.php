@@ -41,7 +41,23 @@ $rows=S::listRows('18446744073709551615',Q::parse(['filter'=>['row_status'=>'ERR
 $ok(str_contains($rows['count_sql'],'import_job_id = ?'),'row results constrained to visible job ID');
 $ok($rows['count_binds'][0]==='18446744073709551615','exact large bigint bind');
 $ok(count($rows['count_binds'])===substr_count($rows['count_sql'],'?'),'row count binds');
-$ok(str_contains($rows['rows_sql'],'ORDER BY row_number ASC'),'deterministic row results');
+$ok(str_contains($rows['rows_sql'],'ORDER BY `row_number` ASC'),'deterministic quoted row results');
+// Regression: row_number is reserved in MariaDB >= 10.7.1 (Hostinger), but
+// accepted unquoted by older MariaDB (XAMPP 10.4). Test every allowed sort
+// in both directions; the tie-breaker must be quoted as well.
+foreach (['row_number','row_status','entity_key','created_at'] as $column) {
+    foreach (['ASC'=>false,'DESC'=>true] as $direction=>$descending) {
+        $sort=($descending?'-':'').$column;
+        $actual=S::listRows('11',Q::parse(['sort'=>$sort,'page'=>1,'page_size'=>15],true),'dinktech_');
+        $order='ORDER BY `'.$column.'` '.$direction
+            .($column==='row_number'?'':', `row_number` ASC').' LIMIT 15 OFFSET 0';
+        $ok(str_contains($actual['rows_sql'],$order),"reserved-safe sort: {$sort}");
+        $ok(str_contains($actual['rows_sql'],'FROM `dinktech_import_job_rows` WHERE import_job_id = ?'),
+            "bounded import job scope: {$sort}");
+        $ok($actual['rows_binds']===['11'] && $actual['count_binds']===['11'],
+            "job scope binds unchanged: {$sort}");
+    }
+}
 $bad(static fn()=>Q::parse(['page'=>0]),'zero page');
 $bad(static fn()=>Q::parse(['page_size'=>101]),'oversize page');
 $bad(static fn()=>Q::parse(['sort'=>'id;DROP']),'unsafe sort');

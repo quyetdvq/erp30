@@ -33,7 +33,7 @@ export function useShellHeader(currentTabKey: ComputedRef<string>) {
   const localeLabel = computed(() => (locale.value === 'vi' ? 'Tiếng Việt' : 'English'))
   const themeIcon = computed(() => (workspace.themeMode === 'dark' ? SunnyOutline : MoonOutline))
   const unreadNotifications = computed(() => inbox.unreadCount)
-  const notificationItems = computed(() => inbox.items.slice(0, 5))
+  const notificationItems = computed(() => inbox.previewItems.slice(0, 5))
   let poll: ReturnType<typeof setInterval> | null = null
 
   function canPoll(): boolean {
@@ -54,7 +54,7 @@ export function useShellHeader(currentTabKey: ComputedRef<string>) {
   watch(notificationsOpen, (open) => {
     if (open && canPoll()) {
       refreshIfVisible()
-      void inbox.loadPage('all')
+      void inbox.loadPreview()
     }
   })
   onMounted(() => {
@@ -77,9 +77,16 @@ export function useShellHeader(currentTabKey: ComputedRef<string>) {
   function toggleTheme(): void {
     workspace.setThemeMode(workspace.themeMode === 'dark' ? 'light' : 'dark')
   }
-  function openInbox(): void {
+  function closeNotifications(): void {
     notificationsOpen.value = false
+  }
+  function openInbox(): void {
+    closeNotifications()
     void router.push('/notifications')
+  }
+  async function markOneNotificationRead(id: string): Promise<void> {
+    if (!inboxUiEnabled) return
+    try { await inbox.markRead(id) } catch { /* API error boundary reports server errors. */ }
   }
   async function markNotificationsRead(): Promise<void> {
     if (!inboxUiEnabled || inbox.unreadCount === 0) return
@@ -104,6 +111,7 @@ export function useShellHeader(currentTabKey: ComputedRef<string>) {
   return {
     auth, inbox, inboxUiEnabled, userMenuOpen, notificationsOpen, localeOptions, userOptions,
     localeLabel, themeIcon, unreadNotifications, notificationItems,
-    handleLocale, toggleTheme, markNotificationsRead, openInbox, handleUserAction,
+    handleLocale, toggleTheme, markNotificationsRead, markOneNotificationRead,
+    closeNotifications, openInbox, handleUserAction,
   }
 }

@@ -28,8 +28,14 @@ final class NotificationOperationsAuditRules
                 $warnings[] = 'RUNTIME_FLAG_NOT_PERSISTED:' . $name;
             }
         }
-        foreach ($snapshot['policy_guards'] as $key => $valid) {
-            if (! $valid) {
+        // A partially populated snapshot must never be reported healthy. Validate
+        // every explicit-consent policy required by the deployed catalog, not only
+        // keys that happened to be present in a supplied reader/snapshot.
+        foreach (NotificationCatalog::definitions() as $key => $definition) {
+            if (($definition['requires_explicit_consent'] ?? false) !== true) {
+                continue;
+            }
+            if (($snapshot['policy_guards'][$key] ?? false) !== true) {
                 $blockers[] = 'CONSENT_POLICY_INVALID:' . $key;
             }
         }

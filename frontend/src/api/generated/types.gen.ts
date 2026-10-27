@@ -151,6 +151,92 @@ export type WorkflowNotificationAssigneesResponse = SuccessResponse & {
     data?: WorkflowNotificationAssignees;
 };
 
+export type NotificationOperationsQueue = {
+    available: boolean;
+    /**
+     * Counts by allowlisted queue-specific status, absent statuses have zero rows.
+     */
+    status_counts: {
+        [key: string]: number;
+    };
+    expired_leases: number;
+    overdue_ready_15m: number;
+};
+
+export type NotificationOperationsDiagnosticsQueue = {
+    available: boolean;
+    ready: number;
+    retry_ready: number;
+    retry_delayed: number;
+    dead: number;
+    expired_leases: number;
+    overdue_ready_15m: number;
+    overdue_ready_60m: number;
+    oldest_ready_minutes: number | null;
+    /**
+     * Counts of RETRY and DEAD rows only, categorized server-side. Raw error codes are never exposed.
+     */
+    error_categories: {
+        TRANSPORT?: number;
+        LEASE_EXHAUSTED?: number;
+        POLICY?: number;
+        IDENTITY?: number;
+        OTHER?: number;
+        UNSPECIFIED?: number;
+    };
+    findings: Array<'QUEUE_UNAVAILABLE' | 'DEAD_PRESENT' | 'EXPIRED_LEASE' | 'OVERDUE_60M' | 'OVERDUE_15M' | 'RETRY_READY' | 'RETRY_DELAYED'>;
+};
+
+export type NotificationOperationsDiagnostics = {
+    as_of_utc: string;
+    queues: {
+        outbox: NotificationOperationsDiagnosticsQueue;
+        email: NotificationOperationsDiagnosticsQueue;
+        push: NotificationOperationsDiagnosticsQueue;
+    };
+    cron: {
+        health: 'UNKNOWN';
+        reason: 'TELEMETRY_UNAVAILABLE';
+    };
+};
+
+export type NotificationOperationsDiagnosticsResponse = SuccessResponse & {
+    data?: NotificationOperationsDiagnostics;
+};
+
+export type NotificationOperationsOverview = {
+    as_of_utc: string;
+    queues: {
+        outbox: NotificationOperationsQueue;
+        email: NotificationOperationsQueue;
+        push: NotificationOperationsQueue;
+    };
+    runtime_switches: [
+        NotificationRuntimeSwitch,
+        NotificationRuntimeSwitch,
+        NotificationRuntimeSwitch,
+        NotificationRuntimeSwitch,
+        NotificationRuntimeSwitch,
+        NotificationRuntimeSwitch,
+        NotificationRuntimeSwitch,
+        NotificationRuntimeSwitch,
+        NotificationRuntimeSwitch,
+        NotificationRuntimeSwitch,
+        NotificationRuntimeSwitch,
+        NotificationRuntimeSwitch
+    ];
+    cron: {
+        health: 'UNKNOWN';
+        reason: 'TELEMETRY_UNAVAILABLE';
+        last_tick_at: null;
+    };
+    telemetry_available: false;
+};
+
+export type NotificationOperationsOverviewResponse = SuccessResponse & {
+    data?: NotificationOperationsOverview;
+};
+
 export type NotificationRuntimeResponse = SuccessResponse & {
     data?: NotificationRuntimeSnapshot;
 };
@@ -198,6 +284,22 @@ export type NotificationInboxResponse = SuccessResponse & {
     data?: {
         items: Array<NotificationInboxItem>;
         next_cursor: string | null;
+    };
+};
+
+export type MyWorkflowItem = {
+    resource_type: string;
+    resource_id: string;
+    current_state: string;
+    available_actions: Array<BusinessWorkflowOption>;
+    selected_at: string;
+};
+
+export type MyWorkflowResponse = SuccessResponse & {
+    data?: {
+        items: Array<MyWorkflowItem>;
+        next_cursor: string | null;
+        execution_enabled: boolean;
     };
 };
 
@@ -8005,6 +8107,100 @@ export type UpdateNotificationRuntimeConfigurationResponses = {
 
 export type UpdateNotificationRuntimeConfigurationResponse = UpdateNotificationRuntimeConfigurationResponses[keyof UpdateNotificationRuntimeConfigurationResponses];
 
+export type GetNotificationOperationsOverviewData = {
+    body?: never;
+    headers?: {
+        /**
+         * Supported request language. Unsupported values fall back to vi.
+         */
+        'Accept-Language'?: 'vi' | 'en';
+        /**
+         * Client request correlation identifier; invalid or missing values are replaced by a generated UUID.
+         */
+        'X-Request-ID'?: RequestId;
+    };
+    path?: never;
+    query?: never;
+    url: '/api/v1/notification-operations/overview';
+};
+
+export type GetNotificationOperationsOverviewErrors = {
+    /**
+     * Unauthenticated or invalid authentication.
+     */
+    401: ErrorResponse;
+    /**
+     * Visible target but action denied.
+     */
+    403: ErrorResponse;
+    /**
+     * Semantically invalid request.
+     */
+    422: ErrorResponse;
+    /**
+     * Unexpected server error without internal diagnostics.
+     */
+    500: ErrorResponse;
+};
+
+export type GetNotificationOperationsOverviewError = GetNotificationOperationsOverviewErrors[keyof GetNotificationOperationsOverviewErrors];
+
+export type GetNotificationOperationsOverviewResponses = {
+    /**
+     * Safe read-only Notification queue aggregate.
+     */
+    200: NotificationOperationsOverviewResponse;
+};
+
+export type GetNotificationOperationsOverviewResponse = GetNotificationOperationsOverviewResponses[keyof GetNotificationOperationsOverviewResponses];
+
+export type GetNotificationOperationsDiagnosticsData = {
+    body?: never;
+    headers?: {
+        /**
+         * Supported request language. Unsupported values fall back to vi.
+         */
+        'Accept-Language'?: 'vi' | 'en';
+        /**
+         * Client request correlation identifier; invalid or missing values are replaced by a generated UUID.
+         */
+        'X-Request-ID'?: RequestId;
+    };
+    path?: never;
+    query?: never;
+    url: '/api/v1/notification-operations/diagnostics';
+};
+
+export type GetNotificationOperationsDiagnosticsErrors = {
+    /**
+     * Unauthenticated or invalid authentication.
+     */
+    401: ErrorResponse;
+    /**
+     * Visible target but action denied.
+     */
+    403: ErrorResponse;
+    /**
+     * Semantically invalid request.
+     */
+    422: ErrorResponse;
+    /**
+     * Unexpected server error without internal diagnostics.
+     */
+    500: ErrorResponse;
+};
+
+export type GetNotificationOperationsDiagnosticsError = GetNotificationOperationsDiagnosticsErrors[keyof GetNotificationOperationsDiagnosticsErrors];
+
+export type GetNotificationOperationsDiagnosticsResponses = {
+    /**
+     * Safe read-only aggregate M11 queue diagnostics.
+     */
+    200: NotificationOperationsDiagnosticsResponse;
+};
+
+export type GetNotificationOperationsDiagnosticsResponse = GetNotificationOperationsDiagnosticsResponses[keyof GetNotificationOperationsDiagnosticsResponses];
+
 export type ListNotificationPoliciesData = {
     body?: never;
     headers?: {
@@ -8343,6 +8539,53 @@ export type RevokeOwnBrowserPushDeviceResponses = {
 
 export type RevokeOwnBrowserPushDeviceResponse = RevokeOwnBrowserPushDeviceResponses[keyof RevokeOwnBrowserPushDeviceResponses];
 
+export type ListOwnActionableWorkflowsData = {
+    body?: never;
+    headers?: {
+        /**
+         * Supported request language. Unsupported values fall back to vi.
+         */
+        'Accept-Language'?: 'vi' | 'en';
+        /**
+         * Client request correlation identifier; invalid or missing values are replaced by a generated UUID.
+         */
+        'X-Request-ID'?: RequestId;
+    };
+    path?: never;
+    query?: {
+        resource_type?: 'all' | 'province' | 'ward' | 'organization' | 'department' | 'position' | 'employee' | 'product_group' | 'product_uom' | 'product' | 'price_list' | 'organization_contact' | 'employee_contact';
+        page_size?: number;
+        cursor?: string;
+    };
+    url: '/api/v1/my-work';
+};
+
+export type ListOwnActionableWorkflowsErrors = {
+    /**
+     * Unauthenticated or invalid authentication.
+     */
+    401: ErrorResponse;
+    /**
+     * Semantically invalid request.
+     */
+    422: ErrorResponse;
+    /**
+     * Unexpected server error without internal diagnostics.
+     */
+    500: ErrorResponse;
+};
+
+export type ListOwnActionableWorkflowsError = ListOwnActionableWorkflowsErrors[keyof ListOwnActionableWorkflowsErrors];
+
+export type ListOwnActionableWorkflowsResponses = {
+    /**
+     * Current authorized Workflow actions for selected notification recipients.
+     */
+    200: MyWorkflowResponse;
+};
+
+export type ListOwnActionableWorkflowsResponse = ListOwnActionableWorkflowsResponses[keyof ListOwnActionableWorkflowsResponses];
+
 export type GetNotificationSummaryData = {
     body?: never;
     headers?: {
@@ -8398,6 +8641,18 @@ export type ListOwnNotificationsData = {
     query?: {
         filter?: 'all' | 'unread';
         page_size?: number;
+        /**
+         * Fixed allowlisted event group.
+         */
+        event_group?: 'all' | 'import' | 'workflow';
+        /**
+         * Inclusive UTC calendar date; requires to.
+         */
+        from?: string;
+        /**
+         * Inclusive UTC calendar date; requires from.
+         */
+        to?: string;
         cursor?: string;
     };
     url: '/api/v1/notifications';

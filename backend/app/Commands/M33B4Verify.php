@@ -50,10 +50,15 @@ final class M33B4Verify extends BaseCommand
                 }
             }
         }
-        if (count(ResourceStateCatalog::independentTypes()) !== 10) {
-            throw new UnexpectedValueException('Official ten Resource State exceptions changed.');
+        // M11 adds independent SYSTEM Notification Resources to the original
+        // ten exceptions. Verify that the historical ten still exist without
+        // rejecting separately approved additive capabilities.
+        $original = ['authorization_group','authorization_log','display_setting',
+            'employee_assignment','import_job','lifecycle','policy','user','workflow_state','resource'];
+        if (array_diff($original, ResourceStateCatalog::independentTypes()) !== []) {
+            throw new UnexpectedValueException('Original ten Resource State exceptions changed.');
         }
-        CLI::write('PASS: Workflow/Lifecycle mutation Actions and 10 exception catalog verified.', 'green');
+        CLI::write('PASS: Workflow/Lifecycle mutation Actions and original ten exceptions verified.', 'green');
         $states = $this->many($db->table('workflow_states')->select('id, status')
             ->orderBy('id', 'ASC')->limit($targetLimit)->get(), 'workflow state sample');
         foreach ($states as $state) {

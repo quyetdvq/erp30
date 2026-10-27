@@ -486,48 +486,6 @@
   font-size: 14px;
 }
 
-.notification-list {
-  display: grid;
-  gap: 2px;
-  padding-top: 5px;
-}
-
-.notification-item {
-  display: flex;
-  gap: 10px;
-  padding: 10px 4px;
-  border-bottom: 1px solid #f0f3f5;
-}
-
-.notification-item:last-child {
-  border-bottom: 0;
-}
-
-.notification-item > div {
-  min-width: 0;
-}
-
-.notification-item strong {
-  color: #294b65;
-  font-size: 12px;
-}
-
-.notification-item p {
-  margin: 3px 0 0;
-  color: #7b8d9d;
-  font-size: 11px;
-  line-height: 1.45;
-}
-
-.notification-dot {
-  width: 8px;
-  height: 8px;
-  flex: 0 0 auto;
-  margin-top: 5px;
-  border-radius: 50%;
-  background: #0b7dbd;
-}
-
 .erp-shell.theme-dark,
 .erp-shell.theme-dark .shell-body,
 .erp-shell.theme-dark .workspace-layout {
@@ -545,7 +503,6 @@
 .erp-shell.theme-dark .sider-heading,
 .erp-shell.theme-dark .sider-footer,
 .erp-shell.theme-dark .workspace-search,
-.erp-shell.theme-dark .notification-item p,
 .erp-shell.theme-dark .command-modal-footer {
   color: #a9bac7;
 }
@@ -587,7 +544,6 @@
 .erp-shell.theme-dark .sider-footer,
 .erp-shell.theme-dark .workspace-tabs-wrap,
 .erp-shell.theme-dark .notification-header,
-.erp-shell.theme-dark .notification-item,
 .erp-shell.theme-dark .command-modal-footer {
   border-color: #2a3b49;
 }
@@ -605,8 +561,7 @@
 }
 
 .erp-shell.theme-dark .command-modal-header strong,
-.erp-shell.theme-dark .notification-header,
-.erp-shell.theme-dark .notification-item strong {
+.erp-shell.theme-dark .notification-header {
   color: #e3edf3;
 }
 

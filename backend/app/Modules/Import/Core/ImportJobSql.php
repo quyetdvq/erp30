@@ -57,8 +57,11 @@ final class ImportJobSql
         $sql=' FROM '.self::table('import_job_rows',$prefix).' WHERE '.implode(' AND ',$conditions);
         $offset=($query['page']-1)*$query['page_size'];
         return ['count_sql'=>'SELECT COUNT(*) AS total'.$sql,
-            'rows_sql'=>'SELECT *'.$sql.' ORDER BY '.$query['sort'].' '.$query['direction']
-                .($query['sort']==='row_number'?'':', row_number ASC').' LIMIT '.$query['page_size'].' OFFSET '.$offset,
+            // ROW_NUMBER became a reserved identifier in MariaDB 10.7+. The
+            // sort column is allowlisted by ImportListQuery::parse(). Quote both
+            // the selected sort and the stable row-number tie-breaker.
+            'rows_sql'=>'SELECT *'.$sql.' ORDER BY `'.$query['sort'].'` '.$query['direction']
+                .($query['sort']==='row_number'?'':', `row_number` ASC').' LIMIT '.$query['page_size'].' OFFSET '.$offset,
             'count_binds'=>$binds,'rows_binds'=>$binds];
     }
 

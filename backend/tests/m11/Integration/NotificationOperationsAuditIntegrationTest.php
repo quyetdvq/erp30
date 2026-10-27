@@ -39,6 +39,8 @@ final class NotificationOperationsAuditIntegrationTest extends TestCase
         // erp_test may have Push from 022 while missing Email altogether. Build an
         // isolated, known-good policy fixture instead of depending on seed history.
         $this->setConsentPolicy('import.completed.email');
+        $this->setConsentPolicy('import.completed_with_errors.email');
+        $this->setConsentPolicy('import.failed.email');
         $this->setConsentPolicy('import.completed.push');
         $before = $this->consentRows();
         $auditBefore = $this->db->table('configuration_audit_events')->countAllResults();
@@ -52,6 +54,8 @@ final class NotificationOperationsAuditIntegrationTest extends TestCase
         self::assertArrayHasKey('DINKERP_M11_TASKS_PUSH_ENABLED', $snapshot['flags']);
         self::assertArrayHasKey('DINKERP_M11_TASKS_EMAIL_ENABLED', $snapshot['flags']);
         self::assertTrue($snapshot['policy_guards']['import.completed.email']);
+        self::assertTrue($snapshot['policy_guards']['import.completed_with_errors.email']);
+        self::assertTrue($snapshot['policy_guards']['import.failed.email']);
         self::assertTrue($snapshot['policy_guards']['import.completed.push']);
         self::assertTrue($snapshot['queues']['email']['available']);
         self::assertTrue($snapshot['queues']['push']['available']);
@@ -75,6 +79,8 @@ final class NotificationOperationsAuditIntegrationTest extends TestCase
     public function testUnsafeEmailDefaultOrEpochStillFailsClosed(): void
     {
         $this->setConsentPolicy('import.completed.email');
+        $this->setConsentPolicy('import.completed_with_errors.email');
+        $this->setConsentPolicy('import.failed.email');
         $this->setConsentPolicy('import.completed.push');
         $this->db->table('notification_settings')->where('setting_key', 'import.completed.email')
             ->update(['default_value' => 1]);
@@ -86,6 +92,23 @@ final class NotificationOperationsAuditIntegrationTest extends TestCase
             ->update(['default_value' => 0, 'override_epoch' => '0']);
         $snapshot = (new NotificationOperationsAuditReader($this->db))->snapshot();
         self::assertFalse($snapshot['policy_guards']['import.completed.email']);
+    }
+
+    public function testNewEmailPolicyMissingOrUnsafeFailsOperationsGuard(): void
+    {
+        foreach (['import.completed_with_errors.email', 'import.failed.email'] as $key) {
+            $this->setConsentPolicy($key);
+        }
+        $reader = new NotificationOperationsAuditReader($this->db);
+        $safe = $reader->snapshot();
+        self::assertTrue($safe['policy_guards']['import.failed.email']);
+        self::assertTrue($safe['policy_guards']['import.completed_with_errors.email']);
+        $this->db->table('notification_settings')->where('setting_key', 'import.failed.email')
+            ->update(['default_value' => 1]);
+        $unsafe = $reader->snapshot();
+        self::assertFalse($unsafe['policy_guards']['import.failed.email']);
+        self::assertContains('CONSENT_POLICY_INVALID:import.failed.email',
+            \App\Modules\Notifications\NotificationOperationsAuditRules::assess($unsafe)['blockers']);
     }
 
     public function testPendingAndExpiredMetricsSeeOwnFixturesWithoutClaiming(): void
@@ -132,7 +155,7 @@ final class NotificationOperationsAuditIntegrationTest extends TestCase
     private function consentRows(): array
     {
         return $this->db->table('notification_settings')
-            ->whereIn('setting_key', ['import.completed.email', 'import.completed.push'])
+            ->whereIn('setting_key', ['import.completed.email', 'import.completed_with_errors.email', 'import.failed.email', 'import.completed.push'])
             ->orderBy('setting_key', 'ASC')->get()->getResultArray();
     }
 }

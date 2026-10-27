@@ -130,11 +130,15 @@ final class NotificationEmailWorker
             if ($user === null || ! WorkflowNotificationRules::activeUser($user)) {
                 return $this->terminal($id, $token, 'CANCELLED', 'M11_EMAIL_USER_INACTIVE');
             }
+            $emailKey = NotificationEmailRules::policyKeyForEvent((string) $row['event_type']);
+            if ($emailKey === null) {
+                return $this->terminal($id, $token, 'DEAD', 'M11_EMAIL_UNSUPPORTED_EVENT');
+            }
             $policy = $this->query("SELECT s.*,p.override_value AS preference_value,"
                 . 'p.override_epoch AS preference_epoch,p.user_revision AS preference_revision '
                 . "FROM {$this->settings} s LEFT JOIN {$this->preferences} p"
                 . ' ON p.setting_key=s.setting_key AND p.user_id=? WHERE s.setting_key=?',
-                [$userId, 'import.completed.email'])->getRowArray();
+                [$userId, $emailKey])->getRowArray();
             if ($policy === null) {
                 return $this->terminal($id, $token, 'CANCELLED', 'M11_EMAIL_POLICY_MISSING');
             }
@@ -144,7 +148,7 @@ final class NotificationEmailWorker
                 'user_revision' => $policy['preference_revision'],
             ];
             // Queue toggle stops NEW receipts, not previously committed deliveries.
-            if (! NotificationEmailRules::consented($policy, $pref, false)) {
+            if (! NotificationEmailRules::consentedForPolicyKey($emailKey, $policy, $pref, false)) {
                 return $this->terminal($id, $token, 'CANCELLED', 'M11_EMAIL_CONSENT_REVOKED');
             }
             $identities = $this->query("SELECT secret FROM {$this->identities} WHERE user_id=? "

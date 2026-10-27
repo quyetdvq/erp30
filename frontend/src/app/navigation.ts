@@ -21,6 +21,7 @@ import {
   RepeatOutline,
   ScaleOutline,
   SettingsOutline,
+  StatsChartOutline,
   ShieldCheckmarkOutline,
   StarOutline,
   TimeOutline,
@@ -47,6 +48,7 @@ export type NavigationItem = {
 
 export const SYSTEM_NAV_PATHS = new Set([
   '/system/configuration-settings',
+  '/system/notification-operations',
   '/system/display-settings',
   '/security/users',
   '/security/authorization-groups',
@@ -68,6 +70,7 @@ export const ORGANIZATION_NAV_PATHS = new Set([
 
 export const navItems: NavigationItem[] = [
   { labelKey: 'nav.dashboard', to: '/', icon: HomeOutline },
+  { labelKey: 'nav.myWork', to: '/my-work', icon: BriefcaseOutline },
   {
     labelKey: 'nav.organizations',
     to: '/organizations',
@@ -103,6 +106,12 @@ export const navItems: NavigationItem[] = [
     to: '/people/employees',
     icon: IdCardOutline,
     permission: 'employee.view',
+  },
+  {
+    labelKey: 'nav.notificationOperations',
+    to: '/system/notification-operations',
+    icon: StatsChartOutline,
+    permission: 'notification_operations.view',
   },
   {
     labelKey: 'nav.configurationSettings',

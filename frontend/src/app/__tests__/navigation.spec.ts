@@ -35,6 +35,14 @@ describe('workspace navigation contract', () => {
     expect(unknown).toEqual([])
   })
 
+  it('gates Operations separately from Notification Settings', () => {
+    const operations = flatten(navItems).find(item => item.to === '/system/notification-operations')
+    const settings = flatten(navItems).find(item => item.to === '/system/configuration-settings')
+    expect(operations?.permission).toBe('notification_operations.view')
+    expect(settings?.permission).toBe('notification_setting.view')
+    expect(operations?.permission).not.toBe(settings?.permission)
+  })
+
   it('keeps sidebar groups and recent-view hints internally consistent', () => {
     const items = flatten(navItems)
     const paths = new Set(items.map(({ to }) => to))

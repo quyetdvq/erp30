@@ -22,6 +22,7 @@ final class ResourceStateCatalog
         'authorization_log' => [],
         'display_setting' => [],
         'notification_setting' => [],
+        'notification_operations' => [],
         'employee_assignment' => ['ACTIVE', 'INACTIVE'],
         'import_job' => ['PENDING', 'PROCESSING', 'COMPLETED', 'COMPLETED_WITH_ERRORS', 'FAILED'],
         'lifecycle' => ['ACTIVE', 'INACTIVE'],

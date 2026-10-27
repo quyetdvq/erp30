@@ -5,10 +5,8 @@ declare(strict_types=1);
 namespace App\Modules\Notifications;
 
 use CodeIgniter\Database\BaseConnection;
-use App\Exceptions\DomainException;
-use App\Modules\Workflow\Execution\BusinessWorkflowRules;
-use App\Modules\Workflow\Execution\BusinessWorkflowService;
-use CodeIgniter\Shield\Entities\User;
+use App\Modules\Notifications\Events\NotificationEventHandlerFactory;
+use App\Modules\Notifications\Events\NotificationEventRegistry;
 use Closure;
 use RuntimeException;
 use Throwable;
@@ -18,11 +16,6 @@ final class NotificationDispatcher
 {
     private const LEASE_SECONDS = 120;
     private readonly string $outbox;
-    private readonly string $jobs;
-    private readonly string $users;
-    private readonly string $settings;
-    private readonly string $preferences;
-    private readonly string $inbox;
 
     /** Fault injection is strictly test-only; never expose it via flags or HTTP. */
     public function __construct(private readonly BaseConnection $db, private readonly ?Closure $testingBeforeAck = null)
@@ -31,11 +24,6 @@ final class NotificationDispatcher
             throw new RuntimeException('M11_TEST_HOOK_FORBIDDEN');
         }
         $this->outbox = $this->table('notification_outbox');
-        $this->jobs = $this->table('import_jobs');
-        $this->users = $this->table('users');
-        $this->settings = $this->table('notification_settings');
-        $this->preferences = $this->table('notification_user_preferences');
-        $this->inbox = $this->table('user_notifications');
     }
 
     /** @return array{claimed:int,processed:int,suppressed:int,retry:int,dead:int,paused:int,lost_lease:int} */
@@ -145,8 +133,18 @@ final class NotificationDispatcher
                 $this->commit();
                 return 'paused';
             }
-            $result = (string) $rows['source_type'] === 'workflow_transition'
-                ? $this->deliverWorkflow($rows) : $this->deliverImport($rows);
+            // A source alone is never sufficient. Unknown/mismatched pairs are
+            // permanent invalid events, not an implicit fallback to Import.
+            $definition = NotificationEventRegistry::find(
+                (string) $rows['event_type'], (string) $rows['source_type'],
+            );
+            if ($definition === null) {
+                throw new NotificationPermanentFailure('NOTIFICATION_INVALID_EVENT');
+            }
+            // Handler receives this exact connection; its writes and the ACK
+            // remain inside this transaction and the existing lease fence.
+            $handler = NotificationEventHandlerFactory::resolve($definition, $this->db);
+            $result = $handler->deliver($rows);
             // Multi-recipient fanout and ACK share a transaction. Do not commit
             // inserts from a worker whose lease expired during PBAC evaluation.
             if (! $this->ownsLease($id, $token)) {
@@ -157,9 +155,9 @@ final class NotificationDispatcher
             if ($this->testingBeforeAck !== null) {
                 ($this->testingBeforeAck)($id);
             }
-            $this->ack($id, $token, $result['status'], $result['reason']);
+            $this->ack($id, $token, $result->status, $result->reason);
             $this->commit();
-            return strtolower($result['status']);
+            return strtolower($result->status);
         } catch (NotificationPermanentFailure $e) {
             $this->db->transRollback();
             return $this->fail($id, $token, $e->reason, true);
@@ -170,268 +168,6 @@ final class NotificationDispatcher
             ]);
             return $this->fail($id, $token, 'NOTIFICATION_DISPATCH_FAILED', false);
         }
-    }
-
-    /** @param array<string,mixed> $event @return array{status:string,reason:?string} */
-    private function deliverImport(array $event): array
-    {
-        $id = (string) $event['source_id'];
-        if ((string) $event['source_type'] !== 'import_job'
-            || preg_match('/\A[1-9][0-9]*\z/D', $id) !== 1
-            || (string) $event['event_key'] !== "import-job:{$id}:terminal"
-            || ! in_array((string) $event['event_type'], ['import.completed','import.completed_with_errors','import.failed'], true)
-            || (string) $event['payload_json'] !== '{"schema":1}') {
-            throw new NotificationPermanentFailure('NOTIFICATION_INVALID_EVENT');
-        }
-        $job = $this->select("SELECT id,status,created_by,success_rows,error_rows FROM {$this->jobs} WHERE id=?", [$id])->getRowArray();
-        if ($job === null) {
-            throw new NotificationPermanentFailure('NOTIFICATION_SOURCE_NOT_FOUND');
-        }
-        try {
-            $type = NotificationDeliveryRules::importEventType((string) $job['status']);
-            $recipientId = NotificationDeliveryRules::shieldUserId($job['created_by']);
-        } catch (\InvalidArgumentException $e) {
-            throw new NotificationPermanentFailure('NOTIFICATION_INVALID_SOURCE', 0, $e);
-        }
-        if ($type !== (string) $event['event_type']) {
-            throw new NotificationPermanentFailure('NOTIFICATION_SOURCE_CHANGED');
-        }
-        if ($recipientId === null) {
-            return ['status' => 'SUPPRESSED', 'reason' => 'NOTIFICATION_NO_CREATOR']; // Explicit system job.
-        }
-        $user = $this->select("SELECT id,active,deleted_at FROM {$this->users} WHERE id=? FOR UPDATE", [$recipientId])->getRowArray();
-        if ($user === null) {
-            throw new NotificationPermanentFailure('NOTIFICATION_USER_NOT_FOUND');
-        }
-        if ((string) $user['active'] !== '1' || $user['deleted_at'] !== null) {
-            return ['status' => 'SUPPRESSED', 'reason' => 'NOTIFICATION_RECIPIENT_INACTIVE'];
-        }
-        $key = $type . '.in_app';
-        $definition = NotificationCatalog::definitions()[$key] ?? null;
-        if ($definition === null || $definition['capability'] !== 'AVAILABLE') {
-            throw new NotificationPermanentFailure('NOTIFICATION_INVALID_EVENT_TYPE');
-        }
-        // One JOIN / one statement: SYSTEM and USER version data are seen together
-        // under MariaDB READ-COMMITTED. The producer toggle is NOT delivery policy.
-        $policy = $this->select("SELECT s.*,p.override_value AS preference_value,"
-            . "p.override_epoch AS preference_epoch,p.user_revision AS preference_revision"
-            . " FROM {$this->settings} s LEFT JOIN {$this->preferences} p"
-            . ' ON p.setting_key=s.setting_key AND p.user_id=? WHERE s.setting_key=?',
-            [$recipientId, $key])->getRowArray();
-        if ($policy === null) {
-            throw new NotificationPermanentFailure('NOTIFICATION_POLICY_MISSING');
-        }
-        $pref = $policy['preference_revision'] === null ? null : [
-            'override_value' => $policy['preference_value'],
-            'override_epoch' => $policy['preference_epoch'],
-            'user_revision' => $policy['preference_revision'],
-        ];
-        try {
-            $effective = NotificationPolicyResolver::preferenceView($key, $policy, $definition, $pref);
-        } catch (Throwable $e) {
-            throw new NotificationPermanentFailure('NOTIFICATION_POLICY_INVALID', 0, $e);
-        }
-        // M11.3B: a separate durable SMTP receipt is created within the SAME
-        // Outbox ACK transaction. It is sent by another worker only after COMMIT.
-        // In-App disabled does not silently disable an explicitly opted-in Email.
-        $sendInApp = (bool) $effective['effective_value'];
-        $queueEmail = false;
-        $success = max(0, (int) $job['success_rows']);
-        $errors = max(0, (int) $job['error_rows']);
-        $params = json_encode(['success_rows' => $success, 'error_rows' => $errors], JSON_THROW_ON_ERROR);
-        if ($type === 'import.completed' && NotificationFlags::emailQueueEnabled($this->db)) {
-            $emailKey = 'import.completed.email';
-            $emailPolicy = $this->select("SELECT s.*,p.override_value AS preference_value,"
-                . 'p.override_epoch AS preference_epoch,p.user_revision AS preference_revision'
-                . " FROM {$this->settings} s LEFT JOIN {$this->preferences} p"
-                . ' ON p.setting_key=s.setting_key AND p.user_id=? WHERE s.setting_key=?',
-                [$recipientId, $emailKey])->getRowArray();
-            if ($emailPolicy === null) {
-                throw new NotificationPermanentFailure('NOTIFICATION_EMAIL_POLICY_MISSING');
-            }
-            $emailPref = $emailPolicy['preference_revision'] === null ? null : [
-                'override_value' => $emailPolicy['preference_value'],
-                'override_epoch' => $emailPolicy['preference_epoch'],
-                'user_revision' => $emailPolicy['preference_revision'],
-            ];
-            try {
-                $queueEmail = NotificationEmailRules::consented($emailPolicy, $emailPref);
-            } catch (Throwable $e) {
-                throw new NotificationPermanentFailure('NOTIFICATION_EMAIL_POLICY_INVALID', 0, $e);
-            }
-            if ($queueEmail) {
-                $receipts = $this->table('notification_email_deliveries');
-                $this->exec("INSERT INTO {$receipts}"
-                    . ' (event_key,recipient_user_id,event_type,params_json,status,attempts,available_at,created_at)'
-                    . " VALUES (?,?,?,?,'PENDING',0,UTC_TIMESTAMP(6),UTC_TIMESTAMP(6))"
-                    . ' ON DUPLICATE KEY UPDATE id=id',
-                    [(string) $event['event_key'], $recipientId, $type, $params]);
-            }
-        }
-        // M11.3C: one opaque payload-free Push signal per active device, in the SAME
-        // Outbox ACK transaction. No external HTTP calls or endpoint plaintext here.
-        $queuePush = false;
-        if ($type === 'import.completed' && NotificationFlags::pushQueueEnabled($this->db)) {
-            $pushKey = 'import.completed.push';
-            $pushPolicy = $this->select("SELECT s.*,p.override_value AS preference_value,"
-                . 'p.override_epoch AS preference_epoch,p.user_revision AS preference_revision'
-                . " FROM {$this->settings} s LEFT JOIN {$this->preferences} p"
-                . ' ON p.setting_key=s.setting_key AND p.user_id=? WHERE s.setting_key=?',
-                [$recipientId, $pushKey])->getRowArray();
-            if ($pushPolicy === null) {
-                throw new NotificationPermanentFailure('NOTIFICATION_PUSH_POLICY_MISSING');
-            }
-            $pushPref = $pushPolicy['preference_revision'] === null ? null : [
-                'override_value' => $pushPolicy['preference_value'],
-                'override_epoch' => $pushPolicy['preference_epoch'],
-                'user_revision' => $pushPolicy['preference_revision'],
-            ];
-            try {
-                $pushConsent = NotificationPushRules::consented($pushPolicy, $pushPref);
-            } catch (Throwable $e) {
-                throw new NotificationPermanentFailure('NOTIFICATION_PUSH_POLICY_INVALID', 0, $e);
-            }
-            if ($pushConsent) {
-                $subs = $this->table('notification_push_subscriptions');
-                $receipts = $this->table('notification_push_deliveries');
-                $ids = $this->select("SELECT id FROM {$subs} WHERE user_id=? AND enabled=1 LIMIT 5", [$recipientId])
-                    ->getResultArray();
-                foreach ($ids as $device) {
-                    $this->exec("INSERT INTO {$receipts}"
-                        . ' (subscription_id,recipient_user_id,event_key,status,attempts,available_at,created_at)'
-                        . " VALUES (?,?,?,'PENDING',0,UTC_TIMESTAMP(6),UTC_TIMESTAMP(6))"
-                        . ' ON DUPLICATE KEY UPDATE id=id',
-                        [(string) $device['id'], $recipientId, (string) $event['event_key']]);
-                    $queuePush = true;
-                }
-            }
-        }
-        if (! $sendInApp && ! $queueEmail && ! $queuePush) {
-            return ['status' => 'SUPPRESSED', 'reason' => 'NOTIFICATION_PREFERENCE_DISABLED'];
-        }
-        if ($sendInApp) {
-            $slug = match ($type) {
-                'import.completed' => 'completed',
-                'import.completed_with_errors' => 'completedWithErrors',
-                'import.failed' => 'failed',
-            };
-            $sql = "INSERT INTO {$this->inbox}"
-                . ' (recipient_user_id,event_key,type,priority,title_key,body_key,params_json,target_type,target_id,created_at)'
-                . ' VALUES (?,?,?,?,?,?,?,?,?,UTC_TIMESTAMP(6)) ON DUPLICATE KEY UPDATE id=id';
-            $this->exec($sql, [$recipientId,(string) $event['event_key'],$type,'NORMAL',
-                "notifications.import.{$slug}.title", "notifications.import.{$slug}.body",
-                $params, 'import_job', $id]);
-        }
-        return ['status' => 'PROCESSED', 'reason' => null];
-    }
-
-    /** @param array<string,mixed> $event @return array{status:string,reason:?string} */
-    private function deliverWorkflow(array $event): array
-    {
-        $id = (string) $event['source_id'];
-        if ((string) $event['source_type'] !== 'workflow_transition'
-            || (string) $event['event_type'] !== 'workflow.action_required') {
-            throw new NotificationPermanentFailure('NOTIFICATION_INVALID_EVENT');
-        }
-        try {
-            BusinessWorkflowRules::id($id);
-            $payload = WorkflowNotificationRules::decode((string) $event['payload_json']);
-            $resource = $payload['resource_type'];
-            $table = $this->table(BusinessWorkflowRules::table($resource));
-        } catch (Throwable $e) {
-            throw new NotificationPermanentFailure('NOTIFICATION_INVALID_EVENT', 0, $e);
-        }
-        if (preg_match('/\Aworkflow:' . preg_quote($resource, '/') . ':'
-                . preg_quote($id, '/') . ':[a-f0-9]{32}\z/D', (string) $event['event_key']) !== 1) {
-            throw new NotificationPermanentFailure('NOTIFICATION_INVALID_EVENT');
-        }
-        // Lock target once for the entire delivery, so status and PBAC decisions
-        // cannot race a subsequent Workflow transition.
-        $target = $this->select("SELECT * FROM {$table} WHERE id=? FOR UPDATE", [$id])->getRowArray();
-        if ($target === null) {
-            throw new NotificationPermanentFailure('NOTIFICATION_SOURCE_NOT_FOUND');
-        }
-        if (str_ends_with($resource, '_contact') && strtoupper((string) ($target['contact_type'] ?? ''))
-            !== ($resource === 'organization_contact' ? 'ORGANIZATION' : 'EMPLOYEE')) {
-            throw new NotificationPermanentFailure('NOTIFICATION_SOURCE_NOT_FOUND');
-        }
-        if (strtoupper((string) $target['status']) !== $payload['to_state']) {
-            return ['status' => 'SUPPRESSED', 'reason' => 'NOTIFICATION_WORKFLOW_STATE_CHANGED'];
-        }
-        $key = 'workflow.action_required.in_app';
-        $definition = NotificationCatalog::definitions()[$key] ?? null;
-        if ($definition === null || $definition['capability'] !== 'AVAILABLE') {
-            throw new NotificationPermanentFailure('NOTIFICATION_INVALID_EVENT_TYPE');
-        }
-        $ids = $payload['recipient_user_ids'];
-        $placeholders = implode(',', array_fill(0, count($ids), '?'));
-        // One SELECT yields the SAME SYSTEM+USER policy snapshot for the entire
-        // fanout at READ-COMMITTED, even when an admin edits policy concurrently.
-        $rows = $this->select("SELECT u.id AS recipient_user_id,s.*,"
-            . 'p.override_value AS preference_value,p.override_epoch AS preference_epoch,'
-            . 'p.user_revision AS preference_revision'
-            . " FROM {$this->settings} s JOIN {$this->users} u ON u.id IN ({$placeholders})"
-            . " LEFT JOIN {$this->preferences} p ON p.setting_key=s.setting_key AND p.user_id=u.id"
-            . ' WHERE s.setting_key=?', [...$ids, $key])->getResultArray();
-        if ($rows === []) {
-            throw new NotificationPermanentFailure('NOTIFICATION_POLICY_MISSING');
-        }
-        $policies = [];
-        foreach ($rows as $row) {
-            $policies[(string) $row['recipient_user_id']] = $row;
-        }
-        $inserted = 0;
-        foreach ($ids as $userId) {
-            if (! isset($policies[$userId])) {
-                throw new NotificationPermanentFailure('NOTIFICATION_USER_NOT_FOUND');
-            }
-            $policy = $policies[$userId];
-            $userRow = $this->select("SELECT * FROM {$this->users} WHERE id=? FOR UPDATE", [$userId])->getRowArray();
-            if ($userRow === null) {
-                throw new NotificationPermanentFailure('NOTIFICATION_USER_NOT_FOUND');
-            }
-            if (! WorkflowNotificationRules::activeUser($userRow)) {
-                continue;
-            }
-            $pref = $policy['preference_revision'] === null ? null : [
-                'override_value' => $policy['preference_value'],
-                'override_epoch' => $policy['preference_epoch'],
-                'user_revision' => $policy['preference_revision'],
-            ];
-            try {
-                $effective = NotificationPolicyResolver::preferenceView($key, $policy, $definition, $pref);
-            } catch (Throwable $e) {
-                throw new NotificationPermanentFailure('NOTIFICATION_POLICY_INVALID', 0, $e);
-            }
-            if (! $effective['effective_value']) {
-                continue;
-            }
-            // Explicit assignment is necessary, but never sufficient: recheck
-            // the target's CURRENT per-user VIEW and executable next actions.
-            try {
-                $options = (new BusinessWorkflowService(new User($userRow), $this->db))
-                    ->options($resource, $id);
-            } catch (DomainException $e) {
-                if ($e->getErrorCode() === 'AUTH_POLICY_DENIED') {
-                    continue;
-                }
-                throw $e;
-            }
-            if ($options['options'] === []) {
-                continue;
-            }
-            $params = json_encode(['resource_type' => $resource, 'state_code' => $payload['to_state']], JSON_THROW_ON_ERROR);
-            $this->exec("INSERT INTO {$this->inbox}"
-                . ' (recipient_user_id,event_key,type,priority,title_key,body_key,params_json,target_type,target_id,created_at)'
-                . ' VALUES (?,?,?,?,?,?,?,?,?,UTC_TIMESTAMP(6)) ON DUPLICATE KEY UPDATE id=id',
-                [$userId, (string) $event['event_key'], 'workflow.action_required', 'NORMAL',
-                    'notifications.workflow.actionRequired.title', 'notifications.workflow.actionRequired.body',
-                    $params, 'workflow_target', $id]);
-            ++$inserted;
-        }
-        return $inserted > 0
-            ? ['status' => 'PROCESSED', 'reason' => null]
-            : ['status' => 'SUPPRESSED', 'reason' => 'NOTIFICATION_NO_ELIGIBLE_ASSIGNEE'];
     }
 
     private function ownsLease(string $id, string $token): bool

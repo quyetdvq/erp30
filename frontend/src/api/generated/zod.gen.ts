@@ -155,6 +155,84 @@ export const zWorkflowNotificationAssignees = z.object({
     user_ids: z.array(z.string().regex(/^[1-9][0-9]{0,9}$/)).max(25)
 });
 
+export const zNotificationOperationsQueue = z.object({
+    available: z.boolean(),
+    status_counts: z.record(z.string(), z.int().gte(0)),
+    expired_leases: z.int().gte(0),
+    overdue_ready_15m: z.int().gte(0)
+});
+
+export const zNotificationOperationsDiagnosticsQueue = z.object({
+    available: z.boolean(),
+    ready: z.int().gte(0),
+    retry_ready: z.int().gte(0),
+    retry_delayed: z.int().gte(0),
+    dead: z.int().gte(0),
+    expired_leases: z.int().gte(0),
+    overdue_ready_15m: z.int().gte(0),
+    overdue_ready_60m: z.int().gte(0),
+    oldest_ready_minutes: z.int().gte(0).nullable(),
+    error_categories: z.object({
+        TRANSPORT: z.int().gte(0).optional(),
+        LEASE_EXHAUSTED: z.int().gte(0).optional(),
+        POLICY: z.int().gte(0).optional(),
+        IDENTITY: z.int().gte(0).optional(),
+        OTHER: z.int().gte(0).optional(),
+        UNSPECIFIED: z.int().gte(0).optional()
+    }),
+    findings: z.array(z.enum([
+        'QUEUE_UNAVAILABLE',
+        'DEAD_PRESENT',
+        'EXPIRED_LEASE',
+        'OVERDUE_60M',
+        'OVERDUE_15M',
+        'RETRY_READY',
+        'RETRY_DELAYED'
+    ])).max(6)
+});
+
+export const zNotificationOperationsDiagnostics = z.object({
+    as_of_utc: z.iso.datetime(),
+    queues: z.object({
+        outbox: zNotificationOperationsDiagnosticsQueue,
+        email: zNotificationOperationsDiagnosticsQueue,
+        push: zNotificationOperationsDiagnosticsQueue
+    }),
+    cron: z.object({
+        health: z.enum(['UNKNOWN']),
+        reason: z.enum(['TELEMETRY_UNAVAILABLE'])
+    })
+});
+
+export const zNotificationOperationsOverview = z.object({
+    as_of_utc: z.iso.datetime(),
+    queues: z.object({
+        outbox: zNotificationOperationsQueue,
+        email: zNotificationOperationsQueue,
+        push: zNotificationOperationsQueue
+    }),
+    runtime_switches: z.tuple([
+        zNotificationRuntimeSwitch,
+        zNotificationRuntimeSwitch,
+        zNotificationRuntimeSwitch,
+        zNotificationRuntimeSwitch,
+        zNotificationRuntimeSwitch,
+        zNotificationRuntimeSwitch,
+        zNotificationRuntimeSwitch,
+        zNotificationRuntimeSwitch,
+        zNotificationRuntimeSwitch,
+        zNotificationRuntimeSwitch,
+        zNotificationRuntimeSwitch,
+        zNotificationRuntimeSwitch
+    ]),
+    cron: z.object({
+        health: z.enum(['UNKNOWN']),
+        reason: z.enum(['TELEMETRY_UNAVAILABLE']),
+        last_tick_at: z.null()
+    }),
+    telemetry_available: z.literal(false)
+});
+
 export const zNotificationInboxItem = z.object({
     id: z.string().regex(/^[1-9][0-9]{0,19}$/),
     type: z.enum([
@@ -205,6 +283,14 @@ export const zBusinessWorkflowStates = z.object({
 export const zBusinessWorkflowOption = z.object({
     action_code: z.string(),
     status: zBusinessWorkflowStatus
+});
+
+export const zMyWorkflowItem = z.object({
+    resource_type: z.string(),
+    resource_id: z.string(),
+    current_state: z.string(),
+    available_actions: z.array(zBusinessWorkflowOption).min(1),
+    selected_at: z.iso.datetime()
 });
 
 export const zBusinessWorkflowOptions = z.object({
@@ -283,6 +369,14 @@ export const zWorkflowNotificationAssigneesResponse = zSuccessResponse.and(z.obj
     data: zWorkflowNotificationAssignees.optional()
 }));
 
+export const zNotificationOperationsDiagnosticsResponse = zSuccessResponse.and(z.object({
+    data: zNotificationOperationsDiagnostics.optional()
+}));
+
+export const zNotificationOperationsOverviewResponse = zSuccessResponse.and(z.object({
+    data: zNotificationOperationsOverview.optional()
+}));
+
 export const zNotificationRuntimeResponse = zSuccessResponse.and(z.object({
     data: zNotificationRuntimeSnapshot.optional()
 }));
@@ -305,6 +399,14 @@ export const zNotificationInboxResponse = zSuccessResponse.and(z.object({
     data: z.object({
         items: z.array(zNotificationInboxItem),
         next_cursor: z.string().nullable()
+    }).optional()
+}));
+
+export const zMyWorkflowResponse = zSuccessResponse.and(z.object({
+    data: z.object({
+        items: z.array(zMyWorkflowItem),
+        next_cursor: z.string().nullable(),
+        execution_enabled: z.boolean()
     }).optional()
 }));
 
@@ -3810,6 +3912,26 @@ export const zUpdateNotificationRuntimeConfigurationHeaders = z.object({
  */
 export const zUpdateNotificationRuntimeConfigurationResponse = zNotificationRuntimeResponse;
 
+export const zGetNotificationOperationsOverviewHeaders = z.object({
+    'Accept-Language': z.enum(['vi', 'en']).optional().default('vi'),
+    'X-Request-ID': zRequestId.optional()
+});
+
+/**
+ * Safe read-only Notification queue aggregate.
+ */
+export const zGetNotificationOperationsOverviewResponse = zNotificationOperationsOverviewResponse;
+
+export const zGetNotificationOperationsDiagnosticsHeaders = z.object({
+    'Accept-Language': z.enum(['vi', 'en']).optional().default('vi'),
+    'X-Request-ID': zRequestId.optional()
+});
+
+/**
+ * Safe read-only aggregate M11 queue diagnostics.
+ */
+export const zGetNotificationOperationsDiagnosticsResponse = zNotificationOperationsDiagnosticsResponse;
+
 export const zListNotificationPoliciesHeaders = z.object({
     'Accept-Language': z.enum(['vi', 'en']).optional().default('vi'),
     'X-Request-ID': zRequestId.optional()
@@ -3900,6 +4022,36 @@ export const zRevokeOwnBrowserPushDevicePath = z.object({
  */
 export const zRevokeOwnBrowserPushDeviceResponse = zNotificationPushRevokeResponse;
 
+export const zListOwnActionableWorkflowsHeaders = z.object({
+    'Accept-Language': z.enum(['vi', 'en']).optional().default('vi'),
+    'X-Request-ID': zRequestId.optional()
+});
+
+export const zListOwnActionableWorkflowsQuery = z.object({
+    resource_type: z.enum([
+        'all',
+        'province',
+        'ward',
+        'organization',
+        'department',
+        'position',
+        'employee',
+        'product_group',
+        'product_uom',
+        'product',
+        'price_list',
+        'organization_contact',
+        'employee_contact'
+    ]).optional().default('all'),
+    page_size: z.int().gte(1).lte(20).optional().default(10),
+    cursor: z.string().max(1024).optional()
+});
+
+/**
+ * Current authorized Workflow actions for selected notification recipients.
+ */
+export const zListOwnActionableWorkflowsResponse = zMyWorkflowResponse;
+
 export const zGetNotificationSummaryHeaders = z.object({
     'Accept-Language': z.enum(['vi', 'en']).optional().default('vi'),
     'X-Request-ID': zRequestId.optional()
@@ -3918,6 +4070,13 @@ export const zListOwnNotificationsHeaders = z.object({
 export const zListOwnNotificationsQuery = z.object({
     filter: z.enum(['all', 'unread']).optional().default('all'),
     page_size: z.int().gte(1).lte(50).optional().default(20),
+    event_group: z.enum([
+        'all',
+        'import',
+        'workflow'
+    ]).optional().default('all'),
+    from: z.iso.date().optional(),
+    to: z.iso.date().optional(),
     cursor: z.string().max(1024).optional()
 });
 

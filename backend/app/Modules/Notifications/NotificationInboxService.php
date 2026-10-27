@@ -6,7 +6,7 @@ namespace App\Modules\Notifications;
 
 use App\Exceptions\DomainException;
 use CodeIgniter\Database\BaseConnection;
-use App\Modules\Workflow\Execution\BusinessWorkflowRules;
+use App\Modules\Notifications\Events\NotificationInboxProjectorRegistry;
 use CodeIgniter\Shield\Entities\User;
 use Throwable;
 
@@ -44,28 +44,38 @@ final class NotificationInboxService
     /** @param array<string,mixed> $query @return array{items:list<array<string,mixed>>,next_cursor:?string} */
     public function listing(array $query): array
     {
-        foreach (array_keys($query) as $key) {
-            if (! in_array($key, ['filter','page_size','cursor'], true)) {
-                throw new DomainException('NOTIFICATION_INVALID_REQUEST');
-            }
-        }
-        $filter = $query['filter'] ?? 'all';
-        $size = $query['page_size'] ?? '20';
-        $cursor = $query['cursor'] ?? null;
-        if (! is_string($filter) || ! in_array($filter, ['all','unread'], true)
-            || ! is_string($size) || ! preg_match('/\A(?:[1-9]|[1-4][0-9]|50)\z/D', $size)
-            || ($cursor !== null && (! is_string($cursor) || $cursor === ''))) {
-            throw new DomainException('NOTIFICATION_INVALID_REQUEST');
-        }
-        $pageSize = (int) $size;
+        $selection = NotificationInboxQuery::parse($query);
+        $filter = $selection['filter'];
+        $pageSize = $selection['page_size'];
+        $cursor = $selection['cursor'];
+        $group = $selection['event_group'];
+        $from = $selection['from'];
+        $to = $selection['to'];
         $secret = $this->secret();
         $where = 'recipient_user_id=? AND (expires_at IS NULL OR expires_at>UTC_TIMESTAMP(6))';
         $binds = [$this->userId];
         if ($filter === 'unread') {
             $where .= ' AND read_at IS NULL';
         }
+        if ($group === 'import') {
+            $where .= ' AND type IN (?,?,?)';
+            array_push($binds, 'import.completed', 'import.completed_with_errors', 'import.failed');
+        } elseif ($group === 'workflow') {
+            $where .= ' AND type=?';
+            $binds[] = 'workflow.action_required';
+        }
+        if ($from !== null) {
+            // The UI's calendar day is UTC, inclusive of both requested dates.
+            $where .= ' AND created_at>=? AND created_at<?';
+            $binds[] = $from . ' 00:00:00.000000';
+            $binds[] = (new \DateTimeImmutable($to . 'T00:00:00Z'))
+                ->modify('+1 day')->format('Y-m-d 00:00:00.000000');
+        }
         if ($cursor !== null) {
-            $position = NotificationCursor::decode($cursor, $this->userId, $filter, $pageSize, $secret);
+            $position = $selection['extended']
+                ? NotificationCursor::decodeV2($cursor, $this->userId, $filter, $pageSize,
+                    $group, $from, $to, $secret)
+                : NotificationCursor::decode($cursor, $this->userId, $filter, $pageSize, $secret);
             $where .= ' AND (created_at<? OR (created_at=? AND id<?))';
             array_push($binds, $position['created_at'], $position['created_at'], $position['id']);
         }
@@ -77,11 +87,15 @@ final class NotificationInboxService
             array_pop($rows);
         }
         $last = $hasMore ? end($rows) : null;
-        $next = is_array($last)
-            ? NotificationCursor::encode($this->userId, $filter, $pageSize,
-                (string) $last['created_at'], (string) $last['id'], $secret)
-            : null;
-        return ['items' => array_map(self::project(...), $rows), 'next_cursor' => $next];
+        $next = null;
+        if (is_array($last)) {
+            $next = $selection['extended']
+                ? NotificationCursor::encodeV2($this->userId, $filter, $pageSize,
+                    $group, $from, $to, (string) $last['created_at'], (string) $last['id'], $secret)
+                : NotificationCursor::encode($this->userId, $filter, $pageSize,
+                    (string) $last['created_at'], (string) $last['id'], $secret);
+        }
+        return ['items' => array_map(NotificationInboxProjectorRegistry::project(...), $rows), 'next_cursor' => $next];
     }
 
     /** @return array{id:string,read_at:?string} */
@@ -134,60 +148,6 @@ final class NotificationInboxService
             $this->db->transRollback();
             throw $e;
         }
-    }
-
-    /** @param array<string,mixed> $row @return array<string,mixed> */
-    private static function project(array $row): array
-    {
-        $type = (string) $row['type'];
-        if ($type === 'workflow.action_required') {
-            $params = json_decode((string) $row['params_json'], true);
-            if (! is_array($params) || array_keys($params) !== ['resource_type','state_code']
-                || ! is_string($params['resource_type']) || ! is_string($params['state_code'])
-                || $params['state_code'] === '' || strlen($params['state_code']) > 50
-                || (string) $row['target_type'] !== 'workflow_target'
-                || (string) $row['title_key'] !== 'notifications.workflow.actionRequired.title'
-                || (string) $row['body_key'] !== 'notifications.workflow.actionRequired.body'
-                || ! NotificationRules::version((string) $row['target_id'])) {
-                throw new DomainException('NOTIFICATION_STORAGE_FAILED');
-            }
-            try { BusinessWorkflowRules::table($params['resource_type']); }
-            catch (\Throwable) { throw new DomainException('NOTIFICATION_STORAGE_FAILED'); }
-            return [
-                'id' => (string) $row['id'], 'type' => $type, 'priority' => (string) $row['priority'],
-                'title_key' => (string) $row['title_key'], 'body_key' => (string) $row['body_key'],
-                'params' => $params,
-                'target' => ['type' => 'workflow_target', 'resource_type' => $params['resource_type'],
-                    'id' => (string) $row['target_id']],
-                'read_at' => $row['read_at'] === null ? null : self::iso((string) $row['read_at']),
-                'created_at' => self::iso((string) $row['created_at']),
-            ];
-        }
-        $known = [
-            'import.completed' => 'completed',
-            'import.completed_with_errors' => 'completedWithErrors',
-            'import.failed' => 'failed',
-        ];
-        $slug = $known[$type] ?? null;
-        if ($slug === null || (string) $row['target_type'] !== 'import_job'
-            || (string) $row['title_key'] !== "notifications.import.{$slug}.title"
-            || (string) $row['body_key'] !== "notifications.import.{$slug}.body"
-            || ! NotificationRules::version((string) $row['target_id'])) {
-            throw new DomainException('NOTIFICATION_STORAGE_FAILED');
-        }
-        $params = json_decode((string) $row['params_json'], true);
-        if (! is_array($params) || array_keys($params) !== ['success_rows', 'error_rows']
-            || ! is_int($params['success_rows']) || ! is_int($params['error_rows'])) {
-            throw new DomainException('NOTIFICATION_STORAGE_FAILED');
-        }
-        return [
-            'id' => (string) $row['id'], 'type' => $type, 'priority' => (string) $row['priority'],
-            'title_key' => (string) $row['title_key'], 'body_key' => (string) $row['body_key'],
-            'params' => $params,
-            'target' => ['type' => 'import_job', 'id' => (string) $row['target_id']],
-            'read_at' => $row['read_at'] === null ? null : self::iso((string) $row['read_at']),
-            'created_at' => self::iso((string) $row['created_at']),
-        ];
     }
 
     private static function iso(string $dbValue): string

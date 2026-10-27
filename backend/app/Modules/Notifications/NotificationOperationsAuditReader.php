@@ -57,7 +57,10 @@ final class NotificationOperationsAuditReader
             }
         }
         $policies = [];
-        foreach (['import.completed.email', 'import.completed.push'] as $key) {
+        foreach (NotificationCatalog::definitions() as $key => $definition) {
+            if (($definition['requires_explicit_consent'] ?? false) !== true) {
+                continue;
+            }
             $row = $present['notification_settings']
                 ? $this->db->table('notification_settings')->select('default_value,allow_user_override,revision,override_epoch')
                     ->where('setting_key', $key)->get()->getRowArray()

@@ -80,8 +80,11 @@ final class NotificationEmailRulesTest extends TestCase
         $content = NotificationEmailRules::content('import.completed', '{"success_rows":2,"error_rows":0}');
         self::assertStringContainsString('2', $content['body']);
         self::assertStringNotContainsString('<', $content['body']);
+        $failed = NotificationEmailRules::content('import.failed', '{"success_rows":2,"error_rows":0}');
+        self::assertStringContainsString('thất bại', $failed['subject']);
+        self::assertStringNotContainsString('2', $failed['body']);
         $this->expectException(InvalidArgumentException::class);
-        NotificationEmailRules::content('import.failed', '{"success_rows":2,"error_rows":0}');
+        NotificationEmailRules::content('workflow.action_required', '{"success_rows":2,"error_rows":0}');
     }
 
     public function testMessagePayloadRejectsAdditionalFields(): void

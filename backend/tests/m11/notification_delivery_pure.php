@@ -28,7 +28,7 @@ assertDelivery(count(array_filter(\App\Modules\Notifications\NotificationCatalog
     static fn (array $v): bool => $v['producer_state'] === 'ACTIVE')) === ((\App\Modules\Notifications\NotificationFlags::producerEnabled() ? 3 : 0)
     + (\App\Modules\Notifications\NotificationFlags::workflowProducerEnabled() ? 1 : 0)
     + (\App\Modules\Notifications\NotificationFlags::producerEnabled()
-        && \App\Modules\Notifications\NotificationFlags::emailQueueEnabled() ? 1 : 0)
+        && \App\Modules\Notifications\NotificationFlags::emailQueueEnabled() ? 3 : 0)
         + (\App\Modules\Notifications\NotificationFlags::producerEnabled()
             && \App\Modules\Notifications\NotificationFlags::pushQueueEnabled() ? 1 : 0)), 'producer gate ACTIVE');
 putenv('DINKERP_M11_IMPORT_PRODUCER_ENABLED=off');

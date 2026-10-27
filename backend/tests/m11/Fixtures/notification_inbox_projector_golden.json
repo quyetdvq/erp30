@@ -1,0 +1,159 @@
+{
+    "import_completed_unread": {
+        "row": {
+            "id": "101",
+            "type": "import.completed",
+            "priority": "NORMAL",
+            "title_key": "notifications.import.completed.title",
+            "body_key": "notifications.import.completed.body",
+            "params_json": "{\"success_rows\":19,\"error_rows\":0}",
+            "target_type": "import_job",
+            "target_id": "77",
+            "read_at": null,
+            "created_at": "2026-10-27 01:02:03.123456"
+        },
+        "expected": {
+            "id": "101",
+            "type": "import.completed",
+            "priority": "NORMAL",
+            "title_key": "notifications.import.completed.title",
+            "body_key": "notifications.import.completed.body",
+            "params": {
+                "success_rows": 19,
+                "error_rows": 0
+            },
+            "target": {
+                "type": "import_job",
+                "id": "77"
+            },
+            "read_at": null,
+            "created_at": "2026-10-27T01:02:03.123456Z"
+        }
+    },
+    "import_with_errors_read": {
+        "row": {
+            "id": "102",
+            "type": "import.completed_with_errors",
+            "priority": "NORMAL",
+            "title_key": "notifications.import.completedWithErrors.title",
+            "body_key": "notifications.import.completedWithErrors.body",
+            "params_json": "{\"success_rows\":5,\"error_rows\":4}",
+            "target_type": "import_job",
+            "target_id": "78",
+            "read_at": "2026-10-27 01:09:10.234567",
+            "created_at": "2026-10-27 00:02:03.000003"
+        },
+        "expected": {
+            "id": "102",
+            "type": "import.completed_with_errors",
+            "priority": "NORMAL",
+            "title_key": "notifications.import.completedWithErrors.title",
+            "body_key": "notifications.import.completedWithErrors.body",
+            "params": {
+                "success_rows": 5,
+                "error_rows": 4
+            },
+            "target": {
+                "type": "import_job",
+                "id": "78"
+            },
+            "read_at": "2026-10-27T01:09:10.234567Z",
+            "created_at": "2026-10-27T00:02:03.000003Z"
+        }
+    },
+    "import_failed_zero_rows": {
+        "row": {
+            "id": "103",
+            "type": "import.failed",
+            "priority": "NORMAL",
+            "title_key": "notifications.import.failed.title",
+            "body_key": "notifications.import.failed.body",
+            "params_json": "{\"success_rows\":0,\"error_rows\":17}",
+            "target_type": "import_job",
+            "target_id": "79",
+            "read_at": null,
+            "created_at": "2026-10-27 09:03:04.000000"
+        },
+        "expected": {
+            "id": "103",
+            "type": "import.failed",
+            "priority": "NORMAL",
+            "title_key": "notifications.import.failed.title",
+            "body_key": "notifications.import.failed.body",
+            "params": {
+                "success_rows": 0,
+                "error_rows": 17
+            },
+            "target": {
+                "type": "import_job",
+                "id": "79"
+            },
+            "read_at": null,
+            "created_at": "2026-10-27T09:03:04.000000Z"
+        }
+    },
+    "workflow_action_read": {
+        "row": {
+            "id": "104",
+            "type": "workflow.action_required",
+            "priority": "NORMAL",
+            "title_key": "notifications.workflow.actionRequired.title",
+            "body_key": "notifications.workflow.actionRequired.body",
+            "params_json": "{\"resource_type\":\"product\",\"state_code\":\"REVIEW\"}",
+            "target_type": "workflow_target",
+            "target_id": "925",
+            "read_at": "2026-10-27 03:30:20.000000",
+            "created_at": "2026-10-27 02:00:00.654321"
+        },
+        "expected": {
+            "id": "104",
+            "type": "workflow.action_required",
+            "priority": "NORMAL",
+            "title_key": "notifications.workflow.actionRequired.title",
+            "body_key": "notifications.workflow.actionRequired.body",
+            "params": {
+                "resource_type": "product",
+                "state_code": "REVIEW"
+            },
+            "target": {
+                "type": "workflow_target",
+                "resource_type": "product",
+                "id": "925"
+            },
+            "read_at": "2026-10-27T03:30:20.000000Z",
+            "created_at": "2026-10-27T02:00:00.654321Z"
+        }
+    },
+    "workflow_action_unread": {
+        "row": {
+            "id": "105",
+            "type": "workflow.action_required",
+            "priority": "NORMAL",
+            "title_key": "notifications.workflow.actionRequired.title",
+            "body_key": "notifications.workflow.actionRequired.body",
+            "params_json": "{\"resource_type\":\"province\",\"state_code\":\"M11_A\"}",
+            "target_type": "workflow_target",
+            "target_id": "926",
+            "read_at": null,
+            "created_at": "2026-10-27 05:13:00.333300"
+        },
+        "expected": {
+            "id": "105",
+            "type": "workflow.action_required",
+            "priority": "NORMAL",
+            "title_key": "notifications.workflow.actionRequired.title",
+            "body_key": "notifications.workflow.actionRequired.body",
+            "params": {
+                "resource_type": "province",
+                "state_code": "M11_A"
+            },
+            "target": {
+                "type": "workflow_target",
+                "resource_type": "province",
+                "id": "926"
+            },
+            "read_at": null,
+            "created_at": "2026-10-27T05:13:00.333300Z"
+        }
+    }
+}

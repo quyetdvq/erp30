@@ -12,7 +12,8 @@ namespace CodeIgniter\Shield\Entities {
 }
 namespace App\Modules\Access {
     final class ResourceStateCatalog {
-        public static function independentTypes(): array { return array_fill(0,10,'resource'); }
+        public static function independentTypes(): array { return ['authorization_group','authorization_log','display_setting',
+            'employee_assignment','import_job','lifecycle','policy','user','workflow_state','resource']; }
     }
     final class UnifiedAccessService {
         public function __construct($actor,$db,$date) {}

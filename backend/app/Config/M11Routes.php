@@ -10,6 +10,9 @@ $routes->patch('notifications/preferences', [\App\Modules\Notifications\Notifica
 
 $routes->get('notifications/summary', [\App\Modules\Notifications\NotificationInboxController::class, 'summary']);
 $routes->get('notifications', [\App\Modules\Notifications\NotificationInboxController::class, 'listing']);
+
+// NFX-B1: own, read-only Workflow action candidates (not task ownership).
+$routes->get('my-work', [\App\Modules\Notifications\MyWorkflowController::class, 'listing']);
 $routes->post('notifications/(:num)/actions/mark-read', [\App\Modules\Notifications\NotificationInboxController::class, 'markRead']);
 $routes->post('notifications/actions/mark-all-read', [\App\Modules\Notifications\NotificationInboxController::class, 'markAllRead']);
 
@@ -18,6 +21,10 @@ $routes->get('notifications/push/config', [\App\Modules\Notifications\Notificati
 $routes->get('notifications/push/subscriptions', [\App\Modules\Notifications\NotificationPushController::class, 'listing']);
 $routes->post('notifications/push/subscriptions', [\App\Modules\Notifications\NotificationPushController::class, 'subscribe']);
 $routes->delete('notifications/push/subscriptions/(:num)', [\App\Modules\Notifications\NotificationPushController::class, 'unsubscribe/$1']);
+
+// NFX-E1.1: one PBAC-protected, aggregate-only monitoring endpoint.
+$routes->get('notification-operations/overview', [\App\Modules\Notifications\NotificationOperationsOverviewController::class, 'overview']);
+$routes->get('notification-operations/diagnostics', [\App\Modules\Notifications\NotificationOperationsOverviewController::class, 'diagnostics']);
 
 // M11.3B.1: persisted, audited operational controls for Notification workers.
 $routes->get('configuration-settings/notifications', [\App\Modules\Notifications\NotificationRuntimeConfigController::class, 'listing']);

@@ -1134,6 +1134,38 @@ paths:
         '403': {$ref: '#/components/responses/Forbidden'}
         '409': {$ref: '#/components/responses/Conflict'}
         '422': {$ref: '#/components/responses/UnprocessableEntity'}
+  /api/v1/notification-operations/overview:
+    get:
+      operationId: getNotificationOperationsOverview
+      summary: Read-only aggregate M11 operations overview (SYSTEM PBAC notification_operations.view)
+      description: >-
+        Aggregate-only queue metrics and runtime flags. Does not expose recipients,
+        notification contents, subscriptions, tokens, SMTP secrets or raw exception messages.
+        Cron is UNKNOWN/TELEMETRY_UNAVAILABLE until separate telemetry is approved and deployed.
+        This endpoint does not execute, retry, cancel or schedule workers.
+      parameters: [{$ref: '#/components/parameters/AcceptLanguage'}, {$ref: '#/components/parameters/RequestId'}]
+      responses:
+        '200': {$ref: '#/components/responses/NotificationOperationsOverviewResponse'}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+        '422': {$ref: '#/components/responses/UnprocessableEntity'}
+        '500': {$ref: '#/components/responses/InternalServerError'}
+  /api/v1/notification-operations/diagnostics:
+    get:
+      operationId: getNotificationOperationsDiagnostics
+      summary: Read-only M11 queue diagnostics (SYSTEM PBAC notification_operations.view)
+      description: >-
+        Aggregated retry/lease/dead/overdue counters and server-normalized error categories.
+        No receipt ids, user identities, payloads, raw error codes or worker mutations.
+        Empty findings do not prove queue delivery or Cron health; Cron remains UNKNOWN.
+        Does not accept query parameters and returns private no-store data.
+      parameters: [{$ref: '#/components/parameters/AcceptLanguage'}, {$ref: '#/components/parameters/RequestId'}]
+      responses:
+        '200': {$ref: '#/components/responses/NotificationOperationsDiagnosticsResponse'}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+        '422': {$ref: '#/components/responses/UnprocessableEntity'}
+        '500': {$ref: '#/components/responses/InternalServerError'}
   /api/v1/notification-settings:
     get:
       operationId: listNotificationPolicies
@@ -1215,6 +1247,29 @@ paths:
         '200': {$ref: '#/components/responses/NotificationPushRevokeResponse'}
         '401': {$ref: '#/components/responses/Unauthorized'}
         '404': {$ref: '#/components/responses/NotFound'}
+  /api/v1/my-work:
+    get:
+      operationId: listOwnActionableWorkflows
+      summary: List current Workflow actions for explicitly selected notification recipients
+      description: >-
+        Read-only snapshot, not task ownership, completion status or a general approval queue.
+        Only records explicitly mapped to the current Shield User and with a current authorized
+        Workflow transition are returned. The scan is bounded to 80 assigned candidates per call;
+        a short or empty page with next_cursor does not imply there are no further results.
+        Cursor is signed, actor/filter/page-size bound and expires after 24 hours. When Workflow
+        mutations are disabled the response contains no items and execution_enabled is false.
+        The destination module rechecks authorization on subsequent navigation or mutation.
+      parameters:
+        - {$ref: '#/components/parameters/AcceptLanguage'}
+        - {$ref: '#/components/parameters/RequestId'}
+        - {name: resource_type, in: query, schema: {type: string, default: all, enum: [all, province, ward, organization, department, position, employee, product_group, product_uom, product, price_list, organization_contact, employee_contact]}}
+        - {name: page_size, in: query, schema: {type: integer, minimum: 1, maximum: 20, default: 10}}
+        - {name: cursor, in: query, schema: {type: string, maxLength: 1024}}
+      responses:
+        '200': {$ref: '#/components/responses/MyWorkflowResponse'}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '422': {$ref: '#/components/responses/UnprocessableEntity'}
+        '500': {$ref: '#/components/responses/InternalServerError'}
   /api/v1/notifications/summary:
     get:
       operationId: getNotificationSummary
@@ -1228,11 +1283,19 @@ paths:
     get:
       operationId: listOwnNotifications
       summary: List Shield-owned notification Inbox with signed keyset pagination
+      description: >-
+        Legacy requests without event_group/from/to retain cursor v1. Any extended filter uses
+        cursor v2 bound to the actor, status, group, date range and page size. UTC dates are
+        inclusive and must be supplied as a pair, with at most 366 inclusive calendar days.
+        A cursor cannot be reused after changing a filter or logging in as another user.
       parameters:
         - {$ref: '#/components/parameters/AcceptLanguage'}
         - {$ref: '#/components/parameters/RequestId'}
         - {name: filter, in: query, schema: {type: string, enum: [all, unread], default: all}}
         - {name: page_size, in: query, schema: {type: integer, minimum: 1, maximum: 50, default: 20}}
+        - {name: event_group, in: query, description: Fixed allowlisted event group., schema: {type: string, enum: [all, import, workflow], default: all}}
+        - {name: from, in: query, description: Inclusive UTC calendar date; requires to., schema: {type: string, format: date}}
+        - {name: to, in: query, description: Inclusive UTC calendar date; requires from., schema: {type: string, format: date}}
         - {name: cursor, in: query, schema: {type: string, maxLength: 1024}}
       responses:
         '200': {$ref: '#/components/responses/NotificationInboxResponse'}
@@ -1453,9 +1516,12 @@ components:
   responses:
     NotificationSummaryResponse: {description: Own unread count., content: {application/json: {schema: {$ref: '#/components/schemas/NotificationSummaryResponse'}}}}
     NotificationInboxResponse: {description: Own Inbox and next signed cursor., content: {application/json: {schema: {$ref: '#/components/schemas/NotificationInboxResponse'}}}}
+    MyWorkflowResponse: {description: Current authorized Workflow actions for selected notification recipients., content: {application/json: {schema: {$ref: '#/components/schemas/MyWorkflowResponse'}}}}
     NotificationReadResponse: {description: Read status of own notification., content: {application/json: {schema: {$ref: '#/components/schemas/NotificationReadResponse'}}}}
     NotificationReadAllResponse: {description: Bulk read cutoff result., content: {application/json: {schema: {$ref: '#/components/schemas/NotificationReadAllResponse'}}}}
     WorkflowNotificationAssigneesResponse: {description: Explicit per-target assignee set and optimistic revision., content: {application/json: {schema: {$ref: '#/components/schemas/WorkflowNotificationAssigneesResponse'}}}}
+    NotificationOperationsOverviewResponse: {description: Safe read-only Notification queue aggregate., content: {application/json: {schema: {$ref: '#/components/schemas/NotificationOperationsOverviewResponse'}}}}
+    NotificationOperationsDiagnosticsResponse: {description: Safe read-only aggregate M11 queue diagnostics., content: {application/json: {schema: {$ref: '#/components/schemas/NotificationOperationsDiagnosticsResponse'}}}}
     NotificationRuntimeResponse: {description: Audited Notification runtime configuration snapshot., content: {application/json: {schema: {$ref: '#/components/schemas/NotificationRuntimeResponse'}}}}
     NotificationPushConfigResponse: {description: Public VAPID configuration; no secrets., content: {application/json: {schema: {$ref: '#/components/schemas/NotificationPushConfigResponse'}}}}
     NotificationPushDevicesResponse: {description: 'Own device identifiers, no endpoints.', content: {application/json: {schema: {$ref: '#/components/schemas/NotificationPushDevicesResponse'}}}}
@@ -1827,6 +1893,106 @@ components:
       allOf: [{$ref: '#/components/schemas/SuccessResponse'}]
       properties:
         data: {$ref: '#/components/schemas/WorkflowNotificationAssignees'}
+    NotificationOperationsQueue:
+      type: object
+      additionalProperties: false
+      required: [available, status_counts, expired_leases, overdue_ready_15m]
+      properties:
+        available: {type: boolean}
+        status_counts:
+          type: object
+          maxProperties: 6
+          additionalProperties: {type: integer, minimum: 0}
+          description: Counts by allowlisted queue-specific status, absent statuses have zero rows.
+        expired_leases: {type: integer, minimum: 0}
+        overdue_ready_15m: {type: integer, minimum: 0}
+    NotificationOperationsDiagnosticsQueue:
+      type: object
+      additionalProperties: false
+      required: [available, ready, retry_ready, retry_delayed, dead, expired_leases, overdue_ready_15m, overdue_ready_60m, oldest_ready_minutes, error_categories, findings]
+      properties:
+        available: {type: boolean}
+        ready: {type: integer, minimum: 0}
+        retry_ready: {type: integer, minimum: 0}
+        retry_delayed: {type: integer, minimum: 0}
+        dead: {type: integer, minimum: 0}
+        expired_leases: {type: integer, minimum: 0}
+        overdue_ready_15m: {type: integer, minimum: 0}
+        overdue_ready_60m: {type: integer, minimum: 0}
+        oldest_ready_minutes: {type: [integer, 'null'], minimum: 0}
+        error_categories:
+          type: object
+          additionalProperties: false
+          description: Counts of RETRY and DEAD rows only, categorized server-side. Raw error codes are never exposed.
+          properties:
+            TRANSPORT: {type: integer, minimum: 0}
+            LEASE_EXHAUSTED: {type: integer, minimum: 0}
+            POLICY: {type: integer, minimum: 0}
+            IDENTITY: {type: integer, minimum: 0}
+            OTHER: {type: integer, minimum: 0}
+            UNSPECIFIED: {type: integer, minimum: 0}
+        findings:
+          type: array
+          maxItems: 6
+          uniqueItems: true
+          items: {type: string, enum: [QUEUE_UNAVAILABLE, DEAD_PRESENT, EXPIRED_LEASE, OVERDUE_60M, OVERDUE_15M, RETRY_READY, RETRY_DELAYED]}
+    NotificationOperationsDiagnostics:
+      type: object
+      additionalProperties: false
+      required: [as_of_utc, queues, cron]
+      properties:
+        as_of_utc: {type: string, format: date-time}
+        queues:
+          type: object
+          additionalProperties: false
+          required: [outbox, email, push]
+          properties:
+            outbox: {$ref: '#/components/schemas/NotificationOperationsDiagnosticsQueue'}
+            email: {$ref: '#/components/schemas/NotificationOperationsDiagnosticsQueue'}
+            push: {$ref: '#/components/schemas/NotificationOperationsDiagnosticsQueue'}
+        cron:
+          type: object
+          additionalProperties: false
+          required: [health, reason]
+          properties:
+            health: {type: string, enum: [UNKNOWN]}
+            reason: {type: string, enum: [TELEMETRY_UNAVAILABLE]}
+    NotificationOperationsDiagnosticsResponse:
+      allOf: [{$ref: '#/components/schemas/SuccessResponse'}]
+      properties:
+        data: {$ref: '#/components/schemas/NotificationOperationsDiagnostics'}
+    NotificationOperationsOverview:
+      type: object
+      additionalProperties: false
+      required: [as_of_utc, queues, runtime_switches, cron, telemetry_available]
+      properties:
+        as_of_utc: {type: string, format: date-time}
+        queues:
+          type: object
+          additionalProperties: false
+          required: [outbox, email, push]
+          properties:
+            outbox: {$ref: '#/components/schemas/NotificationOperationsQueue'}
+            email: {$ref: '#/components/schemas/NotificationOperationsQueue'}
+            push: {$ref: '#/components/schemas/NotificationOperationsQueue'}
+        runtime_switches:
+          type: array
+          minItems: 12
+          maxItems: 12
+          items: {$ref: '#/components/schemas/NotificationRuntimeSwitch'}
+        cron:
+          type: object
+          additionalProperties: false
+          required: [health, reason, last_tick_at]
+          properties:
+            health: {type: string, enum: [UNKNOWN]}
+            reason: {type: string, enum: [TELEMETRY_UNAVAILABLE]}
+            last_tick_at: {type: 'null'}
+        telemetry_available: {type: boolean, enum: [false]}
+    NotificationOperationsOverviewResponse:
+      allOf: [{$ref: '#/components/schemas/SuccessResponse'}]
+      properties:
+        data: {$ref: '#/components/schemas/NotificationOperationsOverview'}
     NotificationRuntimeResponse:
       allOf: [{$ref: '#/components/schemas/SuccessResponse'}]
       properties:
@@ -1899,6 +2065,30 @@ components:
           properties:
             items: {type: array, items: {$ref: '#/components/schemas/NotificationInboxItem'}}
             next_cursor: {type: [string, 'null']}
+    MyWorkflowItem:
+      type: object
+      additionalProperties: false
+      required: [resource_type, resource_id, current_state, available_actions, selected_at]
+      properties:
+        resource_type: {type: string}
+        resource_id: {type: string}
+        current_state: {type: string}
+        available_actions:
+          type: array
+          minItems: 1
+          items: {$ref: '#/components/schemas/BusinessWorkflowOption'}
+        selected_at: {type: string, format: date-time}
+    MyWorkflowResponse:
+      allOf: [{$ref: '#/components/schemas/SuccessResponse'}]
+      properties:
+        data:
+          type: object
+          additionalProperties: false
+          required: [items, next_cursor, execution_enabled]
+          properties:
+            items: {type: array, items: {$ref: '#/components/schemas/MyWorkflowItem'}}
+            next_cursor: {type: [string, 'null']}
+            execution_enabled: {type: boolean}
     NotificationReadResponse:
       allOf: [{$ref: '#/components/schemas/SuccessResponse'}]
       properties:

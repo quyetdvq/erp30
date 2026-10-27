@@ -23,6 +23,12 @@ export const routes: RouteRecordRaw[] = [
         meta: { labelKey: 'nav.dashboard', closable: false },
       },
       {
+        path: 'my-work',
+        name: 'my-work-actions',
+        component: () => import('@/features/notifications/pages/MyWorkflowActionsView.vue'),
+        meta: { labelKey: 'myWork.title', breadcrumbTrail: breadcrumbTrails.account },
+      },
+      {
         path: 'notifications',
         name: 'notifications-inbox',
         component: () => import('@/features/notifications/pages/NotificationsInboxView.vue'),
@@ -42,6 +48,12 @@ export const routes: RouteRecordRaw[] = [
           labelKey: 'shell.displayPreferences',
           breadcrumbTrail: breadcrumbTrails.displayPreferences,
         },
+      },
+      {
+        path: 'system/notification-operations',
+        name: 'notification-operations',
+        component: () => import('@/features/notifications/pages/NotificationOperationsView.vue'),
+        meta: { labelKey: 'nav.notificationOperations', breadcrumbTrail: breadcrumbTrails.configuration },
       },
       {
         path: 'system/configuration-settings',

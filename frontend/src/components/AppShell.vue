@@ -35,6 +35,7 @@ import { RouterLink, RouterView, useRoute } from 'vue-router'
 import { sidebarModes } from '@/app/navigation'
 import AppBreadcrumbs from '@/components/AppBreadcrumbs.vue'
 import UserAvatar from '@/components/users/UserAvatar.vue'
+import NotificationPopoverList from '@/features/notifications/components/NotificationPopoverList.vue'
 import { useShellHeader } from '@/components/app-shell/useShellHeader'
 import { useShellNavigation } from '@/components/app-shell/useShellNavigation'
 import { useShellSidebarResize } from '@/components/app-shell/useShellSidebarResize'
@@ -87,6 +88,8 @@ const {
   handleLocale,
   toggleTheme,
   markNotificationsRead,
+  markOneNotificationRead,
+  closeNotifications,
   openInbox,
   handleUserAction,
 } = useShellHeader(currentTabKey)
@@ -151,18 +154,13 @@ const {
                   {{ unreadNotifications === 0 ? t('shell.allRead') : t('shell.markAllRead') }}
                 </NButton>
               </header>
-              <div class="notification-list">
-                <p v-if="inbox.busy" aria-busy="true">{{ t('notificationsInbox.loading') }}</p>
-                <p v-else-if="inbox.error" role="alert">{{ t('notificationsInbox.requestError') }}</p>
-                <p v-else-if="notificationItems.length === 0">{{ t('notificationsInbox.empty') }}</p>
-                <article v-for="item in notificationItems" :key="item.id" class="notification-item">
-                  <span v-if="item.read_at === null" class="notification-dot" aria-hidden="true" />
-                  <div>
-                    <strong>{{ t(item.title_key, item.params) }}</strong>
-                    <p>{{ t(item.body_key, item.params) }}</p>
-                  </div>
-                </article>
-              </div>
+              <NotificationPopoverList
+                :items="notificationItems"
+                :busy="inbox.previewBusy"
+                :error="Boolean(inbox.previewError)"
+                @navigate="closeNotifications"
+                @mark-read="markOneNotificationRead"
+              />
               <NButton text size="small" @click="openInbox">{{ t('notificationsInbox.viewAll') }}</NButton>
             </section>
           </NPopover>

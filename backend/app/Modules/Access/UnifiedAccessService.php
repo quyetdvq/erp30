@@ -27,7 +27,7 @@ final class UnifiedAccessService
         'organization_contact' => 'ORGANIZATION', 'employee_contact' => 'ORGANIZATION',
         // Pinned M3.3 API-030 domains from baseline ResourceActionSeeder.
         'user' => 'SYSTEM', 'authorization_group' => 'SYSTEM',
-        'notification_setting' => 'SYSTEM',
+        'notification_setting' => 'SYSTEM', 'notification_operations' => 'SYSTEM',
         'resource' => 'SYSTEM', 'workflow_state' => 'SYSTEM',
         'lifecycle' => 'SYSTEM', 'policy' => 'ORGANIZATION',
         'authorization_log' => 'ORGANIZATION',

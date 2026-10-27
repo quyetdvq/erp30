@@ -67,6 +67,15 @@ final class NotificationOperationsAuditTest extends TestCase
         self::assertContains('INBOX_CURSOR_SECRET_MISSING_OR_SHORT', $result['blockers']);
     }
 
+    public function testNewEmailPolicyOmittedFromSnapshotCannotBeMarkedHealthy(): void
+    {
+        $snapshot = self::base();
+        unset($snapshot['policy_guards']['import.failed.email']);
+        $result = NotificationOperationsAuditRules::assess($snapshot);
+        self::assertFalse($result['configuration_pass']);
+        self::assertContains('CONSENT_POLICY_INVALID:import.failed.email', $result['blockers']);
+    }
+
     public function testSendingEmailWithoutValidSmtpIsBlocking(): void
     {
         $snapshot = self::base();
@@ -176,7 +185,9 @@ final class NotificationOperationsAuditTest extends TestCase
         ];
         return [
             'missing_tables' => [], 'flags' => $flags,
-            'policy_guards' => ['import.completed.email' => true, 'import.completed.push' => true],
+            'policy_guards' => ['import.completed.email' => true,
+                'import.completed_with_errors.email' => true, 'import.failed.email' => true,
+                'import.completed.push' => true],
             'queues' => ['outbox' => $queue(), 'email' => $queue(), 'push' => $queue()],
             'credentials' => [
                 'cursor_secret' => true, 'smtp' => true, 'openssl' => true, 'curl' => true,
