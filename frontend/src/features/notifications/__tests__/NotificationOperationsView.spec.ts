@@ -4,7 +4,7 @@ import { i18n } from '@/i18n'
 import NotificationOperationsView from '../pages/NotificationOperationsView.vue'
 import type { NotificationOperationsOverview } from '@/services/notificationOperations'
 
-const mock = vi.hoisted(() => ({ get: vi.fn(), diagnostics: vi.fn(), viewAllowed: true, userId: '7', session: 1 }))
+const mock = vi.hoisted(() => ({ get: vi.fn<(...args: unknown[]) => Promise<unknown>>(), diagnostics: vi.fn<(...args: unknown[]) => Promise<unknown>>(), viewAllowed: true, userId: '7', session: 1 }))
 vi.mock('@/services/notificationOperations', () => ({
   getNotificationOperationsOverview: mock.get, getNotificationOperationsDiagnostics: mock.diagnostics,
 }))

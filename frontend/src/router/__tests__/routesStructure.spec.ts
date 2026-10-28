@@ -24,14 +24,26 @@ function label(locale: 'vi' | 'en', key: string): unknown {
 }
 
 describe('named routes and lazy UI pages', () => {
-  it('preserves the 30 named routes, distinct names and translation keys', () => {
+  it('preserves the 37 named routes, distinct names and translation keys', () => {
     const named = flatten(routes).filter((route) => route.name)
-    expect(named).toHaveLength(30)
+    expect(named).toHaveLength(37)
     expect(new Set(named.map((route) => route.name)).size).toBe(named.length)
     for (const route of named) {
       if (!route.meta?.labelKey) continue
       expect(typeof label('vi', String(route.meta.labelKey))).toBe('string')
       expect(typeof label('en', String(route.meta.labelKey))).toBe('string')
+    }
+  })
+
+  it('keeps Customer modal routes before the Customer list and supplies breadcrumbs', () => {
+    const parent = routes.find((route) => route.path === '/')
+    const children = parent && 'children' in parent && Array.isArray(parent.children) ? parent.children : []
+    const names = ['customers-new', 'customers-edit', 'customers-detail', 'customers']
+    const customerRoutes = children.filter((entry) => names.includes(String(entry.name)))
+    expect(customerRoutes.map((entry) => entry.name)).toEqual(names)
+    for (const route of customerRoutes) {
+      expect(route.meta?.breadcrumbTrail?.length).toBeGreaterThan(0)
+      expect(route.component).toEqual(expect.any(Function))
     }
   })
 

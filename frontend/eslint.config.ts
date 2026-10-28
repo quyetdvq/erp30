@@ -39,6 +39,15 @@ export default defineConfigWithVueTs(
 
   ...pluginOxlint.buildFromOxlintConfigFile('.oxlintrc.json'),
 
+  // Native Node test suites intentionally use node:test and execute via
+  // `node --test`, not Vitest. Keep Vitest's import rule for *.spec.ts.
+  {
+    files: ['src/**/__tests__/*.node.mjs'],
+    rules: {
+      'vitest/no-import-node-test': 'off',
+    },
+  },
+
   // These maintenance tools intentionally run as CommonJS under Node.
   // Keep TypeScript/Vue imports strict without forbidding require() in *.cjs.
   {

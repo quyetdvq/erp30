@@ -61,12 +61,14 @@ const workflowListRoutes = new Map<string, string>([
   ['employee', '/people/employees'],
   ['organization_contact', '/organizations'],
   ['employee_contact', '/people/employees'],
+  ['customer_contact', '/customers'],
 ])
 
 /** Fixed internal destinations. An owning page must still authorize the target at request time. */
 export function workflowDestination(resourceType: string, id: string): NotificationDestination | null {
   if (!/^[1-9][0-9]{0,19}$/.test(id)) return null
   if (resourceType === 'product') return { path: `/products/${id}`, kind: 'detail' }
+  if (resourceType === 'customer') return { path: `/customers/${id}`, kind: 'detail' }
   const path = workflowListRoutes.get(resourceType)
   return path ? { path, kind: 'list' } : null
 }

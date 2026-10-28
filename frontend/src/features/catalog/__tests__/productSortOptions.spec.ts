@@ -9,10 +9,10 @@ import { en } from '@/i18n/locales/en'
 import { vi } from '@/i18n/locales/vi'
 
 describe('Product sorting choices', () => {
-  it('defaults to product_id (persisted id) and resets pagination when changed', () => {
-    expect(DEFAULT_PRODUCT_SORT).toBe('product_id')
+  it('defaults to newest product_id (persisted id descending) and resets pagination when changed', () => {
+    expect(DEFAULT_PRODUCT_SORT).toBe('-product_id')
     expect(serializeListQuery(createListQuery({ sort: DEFAULT_PRODUCT_SORT }))).toContain(
-      'sort=product_id',
+      'sort=-product_id',
     )
   })
 

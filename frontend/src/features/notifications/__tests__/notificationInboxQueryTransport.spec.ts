@@ -2,7 +2,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { getInboxPage } from '@/services/notificationInbox'
 import { apiClient } from '@/services/api'
 
-vi.mock('@/services/api', () => ({ apiClient: { get: vi.fn() } }))
+vi.mock('@/services/api', () => ({ apiClient: { get: vi.fn<(...args: unknown[]) => Promise<unknown>>() } }))
 beforeEach(() => {
   vi.resetAllMocks()
   vi.mocked(apiClient.get).mockResolvedValue({ data: { data: { items: [], next_cursor: null } } } as never)

@@ -50,7 +50,6 @@ const {
   users,
   departments,
   positions,
-  workflowStates,
   actionOptions,
   loadListReferences,
   loadEditorReferences,

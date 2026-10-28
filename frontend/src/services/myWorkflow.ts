@@ -5,7 +5,7 @@ import { apiClient } from '@/services/api'
 export const myWorkflowTypes = [
   'all', 'province', 'ward', 'organization', 'department', 'position', 'employee',
   'product_group', 'product_uom', 'product', 'price_list',
-  'organization_contact', 'employee_contact',
+  'organization_contact', 'employee_contact', 'customer', 'customer_contact',
 ] as const
 export type MyWorkflowType = (typeof myWorkflowTypes)[number]
 
@@ -17,6 +17,9 @@ export interface MyWorkflowItem {
   resource_type: string
   resource_id: string
   current_state: string
+  /** Optional additive fields from a target already checked by Workflow PBAC. */
+  record_name?: string | null
+  record_code?: string | null
   available_actions: MyWorkflowAction[]
   selected_at: string
 }

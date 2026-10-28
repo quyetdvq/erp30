@@ -592,7 +592,7 @@ test.describe('P1-FE-030 security surfaces', () => {
     expect(creates).toBe(1)
     expect(uploads).toBe(1)
     await dialog.getByRole('button', { name: 'Thử tải lại Avatar' }).click()
-    await expect(dialog).not.toBeVisible()
+    await expect(dialog).toBeHidden()
     expect(creates).toBe(1)
     expect(uploads).toBe(2)
   })

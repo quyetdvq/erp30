@@ -4,7 +4,7 @@ import { i18n } from '@/i18n'
 import type { NotificationOperationsDiagnostics, NotificationOperationsDiagnosticsQueue } from '@/services/notificationOperations'
 import NotificationOperationsDiagnosticsPanel from '../pages/NotificationOperationsDiagnosticsPanel.vue'
 
-const mocks = vi.hoisted(() => ({ fetch: vi.fn(), userId: '7', session: 1 }))
+const mocks = vi.hoisted(() => ({ fetch: vi.fn<(...args: unknown[]) => Promise<unknown>>(), userId: '7', session: 1 }))
 vi.mock('@/services/notificationOperations', () => ({ getNotificationOperationsDiagnostics: mocks.fetch }))
 vi.mock('@/stores/auth', () => ({
   useAuthStore: () => ({ user: { id: mocks.userId }, getSessionGeneration: () => mocks.session }),

@@ -87,8 +87,9 @@ final class ContactSql
     public static function collection(
         array $params, AuthorizedSqlScope $org, AuthorizedSqlScope $employee,
         string $utcDate, string $prefix = '',
+        ?AuthorizedSqlScope $customerContact = null, ?AuthorizedSqlScope $customerMaster = null,
     ): array {
-        $owner = self::ownerPredicate($org, $employee, $utcDate, $prefix);
+        $owner = self::ownerPredicate($org, $employee, $utcDate, $prefix, $customerContact, $customerMaster);
         $where = ['(' . $owner['sql'] . ')'];
         $binds = $owner['binds'];
         if ($params['q'] !== '') {
@@ -125,11 +126,12 @@ final class ContactSql
     public static function detail(
         string $id, AuthorizedSqlScope $org, AuthorizedSqlScope $employee,
         string $utcDate, string $prefix = '',
+        ?AuthorizedSqlScope $customerContact = null, ?AuthorizedSqlScope $customerMaster = null,
     ): array {
         if (preg_match('/\A[1-9][0-9]*\z/D', $id) !== 1) {
             throw new InvalidArgumentException('Invalid Contact detail ID.');
         }
-        $owner = self::ownerPredicate($org, $employee, $utcDate, $prefix);
+        $owner = self::ownerPredicate($org, $employee, $utcDate, $prefix, $customerContact, $customerMaster);
         return [
             'sql'=>'SELECT c.* FROM ' . self::table('contacts', $prefix)
                 . ' c WHERE (' . $owner['sql'] . ') AND c.id = ? LIMIT 1',
@@ -141,6 +143,7 @@ final class ContactSql
     private static function ownerPredicate(
         AuthorizedSqlScope $orgScope, AuthorizedSqlScope $employeeScope,
         string $date, string $prefix,
+        ?AuthorizedSqlScope $customerContact = null, ?AuthorizedSqlScope $customerMaster = null,
     ): array {
         if ($orgScope->resource !== 'organization_contact' || $orgScope->domain !== 'ORGANIZATION'
             || $employeeScope->resource !== 'employee_contact' || $employeeScope->domain !== 'ORGANIZATION') {
@@ -172,12 +175,27 @@ final class ContactSql
             . ' AND NOT EXISTS (SELECT 1 FROM ' . self::table('employee_assignments', $prefix)
             . ' other_a WHERE other_a.employee_id = e.id AND other_a.id <> a.id AND ' . $other . ')'
             . ' AND (' . $employeePredicate['sql'] . '))';
+        $customer = '1=0';
+        $customerBinds=[];
+        if ($customerContact!==null && $customerMaster!==null) {
+            if ($customerContact->resource!=='customer_contact' || $customerContact->domain!=='MASTER'
+                || $customerMaster->resource!=='customer' || $customerMaster->domain!=='MASTER') {
+                throw new InvalidArgumentException('Invalid Customer Contact PBAC scope resources.');
+            }
+            $cScope=$customerContact->predicate('c');
+            $mScope=$customerMaster->predicate('cu');
+            $customer="UPPER(TRIM(c.contact_type)) COLLATE utf8mb4_bin = 'CUSTOMER'"
+                . ' AND EXISTS (SELECT 1 FROM ' . self::table('customers',$prefix) . ' cu'
+                . ' WHERE cu.id = c.contact_ref_id AND (' . $cScope['sql'] . ')'
+                . ' AND (' . $mScope['sql'] . '))';
+            $customerBinds=[...$cScope['binds'],...$mScope['binds']];
+        }
         return [
-            'sql'=>'((' . $organization . ') OR (' . $employee . '))',
+            'sql'=>'((' . $organization . ') OR (' . $employee . ') OR (' . $customer . '))',
             'binds'=>[
                 ...$orgPredicate['binds'],
                 'ACTIVE', $date, $date, 'ACTIVE', $date, $date,
-                ...$employeePredicate['binds'],
+                ...$employeePredicate['binds'],...$customerBinds,
             ],
         ];
     }

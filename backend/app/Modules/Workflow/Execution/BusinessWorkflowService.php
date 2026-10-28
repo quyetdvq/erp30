@@ -8,6 +8,7 @@ use App\Exceptions\DomainException;
 use App\Modules\Access\BasePermissionReader;
 use App\Modules\Access\ResourceStateRepository;
 use App\Modules\Access\UnifiedAccessService;
+use App\Modules\Customer\CustomerService;
 use App\Modules\Notifications\NotificationOutboxProducer;
 use CodeIgniter\Database\BaseConnection;
 use CodeIgniter\Shield\Entities\User;
@@ -47,8 +48,8 @@ final class BusinessWorkflowService
         return ['mode'=>'LIFECYCLE','initial'=>$initial,'states'=>$codes];
     }
 
-    /** @return array{mode:string,current:string,options:list<array{action_code:string,status:string}>} */
-    public function options(string $type,string $id): array
+    /** @return array{mode:string,current:string,options:list<array{action_code:string,status:string}>,record_display?:array{name:?string,code:?string}} */
+    public function options(string $type,string $id,bool $includeDisplay=false): array
     {
         $row = $this->target($type,$id,false);
         $current = strtoupper((string) $row['status']);
@@ -64,7 +65,13 @@ final class BusinessWorkflowService
                 $options[] = ['action_code'=>(string) $transition['action_code'], 'status'=>(string) $transition['destination']];
             }
         }
-        return ['mode'=>'LIFECYCLE','current'=>$current,'options'=>$options];
+        $result = ['mode'=>'LIFECYCLE','current'=>$current,'options'=>$options];
+        if ($includeDisplay) {
+            // Only the own-user /my-work read model requests additive display
+            // fields; keep the existing Workflow options HTTP contract unchanged.
+            $result['record_display'] = BusinessWorkflowDisplay::fromAuthorizedRow($type,$row);
+        }
+        return $result;
     }
 
     /** @return array{status:string,action_code:string} */
@@ -72,6 +79,19 @@ final class BusinessWorkflowService
     {
         $action = BusinessWorkflowRules::action($action);
         BusinessWorkflowRules::table($type);
+        if ($type === 'customer') {
+            // Customer owns extra Company Usage reactivation invariants and
+            // an advisory master lock. Never bypass CustomerService::setState()
+            // with the generic SQL UPDATE (even for a direct HTTP caller).
+            $preview = $this->options($type, $id);
+            $chosen = BusinessWorkflowRules::transitionForAction($preview['options'], $action);
+            if ($action !== 'setstate') {
+                throw new DomainException('WF_INVALID_TRANSITION', ['action_code' => $action]);
+            }
+            $saved = (new CustomerService($this->actor, $this->db))
+                ->setState($id, ['status' => $chosen['status']]);
+            return ['status' => (string) $saved['status'], 'action_code' => $action];
+        }
         if (!$this->db->transBegin()) throw new RuntimeException('Workflow transition transaction failed');
         try {
             // Serialize transition on the actual business row and reassess PBAC
@@ -124,9 +144,18 @@ final class BusinessWorkflowService
         if ($result===false) throw new RuntimeException('Workflow target query failed');
         $row = $result->getRowArray();
         if ($row===null) throw new DomainException('WF_TARGET_NOT_FOUND');
-        if (str_ends_with($type,'_contact')) {
-            if (strtoupper((string) ($row['contact_type'] ?? '')) !== ($type==='organization_contact' ? 'ORGANIZATION' : 'EMPLOYEE')) {
+        if (!BusinessWorkflowRules::matchesTargetOwner($type, $row)) {
+            throw new DomainException('WF_TARGET_NOT_FOUND');
+        }
+        // Customer Contacts are visible only together with their parent Customer.
+        // The Contact table itself is shared and must not bypass parent PBAC.
+        if ($type === 'customer_contact') {
+            $parent = $this->db->table('customers')->where('id', $row['contact_ref_id'])->get()->getRowArray();
+            if ($parent === null) {
                 throw new DomainException('WF_TARGET_NOT_FOUND');
+            }
+            if (!$this->access->canView('customer', $parent)) {
+                throw new DomainException('AUTH_POLICY_DENIED', ['action' => 'view']);
             }
         }
         return $row;

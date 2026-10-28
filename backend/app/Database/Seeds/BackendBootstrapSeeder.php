@@ -19,5 +19,8 @@ final class BackendBootstrapSeeder extends Seeder
         $this->call(ResourceActionSeeder::class);
         $this->call(GroupRootSeeder::class);
         $this->call(PrivilegedAuthorizationGroupSeeder::class);
+        if ($this->db->tableExists('customers')) {
+            $this->call(CustomerCoreSeeder::class);
+        }
     }
 }

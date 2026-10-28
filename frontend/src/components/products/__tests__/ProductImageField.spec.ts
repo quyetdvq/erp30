@@ -3,7 +3,7 @@ import { flushPromises, mount } from '@vue/test-utils'
 import { createI18n } from 'vue-i18n'
 import ProductImageField from '../ProductImageField.vue'
 
-const media = vi.hoisted(() => ({ upload: vi.fn(), remove: vi.fn() }))
+const media = vi.hoisted(() => ({ upload: vi.fn<(...args: unknown[]) => Promise<unknown>>(), remove: vi.fn<(...args: unknown[]) => Promise<unknown>>() }))
 vi.mock('@/services/productImage', () => ({
   uploadProductImage: media.upload,
   deleteProductImage: media.remove,

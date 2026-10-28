@@ -31,6 +31,8 @@ final class EffectiveRowActionHints
         'employee_assignment' => ['edit', 'setstate'],
         'organization_contact' => ['edit', 'setstate'],
         'employee_contact' => ['edit', 'setstate'],
+        'customer' => ['edit', 'setstate'],
+        'customer_contact' => ['edit', 'setstate'],
         'price_list' => ['edit', 'setstate'],
         'authorization_group' => ['edit', 'setstate'],
         'policy' => ['edit', 'setstate'],

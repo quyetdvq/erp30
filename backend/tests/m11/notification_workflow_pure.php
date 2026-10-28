@@ -56,4 +56,18 @@ assertM112(!Rules::activeUser(['active'=>1,'deleted_at'=>'2026-10-01','status'=>
 $catalog = \App\Modules\Notifications\NotificationCatalog::definitions();
 assertM112($catalog['workflow.action_required.in_app']['capability'] === 'AVAILABLE', 'workflow capability');
 assertM112($catalog['security.permission_changed.in_app']['capability'] === 'UNAVAILABLE', 'security remains future');
+require_once __DIR__ . '/../../app/Modules/Workflow/Execution/BusinessWorkflowDisplay.php';
+$display = \App\Modules\Workflow\Execution\BusinessWorkflowDisplay::fromAuthorizedRow(
+    'product', ['product_name' => '  Laptop P1  ', 'code' => 'SP001', 'email' => 'private@example.com']
+);
+assertM112($display === ['name' => 'Laptop P1', 'code' => 'SP001'], 'product display strictly whitelisted');
+assertM112(\App\Modules\Workflow\Execution\BusinessWorkflowDisplay::fromAuthorizedRow(
+    'customer', ['name' => 'Customer A', 'customer_code' => 'KH0001', 'tax_code' => 'private']
+) === ['name' => 'Customer A', 'code' => 'KH0001'], 'customer safe identity');
+assertM112(\App\Modules\Workflow\Execution\BusinessWorkflowDisplay::fromAuthorizedRow(
+    'customer_contact', ['name' => 'Receiver', 'mobile' => 'hidden']
+) === ['name' => 'Receiver', 'code' => null], 'contact does not disclose mobile');
+assertM112(\App\Modules\Workflow\Execution\BusinessWorkflowDisplay::fromAuthorizedRow(
+    'unregistered_resource', ['name' => 'Secret', 'code' => 'SECRET']
+) === ['name' => null, 'code' => null], 'unknown resources deny metadata');
 fwrite(STDOUT, "M11.2 PURE PASS: assignment CAS contract, bounded recipients, immutable payload, user eligibility\n");

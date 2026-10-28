@@ -9,8 +9,8 @@ import type { NotificationPreference, NotificationPolicy } from '@/services/noti
 
 const mock = vi.hoisted(() => ({
   route: { name: 'display-preferences', path: '/profile/display-preferences' },
-  getPreferences: vi.fn(), patchPreferences: vi.fn(),
-  getPolicies: vi.fn(), patchPolicies: vi.fn(),
+  getPreferences: vi.fn<(...args: unknown[]) => Promise<unknown>>(), patchPreferences: vi.fn<(changes: Array<{ key: string }>) => Promise<unknown>>(),
+  getPolicies: vi.fn<(...args: unknown[]) => Promise<unknown>>(), patchPolicies: vi.fn<(...args: unknown[]) => Promise<unknown>>(),
 }))
 vi.mock('vue-router', () => ({ useRoute: () => mock.route }))
 vi.mock('@/services/notificationSettings', () => ({

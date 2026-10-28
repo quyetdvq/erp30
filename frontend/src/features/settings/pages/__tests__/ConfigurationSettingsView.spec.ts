@@ -20,8 +20,8 @@ vi.mock('@/stores/auth', () => ({
   useAuthStore: () => ({ getSessionGeneration: () => 1 }),
 }))
 vi.mock('@/services/notificationRuntimeConfig', () => ({
-  getNotificationRuntimeConfig: vi.fn(),
-  updateNotificationRuntimeConfig: vi.fn(),
+  getNotificationRuntimeConfig: vi.fn<(...args: unknown[]) => Promise<unknown>>(),
+  updateNotificationRuntimeConfig: vi.fn<(...args: unknown[]) => Promise<unknown>>(),
 }))
 
 const keys = [

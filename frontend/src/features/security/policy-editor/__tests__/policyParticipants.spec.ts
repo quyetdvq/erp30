@@ -13,7 +13,7 @@ import { usePolicyParticipants } from '../usePolicyParticipants'
 
 const mocks = vi.hoisted(() => ({
   listSecurityUserPage: vi.fn<(query: unknown) => Promise<{ data: ManagedUser[] }>>(),
-  listAuthorizationGroupPage: vi.fn(),
+  listAuthorizationGroupPage: vi.fn<(...args: unknown[]) => Promise<unknown>>(),
   reportApiError: vi.fn<(error: unknown) => void>(),
 }))
 vi.mock('@/services/security', () => ({

@@ -8,8 +8,8 @@ import { useEmployeeLookups } from '../useEmployeeLookups'
 import type { AssignmentMode } from '../types'
 
 const sources = vi.hoisted(() => ({
-  listEmployees: vi.fn(), listAssignments: vi.fn(),
-  listOrganizations: vi.fn(), listDepartments: vi.fn(), listPositions: vi.fn(),
+  listEmployees: vi.fn<(query: ListQuery) => Promise<unknown>>(), listAssignments: vi.fn<(query: ListQuery) => Promise<unknown>>(),
+  listOrganizations: vi.fn<(query: ListQuery) => Promise<unknown>>(), listDepartments: vi.fn<(query: ListQuery) => Promise<unknown>>(), listPositions: vi.fn<(query: ListQuery) => Promise<unknown>>(),
 }))
 vi.mock('@/services/employeeStructure', () => ({
   listEmployeePage: sources.listEmployees,
@@ -18,7 +18,7 @@ vi.mock('@/services/employeeStructure', () => ({
   listPositionPage: sources.listPositions,
 }))
 vi.mock('@/services/foundation', () => ({ listOrganizationPage: sources.listOrganizations }))
-vi.mock('@/services/errorBoundary', () => ({ reportApiError: vi.fn() }))
+vi.mock('@/services/errorBoundary', () => ({ reportApiError: vi.fn<(...args: unknown[]) => void>() }))
 
 function page<T>(query: ListQuery, data: T[], total = data.length): ListResponse<T> {
   return { data, meta: { page: query.page, page_size: query.page_size, total } }

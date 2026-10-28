@@ -101,7 +101,7 @@ final class MyWorkflowService
             ++$scanned;
             $last = $row; // Advance on *examined candidate*, including unauthorized ones.
             try {
-                $details = $workflow->options((string) $row['resource_type'], (string) $row['resource_id']);
+                $details = $workflow->options((string) $row['resource_type'], (string) $row['resource_id'], true);
             } catch (DomainException $e) {
                 // The actor cannot see this target, or it no longer has a usable adapter/state.
                 // Do NOT return the reason, even as an aggregate or a count.
@@ -120,6 +120,10 @@ final class MyWorkflowService
                 'resource_type' => (string) $row['resource_type'],
                 'resource_id' => (string) $row['resource_id'],
                 'current_state' => (string) $details['current'],
+                // Identity is projected from the SAME authorized target already loaded
+                // by WorkflowService::options(); no extra SQL or cross-module read.
+                'record_name' => $details['record_display']['name'],
+                'record_code' => $details['record_display']['code'],
                 'available_actions' => $details['options'],
                 'selected_at' => str_replace(' ', 'T', (string) $row['created_at']) . 'Z',
             ];

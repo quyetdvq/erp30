@@ -45,8 +45,7 @@ final class WorkflowActionRequiredHandler extends AbstractNotificationEventHandl
         if ($target === null) {
             throw new NotificationPermanentFailure('NOTIFICATION_SOURCE_NOT_FOUND');
         }
-        if (str_ends_with($resource, '_contact') && strtoupper((string) ($target['contact_type'] ?? ''))
-            !== ($resource === 'organization_contact' ? 'ORGANIZATION' : 'EMPLOYEE')) {
+        if (! BusinessWorkflowRules::matchesTargetOwner($resource, $target)) {
             throw new NotificationPermanentFailure('NOTIFICATION_SOURCE_NOT_FOUND');
         }
         if (strtoupper((string) $target['status']) !== $payload['to_state']) {

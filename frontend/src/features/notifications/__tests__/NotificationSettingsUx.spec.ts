@@ -10,8 +10,8 @@ import {
 } from '../notificationSettingsPresentation'
 
 const mock = vi.hoisted(() => ({
-  getPolicies: vi.fn(), patchPolicies: vi.fn(),
-  getPreferences: vi.fn(), patchPreferences: vi.fn(),
+  getPolicies: vi.fn<(...args: unknown[]) => Promise<unknown>>(), patchPolicies: vi.fn<(...args: unknown[]) => Promise<unknown>>(),
+  getPreferences: vi.fn<(...args: unknown[]) => Promise<unknown>>(), patchPreferences: vi.fn<(...args: unknown[]) => Promise<unknown>>(),
   generation: 1, editAllowed: true,
 }))
 // D1/C1 tests isolate consent and CAS behavior; D2 has dedicated real workspace-guard tests.

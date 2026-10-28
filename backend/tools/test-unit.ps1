@@ -9,6 +9,7 @@
 #   .\tools\test-unit.ps1 RUN ACCEPTANCE      # source/golden-master gates; no SQL/HTTP
 #   .\tools\test-unit.ps1 RUN M4-INTEGRATION  # opt-in M4 14-route HTTP/SQL sandbox
 #   .\tools\test-unit.ps1 RUN M4-CONCURRENCY  # opt-in two-writer Numbering config race
+#   .\tools\test-unit.ps1 RUN CUS-UNIT       # offline CUS rules + source contract
 #   .\tools\test-unit.ps1 RUN M11-UNIT         # M11 PHPUnit unit, no DB
 #   .\tools\test-unit.ps1 RUN M11-INTEGRATION  # M11 MariaDB E2E, uses database.tests
 #   .\tools\test-unit.ps1 RUN M11-RELIABILITY # M11.3A two-process + failure-injection, commits isolated test fixture
@@ -21,7 +22,7 @@ Set-StrictMode -Version Latest
 $ErrorActionPreference = 'Stop'
 
 $tokens = @($args)
-$usage = 'Usage: .\tools\test-unit.ps1 CHECK|RUN [UNIT-STANDARD|DB-READ|ALL|INTEGRATION|ACCEPTANCE|M4-INTEGRATION|M4-CONCURRENCY|M11|M11-UNIT|M11-INTEGRATION|M11-RELIABILITY] OR PREPARE M11'
+$usage = 'Usage: .\tools\test-unit.ps1 CHECK|RUN [UNIT-STANDARD|DB-READ|ALL|INTEGRATION|ACCEPTANCE|M4-INTEGRATION|M4-CONCURRENCY|M11|M11-UNIT|M11-INTEGRATION|M11-RELIABILITY|CUS-UNIT] OR PREPARE M11'
 if ($tokens.Count -lt 1 -or $tokens.Count -gt 3) { throw $usage }
 $action = ([string]$tokens[0]).ToUpperInvariant()
 if ($action -notin @('CHECK', 'RUN', 'PREPARE')) { throw $usage }
@@ -34,7 +35,7 @@ if ($tokens.Count -eq 2) {
 }
 $suite = $suite.TrimStart('-').ToUpperInvariant()
 if ($action -eq 'PREPARE' -and $suite -ne 'M11') { throw $usage }
-if ($suite -notin @('UNIT-STANDARD', 'DB-READ', 'ALL', 'INTEGRATION', 'ACCEPTANCE', 'M4-INTEGRATION', 'M4-CONCURRENCY', 'M11', 'M11-UNIT', 'M11-INTEGRATION', 'M11-RELIABILITY')) { throw $usage }
+if ($suite -notin @('UNIT-STANDARD', 'DB-READ', 'ALL', 'INTEGRATION', 'ACCEPTANCE', 'M4-INTEGRATION', 'M4-CONCURRENCY', 'M11', 'M11-UNIT', 'M11-INTEGRATION', 'M11-RELIABILITY', 'CUS-UNIT')) { throw $usage }
 
 function Invoke-PHPChecked {
     param([string[]]$Arguments, [string]$Description)
@@ -124,6 +125,15 @@ try {
 
     if ($action -eq 'CHECK') {
         Write-Host 'CHECK PASS: source and OpenAPI inventory only. No test, HTTP, or DB operation.'
+        return
+    }
+
+    if ($suite -eq 'CUS-UNIT') {
+        Invoke-PHPChecked -Description 'CUS G1 pure rules tests' -Arguments @('tests/cus/customer_core_pure.php')
+        Invoke-PHPChecked -Description 'CUS G1 source contract tests' -Arguments @('tests/cus/customer_source_contract_pure.php')
+        Invoke-PHPChecked -Description 'CUS SQL-first scoped query plan tests' -Arguments @('tests/cus/customer_sql_plan_pure.php')
+        Invoke-PHPChecked -Description 'CUS Workflow and User candidate regression tests' -Arguments @('tests/cus/customer_workflow_pure.php')
+        Write-Host 'CUS-UNIT PASS: CUS offline rules and source contract. No DB, HTTP or browser validation.'
         return
     }
 

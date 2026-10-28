@@ -16,6 +16,7 @@ final class BusinessWorkflowRules
         'product_group'=>'product_groups', 'product_uom'=>'product_uoms',
         'product'=>'products', 'price_list'=>'price_lists',
         'organization_contact'=>'contacts', 'employee_contact'=>'contacts',
+        'customer'=>'customers', 'customer_contact'=>'contacts',
     ];
 
     public static function table(string $type): string
@@ -24,6 +25,18 @@ final class BusinessWorkflowRules
             throw new DomainException('WF_TARGET_ADAPTER_UNAVAILABLE', ['resource'=>$type]);
         }
         return self::TABLES[$type];
+    }
+
+    /** Reject a contact ID belonging to a different polymorphic owner. */
+    public static function matchesTargetOwner(string $type, array $row): bool
+    {
+        $required = match ($type) {
+            'organization_contact' => 'ORGANIZATION',
+            'employee_contact' => 'EMPLOYEE',
+            'customer_contact' => 'CUSTOMER',
+            default => null,
+        };
+        return $required === null || strtoupper((string) ($row['contact_type'] ?? '')) === $required;
     }
 
     public static function action(string $action): string

@@ -6,7 +6,7 @@ import { loadLookupPages } from '@/services/listLookups'
 import { emptyEmployeeForm } from '../model'
 import { useEmployeeUserLookup } from '../useEmployeeUserLookup'
 
-vi.mock('@/services/listLookups', () => ({ loadLookupPages: vi.fn() }))
+vi.mock('@/services/listLookups', () => ({ loadLookupPages: vi.fn<(...args: unknown[]) => Promise<unknown>>() }))
 
 const user = (id: string, username: string, name?: string, email?: string): ManagedUser => ({
   id,

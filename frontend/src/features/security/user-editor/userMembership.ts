@@ -3,11 +3,7 @@
  * must not GET every group's members just to show one user's memberships.
  * Group member lists are read only when replacing a changed group's members.
  */
-export function userGroupIds(groups: readonly { id: string | null }[]): string[] {
-  return [...new Set(groups
-    .map((group) => group.id)
-    .filter((id): id is string => typeof id === 'string' && /^[1-9][0-9]*$/.test(id)))]
-}
+export { userGroupIds } from '@/modules/userGroupIds'
 
 /** Never touch groups that are absent from the actor's VIEW-scoped catalog. */
 export function changedMembershipGroupIds(

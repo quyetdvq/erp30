@@ -9,21 +9,58 @@ import {
   getMyWorkflowPage, myWorkflowTypes, type MyWorkflowItem, type MyWorkflowType,
 } from '@/services/myWorkflow'
 
-const { t } = useI18n()
+const { t, locale } = useI18n()
 const auth = useAuthStore()
 const resourceType = ref<MyWorkflowType>('all')
+const searchText = ref('')
+const stateFilter = ref('all')
 const items = ref<MyWorkflowItem[]>([])
 const nextCursor = ref<string | null>(null)
 const enabled = ref(true)
 const busy = ref(false)
 const error = ref(false)
+const userId = computed(() => String(auth.user?.id ?? ''))
 const rows = computed(() => items.value.map(item => ({
   item, destination: workflowDestination(item.resource_type, item.resource_id),
 })))
+const states = computed(() => [...new Set(items.value.map(item => item.current_state))].sort())
+const displayedRows = computed(() => {
+  const query = searchText.value.trim().toLocaleLowerCase()
+  return rows.value.filter(({ item }) => {
+    if (stateFilter.value !== 'all' && item.current_state !== stateFilter.value) return false
+    if (!query) return true
+    return [item.resource_type, item.resource_id, item.record_name, item.record_code,
+      item.current_state, ...item.available_actions.flatMap(option => [option.action_code, option.status]),
+      t(`myWork.resourceTypes.${item.resource_type}`),
+    ].some(value => String(value ?? '').toLocaleLowerCase().includes(query))
+  })
+})
+const availableActionCount = computed(() => items.value.reduce(
+  (sum, item) => sum + item.available_actions.length, 0,
+))
+const kindCount = computed(() => new Set(items.value.map(item => item.resource_type)).size)
+
+function stateLabel(state: string): string {
+  const key = state.toLowerCase()
+  if (['draft', 'approved', 'active', 'inactive', 'closed', 'pending', 'processing',
+    'completed', 'failed', 'locked', 'suspended', 'disabled'].includes(key)) {
+    return t(`status.${key}`)
+  }
+  return state
+}
+function assignedTime(value: string): string {
+  const date = new Date(value)
+  if (Number.isNaN(date.getTime())) return '—'
+  return new Intl.DateTimeFormat(locale.value === 'vi' ? 'vi-VN' : 'en-US', {
+    dateStyle: 'short', timeStyle: 'short',
+  }).format(date)
+}
+function recordTitle(item: MyWorkflowItem): string {
+  return item.record_name?.trim() || `${t(`myWork.resourceTypes.${item.resource_type}`)} #${item.resource_id}`
+}
+
 let requestSerial = 0
 let activeController: AbortController | null = null
-const userId = computed(() => String(auth.user?.id ?? ''))
-
 async function load(append = false): Promise<void> {
   if (append && (nextCursor.value === null || busy.value)) return
   const sequence = ++requestSerial
@@ -55,6 +92,9 @@ async function load(append = false): Promise<void> {
     })
     items.value = append ? [...items.value, ...fresh] : fresh
     nextCursor.value = page.next_cursor
+    if (stateFilter.value !== 'all' && !items.value.some(item => item.current_state === stateFilter.value)) {
+      stateFilter.value = 'all'
+    }
   } catch {
     if (sequence === requestSerial && !controller.signal.aborted && actor === userId.value) error.value = true
   } finally {
@@ -64,15 +104,15 @@ async function load(append = false): Promise<void> {
     }
   }
 }
-
 function selectType(event: Event): void {
   const value = (event.target as HTMLSelectElement).value
   if (myWorkflowTypes.some(type => type === value)) {
     resourceType.value = value as MyWorkflowType
   }
 }
-watch(resourceType, () => { void load() })
+watch(resourceType, () => { searchText.value = ''; stateFilter.value = 'all'; void load() })
 watch(userId, () => {
+  searchText.value = ''; stateFilter.value = 'all'
   if (resourceType.value !== 'all') resourceType.value = 'all'
   else void load()
 })
@@ -82,66 +122,152 @@ onBeforeUnmount(() => { ++requestSerial; activeController?.abort() })
 
 <template>
   <section class="my-work-actions" :aria-label="t('myWork.title')">
-    <h1>{{ t('myWork.title') }}</h1>
-    <p class="my-work-description">{{ t('myWork.description') }}</p>
-    <label class="my-work-filter">
-      <span>{{ t('myWork.filter') }}</span>
-      <select data-testid="my-work-resource-filter" :value="resourceType" :disabled="busy" @change="selectType">
-        <option v-for="type in myWorkflowTypes" :key="type" :value="type">
-          {{ type === 'all' ? t('myWork.allTypes') : t(`myWork.resourceTypes.${type}`) }}
-        </option>
-      </select>
-    </label>
-    <NButton data-testid="my-work-refresh" secondary :disabled="busy" @click="load()">
-      {{ t('myWork.refresh') }}
-    </NButton>
-    <p v-if="busy" role="status" aria-busy="true">{{ t('myWork.loading') }}</p>
+    <header class="my-work-heading">
+      <h1>{{ t('myWork.title') }}</h1>
+      <p class="my-work-description">{{ t('myWork.description') }}</p>
+    </header>
+
+    <div class="my-work-toolbar">
+      <label class="my-work-control">
+        <span>{{ t('myWork.filter') }}</span>
+        <select data-testid="my-work-resource-filter" :value="resourceType" :disabled="busy" @change="selectType">
+          <option v-for="type in myWorkflowTypes" :key="type" :value="type">
+            {{ type === 'all' ? t('myWork.allTypes') : t(`myWork.resourceTypes.${type}`) }}
+          </option>
+        </select>
+      </label>
+      <label class="my-work-control my-work-control--search">
+        <span>{{ t('myWork.searchLoaded') }}</span>
+        <input v-model="searchText" data-testid="my-work-search" type="search"
+          :placeholder="t('myWork.searchPlaceholder')" />
+      </label>
+      <label class="my-work-control">
+        <span>{{ t('myWork.stateFilter') }}</span>
+        <select v-model="stateFilter" data-testid="my-work-state-filter">
+          <option value="all">{{ t('myWork.allStates') }}</option>
+          <option v-for="state in states" :key="state" :value="state">{{ stateLabel(state) }}</option>
+        </select>
+      </label>
+      <NButton data-testid="my-work-refresh" secondary :disabled="busy" @click="load()">
+        {{ t('myWork.refresh') }}
+      </NButton>
+    </div>
+
+    <p v-if="busy && !items.length" role="status" aria-busy="true">{{ t('myWork.loading') }}</p>
     <p v-if="!enabled" role="status">{{ t('myWork.disabled') }}</p>
     <p v-if="error" role="alert">{{ t('myWork.error') }}</p>
     <NButton v-if="error" size="small" @click="load(items.length > 0 || nextCursor !== null)">
       {{ t('myWork.retry') }}
     </NButton>
-    <p v-if="!busy && !error && enabled && !items.length">{{ t('myWork.empty') }}</p>
-    <div class="my-work-list" role="list">
-      <article v-for="row in rows" :key="`${row.item.resource_type}:${row.item.resource_id}`" role="listitem" class="my-work-row">
-        <div>
-          <strong>{{ t(`myWork.resourceTypes.${row.item.resource_type}`) }} #{{ row.item.resource_id }}</strong>
-          <p>{{ row.item.current_state }}</p>
-          <small>{{ t('myWork.selectedAt') }}: {{ new Date(row.item.selected_at).toLocaleString() }}</small>
-          <div class="my-work-actions-label">{{ t('myWork.actions') }}:</div>
-          <ul class="my-work-options">
-            <li v-for="option in row.item.available_actions" :key="`${option.action_code}:${option.status}`">
-              {{ option.action_code }} → {{ option.status }}
-            </li>
-          </ul>
-        </div>
-        <div class="my-work-action-link">
-          <RouterLink v-if="row.destination" :to="row.destination.path">
-            {{ t(row.destination.kind === 'detail' ? 'myWork.openRecord' : 'myWork.openList') }}
-          </RouterLink>
-          <span v-else>{{ t('myWork.unavailable') }}</span>
-        </div>
-      </article>
+
+    <template v-if="enabled && (items.length || nextCursor !== null)">
+      <div class="my-work-summary" role="status">
+        <span><strong>{{ displayedRows.length }}</strong> {{ t('myWork.visibleOfLoaded') }} <strong>{{ items.length }}</strong></span>
+        <span>{{ t('myWork.availableCount') }}: <strong>{{ availableActionCount }}</strong></span>
+        <span>{{ t('myWork.typeCount') }}: <strong>{{ kindCount }}</strong></span>
+      </div>
+      <div v-if="displayedRows.length" class="my-work-table-scroll">
+        <table class="my-work-table">
+          <thead>
+            <tr>
+              <th scope="col">{{ t('myWork.record') }}</th>
+              <th scope="col">{{ t('myWork.currentStateLabel') }}</th>
+              <th scope="col">{{ t('myWork.actions') }}</th>
+              <th scope="col">{{ t('myWork.selectedAt') }}</th>
+              <th scope="col">{{ t('myWork.open') }}</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr v-for="row in displayedRows" :key="`${row.item.resource_type}:${row.item.resource_id}`"
+              data-testid="my-work-row">
+              <td :data-label="t('myWork.record')">
+                <div class="my-work-record">
+                  <span class="my-work-type">{{ t(`myWork.resourceTypes.${row.item.resource_type}`) }}</span>
+                  <strong class="my-work-name">{{ recordTitle(row.item) }}</strong>
+                  <div class="my-work-identity">
+                    <span v-if="row.item.record_code" class="my-work-code">{{ row.item.record_code }}</span>
+                    <span>#{{ row.item.resource_id }}</span>
+                  </div>
+                </div>
+              </td>
+              <td :data-label="t('myWork.currentStateLabel')">
+                <span class="my-work-state" :class="{ 'my-work-state--active': row.item.current_state === 'ACTIVE' }">
+                  {{ stateLabel(row.item.current_state) }}
+                </span>
+              </td>
+              <td :data-label="t('myWork.actions')">
+                <ul class="my-work-options">
+                  <li v-for="option in row.item.available_actions" :key="`${option.action_code}:${option.status}`">
+                    <span>{{ stateLabel(row.item.current_state) }} → <strong>{{ stateLabel(option.status) }}</strong></span>
+                    <code>{{ option.action_code }}</code>
+                  </li>
+                </ul>
+              </td>
+              <td class="my-work-time" :data-label="t('myWork.selectedAt')">
+                <time :datetime="row.item.selected_at">{{ assignedTime(row.item.selected_at) }}</time>
+              </td>
+              <td :data-label="t('myWork.open')">
+                <RouterLink v-if="row.destination" class="my-work-link" :to="row.destination.path">
+                  {{ t(row.destination.kind === 'detail' ? 'myWork.openRecord' : 'myWork.openList') }}
+                </RouterLink>
+                <span v-else class="my-work-muted">{{ t('myWork.unavailable') }}</span>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+      <p v-else class="my-work-empty-filter" role="status">{{ t('myWork.noFilterMatches') }}</p>
+      <p class="my-work-scope-note">{{ t('myWork.localFilterNote') }}</p>
+    </template>
+    <p v-else-if="!busy && !error && enabled">{{ t('myWork.empty') }}</p>
+    <div v-if="nextCursor !== null" class="my-work-more">
+      <NButton data-testid="my-work-more" :disabled="busy" secondary @click="load(true)">
+        {{ t('myWork.more') }}
+      </NButton>
     </div>
-    <NButton v-if="nextCursor !== null" data-testid="my-work-more" :disabled="busy" secondary @click="load(true)">
-      {{ t('myWork.more') }}
-    </NButton>
   </section>
 </template>
 
 <style scoped>
-.my-work-actions { width: min(100%, 980px); margin: 0 auto; padding: 20px; }
-.my-work-actions h1 { font-size: 1.5rem; margin: 0 0 8px; }
-.my-work-description { opacity: .8; max-width: 800px; }
-.my-work-filter { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; margin: 20px 0; }
-.my-work-filter select { min-height: 34px; padding: 5px 8px; border-radius: 6px; border: 1px solid var(--n-border-color, #aaa5); background: var(--n-color, white); color: inherit; }
-.my-work-list { display: grid; gap: 12px; margin: 16px 0; }
-.my-work-row { display: flex; justify-content: space-between; gap: 18px; border: 1px solid var(--n-border-color, #aaa5); border-radius: 10px; padding: 16px; }
-.my-work-row p { margin: 8px 0; }
-.my-work-row small { opacity: .7; }
-.my-work-actions-label { margin-top: 12px; font-size: .9rem; font-weight: 600; }
-.my-work-options { display: flex; flex-wrap: wrap; gap: 8px; list-style: none; padding: 0; margin: 8px 0 0; }
-.my-work-options li { border-radius: 6px; background: var(--n-color-modal, #80808018); padding: 4px 8px; font-size: .85rem; }
-.my-work-action-link { flex-shrink: 0; align-self: center; }
-@media (max-width: 650px) { .my-work-row { flex-direction: column; } .my-work-action-link { align-self: start; } }
+.my-work-actions { width: min(100%, 1240px); margin: 0 auto; padding: 20px; color: #183b57; }
+.my-work-heading h1 { font-size: 1.65rem; margin: 0 0 8px; }
+.my-work-description { max-width: 900px; margin: 0; line-height: 1.6; color: #526a7b; }
+.my-work-toolbar { display: flex; align-items: end; flex-wrap: wrap; gap: 12px; margin: 24px 0 16px; }
+.my-work-control { display: grid; gap: 5px; min-width: 160px; font-size: 12px; font-weight: 600; color: #526a7b; }
+.my-work-control--search { flex: 1 1 260px; }
+.my-work-control :is(select, input) { width: 100%; min-height: 38px; padding: 8px 10px; border: 1px solid #cad7e1; border-radius: 6px; background: #fff; color: #183b57; font: inherit; font-size: 13px; }
+.my-work-summary { display: flex; flex-wrap: wrap; gap: 8px 20px; padding: 12px 16px; border: 1px solid #dbe5ea; border-radius: 7px 7px 0 0; background: #f7fafb; color: #536b7b; font-size: 13px; }
+.my-work-summary strong { color: #183b57; }
+.my-work-table-scroll { width: 100%; max-width: 100%; overflow-x: auto; border: 1px solid #dbe5ea; border-top: 0; border-radius: 0 0 7px 7px; background: #fff; }
+.my-work-table { width: 100%; border-collapse: collapse; font-size: 13px; text-align: start; }
+.my-work-table th { padding: 12px; text-align: start; white-space: nowrap; color: #536b7b; background: #f7fafb; border-bottom: 1px solid #dbe5ea; }
+.my-work-table td { padding: 14px 12px; border-top: 1px solid #e9eff3; vertical-align: middle; }
+.my-work-table tbody tr:hover { background: #fafcfe; }
+.my-work-record { display: grid; justify-items: start; gap: 5px; min-width: 180px; max-width: 340px; }
+.my-work-type { padding: 3px 7px; border-radius: 4px; font-size: 11px; background: #ebf4fa; color: #35607a; }
+.my-work-name { color: #183b57; overflow-wrap: anywhere; font-size: 14px; }
+.my-work-identity { display: flex; flex-wrap: wrap; gap: 6px 10px; font-size: 12px; color: #718294; }
+.my-work-code { font-weight: 600; color: #4f6575; }
+.my-work-state { display: inline-flex; padding: 5px 9px; border-radius: 20px; border: 1px solid #d9e3eb; background: #f4f7fa; font-size: 12px; font-weight: 600; white-space: nowrap; }
+.my-work-state--active { background: #e4f8ed; color: #178549; border-color: #c1eed5; }
+.my-work-options { display: grid; gap: 7px; list-style: none; margin: 0; padding: 0; min-width: 150px; }
+.my-work-options li { display: grid; gap: 3px; width: fit-content; max-width: 100%; padding: 6px 9px; border-radius: 5px; background: #f0f5fa; color: #204963; font-size: 12px; }
+.my-work-options code { color: #668196; font-size: 11px; overflow-wrap: anywhere; }
+.my-work-time { white-space: nowrap; color: #546c7d; }
+.my-work-link { color: #036aa5; font-weight: 600; white-space: nowrap; }
+.my-work-muted { color: #7c8c9a; }
+.my-work-scope-note { font-size: 12px; line-height: 1.5; color: #667c8b; }
+.my-work-empty-filter { padding: 24px; text-align: center; border: 1px solid #dbe5ea; border-top: 0; margin: 0; }
+.my-work-more { display: flex; justify-content: center; padding: 12px; }
+@media (max-width: 760px) {
+  .my-work-actions { padding: 12px; }
+  .my-work-table-scroll { overflow-x: visible; border: 0; background: transparent; }
+  .my-work-table, .my-work-table tbody { display: block; }
+  .my-work-table thead { display: none; }
+  .my-work-table tbody tr { display: grid; gap: 10px; margin: 10px 0; padding: 14px; border: 1px solid #dbe5ea; border-radius: 8px; background: #fff; }
+  .my-work-table td { display: grid; grid-template-columns: 100px minmax(0, 1fr); align-items: start; gap: 8px; padding: 0; border: 0; }
+  .my-work-table td::before { content: attr(data-label); color: #536b7b; font-size: 12px; font-weight: 600; }
+  .my-work-record { min-width: 0; }
+  .my-work-time { white-space: normal; }
+}
 </style>

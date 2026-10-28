@@ -179,6 +179,26 @@ export const routes: RouteRecordRaw[] = [
         meta: { labelKey: 'nav.products' },
       },
       {
+        path: 'customers/new', name: 'customers-new',
+        component: () => import('@/features/customer/pages/CustomersView.vue'),
+        meta: { labelKey: 'customer.create', breadcrumbTrail: breadcrumbTrails.customers },
+      },
+      {
+        path: 'customers/:id/edit', name: 'customers-edit',
+        component: () => import('@/features/customer/pages/CustomersView.vue'),
+        meta: { labelKey: 'customer.edit', breadcrumbTrail: breadcrumbTrails.customers },
+      },
+      {
+        path: 'customers/:id', name: 'customers-detail',
+        component: () => import('@/features/customer/pages/CustomersView.vue'),
+        meta: { labelKey: 'customer.view', breadcrumbTrail: breadcrumbTrails.customers },
+      },
+      {
+        path: 'customers', name: 'customers',
+        component: () => import('@/features/customer/pages/CustomersView.vue'),
+        meta: { labelKey: 'nav.customers', breadcrumbTrail: breadcrumbTrails.organization },
+      },
+      {
         path: 'organizations',
         name: 'organizations',
         component: () => import('@/features/organization/pages/OrganizationsView.vue'),

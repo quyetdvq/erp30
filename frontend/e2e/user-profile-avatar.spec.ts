@@ -1,4 +1,4 @@
-import { expect, test, type Page } from '@playwright/test'
+import { expect, test, type Page, type Request } from '@playwright/test'
 
 /** Mocked HTTP transport: no database or persistent account mutations. */
 type SessionUser = {
@@ -45,6 +45,15 @@ async function mockProfileSession(page: Page): Promise<{ user: SessionUser }> {
     }),
   )
   return session
+}
+
+/** Validate the intercepted multipart upload without conditional test assertions. */
+function validateAvatarUploadRequest(request: Request): string {
+  expect(request.headers()['content-type']).toContain('multipart/form-data')
+  const payload = request.postDataBuffer()?.toString('latin1') ?? ''
+  expect(payload).toContain('name="image"; filename="photo.png"')
+  expect(payload).not.toContain('name="_method"')
+  return payload
 }
 
 test.describe('User v1.2 private profile and avatar regression', () => {
@@ -100,10 +109,7 @@ test.describe('User v1.2 private profile and avatar regression', () => {
       const method = route.request().method()
       if (method === 'POST') {
         uploaded++
-        expect(route.request().headers()['content-type']).toContain('multipart/form-data')
-        multipartPayload = route.request().postDataBuffer()?.toString('latin1') ?? ''
-        expect(multipartPayload).toContain('name="image"; filename="photo.png"')
-        expect(multipartPayload).not.toContain('name="_method"')
+        multipartPayload = validateAvatarUploadRequest(route.request())
         session.user.has_avatar = true
         session.user.avatar_url = avatarUrl
         return route.fulfill({

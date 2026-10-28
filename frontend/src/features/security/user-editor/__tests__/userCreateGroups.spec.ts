@@ -32,7 +32,7 @@ describe('Shield User create/edit UX', () => {
     ])
     expect(options.map((item) => item.value)).toEqual(['2', '4'])
     expect(buildCreateUserPayload(input).group_ids).toEqual(['2', '4'])
-    expect(() => buildCreateUserPayload({ ...input, group_ids: ['2', '2'] })).toThrow()
+    expect(() => buildCreateUserPayload({ ...input, group_ids: ['2', '2'] })).toThrow('INVALID_GROUP_IDS')
   })
 
   it('PATCH does not replace memberships and allows old NULL names to remain', () => {
@@ -48,8 +48,8 @@ describe('Shield User create/edit UX', () => {
 
   it('when Avatar PUT fails after POST, retry performs PUT only', async () => {
     const context: { createdUserId: string | null } = { createdUserId: null }
-    const create = vi.fn().mockResolvedValue({ id: '77' })
-    const upload = vi.fn().mockRejectedValueOnce(new Error('Forbidden')).mockResolvedValue(undefined)
+    const create = vi.fn<() => Promise<{ id: string }>>().mockResolvedValue({ id: '77' })
+    const upload = vi.fn<(id: string) => Promise<void>>().mockRejectedValueOnce(new Error('Forbidden')).mockResolvedValue(undefined)
     await expect(submitCreatedUserAvatar(context, create, upload)).rejects.toThrow('Forbidden')
     expect(context.createdUserId).toBe('77')
     await submitCreatedUserAvatar(context, create, upload)

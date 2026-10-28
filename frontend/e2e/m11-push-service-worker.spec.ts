@@ -1,4 +1,4 @@
-import { chromium, expect, test as base, type BrowserContext } from '@playwright/test'
+import { chromium, expect, test as base, type BrowserContext, type TestInfo } from '@playwright/test'
 import { mkdtemp, rm } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
@@ -35,6 +35,22 @@ const test = base.extend<{ context: BrowserContext }>({
 // Headless Windows/Chromium can omit notifications from getNotifications() even
 // when showNotification() resolves; that OS notification list is extra evidence,
 // not the sole signal that the Push handler ran.
+type NotificationEvidence = { title: string; body: string; path: string | null }
+
+/** Headless getNotifications() may be empty even after showNotification() succeeds. */
+function assertOptionalNativeNotificationEvidence(
+  displayed: NotificationEvidence[], expected: NotificationEvidence, testInfo: TestInfo,
+): void {
+  if (displayed.length > 0) {
+    expect(displayed).toEqual([expected])
+  } else {
+    testInfo.annotations.push({
+      type: 'headless-notification-list',
+      description: 'getNotifications() returned []; verified native showNotification() resolved in real worker. OS display requires human DEV-device acceptance.',
+    })
+  }
+}
+
 test('real Chromium Service Worker handles a content-free synthetic Push', async ({ page, context, baseURL }, testInfo) => {
   const origin = new URL(baseURL!).origin
   const workerUrl = `${origin}/notification-sw.js`
@@ -153,9 +169,7 @@ test('real Chromium Service Worker handles a content-free synthetic Push', async
         title: n.title, body: n.body, path: n.data?.path,
       }))
     })
-    if (displayed.length > 0) expect(displayed).toEqual([expected])
-    else testInfo.annotations.push({ type: 'headless-notification-list',
-      description: 'getNotifications() returned []; verified native showNotification() resolved in real worker. OS display requires human DEV-device acceptance.' })
+    assertOptionalNativeNotificationEvidence(displayed, expected, testInfo)
   } finally {
     // Clean up even when a real browser API or CDP assertion failed.
     await page.evaluate(async () => {

@@ -145,6 +145,12 @@ $routes->group('api/v1', ['filter' => 'cors'], static function (RouteCollection 
     // M8 shared Import Framework + Product Adapter: four frozen operations.
     require __DIR__ . '/M8Routes.php';
 
+    // P2-CUS-G1: approved Customer Core (seven routes; SAL/FIN are deferred).
+    require __DIR__ . '/CUSRoutes.php';
+
+    // P2 Workflow UI: scope-checked assignee candidate search, isolated from frozen M4 routes.
+    require __DIR__ . '/WorkflowAssigneeRoutes.php';
+
     // M11.1B: Settings, Shield Inbox and read-status routes; CLI producer/worker are feature-gated.
     require __DIR__ . '/M11Routes.php';
 

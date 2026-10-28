@@ -3,7 +3,7 @@ import { rowAllowedActions } from '@/components/lists/rowActionPolicy'
 import { computed, nextTick, onMounted, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { NIcon } from 'naive-ui'
-import { CloseOutline, RefreshOutline } from '@vicons/ionicons5'
+import { RefreshOutline } from '@vicons/ionicons5'
 
 import type {
   NumberingSeriesCreate,

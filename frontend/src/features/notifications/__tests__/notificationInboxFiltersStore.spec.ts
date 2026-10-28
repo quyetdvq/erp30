@@ -8,7 +8,7 @@ vi.mock('@/stores/auth', () => ({
   useAuthStore: () => ({ user: session.userId ? { id: session.userId } : null, getSessionGeneration: () => session.generation }),
 }))
 vi.mock('@/services/notificationInbox', () => ({
-  getInboxPage: vi.fn(), getInboxSummary: vi.fn(), markInboxRead: vi.fn(), markInboxAllRead: vi.fn(),
+  getInboxPage: vi.fn<(...args: unknown[]) => Promise<unknown>>(), getInboxSummary: vi.fn<(...args: unknown[]) => Promise<unknown>>(), markInboxRead: vi.fn<(...args: unknown[]) => Promise<unknown>>(), markInboxAllRead: vi.fn<(...args: unknown[]) => Promise<unknown>>(),
 }))
 function item(id: string): InboxNotification {
   return {

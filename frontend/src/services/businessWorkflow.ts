@@ -93,3 +93,29 @@ export async function replaceWorkflowNotificationAssignees(
   )
   return response.data.data
 }
+
+/** Active User candidates for one VIEW+SETSTATE-authorized Workflow target. */
+export interface WorkflowAssigneeCandidate {
+  id: string
+  username: string
+  name: string | null
+}
+export interface WorkflowAssigneeCandidatePage {
+  data: WorkflowAssigneeCandidate[]
+  meta: { page: number; page_size: number; total: number }
+}
+export async function getWorkflowAssigneeCandidates(
+  resource: string, id: string, query: { q?: string; page?: number; page_size?: number; ids?: string[] } = {},
+): Promise<WorkflowAssigneeCandidatePage> {
+  const params: Record<string, string | number> = {
+    page: query.page ?? 1,
+    page_size: query.page_size ?? 25,
+  }
+  if (query.ids?.length) params.ids = query.ids.join(',')
+  else if (query.q) params.q = query.q
+  const response = await apiClient.get<WorkflowAssigneeCandidatePage>(
+    `/api/v1/business-workflow/${encodeURIComponent(resource)}/${encodeURIComponent(id)}/assignee-candidates`,
+    { params },
+  )
+  return response.data
+}

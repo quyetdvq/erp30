@@ -11,7 +11,7 @@ use InvalidArgumentException;
 /** Immutable owner identity, strict API-010 field validation and State input. */
 final class ContactRules
 {
-    private const OWNERS = ['ORGANIZATION' => 'organization_contact', 'EMPLOYEE' => 'employee_contact'];
+    private const OWNERS = ['ORGANIZATION' => 'organization_contact', 'EMPLOYEE' => 'employee_contact', 'CUSTOMER' => 'customer_contact'];
     private const FIELDS = ['description' => 65535, 'name' => 255, 'email' => 255,
         'phone' => 50, 'mobile' => 50, 'address' => 65535,
         'province_name' => 255, 'ward_name' => 255];

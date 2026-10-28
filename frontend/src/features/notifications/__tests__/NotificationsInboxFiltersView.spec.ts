@@ -28,7 +28,7 @@ beforeEach(() => {
   mock.inbox = reactive({
     filter: 'all', eventGroup: 'all', dateFrom: null, dateTo: null,
     items: [], unreadCount: 0, nextCursor: null, busy: false, error: '',
-    loadPage: vi.fn().mockResolvedValue(undefined), markRead: vi.fn(), markAllRead: vi.fn(),
+    loadPage: vi.fn<(...args: unknown[]) => Promise<unknown>>().mockResolvedValue(undefined), markRead: vi.fn<(...args: unknown[]) => Promise<unknown>>(), markAllRead: vi.fn<(...args: unknown[]) => Promise<unknown>>(),
   })
 })
 

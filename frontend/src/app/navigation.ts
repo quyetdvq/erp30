@@ -66,6 +66,7 @@ export const ORGANIZATION_NAV_PATHS = new Set([
   '/people/departments',
   '/people/positions',
   '/people/employees',
+  '/customers',
 ])
 
 export const navItems: NavigationItem[] = [
@@ -173,6 +174,7 @@ export const navItems: NavigationItem[] = [
     icon: BarcodeOutline,
     permission: 'resource.configure_numbering',
   },
+  { labelKey: 'nav.customers', to: '/customers', icon: PeopleOutline, permission: 'customer.view' },
   {
     labelKey: 'nav.products',
     to: '/products',
@@ -221,6 +223,9 @@ export const navItems: NavigationItem[] = [
 // Detail and self-service routes are absent from the sidebar menu but valid in Recent.
 // These permissions are presentation hints only; the API still enforces authorization.
 export const RECENT_ROUTE_HINTS = new Map<string, Pick<NavigationItem, 'icon' | 'permission'>>([
+  ['customers-new', { icon: PeopleOutline, permission: 'customer.create' }],
+  ['customers-detail', { icon: PeopleOutline, permission: 'customer.view' }],
+  ['customers-edit', { icon: PeopleOutline, permission: 'customer.edit' }],
   ['products-new', { icon: CubeOutline, permission: 'product.view' }],
   ['products-edit', { icon: CubeOutline, permission: 'product.view' }],
   ['products-import-job-detail', { icon: TimeOutline, permission: 'import_job.view' }],

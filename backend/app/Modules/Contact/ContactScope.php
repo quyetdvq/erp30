@@ -24,6 +24,11 @@ final class ContactScope
             if ($this->db->table('organizations')->select('id')->where('id', $organizationId)->get()->getRowArray() === null) {
                 throw new DomainException('CONTACT_OWNER_NOT_FOUND');
             }
+        } elseif ($owner['type'] === 'CUSTOMER') {
+            $customer = $this->db->table('customers')->where('id', $owner['id'])->get()->getRowArray();
+            if ($customer === null) throw new DomainException('CONTACT_OWNER_NOT_FOUND');
+            // MASTER Customer Contact is evaluated at GROUP, never at a client-supplied Company.
+            return ['resource' => 'customer_contact', 'target' => $row];
         } else {
             $people = AccessReadAdapters::people($this->db);
             if ($people->employeeById($owner['id']) === null) {

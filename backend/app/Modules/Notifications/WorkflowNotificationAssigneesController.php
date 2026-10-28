@@ -19,6 +19,19 @@ final class WorkflowNotificationAssigneesController extends Controller
         return ApiResponder::success($this->response, $this->service()->listing($resource, $id));
     }
 
+    public function candidates(string $resource, string $id): ResponseInterface
+    {
+        $this->noStore();
+        $query = $this->request->getGet() ?? [];
+        if (!is_array($query)) {
+            throw new DomainException('NOTIFICATION_INVALID_REQUEST');
+        }
+        $page = $this->service()->candidates($resource, $id, $query);
+        return ApiResponder::success($this->response, $page['data'], 200, [
+            'page' => $page['page'], 'page_size' => $page['page_size'], 'total' => $page['total'],
+        ]);
+    }
+
     public function replace(string $resource, string $id): ResponseInterface
     {
         $this->noStore();

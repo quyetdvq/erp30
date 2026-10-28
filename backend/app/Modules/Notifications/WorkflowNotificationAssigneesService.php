@@ -42,6 +42,46 @@ final class WorkflowNotificationAssigneesService
         return $this->current($resource, $id, false);
     }
 
+    /**
+     * Search active Users for an already-authorized per-record assignment.
+     * This is NOT a permission grant or a promise that a User can approve;
+     * effective next-action PBAC is checked by the notification dispatcher.
+     *
+     * @param array<string,mixed> $query
+     * @return array{data:list<array{id:string,username:string,name:?string}>,page:int,page_size:int,total:int}
+     */
+    public function candidates(string $resource, string $id, array $query): array
+    {
+        $row = $this->target($resource, $id, false);
+        $this->authorize($resource, $row);
+        $params = WorkflowAssigneeCandidateQuery::parse($query);
+        $builder = $this->db->table('users')
+            ->where('active', 1)->where('deleted_at', null)
+            ->where("LOWER(TRIM(COALESCE(status, ''))) NOT IN ('inactive','locked','suspended','banned','disabled')", null, false);
+        if ($params['ids'] !== []) {
+            $builder->whereIn('id', $params['ids']);
+        } elseif ($params['q'] !== '') {
+            // CI Query Builder escapes LIKE wildcards and binds user input.
+            $builder->groupStart()->like('username', $params['q'])
+                ->orLike('full_name', $params['q'])->groupEnd();
+        }
+        $total = (clone $builder)->countAllResults();
+        $rows = $builder->select('id,username,full_name')
+            ->orderBy('username', 'ASC')->orderBy('id', 'ASC')
+            ->limit($params['page_size'], ($params['page'] - 1) * $params['page_size'])
+            ->get()->getResultArray();
+        return [
+            'data' => array_map(static fn (array $user): array => [
+                'id' => (string) $user['id'],
+                'username' => (string) $user['username'],
+                'name' => $user['full_name'] === null ? null : (string) $user['full_name'],
+            ], $rows),
+            'page' => $params['page'],
+            'page_size' => $params['page_size'],
+            'total' => (int) $total,
+        ];
+    }
+
     /** @param array<string,mixed> $payload @return array{revision:string,user_ids:list<string>} */
     public function replace(string $resource, string $id, array $payload): array
     {
@@ -126,9 +166,17 @@ final class WorkflowNotificationAssigneesService
         if ($row === null) {
             throw new DomainException('WF_TARGET_NOT_FOUND');
         }
-        if (str_ends_with($resource, '_contact') && strtoupper((string) ($row['contact_type'] ?? ''))
-            !== ($resource === 'organization_contact' ? 'ORGANIZATION' : 'EMPLOYEE')) {
+        if (!BusinessWorkflowRules::matchesTargetOwner($resource, $row)) {
             throw new DomainException('WF_TARGET_NOT_FOUND');
+        }
+        if ($resource === 'customer_contact') {
+            $parent = $this->db->table('customers')->where('id', $row['contact_ref_id'])->get()->getRowArray();
+            if ($parent === null) {
+                throw new DomainException('WF_TARGET_NOT_FOUND');
+            }
+            if (!$this->access->canView('customer', $parent)) {
+                throw new DomainException('AUTH_POLICY_DENIED');
+            }
         }
         return $row;
     }

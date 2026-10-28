@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
-const http = vi.hoisted(() => ({ get: vi.fn() }))
+const http = vi.hoisted(() => ({ get: vi.fn<(...args: unknown[]) => Promise<unknown>>() }))
 vi.mock('@/services/api', () => ({ apiClient: http }))
 
 import { getMyWorkflowPage } from '@/services/myWorkflow'

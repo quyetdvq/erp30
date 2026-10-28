@@ -232,7 +232,7 @@ test('Employee structure routes expose hierarchy, canonical gender, tabs, and as
   const accessibility = await new AxeBuilder({ page }).include('.employee-detail-modal').analyze()
   expect(accessibility.violations).toEqual([])
   await employeeDetail.getByRole('button', { name: 'Đóng', exact: true }).last().click()
-  await expect(employeeDetail).not.toBeVisible()
+  await expect(employeeDetail).toBeHidden()
 
   const employeeRow = page.getByRole('row').filter({
     has: page.getByRole('cell', { name: 'E-01', exact: true }),

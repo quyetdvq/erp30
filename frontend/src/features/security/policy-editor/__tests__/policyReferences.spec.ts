@@ -7,10 +7,10 @@ import { usePolicyReferences } from '../usePolicyReferences'
 
 const mocks = vi.hoisted(() => ({
   getResourceActions: vi.fn<(id: string) => Promise<SecurityAction[]>>(),
-  listResourcePage: vi.fn(),
-  listAuthorizationGroupPage: vi.fn(),
-  listSecurityUserPage: vi.fn(),
-  withTypedClient: vi.fn(),
+  listResourcePage: vi.fn<(...args: unknown[]) => Promise<unknown>>(),
+  listAuthorizationGroupPage: vi.fn<(...args: unknown[]) => Promise<unknown>>(),
+  listSecurityUserPage: vi.fn<(...args: unknown[]) => Promise<unknown>>(),
+  withTypedClient: vi.fn<(...args: unknown[]) => Promise<unknown>>(),
 }))
 vi.mock('@/services/security', () => ({
   getResourceActions: mocks.getResourceActions,

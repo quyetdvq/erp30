@@ -71,6 +71,8 @@ final class MyWorkflowIntegrationTest extends TestCase
         self::assertSame('province', $item['resource_type']);
         self::assertSame($this->fixture->targetId, $item['resource_id']);
         self::assertSame('M11_A', $item['current_state']);
+        self::assertSame('M11 notification fixture', $item['record_name']);
+        self::assertStringStartsWith('M11', $item['record_code']);
         self::assertSame([['action_code' => 'm11_submit', 'status' => 'M11_B']], $item['available_actions']);
         self::assertArrayNotHasKey('read_at', $item);
         self::assertArrayNotHasKey('completed_at', $item);

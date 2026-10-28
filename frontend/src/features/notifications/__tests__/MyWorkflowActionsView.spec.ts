@@ -7,7 +7,7 @@ import type { MyWorkflowPage } from '@/services/myWorkflow'
 
 const mock = vi.hoisted(() => ({
   auth: { user: { id: '1' } as { id: string } | null },
-  getPage: vi.fn(),
+  getPage: vi.fn<(...args: unknown[]) => Promise<unknown>>(),
 }))
 vi.mock('@/stores/auth', () => ({ useAuthStore: () => mock.auth }))
 vi.mock('@/services/myWorkflow', async (importOriginal) => {
@@ -48,11 +48,34 @@ describe('NFX-B read-only action candidates view', () => {
     expect(wrapper.text()).toContain(i18n.global.t('myWork.description'))
   })
 
+  it('shows authorized record name/code and filters only loaded rows without extra API reads', async () => {
+    mock.getPage.mockResolvedValue(page([
+      { ...record, record_name: 'Laptop Business 14', record_code: 'SKU-B14' },
+      { ...record, resource_type: 'customer', resource_id: '7', record_name: 'Khách hàng A',
+        record_code: 'KH000007', current_state: 'DRAFT' },
+    ]))
+    const wrapper = view()
+    await flushPromises()
+    expect(wrapper.text()).toContain('Laptop Business 14')
+    expect(wrapper.text()).toContain('SKU-B14')
+    expect(wrapper.text()).toContain('Khách hàng A')
+    expect(wrapper.findAll('[data-testid="my-work-row"]')).toHaveLength(2)
+    await wrapper.get('[data-testid="my-work-search"]').setValue('KH000007')
+    expect(wrapper.findAll('[data-testid="my-work-row"]')).toHaveLength(1)
+    expect(wrapper.text()).toContain('Khách hàng A')
+    await wrapper.get('[data-testid="my-work-search"]').setValue('')
+    await wrapper.get('[data-testid="my-work-state-filter"]').setValue('REVIEW')
+    expect(wrapper.findAll('[data-testid="my-work-row"]')).toHaveLength(1)
+    expect(wrapper.text()).toContain('Laptop Business 14')
+    // Search and state filter are local only: no new HTTP request.
+    expect(mock.getPage).toHaveBeenCalledTimes(1)
+  })
+
   it('does not infer a completed task from an empty authorized read model', async () => {
     const wrapper = view()
     await flushPromises()
     expect(wrapper.text()).toContain(i18n.global.t('myWork.empty'))
-    expect(wrapper.findAll('[role="listitem"]')).toHaveLength(0)
+    expect(wrapper.findAll('[data-testid="my-work-row"]')).toHaveLength(0)
   })
 
   it('handles an empty candidate page with a next cursor instead of claiming exhaustion', async () => {
@@ -63,7 +86,7 @@ describe('NFX-B read-only action candidates view', () => {
     await wrapper.get('[data-testid="my-work-more"]').trigger('click')
     await flushPromises()
     expect(mock.getPage).toHaveBeenLastCalledWith('all', 'NEXT', expect.any(AbortSignal))
-    expect(wrapper.findAll('[role="listitem"]')).toHaveLength(1)
+    expect(wrapper.findAll('[data-testid="my-work-row"]')).toHaveLength(1)
   })
 
   it('clears the cursor and results when the resource filter changes', async () => {
@@ -74,7 +97,7 @@ describe('NFX-B read-only action candidates view', () => {
     await wrapper.get('[data-testid="my-work-resource-filter"]').setValue('province')
     await flushPromises()
     expect(mock.getPage).toHaveBeenLastCalledWith('province', null, expect.any(AbortSignal))
-    expect(wrapper.findAll('[role="listitem"]')).toHaveLength(0)
+    expect(wrapper.findAll('[data-testid="my-work-row"]')).toHaveLength(0)
     expect(wrapper.find('[data-testid="my-work-more"]').exists()).toBe(false)
   })
 
@@ -85,7 +108,7 @@ describe('NFX-B read-only action candidates view', () => {
     await wrapper.get('[data-testid="my-work-refresh"]').trigger('click')
     await flushPromises()
     expect(mock.getPage).toHaveBeenLastCalledWith('all', null, expect.any(AbortSignal))
-    expect(wrapper.findAll('[role="listitem"]')).toHaveLength(0)
+    expect(wrapper.findAll('[data-testid="my-work-row"]')).toHaveLength(0)
     expect(wrapper.find('[data-testid="my-work-more"]').exists()).toBe(false)
   })
 
@@ -100,6 +123,6 @@ describe('NFX-B read-only action candidates view', () => {
     await wrapper.vm.$nextTick()
     resolveFirst(page([record]))
     await flushPromises()
-    expect(wrapper.findAll('[role="listitem"]')).toHaveLength(0)
+    expect(wrapper.findAll('[data-testid="my-work-row"]')).toHaveLength(0)
   })
 })

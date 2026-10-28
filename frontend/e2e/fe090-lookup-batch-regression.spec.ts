@@ -24,6 +24,54 @@ async function openPriceItems(page: Page, mode: 'view' | 'edit' = 'view') {
   return dialog
 }
 
+/** Realistic CSRF mock server behavior belongs in a helper, not in test assertions. */
+type RotatingCsrfState = {
+  serverToken: string
+  acceptedTokens: string[]
+  csrfFailures: string[]
+}
+
+async function respondWithRotatingCsrf(route: Route, state: RotatingCsrfState): Promise<void> {
+  if (route.request().method() !== 'POST') return route.fallback()
+  const request = route.request()
+  const token = request.headers()['x-csrf-token'] || ''
+  const headers = {
+    'Access-Control-Allow-Origin': request.headers()['origin'] ?? 'http://localhost:5173',
+    'Access-Control-Allow-Credentials': 'true',
+    'Access-Control-Expose-Headers': 'X-CSRF-TOKEN',
+  }
+  if (token !== state.serverToken) {
+    state.csrfFailures.push(token)
+    await route.fulfill({
+      status: 403,
+      headers,
+      contentType: 'application/json',
+      body: JSON.stringify({ error: { code: 'CSRF_INVALID', message: 'CSRF token expired' } }),
+    })
+    return
+  }
+  state.acceptedTokens.push(token)
+  state.serverToken = `rotated-csrf-${state.acceptedTokens.length}`
+  const ids = (request.postDataJSON() as { product_ids: string[] }).product_ids
+  const responseData = request.url().includes('/sales-uom-options/')
+    ? ids.map((id) => ({ product_id: id, options: [{ id: '20', code: 'PCS' }] }))
+    : ids.map((id) => ({
+        id,
+        product_code: 'E2E-SIMPLE',
+        full_name: 'E2E Simple',
+        role: 'SIMPLE',
+        status: 'ACTIVE',
+        base_uom_id: '20',
+        selectable: true,
+      }))
+  await route.fulfill({
+    status: 200,
+    headers: { ...headers, 'X-CSRF-TOKEN': state.serverToken },
+    contentType: 'application/json',
+    body: JSON.stringify({ data: responseData }),
+  })
+}
+
 test.describe('E2E-LOOKUP-BATCH (browser contract, mocked API)', () => {
   test('Products initial load uses one paged list and one relation preview, never entire Product lookup', async ({
     page,
@@ -144,57 +192,18 @@ test.describe('E2E-LOOKUP-BATCH (browser contract, mocked API)', () => {
     page,
   }) => {
     const api = await mockLookupBatch(page)
-    let serverCsrfToken = 'e2e-csrf'
-    const acceptedTokens: string[] = []
-    const csrfFailures: string[] = []
-    const rotatingResolve = async (route: Route) => {
-      if (route.request().method() !== 'POST') return route.fallback()
-      const request = route.request()
-      const token = request.headers()['x-csrf-token'] || ''
-      const headers = {
-        'Access-Control-Allow-Origin': request.headers()['origin'] ?? 'http://localhost:5173',
-        'Access-Control-Allow-Credentials': 'true',
-        'Access-Control-Expose-Headers': 'X-CSRF-TOKEN',
-      }
-      if (token !== serverCsrfToken) {
-        csrfFailures.push(token)
-        await route.fulfill({
-          status: 403,
-          headers,
-          contentType: 'application/json',
-          body: JSON.stringify({ error: { code: 'CSRF_INVALID', message: 'CSRF token expired' } }),
-        })
-        return
-      }
-      acceptedTokens.push(token)
-      serverCsrfToken = `rotated-csrf-${acceptedTokens.length}`
-      const ids = (request.postDataJSON() as { product_ids: string[] }).product_ids
-      const responseData = request.url().includes('/sales-uom-options/')
-        ? ids.map((id) => ({ product_id: id, options: [{ id: '20', code: 'PCS' }] }))
-        : ids.map((id) => ({
-            id,
-            product_code: 'E2E-SIMPLE',
-            full_name: 'E2E Simple',
-            role: 'SIMPLE',
-            status: 'ACTIVE',
-            base_uom_id: '20',
-            selectable: true,
-          }))
-      await route.fulfill({
-        status: 200,
-        headers: { ...headers, 'X-CSRF-TOKEN': serverCsrfToken },
-        contentType: 'application/json',
-        body: JSON.stringify({ data: responseData }),
-      })
+    const csrfState: RotatingCsrfState = {
+      serverToken: 'e2e-csrf', acceptedTokens: [], csrfFailures: [],
     }
+    const rotatingResolve = (route: Route) => respondWithRotatingCsrf(route, csrfState)
     await page.route('**/api/v1/products/options/resolve', rotatingResolve)
     await page.route('**/api/v1/products/sales-uom-options/resolve', rotatingResolve)
 
     await page.goto('/products/price-lists')
     const dialog = await openPriceItems(page)
-    await expect.poll(() => acceptedTokens.length).toBe(2)
-    expect(acceptedTokens).toEqual(['e2e-csrf', 'rotated-csrf-1'])
-    expect(csrfFailures).toEqual([])
+    await expect.poll(() => csrfState.acceptedTokens.length).toBe(2)
+    expect(csrfState.acceptedTokens).toEqual(['e2e-csrf', 'rotated-csrf-1'])
+    expect(csrfState.csrfFailures).toEqual([])
     await expect(dialog.getByText('125,000.00')).toBeVisible()
     await expect(dialog.locator('.inline-error')).toHaveCount(0)
     expect(api.unexpected).toEqual([])

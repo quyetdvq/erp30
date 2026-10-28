@@ -66,13 +66,35 @@ final class M4SourceAcceptance
         if (count($baseline) !== 150) throw new RuntimeException('M4 baseline operations changed');
         $source = (string) file_get_contents($root.'/backend/app/Config/M4Routes.php');
         preg_match_all('~\\$routes->(get|post|patch|put|delete)\(\x27([^\x27]+)\x27,\s*\[(\\\\App\\\\Modules\\\\[A-Za-z0-9_\\\\]+)::class,\x27([A-Za-z0-9_]+)\x27\]\);~', $source, $all, PREG_SET_ORDER);
-        if (count($all) !== 14 || preg_match_all('/\$routes->(?:get|post|patch|put|delete|options)\s*\(/', $source)!==14) {
-            throw new RuntimeException('Exactly 14 explicitly owned M4 routes required');
+        // M11 added exactly two notification-assignee routes to this legacy file.
+        // Keep all fourteen M4 operations pinned, and allow only these two named
+        // additive routes. An arbitrary new operation must still fail closed.
+        $m11Extensions = [
+            'GET business-workflow/(:segment)/(:num)/notification-assignees' =>
+                ['App\\Modules\\Notifications\\WorkflowNotificationAssigneesController', 'listing'],
+            'PUT business-workflow/(:segment)/(:num)/notification-assignees' =>
+                ['App\\Modules\\Notifications\\WorkflowNotificationAssigneesController', 'replace'],
+        ];
+        if (count($all) !== 16 || preg_match_all('/\$routes->(?:get|post|patch|put|delete|options)\s*\(/', $source)!==16) {
+            throw new RuntimeException('Expected 14 M4 routes plus exactly 2 approved M11 routes');
         }
         $matched=[];
+        $seenExtensions=[];
         foreach ($all as $row) {
             $key = strtoupper($row[1]).' '.$row[2];
             $handler = ltrim($row[3],'\\');
+            if (isset($m11Extensions[$key])) {
+                if (isset($seenExtensions[$key]) || [$handler, $row[4]] !== $m11Extensions[$key]) {
+                    throw new RuntimeException('Unreviewed M11 route extension '.$key);
+                }
+                $extensionSource = $root.'/backend/app/'.str_replace('\\','/',substr($handler,4)).'.php';
+                $controllerCode = is_file($extensionSource) ? (string) file_get_contents($extensionSource) : '';
+                if (preg_match('/\bpublic\s+function\s+'.preg_quote($row[4],'/').'\s*\(/', $controllerCode)!==1) {
+                    throw new RuntimeException('M11 extension controller method missing '.$key);
+                }
+                $seenExtensions[$key]=true;
+                continue;
+            }
             if (isset($matched[$key]) || !isset(self::expected()[$key])) throw new RuntimeException('Unreviewed M4 route '.$key);
             [$expectedClass,$expectedMethod,$operationId,$status] = self::expected()[$key];
             if ($handler !== $expectedClass || $row[4] !== $expectedMethod) throw new RuntimeException('M4 wrong handler '.$key);
@@ -96,7 +118,7 @@ final class M4SourceAcceptance
             }
             $matched[$key]=$operationId;
         }
-        if (count($matched)!==14) throw new RuntimeException('M4 reviewed operation missing');
+        if (count($matched)!==14 || count($seenExtensions)!==2) throw new RuntimeException('M4 baseline or approved M11 extension missing');
         if (!str_contains((string)file_get_contents($root.'/backend/app/Config/Routes.php'),"require __DIR__ . '/M4Routes.php';")) {
             throw new RuntimeException('M4 route registration not included');
         }

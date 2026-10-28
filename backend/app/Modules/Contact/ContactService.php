@@ -52,7 +52,8 @@ final class ContactService
             $date = UtcBusinessDate::at($this->instant);
             $readScope = new ContactScope($this->db, $date);
             $plan = ContactSql::collection($params, $organization, $employee,
-                $date, (string)$this->db->DBPrefix);
+                $date, (string)$this->db->DBPrefix,
+                ...$this->customerScopes($access));
             $countQuery = $this->db->query($plan['count_sql'], $plan['count_binds']);
             if ($countQuery === false) throw new UnexpectedValueException('Contact scoped COUNT failed.');
             $total = self::validCount($countQuery->getRowArray()['total'] ?? null);
@@ -65,7 +66,8 @@ final class ContactService
                 // Defense in depth. A mismatch must fail the whole response,
                 // NEVER silently post-filter and corrupt an authorized total.
                 $scope = $readScope->resolve($row);
-                if (!$access->canView($scope['resource'], $scope['target'])) {
+                if (!$access->canView($scope['resource'], $scope['target'])
+                    || !$this->customerParentView($row,$access)) {
                     throw new UnexpectedValueException('AUTH_SCOPE_PBAC_MISMATCH: Contact list.');
                 }
                 $row['allowed_actions'] = EffectiveRowActionHints::forViewedRow($access, $scope['resource'], $scope['target']);
@@ -84,13 +86,15 @@ final class ContactService
             $date = UtcBusinessDate::at($this->instant);
             $readScope = new ContactScope($this->db, $date);
             $plan = ContactSql::detail($id, $organization, $employee,
-                $date, (string)$this->db->DBPrefix);
+                $date, (string)$this->db->DBPrefix,
+                ...$this->customerScopes($access));
             $result = $this->db->query($plan['sql'], $plan['binds']);
             if ($result === false) throw new UnexpectedValueException('Contact scoped detail failed.');
             $row = $result->getRowArray();
             if ($row === null) throw new PageNotFoundException('Contact record not available.');
             $scope = $readScope->resolve($row);
-            if (!$access->canView($scope['resource'], $scope['target'])) {
+            if (!$access->canView($scope['resource'], $scope['target'])
+                || !$this->customerParentView($row,$access)) {
                 throw new UnexpectedValueException('AUTH_SCOPE_PBAC_MISMATCH: Contact detail.');
             }
             $row['allowed_actions'] = EffectiveRowActionHints::forViewedRow($access, $scope['resource'], $scope['target']);
@@ -107,6 +111,25 @@ final class ContactService
             $compiler->compile(new ContactScopeProvider('organization_contact', $this->db)),
             $compiler->compile(new ContactScopeProvider('employee_contact', $this->db)),
         ];
+    }
+
+    /** @return array{0:\App\Modules\Access\Query\AuthorizedSqlScope,1:\App\Modules\Access\Query\AuthorizedSqlScope} */
+    private function customerScopes(UnifiedAccessService $access): array
+    {
+        return [
+            \App\Modules\Access\Query\AuthorizedSqlScope::master(
+                'customer_contact',$access->viewableMasterLifecycleStatuses('customer_contact')),
+            \App\Modules\Access\Query\AuthorizedSqlScope::master(
+                'customer',$access->viewableMasterLifecycleStatuses('customer')),
+        ];
+    }
+
+    /** Parent GROUP PBAC is independent of Contact's own GROUP PBAC. */
+    private function customerParentView(array $contact, UnifiedAccessService $access): bool
+    {
+        if (strtoupper(trim((string)($contact['contact_type']??'')))!=='CUSTOMER') return true;
+        $customer=$this->db->table('customers')->where('id',$contact['contact_ref_id'])->get()->getRowArray();
+        return $customer!==null && $access->canView('customer',$customer);
     }
 
     /** Consistent READ snapshot. Never commit or roll back a caller's write transaction. */
@@ -157,11 +180,49 @@ final class ContactService
         $payload['status'] = $initial;
         return $this->transaction(function () use ($payload): array {
             $scope = $this->scope->resolve($payload);
+            if (! $this->customerParentView($payload,$this->access))
+                throw new DomainException('AUTH_POLICY_DENIED');
             $this->permit($scope['resource'], 'create', null, $scope['target']);
             $this->assertAddress($payload);
             $this->persistInsert([...$payload, ...$this->createdAudit()]);
             return $this->visible($this->target((string) $this->db->insertID()));
         });
+    }
+
+
+    /**
+     * CUS-G1: create a CUSTOMER-owned Contact within the caller's transaction.
+     * Reuse canonical Contact validation, Lifecycle, PBAC, address and audit.
+     * This does not commit or start another transaction, and deliberately does
+     * not require Contact VIEW merely to complete an authorized CREATE.
+     * @param array<string,mixed> $input
+     */
+    public function createCustomerInOwningTransaction(array $input): string
+    {
+        if ($this->db->transDepth !== 1) {
+            throw new DomainException('CONTACT_PARENT_TRANSACTION_REQUIRED');
+        }
+        $payload = ContactRules::payload($input, true);
+        $owner = ContactRules::owner($payload);
+        if ($owner['type'] !== 'CUSTOMER') {
+            throw new DomainException('CONTACT_TYPE_UNSUPPORTED');
+        }
+        $initial = $this->states->initialState('customer_contact');
+        if ($initial === null) {
+            throw new DomainException('WF_INITIAL_STATE_REQUIRED', ['resource' => 'customer_contact']);
+        }
+        if (isset($payload['status']) && $payload['status'] !== $initial) {
+            throw new DomainException('WF_INITIAL_STATE_INVALID', ['field' => 'status']);
+        }
+        $payload['status'] = $initial;
+        $scope = $this->scope->resolve($payload);
+        if (! $this->customerParentView($payload, $this->access)) {
+            throw new DomainException('AUTH_POLICY_DENIED');
+        }
+        $this->permit($scope['resource'], 'create', null, $scope['target']);
+        $this->assertAddress($payload);
+        $this->persistInsert([...$payload, ...$this->createdAudit()]);
+        return (string) $this->db->insertID();
     }
 
     /** @param array<string,mixed> $input @return array<string,mixed> */
@@ -231,7 +292,8 @@ final class ContactService
             }
             throw $exception;
         }
-        if (! $this->access->canView($scope['resource'], $scope['target'])) {
+        if (! $this->access->canView($scope['resource'], $scope['target'])
+            || ! $this->customerParentView($row, $this->access)) {
             throw new PageNotFoundException('Contact record not available.');
         }
         return $scope;

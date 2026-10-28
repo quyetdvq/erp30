@@ -63,7 +63,7 @@ import { i18n } from '@/i18n'
 import type { ListQuery, ListResponse } from '@/components/lists/listTypes'
 import { getCurrentUser, type AuthUser } from '@/services/auth'
 import { rowAllowedActions, type AllowedRowActions } from '@/components/lists/rowActionPolicy'
-import { userGroupIds } from '@/features/security/user-editor/userMembership'
+import { userGroupIds } from '@/modules/userGroupIds'
 
 export type ManagedUser = {
   id: number | string
