@@ -1,0 +1,12 @@
+{
+  "doc_version": "1.0.0",
+  "date": "2026-10-28",
+  "source_requirements_filename": "00_User_Requirements_v1.0.15.md",
+  "source_requirements_sha256": "97894e35dbf6c5f641f56574af947cafbc45122a87b9fb189ee7426503448144",
+  "total_ur_all_phases": 83,
+  "total_p2_ur": 30,
+  "total_p2_ac": 147,
+  "source_code_zip": "erp_v1.9.0.zip",
+  "source_zip_sha256": "464cfe340c4d1b8d8ada4357b48fb8e470d719985155b8371ba01a975dbdf626",
+  "build_method": "P2 UR exact heading blocks; standalone P1 invariant summaries; proposals clearly marked as draft"
+}

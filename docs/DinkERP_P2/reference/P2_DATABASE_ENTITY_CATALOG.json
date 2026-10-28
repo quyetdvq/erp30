@@ -1,0 +1,622 @@
+[
+  {
+    "table": "documents",
+    "module": "DOC",
+    "purpose": "Document logical identity",
+    "columns_draft": "id:BIGINT PK; code:VARCHAR(50); title:VARCHAR(255); category_code:VARCHAR(50) NULL; status:VARCHAR(20); current_version_id:BIGINT NULL; created_by:BIGINT; created_at:DATETIME",
+    "constraints_draft": "UNIQUE(code); index(status,category_code)",
+    "references": "document_versions via current_version_id (circular FK deferred)",
+    "business_rules": "Không lưu binary trong SQL; metadata của document tồn tại ngay cả khi version bị thay thế",
+    "status": "P2-DRAFT"
+  },
+  {
+    "table": "document_versions",
+    "module": "DOC",
+    "purpose": "Immutable uploaded versions",
+    "columns_draft": "id:BIGINT PK; document_id:BIGINT; version_no:INT; storage_key:VARCHAR(255); original_name:VARCHAR(255); mime_type:VARCHAR(150); size_bytes:BIGINT; content_sha256:CHAR(64); uploaded_by:BIGINT; uploaded_at:DATETIME",
+    "constraints_draft": "UNIQUE(document_id,version_no); index(content_sha256)",
+    "references": "documents.id",
+    "business_rules": "Version sau immutable; tải qua authorized download, không public storage URL",
+    "status": "P2-DRAFT"
+  },
+  {
+    "table": "document_links",
+    "module": "DOC",
+    "purpose": "Polymorphic resource ownership",
+    "columns_draft": "id:BIGINT PK; document_id:BIGINT; owner_type:VARCHAR(60); owner_id:BIGINT; linked_at:DATETIME; linked_by:BIGINT",
+    "constraints_draft": "UNIQUE(document_id,owner_type,owner_id); INDEX(owner_type,owner_id)",
+    "references": "documents.id; owner polymorphic app-layer",
+    "business_rules": "Owner authorization check tại từng download và link create, tuyệt đối không tin client owner_id để bypass",
+    "status": "P2-DRAFT"
+  },
+  {
+    "table": "document_tags",
+    "module": "DOC",
+    "purpose": "Reusable document tags",
+    "columns_draft": "id:BIGINT PK; code:VARCHAR(50); name:VARCHAR(120); status:VARCHAR(20)",
+    "constraints_draft": "UNIQUE(code)",
+    "references": "none",
+    "business_rules": "Tag/search SHOULD từ UR-DOC-002; nếu postpone phải ghi acceptance waiver",
+    "status": "P2-DRAFT"
+  },
+  {
+    "table": "document_tag_links",
+    "module": "DOC",
+    "purpose": "Document-tag join",
+    "columns_draft": "document_id:BIGINT; tag_id:BIGINT",
+    "constraints_draft": "UNIQUE(document_id,tag_id)",
+    "references": "documents.id; document_tags.id",
+    "business_rules": "Không mở rộng quyền access từ tag",
+    "status": "P2-DRAFT"
+  },
+  {
+    "table": "customers",
+    "module": "CUS",
+    "purpose": "Shared customer master",
+    "columns_draft": "id:BIGINT PK; customer_code:VARCHAR(50); name:VARCHAR(255); customer_group_id:BIGINT NULL; phone:VARCHAR(50) NULL; email:VARCHAR(255) NULL; tax_code:VARCHAR(50) NULL; address:TEXT NULL; province_id:BIGINT NULL; ward_id:BIGINT NULL; shipping_address:TEXT NULL; shipping_province_id:BIGINT NULL; shipping_ward_id:BIGINT NULL; all_companies:BOOLEAN; status:VARCHAR(20); created_by:BIGINT; created_at:DATETIME; updated_by:BIGINT NULL; updated_at:DATETIME NULL",
+    "constraints_draft": "UNIQUE(customer_code); INDEX(status,all_companies)",
+    "references": "customer_groups; provinces; wards",
+    "business_rules": "Group shared identity, Company usage filter trước chọn trong order",
+    "status": "P2-DRAFT"
+  },
+  {
+    "table": "customer_groups",
+    "module": "CUS",
+    "purpose": "Customer grouping for P2 pricing",
+    "columns_draft": "id:BIGINT PK; group_code:VARCHAR(50); name:VARCHAR(255); status:VARCHAR(20)",
+    "constraints_draft": "UNIQUE(group_code)",
+    "references": "none",
+    "business_rules": "Phạm vi Customer Group được nhắc trong UR-PRC-001; taxonomy chi tiết OPEN-DECISION",
+    "status": "P2-DRAFT"
+  },
+  {
+    "table": "customer_company_usages",
+    "module": "CUS",
+    "purpose": "Customer company allowlist",
+    "columns_draft": "customer_id:BIGINT; company_organization_id:BIGINT; status:VARCHAR(20)",
+    "constraints_draft": "UNIQUE(customer_id,company_organization_id)",
+    "references": "customers.id; organizations.id type COMPANY",
+    "business_rules": "all_companies false phải có ít nhất một Company hợp lệ trước khi dùng transaction",
+    "status": "P2-DRAFT"
+  },
+  {
+    "table": "customer_notes",
+    "module": "CUS",
+    "purpose": "CRM contact/note history",
+    "columns_draft": "id:BIGINT PK; customer_id:BIGINT; company_organization_id:BIGINT NULL; content:TEXT; happened_at:DATETIME; created_by:BIGINT; created_at:DATETIME",
+    "constraints_draft": "INDEX(customer_id,happened_at); INDEX(company_organization_id)",
+    "references": "customers.id; organizations.id",
+    "business_rules": "Note Company-scoped bị lọc theo PBAC, không leak vào Group-wide read",
+    "status": "P2-DRAFT"
+  },
+  {
+    "table": "suppliers",
+    "module": "SUP",
+    "purpose": "Shared supplier master",
+    "columns_draft": "id:BIGINT PK; supplier_code:VARCHAR(50); name:VARCHAR(255); supplier_group:VARCHAR(80) NULL; phone:VARCHAR(50) NULL; email:VARCHAR(255) NULL; tax_code:VARCHAR(50) NULL; address:TEXT NULL; province_id:BIGINT NULL; ward_id:BIGINT NULL; bank_account_info:TEXT NULL; payment_term_code:VARCHAR(80) NULL; all_companies:BOOLEAN; status:VARCHAR(20); created_by:BIGINT; created_at:DATETIME",
+    "constraints_draft": "UNIQUE(supplier_code); INDEX(status,all_companies)",
+    "references": "provinces; wards",
+    "business_rules": "Không log bank account raw; field-level masking không thuộc P1 UR, quyền resource/action vẫn bắt buộc",
+    "status": "P2-DRAFT"
+  },
+  {
+    "table": "supplier_company_usages",
+    "module": "SUP",
+    "purpose": "Supplier company allowlist",
+    "columns_draft": "supplier_id:BIGINT; company_organization_id:BIGINT; status:VARCHAR(20)",
+    "constraints_draft": "UNIQUE(supplier_id,company_organization_id)",
+    "references": "suppliers.id; organizations.id COMPANY",
+    "business_rules": "PO Company phải nằm trong Usage scope của Supplier",
+    "status": "P2-DRAFT"
+  },
+  {
+    "table": "supplier_notes",
+    "module": "SUP",
+    "purpose": "Supplier history note",
+    "columns_draft": "id:BIGINT PK; supplier_id:BIGINT; company_organization_id:BIGINT NULL; content:TEXT; happened_at:DATETIME; created_by:BIGINT",
+    "constraints_draft": "INDEX(supplier_id,happened_at)",
+    "references": "suppliers.id",
+    "business_rules": "Không dùng note để thay nguồn PO/receipt history",
+    "status": "P2-DRAFT"
+  },
+  {
+    "table": "sales_channels",
+    "module": "SAL",
+    "purpose": "Canonical internal/marketplace channel identity",
+    "columns_draft": "id:BIGINT PK; code:VARCHAR(40); name:VARCHAR(120); platform:VARCHAR(30) NULL; status:VARCHAR(20)",
+    "constraints_draft": "UNIQUE(code)",
+    "references": "none",
+    "business_rules": "Cần phân biệt DIRECT/SHOPEE/TIKTOK; source chưa khóa enum channel",
+    "status": "P2-DRAFT"
+  },
+  {
+    "table": "product_price_list_item_contexts",
+    "module": "PRC",
+    "purpose": "Explicit P2 pricing criteria on P1 items",
+    "columns_draft": "id:BIGINT PK; price_list_item_id:BIGINT; customer_id:BIGINT NULL; customer_group_id:BIGINT NULL; sales_channel_id:BIGINT NULL; status:VARCHAR(20)",
+    "constraints_draft": "INDEX(price_list_item_id,customer_id,customer_group_id,sales_channel_id)",
+    "references": "product_price_list_items.id; customers.id; customer_groups.id; sales_channels.id",
+    "business_rules": "Không phá Product+UOM; specificity phải được duyệt, NULL canonical hóa khi unique",
+    "status": "P2-DRAFT"
+  },
+  {
+    "table": "promotions",
+    "module": "PRC",
+    "purpose": "Promotion master",
+    "columns_draft": "id:BIGINT PK; promo_code:VARCHAR(50); name:VARCHAR(255); promo_type:VARCHAR(40); priority:INT; effective_from:DATETIME; effective_to:DATETIME NULL; combinable:BOOLEAN; status:VARCHAR(20); created_by:BIGINT; created_at:DATETIME",
+    "constraints_draft": "UNIQUE(promo_code); INDEX(status,effective_from,effective_to,priority)",
+    "references": "none",
+    "business_rules": "Types %/amount/special/quantity/gift/coupon; promotions tie conflict phải reject hoặc deterministic trước active",
+    "status": "P2-DRAFT"
+  },
+  {
+    "table": "promotion_rules",
+    "module": "PRC",
+    "purpose": "Explicit eligible targets and rule values",
+    "columns_draft": "id:BIGINT PK; promotion_id:BIGINT; product_id:BIGINT NULL; product_group_id:BIGINT NULL; customer_id:BIGINT NULL; customer_group_id:BIGINT NULL; sales_channel_id:BIGINT NULL; threshold_qty:DECIMAL(18,6) NULL; discount_rate:DECIMAL(9,6) NULL; discount_amount:DECIMAL(18,2) NULL; gift_product_id:BIGINT NULL",
+    "constraints_draft": "INDEX(promotion_id)",
+    "references": "promotions.id; products; product_groups; customers; customer_groups; sales_channels",
+    "business_rules": "Không arbitrary condition execution; schema cần review từng promo type",
+    "status": "P2-DRAFT"
+  },
+  {
+    "table": "coupons",
+    "module": "PRC",
+    "purpose": "Coupon issuance and usage policy",
+    "columns_draft": "id:BIGINT PK; coupon_code:VARCHAR(80); promotion_id:BIGINT; status:VARCHAR(20); max_uses:INT NULL; used_count:INT",
+    "constraints_draft": "UNIQUE(coupon_code); CHECK used_count<=max_uses if max_uses not null",
+    "references": "promotions.id",
+    "business_rules": "Concurrency lock coupon issuance/usage; eligibility còn OPEN-DECISION",
+    "status": "P2-DRAFT"
+  },
+  {
+    "table": "purchase_requests",
+    "module": "PUR",
+    "purpose": "Purchase Request header",
+    "columns_draft": "id:BIGINT PK; request_number:VARCHAR(60); company_id:BIGINT; warehouse_id:BIGINT NULL; status:VARCHAR(30); requested_by:BIGINT; created_by:BIGINT; created_at:DATETIME; updated_at:DATETIME NULL",
+    "constraints_draft": "UNIQUE(company_id,request_number); INDEX(company_id,status)",
+    "references": "organizations.id COMPANY and WAREHOUSE",
+    "business_rules": "State DRAFT/PENDING_APPROVAL/APPROVED/REJECTED/CANCELLED",
+    "status": "P2-DRAFT"
+  },
+  {
+    "table": "purchase_request_lines",
+    "module": "PUR",
+    "purpose": "PR requested leaves",
+    "columns_draft": "id:BIGINT PK; purchase_request_id:BIGINT; line_no:INT; product_id:BIGINT; source_uom_id:BIGINT; source_qty:DECIMAL(18,6); base_qty:DECIMAL(18,6)",
+    "constraints_draft": "UNIQUE(purchase_request_id,line_no)",
+    "references": "purchase_requests.id; products; product_uoms",
+    "business_rules": "Combo template expansion trước downstream; lưu source trace",
+    "status": "P2-DRAFT"
+  },
+  {
+    "table": "purchase_orders",
+    "module": "PUR",
+    "purpose": "PO header",
+    "columns_draft": "id:BIGINT PK; po_number:VARCHAR(60); company_id:BIGINT; supplier_id:BIGINT; receiving_warehouse_id:BIGINT; payment_term_code:VARCHAR(80) NULL; expected_receipt_date:DATE NULL; status:VARCHAR(30); created_by:BIGINT; created_at:DATETIME; updated_at:DATETIME NULL",
+    "constraints_draft": "UNIQUE(company_id,po_number); INDEX(company_id,status,supplier_id)",
+    "references": "organizations.id; suppliers.id",
+    "business_rules": "PO Company=receiving Warehouse Company; Supplier usable",
+    "status": "P2-DRAFT"
+  },
+  {
+    "table": "purchase_order_lines",
+    "module": "PUR",
+    "purpose": "PO line",
+    "columns_draft": "id:BIGINT PK; purchase_order_id:BIGINT; line_no:INT; product_id:BIGINT; source_uom_id:BIGINT; source_qty:DECIMAL(18,6); base_qty:DECIMAL(18,6); unit_price:DECIMAL(18,2); discount_amount:DECIMAL(18,2); tax_amount:DECIMAL(18,2) NULL; received_base_qty:DECIMAL(18,6)",
+    "constraints_draft": "UNIQUE(purchase_order_id,line_no)",
+    "references": "purchase_orders.id; products; product_uoms",
+    "business_rules": "Partial receiving <= ordered; rounding/cost method OPEN-DECISION",
+    "status": "P2-DRAFT"
+  },
+  {
+    "table": "purchase_request_po_links",
+    "module": "PUR",
+    "purpose": "PR to PO trace",
+    "columns_draft": "purchase_request_line_id:BIGINT; purchase_order_line_id:BIGINT; linked_base_qty:DECIMAL(18,6)",
+    "constraints_draft": "UNIQUE(purchase_request_line_id,purchase_order_line_id)",
+    "references": "purchase_request_lines.id; purchase_order_lines.id",
+    "business_rules": "Approved PR only",
+    "status": "P2-DRAFT"
+  },
+  {
+    "table": "goods_receipts",
+    "module": "PUR",
+    "purpose": "Goods Receipt header",
+    "columns_draft": "id:BIGINT PK; gr_number:VARCHAR(60); company_id:BIGINT; purchase_order_id:BIGINT; warehouse_id:BIGINT; status:VARCHAR(30); posted_at:DATETIME NULL; posted_by:BIGINT NULL; created_by:BIGINT; created_at:DATETIME",
+    "constraints_draft": "UNIQUE(company_id,gr_number); INDEX(company_id,status)",
+    "references": "purchase_orders.id; organizations.id",
+    "business_rules": "On-hand chỉ thay đổi sau posting transaction",
+    "status": "P2-DRAFT"
+  },
+  {
+    "table": "goods_receipt_lines",
+    "module": "PUR",
+    "purpose": "Goods Receipt line",
+    "columns_draft": "id:BIGINT PK; goods_receipt_id:BIGINT; purchase_order_line_id:BIGINT; product_id:BIGINT; source_uom_id:BIGINT; received_qty:DECIMAL(18,6); received_base_qty:DECIMAL(18,6)",
+    "constraints_draft": "INDEX(goods_receipt_id,purchase_order_line_id)",
+    "references": "goods_receipts; purchase_order_lines; products",
+    "business_rules": "Serial per movement nếu quản lý Serial",
+    "status": "P2-DRAFT"
+  },
+  {
+    "table": "purchase_returns",
+    "module": "PUR",
+    "purpose": "Purchase Return header",
+    "columns_draft": "id:BIGINT PK; return_number:VARCHAR(60); company_id:BIGINT; supplier_id:BIGINT; goods_receipt_id:BIGINT NULL; status:VARCHAR(30); posted_at:DATETIME NULL; created_by:BIGINT; created_at:DATETIME",
+    "constraints_draft": "UNIQUE(company_id,return_number)",
+    "references": "suppliers; goods_receipts",
+    "business_rules": "Posted return giảm stock, no destructive edit",
+    "status": "P2-DRAFT"
+  },
+  {
+    "table": "purchase_return_lines",
+    "module": "PUR",
+    "purpose": "Purchase Return lines",
+    "columns_draft": "id:BIGINT PK; purchase_return_id:BIGINT; goods_receipt_line_id:BIGINT NULL; product_id:BIGINT; return_base_qty:DECIMAL(18,6)",
+    "constraints_draft": "INDEX(purchase_return_id)",
+    "references": "purchase_returns; goods_receipt_lines; products",
+    "business_rules": "No serial mismatch or excess return",
+    "status": "P2-DRAFT"
+  },
+  {
+    "table": "inventory_movements",
+    "module": "INV",
+    "purpose": "Immutable stock ledger when POSTED",
+    "columns_draft": "id:BIGINT PK; posting_key:VARCHAR(160); company_id:BIGINT; warehouse_id:BIGINT; product_id:BIGINT; source_uom_id:BIGINT; source_qty:DECIMAL(18,6); base_qty_delta:DECIMAL(18,6); movement_type:VARCHAR(40); source_type:VARCHAR(50); source_id:BIGINT; source_line_id:BIGINT NULL; posted_at:DATETIME; posted_by:BIGINT; reversal_of_id:BIGINT NULL",
+    "constraints_draft": "UNIQUE(posting_key); INDEX(company_id,warehouse_id,product_id,posted_at)",
+    "references": "organizations; products; product_uoms; self",
+    "business_rules": "Only SIMPLE/CHILD; immutable posted rows; correction by reversal/adjustment",
+    "status": "P2-DRAFT"
+  },
+  {
+    "table": "inventory_balances",
+    "module": "INV",
+    "purpose": "Materialized stock by Company Warehouse Product",
+    "columns_draft": "company_id:BIGINT; warehouse_id:BIGINT; product_id:BIGINT; on_hand_qty:DECIMAL(18,6); reserved_qty:DECIMAL(18,6); updated_at:DATETIME",
+    "constraints_draft": "UNIQUE(company_id,warehouse_id,product_id)",
+    "references": "organizations; products",
+    "business_rules": "Available=on_hand-reserved; mutated atomically with posting/reservation, rebuildable from ledger",
+    "status": "P2-DRAFT"
+  },
+  {
+    "table": "inventory_serials",
+    "module": "INV",
+    "purpose": "Serial state & current location",
+    "columns_draft": "id:BIGINT PK; product_id:BIGINT; serial_code:VARCHAR(120); company_id:BIGINT; warehouse_id:BIGINT NULL; status:VARCHAR(30); last_movement_id:BIGINT NULL",
+    "constraints_draft": "UNIQUE(product_id,serial_code); INDEX(company_id,warehouse_id,status)",
+    "references": "products; organizations; inventory_movements",
+    "business_rules": "Serial không đồng thời ở nhiều warehouse; unique per Product",
+    "status": "P2-DRAFT"
+  },
+  {
+    "table": "inventory_movement_serials",
+    "module": "INV",
+    "purpose": "Serial movement trace",
+    "columns_draft": "inventory_movement_id:BIGINT; serial_id:BIGINT; direction:VARCHAR(20)",
+    "constraints_draft": "UNIQUE(inventory_movement_id,serial_id)",
+    "references": "inventory_movements; inventory_serials",
+    "business_rules": "Trace serial thru receipt/issue/transfer/return",
+    "status": "P2-DRAFT"
+  },
+  {
+    "table": "inventory_reservations",
+    "module": "INV",
+    "purpose": "Leaf reservation from confirmed SO",
+    "columns_draft": "id:BIGINT PK; reservation_key:VARCHAR(160); company_id:BIGINT; warehouse_id:BIGINT; product_id:BIGINT; sales_order_line_id:BIGINT; reserved_qty:DECIMAL(18,6); consumed_qty:DECIMAL(18,6); released_qty:DECIMAL(18,6); status:VARCHAR(30); created_at:DATETIME",
+    "constraints_draft": "UNIQUE(reservation_key); INDEX(company_id,warehouse_id,product_id,status)",
+    "references": "sales_order_lines; products; organizations",
+    "business_rules": "Active remaining=reserved-consumed-released>=0; no overselling",
+    "status": "P2-DRAFT"
+  },
+  {
+    "table": "warehouse_transfers",
+    "module": "INV",
+    "purpose": "Warehouse Transfer document",
+    "columns_draft": "id:BIGINT PK; transfer_number:VARCHAR(60); company_id:BIGINT; source_warehouse_id:BIGINT; destination_warehouse_id:BIGINT; status:VARCHAR(30); posted_at:DATETIME NULL",
+    "constraints_draft": "UNIQUE(company_id,transfer_number)",
+    "references": "organizations warehouse",
+    "business_rules": "Both warehouses same Company; single atomic post out/in",
+    "status": "P2-DRAFT"
+  },
+  {
+    "table": "warehouse_transfer_lines",
+    "module": "INV",
+    "purpose": "Transfer line",
+    "columns_draft": "id:BIGINT PK; transfer_id:BIGINT; product_id:BIGINT; base_qty:DECIMAL(18,6)",
+    "constraints_draft": "INDEX(transfer_id)",
+    "references": "warehouse_transfers; products",
+    "business_rules": "serial selected when transfer posted",
+    "status": "P2-DRAFT"
+  },
+  {
+    "table": "stock_counts",
+    "module": "INV",
+    "purpose": "Stock Count header",
+    "columns_draft": "id:BIGINT PK; count_number:VARCHAR(60); company_id:BIGINT; warehouse_id:BIGINT; status:VARCHAR(30); snapshot_at:DATETIME; confirmed_by:BIGINT NULL",
+    "constraints_draft": "UNIQUE(company_id,count_number)",
+    "references": "organizations",
+    "business_rules": "Snapshot vs actual; variance confirmation authorization",
+    "status": "P2-DRAFT"
+  },
+  {
+    "table": "stock_count_lines",
+    "module": "INV",
+    "purpose": "Stock Count line",
+    "columns_draft": "id:BIGINT PK; stock_count_id:BIGINT; product_id:BIGINT; system_base_qty:DECIMAL(18,6); actual_base_qty:DECIMAL(18,6); variance_base_qty:DECIMAL(18,6)",
+    "constraints_draft": "UNIQUE(stock_count_id,product_id)",
+    "references": "stock_counts; products",
+    "business_rules": "Variance calc actual-system, not UI floats",
+    "status": "P2-DRAFT"
+  },
+  {
+    "table": "inventory_adjustments",
+    "module": "INV",
+    "purpose": "Stock adjustment header",
+    "columns_draft": "id:BIGINT PK; adjustment_number:VARCHAR(60); company_id:BIGINT; warehouse_id:BIGINT; stock_count_id:BIGINT NULL; status:VARCHAR(30); posted_at:DATETIME NULL",
+    "constraints_draft": "UNIQUE(company_id,adjustment_number)",
+    "references": "organizations; stock_counts",
+    "business_rules": "Post-only delta and trace to Stock Count",
+    "status": "P2-DRAFT"
+  },
+  {
+    "table": "inventory_adjustment_lines",
+    "module": "INV",
+    "purpose": "Adjustment line",
+    "columns_draft": "id:BIGINT PK; adjustment_id:BIGINT; product_id:BIGINT; base_qty_delta:DECIMAL(18,6); reason_code:VARCHAR(50)",
+    "constraints_draft": "INDEX(adjustment_id)",
+    "references": "inventory_adjustments; products",
+    "business_rules": "No posted update",
+    "status": "P2-DRAFT"
+  },
+  {
+    "table": "sales_orders",
+    "module": "SAL",
+    "purpose": "Single-Company sales order",
+    "columns_draft": "id:BIGINT PK; sales_order_number:VARCHAR(60); company_id:BIGINT; customer_id:BIGINT NULL; sales_channel_id:BIGINT; warehouse_id:BIGINT; price_source:VARCHAR(30); status:VARCHAR(30); delivery_address:TEXT NULL; delivery_province_id:BIGINT NULL; delivery_ward_id:BIGINT NULL; shipping_fee:DECIMAL(18,2) NULL; created_at:DATETIME; created_by:BIGINT",
+    "constraints_draft": "UNIQUE(company_id,sales_order_number); INDEX(company_id,status,sales_channel_id)",
+    "references": "customers; sales_channels; organizations",
+    "business_rules": "External price authoritative; stored price snapshots; confirmed creates reservation",
+    "status": "P2-DRAFT"
+  },
+  {
+    "table": "sales_order_lines",
+    "module": "SAL",
+    "purpose": "Operational leaf line",
+    "columns_draft": "id:BIGINT PK; sales_order_id:BIGINT; line_no:INT; product_id:BIGINT; source_uom_id:BIGINT; source_qty:DECIMAL(18,6); base_qty:DECIMAL(18,6); unit_price:DECIMAL(18,2); amount:DECIMAL(18,2); price_source:VARCHAR(30); price_list_id:BIGINT NULL",
+    "constraints_draft": "UNIQUE(sales_order_id,line_no)",
+    "references": "sales_orders; products; product_uoms; price_lists",
+    "business_rules": "COMBO flattened leaves; preserve origin linking; amounts exact",
+    "status": "P2-DRAFT"
+  },
+  {
+    "table": "sales_order_combo_origins",
+    "module": "SAL",
+    "purpose": "Root COMBO selection trace",
+    "columns_draft": "id:BIGINT PK; sales_order_id:BIGINT; root_combo_product_id:BIGINT; root_combo_qty:DECIMAL(18,6); root_price:DECIMAL(18,2); root_total_amount:DECIMAL(18,2)",
+    "constraints_draft": "INDEX(sales_order_id)",
+    "references": "sales_orders; products",
+    "business_rules": "Store selected root and allocated summary without creating stock COMBO",
+    "status": "P2-DRAFT"
+  },
+  {
+    "table": "sales_order_combo_allocations",
+    "module": "SAL",
+    "purpose": "Leaf allocations from combo root",
+    "columns_draft": "combo_origin_id:BIGINT; sales_order_line_id:BIGINT; allocated_qty:DECIMAL(18,6); allocated_amount:DECIMAL(18,2)",
+    "constraints_draft": "UNIQUE(combo_origin_id,sales_order_line_id)",
+    "references": "sales_order_combo_origins; sales_order_lines",
+    "business_rules": "SUM allocated amount = root amount; same leaf weighted avg",
+    "status": "P2-DRAFT"
+  },
+  {
+    "table": "sales_order_promotions",
+    "module": "PRC",
+    "purpose": "Promotion/coupon application snapshot",
+    "columns_draft": "id:BIGINT PK; sales_order_id:BIGINT; promotion_id:BIGINT; coupon_id:BIGINT NULL; applied_amount:DECIMAL(18,2); calculation_snapshot:TEXT; applied_at:DATETIME",
+    "constraints_draft": "INDEX(sales_order_id)",
+    "references": "sales_orders; promotions; coupons",
+    "business_rules": "Promotions applied deterministic; snapshot re-pricing not on external price",
+    "status": "P2-DRAFT"
+  },
+  {
+    "table": "marketplace_accounts",
+    "module": "SAL",
+    "purpose": "Source shop/account → Company and warehouse mapping",
+    "columns_draft": "id:BIGINT PK; sales_channel_id:BIGINT; external_account_id:VARCHAR(160); company_id:BIGINT; warehouse_id:BIGINT; effective_from:DATETIME; effective_to:DATETIME NULL; status:VARCHAR(20); credentials_ref:VARCHAR(255) NULL",
+    "constraints_draft": "INDEX(sales_channel_id,external_account_id,effective_from)",
+    "references": "sales_channels; organizations",
+    "business_rules": "One effective Company at time; secrets not returned to UI",
+    "status": "P2-DRAFT"
+  },
+  {
+    "table": "marketplace_order_inbox",
+    "module": "SAL",
+    "purpose": "Raw external order reference and safe digest",
+    "columns_draft": "id:BIGINT PK; sales_channel_id:BIGINT; marketplace_account_id:BIGINT; external_order_id:VARCHAR(160); payload_sha256:CHAR(64); received_at:DATETIME; sync_status:VARCHAR(30); error_code:VARCHAR(80) NULL; payload_storage_ref:VARCHAR(255) NULL",
+    "constraints_draft": "UNIQUE(sales_channel_id,marketplace_account_id,external_order_id)",
+    "references": "marketplace_accounts; sales_channels",
+    "business_rules": "Idempotent first ingest; retry updates same row, no duplicate SO",
+    "status": "P2-DRAFT"
+  },
+  {
+    "table": "marketplace_order_links",
+    "module": "SAL",
+    "purpose": "External business key to ERP SO",
+    "columns_draft": "id:BIGINT PK; marketplace_order_id:BIGINT; sales_order_id:BIGINT; created_at:DATETIME",
+    "constraints_draft": "UNIQUE(marketplace_order_id); UNIQUE(sales_order_id) conditional if no multi-origin",
+    "references": "marketplace_order_inbox; sales_orders",
+    "business_rules": "Create/link transaction atomic; no duplicate SO",
+    "status": "P2-DRAFT"
+  },
+  {
+    "table": "marketplace_sync_attempts",
+    "module": "SAL",
+    "purpose": "Marketplace sync errors/retry trace",
+    "columns_draft": "id:BIGINT PK; marketplace_order_id:BIGINT; attempted_at:DATETIME; status:VARCHAR(25); error_code:VARCHAR(80) NULL; retry_after:DATETIME NULL",
+    "constraints_draft": "INDEX(marketplace_order_id,attempted_at)",
+    "references": "marketplace_order_inbox",
+    "business_rules": "Do not log raw secret/PII; bounded retries",
+    "status": "P2-DRAFT"
+  },
+  {
+    "table": "shipments",
+    "module": "SAL",
+    "purpose": "Shipment and carrier metadata",
+    "columns_draft": "id:BIGINT PK; shipment_number:VARCHAR(60); company_id:BIGINT; sales_order_id:BIGINT; warehouse_id:BIGINT; carrier_account_id:BIGINT NULL; tracking_number:VARCHAR(120) NULL; shipping_fee:DECIMAL(18,2) NULL; cod_amount:DECIMAL(18,2) NULL; delivery_status:VARCHAR(30); status:VARCHAR(30)",
+    "constraints_draft": "UNIQUE(company_id,shipment_number); INDEX(company_id,tracking_number)",
+    "references": "sales_orders; organizations; carrier_accounts",
+    "business_rules": "Company alignment; cancel carrier label != delete shipment",
+    "status": "P2-DRAFT"
+  },
+  {
+    "table": "shipment_lines",
+    "module": "SAL",
+    "purpose": "Shipment partial fulfillment",
+    "columns_draft": "id:BIGINT PK; shipment_id:BIGINT; sales_order_line_id:BIGINT; base_qty:DECIMAL(18,6)",
+    "constraints_draft": "INDEX(shipment_id)",
+    "references": "shipments; sales_order_lines",
+    "business_rules": "Partial shipment <= remaining qty",
+    "status": "P2-DRAFT"
+  },
+  {
+    "table": "carrier_accounts",
+    "module": "SAL",
+    "purpose": "Carrier integration connection",
+    "columns_draft": "id:BIGINT PK; carrier_code:VARCHAR(40); company_id:BIGINT; credential_ref:VARCHAR(255); status:VARCHAR(20)",
+    "constraints_draft": "INDEX(company_id,carrier_code)",
+    "references": "organizations",
+    "business_rules": "Credentials only secret store; no plaintext API",
+    "status": "P2-DRAFT"
+  },
+  {
+    "table": "carrier_interactions",
+    "module": "SAL",
+    "purpose": "Label/fee/tracking/cancel attempts",
+    "columns_draft": "id:BIGINT PK; shipment_id:BIGINT; operation:VARCHAR(40); request_key:VARCHAR(160); provider_ref:VARCHAR(160) NULL; attempted_at:DATETIME; result_status:VARCHAR(30); error_code:VARCHAR(80) NULL",
+    "constraints_draft": "UNIQUE(request_key); INDEX(shipment_id,attempted_at)",
+    "references": "shipments",
+    "business_rules": "Provider retry idempotent where supported; reconciliation log",
+    "status": "P2-DRAFT"
+  },
+  {
+    "table": "carrier_tracking_events",
+    "module": "SAL",
+    "purpose": "Deduped carrier event timeline",
+    "columns_draft": "id:BIGINT PK; shipment_id:BIGINT; provider_event_id:VARCHAR(160) NULL; payload_sha256:CHAR(64); event_code:VARCHAR(60); event_at:DATETIME; received_at:DATETIME",
+    "constraints_draft": "UNIQUE(shipment_id,provider_event_id) if provider id exists; INDEX(shipment_id,event_at)",
+    "references": "shipments",
+    "business_rules": "Out-of-order event handling, anti-replay, mapping decision OPEN",
+    "status": "P2-DRAFT"
+  },
+  {
+    "table": "sales_issues",
+    "module": "SAL",
+    "purpose": "Sales Issue header (inventory post source)",
+    "columns_draft": "id:BIGINT PK; issue_number:VARCHAR(60); company_id:BIGINT; shipment_id:BIGINT; warehouse_id:BIGINT; status:VARCHAR(30); posted_at:DATETIME NULL",
+    "constraints_draft": "UNIQUE(company_id,issue_number)",
+    "references": "shipments; organizations",
+    "business_rules": "Post consumes reservation + reduces on-hand together",
+    "status": "P2-DRAFT"
+  },
+  {
+    "table": "sales_issue_lines",
+    "module": "SAL",
+    "purpose": "Sales Issue leaf posted quantities",
+    "columns_draft": "id:BIGINT PK; sales_issue_id:BIGINT; sales_order_line_id:BIGINT; base_qty:DECIMAL(18,6)",
+    "constraints_draft": "INDEX(sales_issue_id)",
+    "references": "sales_issues; sales_order_lines",
+    "business_rules": "Serial-specific allocation on post",
+    "status": "P2-DRAFT"
+  },
+  {
+    "table": "cod_reconciliations",
+    "module": "SAL",
+    "purpose": "COD carrier versus actual receipts",
+    "columns_draft": "id:BIGINT PK; company_id:BIGINT; shipment_id:BIGINT; carrier_report_ref:VARCHAR(160) NULL; cod_due:DECIMAL(18,2); carrier_collected:DECIMAL(18,2); shipping_fee:DECIMAL(18,2); other_fee:DECIMAL(18,2); net_due:DECIMAL(18,2); actual_received:DECIMAL(18,2); difference:DECIMAL(18,2); status:VARCHAR(30)",
+    "constraints_draft": "INDEX(company_id,status); INDEX(shipment_id)",
+    "references": "shipments",
+    "business_rules": "Only posted Money Receipt changes finance balance; reconciliation should not post money implicitly",
+    "status": "P2-DRAFT"
+  },
+  {
+    "table": "sales_returns",
+    "module": "SAL",
+    "purpose": "Sales Return header",
+    "columns_draft": "id:BIGINT PK; return_number:VARCHAR(60); company_id:BIGINT; sales_order_id:BIGINT NULL; shipment_id:BIGINT NULL; status:VARCHAR(30); posted_at:DATETIME NULL",
+    "constraints_draft": "UNIQUE(company_id,return_number)",
+    "references": "sales_orders; shipments",
+    "business_rules": "Physical return only increases stock on posted return movement",
+    "status": "P2-DRAFT"
+  },
+  {
+    "table": "sales_return_lines",
+    "module": "SAL",
+    "purpose": "Sales Return lines",
+    "columns_draft": "id:BIGINT PK; sales_return_id:BIGINT; product_id:BIGINT; sales_order_line_id:BIGINT NULL; returned_base_qty:DECIMAL(18,6)",
+    "constraints_draft": "INDEX(sales_return_id)",
+    "references": "sales_returns; products; sales_order_lines",
+    "business_rules": "No serial validation bypass",
+    "status": "P2-DRAFT"
+  },
+  {
+    "table": "cash_bank_accounts",
+    "module": "FIN",
+    "purpose": "Cash Fund and Bank Account master",
+    "columns_draft": "id:BIGINT PK; account_code:VARCHAR(50); company_id:BIGINT; account_type:VARCHAR(20); name:VARCHAR(255); opening_balance:DECIMAL(18,2); opening_date:DATE; status:VARCHAR(20)",
+    "constraints_draft": "UNIQUE(company_id,account_code)",
+    "references": "organizations",
+    "business_rules": "Account Company immutable after financial transactions; opening date authoritative",
+    "status": "P2-DRAFT"
+  },
+  {
+    "table": "money_categories",
+    "module": "FIN",
+    "purpose": "Operational receipt/expense categories",
+    "columns_draft": "id:BIGINT PK; category_code:VARCHAR(50); category_type:VARCHAR(20); name:VARCHAR(255); status:VARCHAR(20)",
+    "constraints_draft": "UNIQUE(category_code)",
+    "references": "none",
+    "business_rules": "RECEIPT or EXPENSE, inactive not for new transactions",
+    "status": "P2-DRAFT"
+  },
+  {
+    "table": "money_transactions",
+    "module": "FIN",
+    "purpose": "Money Receipt/Expense immutable post",
+    "columns_draft": "id:BIGINT PK; transaction_number:VARCHAR(60); company_id:BIGINT; account_id:BIGINT; category_id:BIGINT; direction:VARCHAR(20); business_date:DATE; amount:DECIMAL(18,2); status:VARCHAR(30); description:TEXT NULL; recorded_by:BIGINT; created_at:DATETIME; posted_at:DATETIME NULL; posted_by:BIGINT NULL; reversal_of_id:BIGINT NULL",
+    "constraints_draft": "UNIQUE(company_id,transaction_number); INDEX(company_id,account_id,business_date,status)",
+    "references": "cash_bank_accounts; money_categories; organizations",
+    "business_rules": "Posted only adds/subtracts balance; no double-entry",
+    "status": "P2-DRAFT"
+  },
+  {
+    "table": "money_source_links",
+    "module": "FIN",
+    "purpose": "Finance source references",
+    "columns_draft": "id:BIGINT PK; money_transaction_id:BIGINT; source_type:VARCHAR(50); source_id:BIGINT; linked_amount:DECIMAL(18,2) NULL",
+    "constraints_draft": "INDEX(source_type,source_id); INDEX(money_transaction_id)",
+    "references": "money_transactions; polymorphic source app-layer",
+    "business_rules": "Account/company match and source visibility; avoid false GL posting",
+    "status": "P2-DRAFT"
+  },
+  {
+    "table": "p2_outbox_events",
+    "module": "SHARED",
+    "purpose": "Transactional outbox for integration notifications (optional design)",
+    "columns_draft": "id:BIGINT PK; event_key:VARCHAR(160); company_id:BIGINT NULL; aggregate_type:VARCHAR(80); aggregate_id:BIGINT; event_name:VARCHAR(80); payload_ref:VARCHAR(255) NULL; status:VARCHAR(20); available_at:DATETIME; created_at:DATETIME",
+    "constraints_draft": "UNIQUE(event_key); INDEX(status,available_at)",
+    "references": "none",
+    "business_rules": "Optional proposed infrastructure, no P2 UR expressly mandates a generic outbox",
+    "status": "P2-DRAFT"
+  },
+  {
+    "table": "p2_external_event_dedup",
+    "module": "SHARED",
+    "purpose": "Webhook event anti-replay (optional design)",
+    "columns_draft": "id:BIGINT PK; provider:VARCHAR(60); event_uid:VARCHAR(160); payload_hash:CHAR(64); received_at:DATETIME; status:VARCHAR(20)",
+    "constraints_draft": "UNIQUE(provider,event_uid)",
+    "references": "none",
+    "business_rules": "Provider webhook auth/retention OPEN-DECISION",
+    "status": "P2-DRAFT"
+  }
+]

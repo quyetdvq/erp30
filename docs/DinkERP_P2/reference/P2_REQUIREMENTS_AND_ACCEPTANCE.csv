@@ -1,0 +1,148 @@
+﻿ur_id,fr_id,test_id,criteria_index,criteria,module,priority,source_line,authority,implementation_status
+UR-DOC-001,P2-FR-DOC-001-01,P2-AT-DOC-001-01,1,File xác định được đối tượng nghiệp vụ liên quan.,DOC,MUST,979,BASELINE-UR,NOT_IMPLEMENTED
+UR-DOC-001,P2-FR-DOC-001-02,P2-AT-DOC-001-02,2,Quyền truy cập file tuân theo quyền đối tượng nghiệp vụ.,DOC,MUST,979,BASELINE-UR,NOT_IMPLEMENTED
+UR-DOC-002,P2-FR-DOC-002-01,P2-AT-DOC-002-01,1,Có thể xem version hiện tại và version trước.,DOC,SHOULD,999,BASELINE-UR,NOT_IMPLEMENTED
+UR-DOC-002,P2-FR-DOC-002-02,P2-AT-DOC-002-02,2,Tài liệu bị thay thế không làm mất lịch sử.,DOC,SHOULD,999,BASELINE-UR,NOT_IMPLEMENTED
+UR-CUS-001,P2-FR-CUS-001-01,P2-AT-CUS-001-01,1,Customer Code là duy nhất trong Group.,CUS,MUST,1226,BASELINE-UR,NOT_IMPLEMENTED
+UR-CUS-001,P2-FR-CUS-001-02,P2-AT-CUS-001-02,2,Customer có thể cấu hình `All Companies` hoặc danh sách Company được phép sử dụng.,CUS,MUST,1226,BASELINE-UR,NOT_IMPLEMENTED
+UR-CUS-001,P2-FR-CUS-001-03,P2-AT-CUS-001-03,3,Company ngoài Customer Usage Scope không được dùng Customer cho giao dịch mới.,CUS,MUST,1226,BASELINE-UR,NOT_IMPLEMENTED
+UR-CUS-001,P2-FR-CUS-001-04,P2-AT-CUS-001-04,4,"Khi triển khai Customer ở P2, Customer có thể sử dụng Shared Contact Management để quản lý nhiều Contact; không tạo capability Contact riêng chỉ vì là Customer.",CUS,MUST,1226,BASELINE-UR,NOT_IMPLEMENTED
+UR-CUS-001,P2-FR-CUS-001-05,P2-AT-CUS-001-05,5,Customer inactive không được chọn cho giao dịch mới nhưng lịch sử giao dịch/liên hệ vẫn tra cứu được.,CUS,MUST,1226,BASELINE-UR,NOT_IMPLEMENTED
+UR-CUS-002,P2-FR-CUS-002-01,P2-AT-CUS-002-01,1,Lưu được note/lịch sử liên hệ.,CUS,MUST,1257,BASELINE-UR,NOT_IMPLEMENTED
+UR-CUS-002,P2-FR-CUS-002-02,P2-AT-CUS-002-02,2,Xem được Sales Order/Shipment/Sales Return/Thu tiền liên quan trong phạm vi quyền.,CUS,MUST,1257,BASELINE-UR,NOT_IMPLEMENTED
+UR-CUS-002,P2-FR-CUS-002-03,P2-AT-CUS-002-03,3,Không yêu cầu Lead Management hoặc Opportunity Pipeline.,CUS,MUST,1257,BASELINE-UR,NOT_IMPLEMENTED
+UR-PRC-002,P2-FR-PRC-002-01,P2-AT-PRC-002-01,1,Promotion chỉ áp dụng trong thời gian hiệu lực và khi đủ điều kiện.,PRC,MUST,1344,BASELINE-UR,NOT_IMPLEMENTED
+UR-PRC-002,P2-FR-PRC-002-02,P2-AT-PRC-002-02,2,Sales Order lưu được promotion/coupon đã áp dụng.,PRC,MUST,1344,BASELINE-UR,NOT_IMPLEMENTED
+UR-PRC-002,P2-FR-PRC-002-03,P2-AT-PRC-002-03,3,Special Price được xử lý trước Discount/Promotion khác.,PRC,MUST,1344,BASELINE-UR,NOT_IMPLEMENTED
+UR-PRC-002,P2-FR-PRC-002-04,P2-AT-PRC-002-04,4,Promotion được evaluate theo Priority và không được tạo stacking tùy ý ngoài rule đã cấu hình.,PRC,MUST,1344,BASELINE-UR,NOT_IMPLEMENTED
+UR-PRC-002,P2-FR-PRC-002-05,P2-AT-PRC-002-05,5,Promotion có `Combinable=false` không được kết hợp với Promotion/Coupon khác trái với rule.,PRC,MUST,1344,BASELINE-UR,NOT_IMPLEMENTED
+UR-PRC-002,P2-FR-PRC-002-06,P2-AT-PRC-002-06,6,"Nếu các Promotion cùng Priority và scope có thể tạo kết quả không xác định, cấu hình phải bị từ chối hoặc được điều chỉnh trước khi active.",PRC,MUST,1344,BASELINE-UR,NOT_IMPLEMENTED
+UR-SUP-001,P2-FR-SUP-001-01,P2-AT-SUP-001-01,1,Supplier Code là duy nhất trong Group.,SUP,MUST,1382,BASELINE-UR,NOT_IMPLEMENTED
+UR-SUP-001,P2-FR-SUP-001-02,P2-AT-SUP-001-02,2,Supplier có thể cấu hình `All Companies` hoặc danh sách Company được phép sử dụng.,SUP,MUST,1382,BASELINE-UR,NOT_IMPLEMENTED
+UR-SUP-001,P2-FR-SUP-001-03,P2-AT-SUP-001-03,3,Company ngoài Supplier Usage Scope không được dùng Supplier cho giao dịch mới.,SUP,MUST,1382,BASELINE-UR,NOT_IMPLEMENTED
+UR-SUP-001,P2-FR-SUP-001-04,P2-AT-SUP-001-04,4,"Khi triển khai Supplier ở P2, Supplier có thể sử dụng Shared Contact Management để quản lý nhiều Contact; không tạo capability Contact riêng chỉ vì là Supplier.",SUP,MUST,1382,BASELINE-UR,NOT_IMPLEMENTED
+UR-SUP-001,P2-FR-SUP-001-05,P2-AT-SUP-001-05,5,Supplier inactive không được chọn cho giao dịch mới nhưng lịch sử vẫn tra cứu được.,SUP,MUST,1382,BASELINE-UR,NOT_IMPLEMENTED
+UR-SUP-002,P2-FR-SUP-002-01,P2-AT-SUP-002-01,1,Chỉ hiển thị lịch sử thuộc Company nằm trong authorization scope của User.,SUP,MUST,1411,BASELINE-UR,NOT_IMPLEMENTED
+UR-SUP-002,P2-FR-SUP-002-02,P2-AT-SUP-002-02,2,Có thể điều hướng từ Supplier tới chứng từ nguồn liên quan khi User có quyền VIEW chứng từ đó.,SUP,MUST,1411,BASELINE-UR,NOT_IMPLEMENTED
+UR-SUP-002,P2-FR-SUP-002-03,P2-AT-SUP-002-03,3,Lịch sử vẫn tra cứu được khi Supplier đã inactive.,SUP,MUST,1411,BASELINE-UR,NOT_IMPLEMENTED
+UR-PUR-001,P2-FR-PUR-001-01,P2-AT-PUR-001-01,1,PR có thể Submit/Approve/Reject theo PBAC.,PUR,MUST,1433,BASELINE-UR,NOT_IMPLEMENTED
+UR-PUR-001,P2-FR-PUR-001-02,P2-AT-PUR-001-02,2,PR Approved có thể dùng để tạo Purchase Order.,PUR,MUST,1433,BASELINE-UR,NOT_IMPLEMENTED
+UR-PUR-002,P2-FR-PUR-002-01,P2-AT-PUR-002-01,1,PO tuân theo PBAC theo Company/Resource/State/Action.,PUR,MUST,1451,BASELINE-UR,NOT_IMPLEMENTED
+UR-PUR-002,P2-FR-PUR-002-02,P2-AT-PUR-002-02,2,UOM phải hợp lệ cho Product; Quantity phải có thể quy đổi về Base UOM khi sử dụng Alternate UOM của SIMPLE/CHILD.,PUR,MUST,1451,BASELINE-UR,NOT_IMPLEMENTED
+UR-PUR-002,P2-FR-PUR-002-03,P2-AT-PUR-002-03,3,"COMBO có thể được chọn như template để nhập nhanh Purchase line, nhưng trước receiving/inventory/cost operational processing phải expand về SIMPLE/CHILD; COMBO selling-price allocation không được tự dùng làm purchase-price allocation.",PUR,MUST,1451,BASELINE-UR,NOT_IMPLEMENTED
+UR-PUR-002,P2-FR-PUR-002-04,P2-AT-PUR-002-04,4,"Purchase price/cost của các leaf sau expansion phải được xác định theo nghiệp vụ Purchase tương ứng, không suy từ COMBO selling price nếu chưa có requirement riêng.",PUR,MUST,1451,BASELINE-UR,NOT_IMPLEMENTED
+UR-PUR-002,P2-FR-PUR-002-05,P2-AT-PUR-002-05,5,PO giữ lịch sử phê duyệt và thay đổi quan trọng.,PUR,MUST,1451,BASELINE-UR,NOT_IMPLEMENTED
+UR-PUR-003,P2-FR-PUR-003-01,P2-AT-PUR-003-01,1,Chỉ Goods Receipt đã đạt posting state của module (`POSTED` hoặc trạng thái `CONFIRMED` được định nghĩa tương đương posting) mới làm tăng On-hand Inventory.,PUR,MUST,1478,BASELINE-UR,NOT_IMPLEMENTED
+UR-PUR-003,P2-FR-PUR-003-02,P2-AT-PUR-003-02,2,Goods Receipt cập nhật Received Quantity của Purchase Order nguồn.,PUR,MUST,1478,BASELINE-UR,NOT_IMPLEMENTED
+UR-PUR-003,P2-FR-PUR-003-03,P2-AT-PUR-003-03,3,Product serial-managed bắt buộc ghi Serial khi Goods Receipt được post.,PUR,MUST,1478,BASELINE-UR,NOT_IMPLEMENTED
+UR-PUR-003,P2-FR-PUR-003-04,P2-AT-PUR-003-04,4,Không nhận vào Warehouse thuộc Company khác Purchase Order.,PUR,MUST,1478,BASELINE-UR,NOT_IMPLEMENTED
+UR-PUR-003,P2-FR-PUR-003-05,P2-AT-PUR-003-05,5,Goods Receipt đã post không được delete/edit trực tiếp các dữ liệu làm thay đổi stock; correction phải qua reversal hoặc Inventory Adjustment phù hợp.,PUR,MUST,1478,BASELINE-UR,NOT_IMPLEMENTED
+UR-PUR-004,P2-FR-PUR-004-01,P2-AT-PUR-004-01,1,Chỉ Purchase Return đã đạt posting state mới làm giảm On-hand Inventory.,PUR,MUST,1492,BASELINE-UR,NOT_IMPLEMENTED
+UR-PUR-004,P2-FR-PUR-004-02,P2-AT-PUR-004-02,2,Serial-managed item phải xác định đúng Serial trả.,PUR,MUST,1492,BASELINE-UR,NOT_IMPLEMENTED
+UR-PUR-004,P2-FR-PUR-004-03,P2-AT-PUR-004-03,3,Có thể truy về Goods Receipt/Purchase Order nguồn.,PUR,MUST,1492,BASELINE-UR,NOT_IMPLEMENTED
+UR-PUR-004,P2-FR-PUR-004-04,P2-AT-PUR-004-04,4,Purchase Return đã post không được delete/edit trực tiếp làm thay đổi stock history; correction phải qua reversal/adjustment phù hợp.,PUR,MUST,1492,BASELINE-UR,NOT_IMPLEMENTED
+UR-INV-001,P2-FR-INV-001-01,P2-AT-INV-001-01,1,"Có thể xem On-hand, Reserved và Available theo từng Warehouse.",INV,MUST,1511,BASELINE-UR,NOT_IMPLEMENTED
+UR-INV-001,P2-FR-INV-001-02,P2-AT-INV-001-02,2,Inventory balance chỉ tồn tại cho SIMPLE/CHILD leaf; COMBO không có On-hand/Reserved/Available riêng.,INV,MUST,1511,BASELINE-UR,NOT_IMPLEMENTED
+UR-INV-001,P2-FR-INV-001-03,P2-AT-INV-001-03,3,On-hand chỉ phản ánh stock movement đã được post/confirm theo posting rule.,INV,MUST,1511,BASELINE-UR,NOT_IMPLEMENTED
+UR-INV-001,P2-FR-INV-001-04,P2-AT-INV-001-04,4,Có thể xem tồn Group bằng tổng hợp Company được phép.,INV,MUST,1511,BASELINE-UR,NOT_IMPLEMENTED
+UR-INV-001,P2-FR-INV-001-05,P2-AT-INV-001-05,5,Không trộn tồn giữa các Company.,INV,MUST,1511,BASELINE-UR,NOT_IMPLEMENTED
+UR-INV-002,P2-FR-INV-002-01,P2-AT-INV-002-01,1,Chỉ movement ở posting state (`POSTED` hoặc module-defined `CONFIRMED` tương đương posting) mới làm thay đổi On-hand Qty.,INV,MUST,1534,BASELINE-UR,NOT_IMPLEMENTED
+UR-INV-002,P2-FR-INV-002-02,P2-AT-INV-002-02,2,Inventory movement chỉ post SIMPLE/CHILD leaf; nếu source document sử dụng COMBO thì phải flatten trước khi tạo/post stock movement.,INV,MUST,1534,BASELINE-UR,NOT_IMPLEMENTED
+UR-INV-002,P2-FR-INV-002-03,P2-AT-INV-002-03,3,Draft/Pending movement không làm thay đổi On-hand Qty.,INV,MUST,1534,BASELINE-UR,NOT_IMPLEMENTED
+UR-INV-002,P2-FR-INV-002-04,P2-AT-INV-002-04,4,Movement đã post không được delete hoặc sửa trực tiếp quantity/product/warehouse làm thay đổi stock history.,INV,MUST,1534,BASELINE-UR,NOT_IMPLEMENTED
+UR-INV-002,P2-FR-INV-002-05,P2-AT-INV-002-05,5,Correction sau posting phải được thực hiện bằng reversal hoặc Inventory Adjustment có traceability.,INV,MUST,1534,BASELINE-UR,NOT_IMPLEMENTED
+UR-INV-002,P2-FR-INV-002-06,P2-AT-INV-002-06,6,"Mỗi posted movement truy được Source Document, User và Timestamp.",INV,MUST,1534,BASELINE-UR,NOT_IMPLEMENTED
+UR-INV-003,P2-FR-INV-003-01,P2-AT-INV-003-01,1,Source và destination Warehouse phải cùng Company.,INV,MUST,1569,BASELINE-UR,NOT_IMPLEMENTED
+UR-INV-003,P2-FR-INV-003-02,P2-AT-INV-003-02,2,Cross-Company movement không được xử lý như internal warehouse transfer.,INV,MUST,1569,BASELINE-UR,NOT_IMPLEMENTED
+UR-INV-003,P2-FR-INV-003-03,P2-AT-INV-003-03,3,Chỉ Transfer đã đạt posting state mới làm thay đổi stock location/balance.,INV,MUST,1569,BASELINE-UR,NOT_IMPLEMENTED
+UR-INV-003,P2-FR-INV-003-04,P2-AT-INV-003-04,4,Posted Transfer phải giữ trace giữa source và destination movement.,INV,MUST,1569,BASELINE-UR,NOT_IMPLEMENTED
+UR-INV-004,P2-FR-INV-004-01,P2-AT-INV-004-01,1,Adjustment chỉ được ghi nhận theo PBAC.,INV,MUST,1582,BASELINE-UR,NOT_IMPLEMENTED
+UR-INV-004,P2-FR-INV-004-02,P2-AT-INV-004-02,2,Adjustment chỉ làm thay đổi On-hand khi đạt posting state.,INV,MUST,1582,BASELINE-UR,NOT_IMPLEMENTED
+UR-INV-004,P2-FR-INV-004-03,P2-AT-INV-004-03,3,Có thể truy từ Adjustment về Stock Count và người xác nhận.,INV,MUST,1582,BASELINE-UR,NOT_IMPLEMENTED
+UR-INV-004,P2-FR-INV-004-04,P2-AT-INV-004-04,4,Posted Adjustment không được delete/edit trực tiếp làm thay đổi stock history.,INV,MUST,1582,BASELINE-UR,NOT_IMPLEMENTED
+UR-INV-005,P2-FR-INV-005-01,P2-AT-INV-005-01,1,"Serial xác định được Product, Company, Warehouse hiện tại và trạng thái.",INV,MUST,1604,BASELINE-UR,NOT_IMPLEMENTED
+UR-INV-005,P2-FR-INV-005-02,P2-AT-INV-005-02,2,"Serial truy được Goods Receipt, Sales Issue, transfer, purchase return và sales return liên quan.",INV,MUST,1604,BASELINE-UR,NOT_IMPLEMENTED
+UR-INV-005,P2-FR-INV-005-03,P2-AT-INV-005-03,3,Một Serial không thể đồng thời tồn tại ở nhiều Warehouse.,INV,MUST,1604,BASELINE-UR,NOT_IMPLEMENTED
+UR-INV-005,P2-FR-INV-005-04,P2-AT-INV-005-04,4,Goods Receipt của Product serial-managed phải ghi nhận Serial trước khi posting.,INV,MUST,1604,BASELINE-UR,NOT_IMPLEMENTED
+UR-INV-005,P2-FR-INV-005-05,P2-AT-INV-005-05,5,Sales Issue của Product serial-managed phải xác định Serial xuất.,INV,MUST,1604,BASELINE-UR,NOT_IMPLEMENTED
+UR-INV-005,P2-FR-INV-005-06,P2-AT-INV-005-06,6,Warehouse Transfer phải chuyển trạng thái/location của đúng Serial.,INV,MUST,1604,BASELINE-UR,NOT_IMPLEMENTED
+UR-INV-005,P2-FR-INV-005-07,P2-AT-INV-005-07,7,Purchase Return và Sales Return phải tham chiếu đúng Serial khi áp dụng.,INV,MUST,1604,BASELINE-UR,NOT_IMPLEMENTED
+UR-INV-006,P2-FR-INV-006-01,P2-AT-INV-006-01,1,"Reservation xác định Company, Warehouse, Product, Reserved Quantity và Source Sales Order/Order Line.",INV,MUST,1621,BASELINE-UR,NOT_IMPLEMENTED
+UR-INV-006,P2-FR-INV-006-02,P2-AT-INV-006-02,2,Reservation chỉ giữ quantity của SIMPLE/CHILD leaf; COMBO phải được flatten trước reservation.,INV,MUST,1621,BASELINE-UR,NOT_IMPLEMENTED
+UR-INV-006,P2-FR-INV-006-03,P2-AT-INV-006-03,3,Reservation được tạo khi Sales Order đạt trạng thái xác nhận vận hành theo lifecycle của module.,INV,MUST,1621,BASELINE-UR,NOT_IMPLEMENTED
+UR-INV-006,P2-FR-INV-006-04,P2-AT-INV-006-04,4,Cancel Order hoặc giảm quantity phải release phần reservation không còn cần.,INV,MUST,1621,BASELINE-UR,NOT_IMPLEMENTED
+UR-INV-006,P2-FR-INV-006-05,P2-AT-INV-006-05,5,Partial shipment/Sales Issue consume phần reservation tương ứng và giữ reservation cho phần chưa xử lý.,INV,MUST,1621,BASELINE-UR,NOT_IMPLEMENTED
+UR-INV-006,P2-FR-INV-006-06,P2-AT-INV-006-06,6,"Khi Sales Issue được post, phần reservation được consume đồng thời với stock issue liên quan.",INV,MUST,1621,BASELINE-UR,NOT_IMPLEMENTED
+UR-INV-006,P2-FR-INV-006-07,P2-AT-INV-006-07,7,Reservation không tự làm thay đổi On-hand Qty.,INV,MUST,1621,BASELINE-UR,NOT_IMPLEMENTED
+UR-INV-006,P2-FR-INV-006-08,P2-AT-INV-006-08,8,Baseline không cho reservation mới làm Available Qty âm; trường hợp overselling cần requirement/change request riêng.,INV,MUST,1621,BASELINE-UR,NOT_IMPLEMENTED
+UR-INV-006,P2-FR-INV-006-09,P2-AT-INV-006-09,9,"Với Product serial-managed, baseline reserve theo quantity; Serial cụ thể được chọn và validate khi Sales Issue được post.",INV,MUST,1621,BASELINE-UR,NOT_IMPLEMENTED
+UR-SAL-001,P2-FR-SAL-001-01,P2-AT-SAL-001-01,1,"Direct/Internal Sales sử dụng Price Resolution theo Product + UOM + Company + Effective Time; Sales Order lưu giá cuối cùng, UOM và Price Source `PRICE_LIST_COMPANY`, `PRICE_LIST_GROUP` hoặc `PRODUCT_DEFAULT`.",SAL,MUST,1650,BASELINE-UR,NOT_IMPLEMENTED
+UR-SAL-001,P2-FR-SAL-001-02,P2-AT-SAL-001-02,2,"Direct/Internal Sales cho phép chọn COMBO như template. Khi chọn COMBO, hệ thống resolve giá root COMBO, flatten về SIMPLE/CHILD, phân bổ selling amount và aggregate leaf theo UR-PRD-006 trước các bước Reservation/Inventory/Serial/Costing/Posting.",SAL,MUST,1650,BASELINE-UR,NOT_IMPLEMENTED
+UR-SAL-001,P2-FR-SAL-001-03,P2-AT-SAL-001-03,3,Sales Order phải giữ đủ traceability giữa leaf line và COMBO nguồn khi COMBO được dùng để tạo nhanh line.,SAL,MUST,1650,BASELINE-UR,NOT_IMPLEMENTED
+UR-SAL-001,P2-FR-SAL-001-04,P2-AT-SAL-001-04,4,Marketplace Sales từ Shopee/TikTok Shop sử dụng external channel price/discount authoritative và lưu Price Source `EXTERNAL_CHANNEL`.,SAL,MUST,1650,BASELINE-UR,NOT_IMPLEMENTED
+UR-SAL-001,P2-FR-SAL-001-05,P2-AT-SAL-001-05,5,Sales Order có Price Source `EXTERNAL_CHANNEL` không bị ERP Price Resolution/Promotion recompute lại giá marketplace.,SAL,MUST,1650,BASELINE-UR,NOT_IMPLEMENTED
+UR-SAL-001,P2-FR-SAL-001-06,P2-AT-SAL-001-06,6,"Sales Order lưu được nguồn giá, UOM và promotion/discount reference phù hợp với loại order.",SAL,MUST,1650,BASELINE-UR,NOT_IMPLEMENTED
+UR-SAL-001,P2-FR-SAL-001-07,P2-AT-SAL-001-07,7,Delivery address sử dụng Province/City Code và Ward/Commune Code khi áp dụng.,SAL,MUST,1650,BASELINE-UR,NOT_IMPLEMENTED
+UR-SAL-001,P2-FR-SAL-001-08,P2-AT-SAL-001-08,8,Sales Order tuân theo PBAC theo Company/Resource/State/Action.,SAL,MUST,1650,BASELINE-UR,NOT_IMPLEMENTED
+UR-SAL-002,P2-FR-SAL-002-01,P2-AT-SAL-002-01,1,Lưu Shopee Order ID và Shop/Account source.,SAL,MUST,1690,BASELINE-UR,NOT_IMPLEMENTED
+UR-SAL-002,P2-FR-SAL-002-02,P2-AT-SAL-002-02,2,Mapping SKU/Product.,SAL,MUST,1690,BASELINE-UR,NOT_IMPLEMENTED
+UR-SAL-002,P2-FR-SAL-002-03,P2-AT-SAL-002-03,3,Shop/Account phải resolve được Company và fulfillment Warehouse theo UR-SAL-008 trước khi tạo ERP Sales Order.,SAL,MUST,1690,BASELINE-UR,NOT_IMPLEMENTED
+UR-SAL-002,P2-FR-SAL-002-04,P2-AT-SAL-002-04,4,Tạo hoặc liên kết ERP Sales Order theo idempotency rule của UR-SAL-008.,SAL,MUST,1690,BASELINE-UR,NOT_IMPLEMENTED
+UR-SAL-002,P2-FR-SAL-002-05,P2-AT-SAL-002-05,5,Giá/discount từ Shopee là external authoritative price và được lưu với Price Source `EXTERNAL_CHANNEL`.,SAL,MUST,1690,BASELINE-UR,NOT_IMPLEMENTED
+UR-SAL-002,P2-FR-SAL-002-06,P2-AT-SAL-002-06,6,Đồng bộ trạng thái cần thiết.,SAL,MUST,1690,BASELINE-UR,NOT_IMPLEMENTED
+UR-SAL-002,P2-FR-SAL-002-07,P2-AT-SAL-002-07,7,Lỗi mapping/sync phải được ghi nhận để xử lý/retry mà không tạo duplicate Sales Order.,SAL,MUST,1690,BASELINE-UR,NOT_IMPLEMENTED
+UR-SAL-003,P2-FR-SAL-003-01,P2-AT-SAL-003-01,1,Lưu TikTok Shop Order ID và Shop/Account source.,SAL,MUST,1706,BASELINE-UR,NOT_IMPLEMENTED
+UR-SAL-003,P2-FR-SAL-003-02,P2-AT-SAL-003-02,2,Mapping SKU/Product.,SAL,MUST,1706,BASELINE-UR,NOT_IMPLEMENTED
+UR-SAL-003,P2-FR-SAL-003-03,P2-AT-SAL-003-03,3,Shop/Account phải resolve được Company và fulfillment Warehouse theo UR-SAL-008 trước khi tạo ERP Sales Order.,SAL,MUST,1706,BASELINE-UR,NOT_IMPLEMENTED
+UR-SAL-003,P2-FR-SAL-003-04,P2-AT-SAL-003-04,4,Tạo hoặc liên kết ERP Sales Order theo idempotency rule của UR-SAL-008.,SAL,MUST,1706,BASELINE-UR,NOT_IMPLEMENTED
+UR-SAL-003,P2-FR-SAL-003-05,P2-AT-SAL-003-05,5,Giá/discount từ TikTok Shop là external authoritative price và được lưu với Price Source `EXTERNAL_CHANNEL`.,SAL,MUST,1706,BASELINE-UR,NOT_IMPLEMENTED
+UR-SAL-003,P2-FR-SAL-003-06,P2-AT-SAL-003-06,6,Đồng bộ trạng thái cần thiết.,SAL,MUST,1706,BASELINE-UR,NOT_IMPLEMENTED
+UR-SAL-003,P2-FR-SAL-003-07,P2-AT-SAL-003-07,7,Lỗi mapping/sync phải được ghi nhận để xử lý/retry mà không tạo duplicate Sales Order.,SAL,MUST,1706,BASELINE-UR,NOT_IMPLEMENTED
+UR-SAL-004,P2-FR-SAL-004-01,P2-AT-SAL-004-01,1,Không tạo kho logic riêng cạnh tranh chỉ vì khác sales channel.,SAL,MUST,1722,BASELINE-UR,NOT_IMPLEMENTED
+UR-SAL-004,P2-FR-SAL-004-02,P2-AT-SAL-004-02,2,Order phải kiểm tra Available Qty theo Company/Warehouse phù hợp.,SAL,MUST,1722,BASELINE-UR,NOT_IMPLEMENTED
+UR-SAL-004,P2-FR-SAL-004-03,P2-AT-SAL-004-03,3,Order được xác nhận phải reserve stock vào Inventory chung theo UR-INV-006.,SAL,MUST,1722,BASELINE-UR,NOT_IMPLEMENTED
+UR-SAL-004,P2-FR-SAL-004-04,P2-AT-SAL-004-04,4,Release/consume reservation phải phản ánh vào Inventory chung.,SAL,MUST,1722,BASELINE-UR,NOT_IMPLEMENTED
+UR-SAL-004,P2-FR-SAL-004-05,P2-AT-SAL-004-05,5,Sales Issue đã post làm giảm On-hand theo stock posting rule.,SAL,MUST,1722,BASELINE-UR,NOT_IMPLEMENTED
+UR-SAL-005,P2-FR-SAL-005-01,P2-AT-SAL-005-01,1,Shipment thuộc cùng Company với Sales Order nguồn.,SAL,MUST,1736,BASELINE-UR,NOT_IMPLEMENTED
+UR-SAL-005,P2-FR-SAL-005-02,P2-AT-SAL-005-02,2,Shipment truy được Sales Order và Warehouse fulfillment liên quan.,SAL,MUST,1736,BASELINE-UR,NOT_IMPLEMENTED
+UR-SAL-005,P2-FR-SAL-005-03,P2-AT-SAL-005-03,3,Tracking Number và delivery status được lưu khi carrier trả về.,SAL,MUST,1736,BASELINE-UR,NOT_IMPLEMENTED
+UR-SAL-005,P2-FR-SAL-005-04,P2-AT-SAL-005-04,4,Hủy vận đơn không tự xóa Shipment hoặc lịch sử carrier interaction.,SAL,MUST,1736,BASELINE-UR,NOT_IMPLEMENTED
+UR-SAL-005,P2-FR-SAL-005-05,P2-AT-SAL-005-05,5,Shipping Fee và COD Amount được lưu để phục vụ COD Reconciliation khi áp dụng.,SAL,MUST,1736,BASELINE-UR,NOT_IMPLEMENTED
+UR-SAL-005,P2-FR-SAL-005-06,P2-AT-SAL-005-06,6,Carrier integration error phải được ghi nhận để retry/xử lý.,SAL,MUST,1736,BASELINE-UR,NOT_IMPLEMENTED
+UR-SAL-006,P2-FR-SAL-006-01,P2-AT-SAL-006-01,1,Có thể lọc các shipment chưa đối soát.,SAL,MUST,1769,BASELINE-UR,NOT_IMPLEMENTED
+UR-SAL-006,P2-FR-SAL-006-02,P2-AT-SAL-006-02,2,Chênh lệch phải xác định được amount và trạng thái xử lý.,SAL,MUST,1769,BASELINE-UR,NOT_IMPLEMENTED
+UR-SAL-006,P2-FR-SAL-006-03,P2-AT-SAL-006-03,3,Khoản COD đã đối soát có thể tạo/liên kết Money Receipt.,SAL,MUST,1769,BASELINE-UR,NOT_IMPLEMENTED
+UR-SAL-007,P2-FR-SAL-007-01,P2-AT-SAL-007-01,1,Sales Return truy được Sales Order/Shipment nguồn khi có.,SAL,MUST,1789,BASELINE-UR,NOT_IMPLEMENTED
+UR-SAL-007,P2-FR-SAL-007-02,P2-AT-SAL-007-02,2,Returned goods chỉ làm tăng On-hand khi inventory return movement được post/confirm theo posting rule.,SAL,MUST,1789,BASELINE-UR,NOT_IMPLEMENTED
+UR-SAL-007,P2-FR-SAL-007-03,P2-AT-SAL-007-03,3,Product serial-managed phải validate đúng Serial trả lại.,SAL,MUST,1789,BASELINE-UR,NOT_IMPLEMENTED
+UR-SAL-007,P2-FR-SAL-007-04,P2-AT-SAL-007-04,4,"Refund hoặc giao dịch Thu/Chi liên quan được reference, không tự tạo double-entry accounting.",SAL,MUST,1789,BASELINE-UR,NOT_IMPLEMENTED
+UR-SAL-007,P2-FR-SAL-007-05,P2-AT-SAL-007-05,5,Return đã post không được xóa/sửa trực tiếp làm thay đổi stock history.,SAL,MUST,1789,BASELINE-UR,NOT_IMPLEMENTED
+UR-SAL-008,P2-FR-SAL-008-01,P2-AT-SAL-008-01,1,Mỗi Shop/Account xác định được Sales Channel/Platform.,SAL,MUST,1809,BASELINE-UR,NOT_IMPLEMENTED
+UR-SAL-008,P2-FR-SAL-008-02,P2-AT-SAL-008-02,2,Mỗi Shop/Account map đúng một Company tại một thời điểm hiệu lực.,SAL,MUST,1809,BASELINE-UR,NOT_IMPLEMENTED
+UR-SAL-008,P2-FR-SAL-008-03,P2-AT-SAL-008-03,3,Shop/Account có fulfillment Warehouse mặc định hoặc mapping Warehouse rõ ràng trước khi tạo Sales Order.,SAL,MUST,1809,BASELINE-UR,NOT_IMPLEMENTED
+UR-SAL-008,P2-FR-SAL-008-04,P2-AT-SAL-008-04,4,`Sales Channel + Shop/Account + External Order ID` là unique business key.,SAL,MUST,1809,BASELINE-UR,NOT_IMPLEMENTED
+UR-SAL-008,P2-FR-SAL-008-05,P2-AT-SAL-008-05,5,Retry/sync lại cùng external order không được tạo duplicate ERP Sales Order.,SAL,MUST,1809,BASELINE-UR,NOT_IMPLEMENTED
+UR-SAL-008,P2-FR-SAL-008-06,P2-AT-SAL-008-06,6,Sync/retry phải idempotent đối với create/link order.,SAL,MUST,1809,BASELINE-UR,NOT_IMPLEMENTED
+UR-SAL-008,P2-FR-SAL-008-07,P2-AT-SAL-008-07,7,Mapping Company/Warehouse phải hoàn tất trước khi ERP Sales Order được tạo.,SAL,MUST,1809,BASELINE-UR,NOT_IMPLEMENTED
+UR-SAL-008,P2-FR-SAL-008-08,P2-AT-SAL-008-08,8,Lỗi mapping hoặc sync được giữ trạng thái/lý do để reprocess.,SAL,MUST,1809,BASELINE-UR,NOT_IMPLEMENTED
+UR-FIN-001,P2-FR-FIN-001-01,P2-AT-FIN-001-01,1,Mỗi Money Receipt/Money Expense thuộc đúng một Company.,FIN,MUST,2130,BASELINE-UR,NOT_IMPLEMENTED
+UR-FIN-001,P2-FR-FIN-001-02,P2-AT-FIN-001-02,2,Amount phải lớn hơn 0.,FIN,MUST,2130,BASELINE-UR,NOT_IMPLEMENTED
+UR-FIN-001,P2-FR-FIN-001-03,P2-AT-FIN-001-03,3,Account sử dụng phải thuộc cùng Company với transaction.,FIN,MUST,2130,BASELINE-UR,NOT_IMPLEMENTED
+UR-FIN-001,P2-FR-FIN-001-04,P2-AT-FIN-001-04,4,Chỉ transaction đã `POSTED` mới tham gia operational balance.,FIN,MUST,2130,BASELINE-UR,NOT_IMPLEMENTED
+UR-FIN-001,P2-FR-FIN-001-05,P2-AT-FIN-001-05,5,Transaction đã post không được xóa/sửa trực tiếp amount/account làm thay đổi history; correction phải qua reversal/adjustment có traceability.,FIN,MUST,2130,BASELINE-UR,NOT_IMPLEMENTED
+UR-FIN-002,P2-FR-FIN-002-01,P2-AT-FIN-002-01,1,Category xác định được loại `RECEIPT` hoặc `EXPENSE`.,FIN,MUST,2157,BASELINE-UR,NOT_IMPLEMENTED
+UR-FIN-002,P2-FR-FIN-002-02,P2-AT-FIN-002-02,2,Category inactive không dùng cho giao dịch mới nhưng lịch sử vẫn tra cứu được.,FIN,MUST,2157,BASELINE-UR,NOT_IMPLEMENTED
+UR-FIN-002,P2-FR-FIN-002-03,P2-AT-FIN-002-03,3,Có thể lọc/tổng hợp Thu/Chi theo category.,FIN,MUST,2157,BASELINE-UR,NOT_IMPLEMENTED
+UR-FIN-003,P2-FR-FIN-003-01,P2-AT-FIN-003-01,1,Mỗi account thuộc một Company.,FIN,MUST,2177,BASELINE-UR,NOT_IMPLEMENTED
+UR-FIN-003,P2-FR-FIN-003-02,P2-AT-FIN-003-02,2,Opening Balance và Opening Date được xác định trước khi tính operational balance từ thời điểm đó.,FIN,MUST,2177,BASELINE-UR,NOT_IMPLEMENTED
+UR-FIN-003,P2-FR-FIN-003-03,P2-AT-FIN-003-03,3,User chỉ thao tác account trong PBAC scope.,FIN,MUST,2177,BASELINE-UR,NOT_IMPLEMENTED
+UR-FIN-003,P2-FR-FIN-003-04,P2-AT-FIN-003-04,4,Account inactive không dùng cho giao dịch mới nhưng lịch sử vẫn tra cứu được.,FIN,MUST,2177,BASELINE-UR,NOT_IMPLEMENTED
+UR-FIN-004,P2-FR-FIN-004-01,P2-AT-FIN-004-01,1,Chỉ posted Money Receipt/Money Expense được tính vào operational balance.,FIN,MUST,2198,BASELINE-UR,NOT_IMPLEMENTED
+UR-FIN-004,P2-FR-FIN-004-02,P2-AT-FIN-004-02,2,Opening/Closing Balance không suy diễn từ General Ledger.,FIN,MUST,2198,BASELINE-UR,NOT_IMPLEMENTED
+UR-FIN-004,P2-FR-FIN-004-03,P2-AT-FIN-004-03,3,Có thể tính balance theo từng Cash/Bank Account và tổng hợp các account trong Company theo filter.,FIN,MUST,2198,BASELINE-UR,NOT_IMPLEMENTED
+UR-FIN-004,P2-FR-FIN-004-04,P2-AT-FIN-004-04,4,Report theo nhiều Company chỉ tổng hợp Company User có quyền xem.,FIN,MUST,2198,BASELINE-UR,NOT_IMPLEMENTED
+UR-FIN-004,P2-FR-FIN-004-05,P2-AT-FIN-004-05,5,Operational Balance không được mô tả như bank reconciliation hoặc statutory accounting balance.,FIN,MUST,2198,BASELINE-UR,NOT_IMPLEMENTED
+UR-FIN-005,P2-FR-FIN-005-01,P2-AT-FIN-005-01,1,Có thể truy từ Money Receipt/Money Expense về Source Reference khi nguồn còn tồn tại và User có quyền.,FIN,MUST,2231,BASELINE-UR,NOT_IMPLEMENTED
+UR-FIN-005,P2-FR-FIN-005-02,P2-AT-FIN-005-02,2,Một source reference không tự tạo double-entry journal.,FIN,MUST,2231,BASELINE-UR,NOT_IMPLEMENTED
+UR-FIN-005,P2-FR-FIN-005-03,P2-AT-FIN-005-03,3,COD đã reconciliation có thể tạo/liên kết Money Receipt mà vẫn giữ Shipment/COD reference.,FIN,MUST,2231,BASELINE-UR,NOT_IMPLEMENTED
+UR-FIN-005,P2-FR-FIN-005-04,P2-AT-FIN-005-04,4,Payroll payment có thể liên kết Money Expense theo đúng Company.,FIN,MUST,2231,BASELINE-UR,NOT_IMPLEMENTED

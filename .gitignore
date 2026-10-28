@@ -14,6 +14,7 @@
 backend/TEMP/**
 *.patch
 *.PATCH
+TEMP/**
 
 # Dependencies and generated frontend output
 **/vendor/

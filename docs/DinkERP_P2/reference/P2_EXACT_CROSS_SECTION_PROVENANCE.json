@@ -1,0 +1,20 @@
+[
+  {
+    "title": "Phase P2 - Operational ERP",
+    "sha256": "2ba5979c219f7f69a01eb3ea171ffe5b14deaf29c7a9888be08274e89b6a6197",
+    "source_start_line": 182,
+    "body": "### P2 - Operational ERP\n\nP2 triển khai các module vận hành còn lại, ngoại trừ BOM và HCM/Payroll:\n- Document\n- Customer & CRM\n- Pricing context mở rộng theo Customer, Customer Group và Sales Channel\n- Promotion\n- Supplier\n- Purchase\n- Inventory, bao gồm Inventory Reservation\n- Sales đa kênh\n- Shopee\n- TikTok Shop\n- Marketplace Account Mapping & Order Idempotency\n- Carrier, Tracking và COD Reconciliation\n- Vận hành tài chính Thu/Chi\n- Import cho các master P2"
+  },
+  {
+    "title": "P2 - Extended Pricing Context (embedded in UR-PRC-001 / P1)",
+    "sha256": "ec27878e9bc70366d4f5c95a7691cc850b6d9ce286c11637184525556a601dfb",
+    "source_start_line": 1318,
+    "body": "**P2 - Extended Pricing Context**\n- Sales Channel condition.\n- Customer Group condition.\n- Customer-specific condition.\n\nKhi P2 bổ sung các condition này, UOM vẫn là dimension bắt buộc và Company scope vẫn được ưu tiên trước Group scope. Trong cùng scope, specificity có thể mở rộng theo thứ tự:\n\n**Customer condition -> Customer Group condition -> Sales Channel condition**\n\nsau đó mới dùng Priority/Effective From/ID để tie-break. Exact persistence của P2 condition phải được thiết kế ở P2, không tạo generic pricing condition table trong P1."
+  },
+  {
+    "title": "P2 end-to-end operational flows",
+    "sha256": "9a84989ea5fa7e08bb61be1b5773c89ecc4deacdaa4ded8660456f1fb128960d",
+    "source_start_line": 2534,
+    "body": "### 19.1 Purchase\nSupplier\n-> Purchase Request\n-> Purchase Order / optional COMBO selection template\n-> COMBO expansion to SIMPLE/CHILD when applicable\n-> Goods Receipt\n-> Inventory\n-> Money Expense khi phát sinh\n\n### 19.2 Marketplace Sales\nShopee / TikTok Shop\n-> External Price/Discount\n-> ERP Sales Order (`Price Source = EXTERNAL_CHANNEL`)\n-> Inventory Reservation\n-> Shipment\n-> Sales Issue\n-> Carrier\n-> Delivery\n-> COD\n-> COD Reconciliation\n-> Money Receipt\n\n### 19.3 Direct/Internal Sales\nCustomer\n-> Sales Order / optional COMBO selection\n-> Price Resolution / Promotion theo rule áp dụng\n-> COMBO flatten + selling amount allocation + leaf aggregation trước operational downstream khi có COMBO\n-> Inventory Reservation\n-> Shipment\n-> Sales Issue\n-> Money Receipt\n\n### 19.4 Inventory\nGoods Receipt\n-> On-hand\n-> Reservation / Transfer / Adjustment\n-> Sales Issue\n-> Return / Reversal khi áp dụng"
+  }
+]
