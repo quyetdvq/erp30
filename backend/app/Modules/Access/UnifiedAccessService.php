@@ -86,7 +86,7 @@ final class UnifiedAccessService
     public function viewableMasterLifecycleStatuses(string $type): array
     {
         $type = ResourceStateCatalog::normalizedType($type);
-        if (! in_array($type, ['product', 'product_group', 'product_uom', 'employee', 'department', 'position', 'customer', 'customer_contact'], true)) {
+        if (! in_array($type, ['product', 'product_group', 'product_uom', 'employee', 'department', 'position', 'province', 'ward', 'customer', 'customer_contact'], true)) {
             throw new UnexpectedValueException('SQL VIEW scope is not approved for resource: ' . $type);
         }
         $resource = $this->policies->resourceAction($type, 'view');
@@ -144,7 +144,7 @@ final class UnifiedAccessService
             foreach ($definition['by_code'] as $status => $stateId) {
                 if ($this->viewDecisionForState($type, $resource, $ancestors, $stateId)['allowed']) {
                     $slots[] = ['organization_id'=>$id, 'status'=>$status];
-                    if (count($slots) > 512) {
+                    if (count($slots) > 16384) {
                         throw new UnexpectedValueException('AUTH_SCOPE_COMPILATION_UNSUPPORTED: too many organization/State slots.');
                     }
                 }

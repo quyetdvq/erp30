@@ -6,6 +6,7 @@ namespace App\Shared\Http;
 
 use CodeIgniter\Debug\ExceptionHandler;
 use CodeIgniter\Debug\ExceptionHandlerInterface;
+use CodeIgniter\Exceptions\PageNotFoundException;
 use CodeIgniter\HTTP\IncomingRequest;
 use CodeIgniter\HTTP\RequestInterface;
 use CodeIgniter\HTTP\ResponseInterface;
@@ -26,6 +27,21 @@ final class ApiExceptionHandler implements ExceptionHandlerInterface
         $isApi = $path === '/api/v1' || str_starts_with($path, '/api/v1/')
             || (is_string($raw) && ($raw === '/api/v1' || str_starts_with($raw, '/api/v1/')));
         if (! $isApi) {
+            if ($exception instanceof PageNotFoundException) {
+                // Static image requests with missing files may reach CI4's 404 route.
+                // CI4 4.7.5's HTML exception handler can throw another exception
+                // while masking a stack trace without "args". Never turn a
+                // normal missing-file 404 into an uncaught fatal error.
+                $response->setStatusCode(404)
+                    ->setHeader('Content-Type', 'text/plain; charset=utf-8')
+                    ->setHeader('Cache-Control', 'no-store')
+                    ->setBody('Not Found')
+                    ->send();
+                if (ENVIRONMENT !== 'testing') {
+                    exit($exitCode);
+                }
+                return;
+            }
             (new ExceptionHandler($this->config))->handle($exception, $request, $response, $statusCode, $exitCode);
             return;
         }

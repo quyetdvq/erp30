@@ -15,7 +15,7 @@ final class NotificationsPushDispatch extends BaseCommand
 {
     protected $group = 'DinkERP';
     protected $name = 'notifications:push-dispatch';
-    protected $description = 'Send opted-in, payload-free browser Push signals with lease/retry.';
+    protected $description = 'Send opted-in browser Push (encrypted event facts when device keys are available), with lease/retry.';
 
     /** @param array<array-key,string|null> $params */
     public function run(array $params): void

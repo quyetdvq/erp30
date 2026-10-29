@@ -24,7 +24,7 @@ function labelFor(key: string): string {
 }
 const rows = ref<NotificationPreference[]>([])
 const groups = computed(() => groupedNotificationRows(rows.value))
-const pushConsented = computed(() => rows.value.some((row) => row.key === 'import.completed.push'
+const pushConsented = computed(() => rows.value.some((row) => row.key.endsWith('.push')
   && row.user_override === true && row.effective_value === true && !row.locked))
 const drafts = ref<Record<string, PreferenceSelection>>({})
 const loading = ref(false)

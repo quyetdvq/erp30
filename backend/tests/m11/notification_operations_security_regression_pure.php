@@ -2,6 +2,8 @@
 
 declare(strict_types=1);
 
+require_once dirname(__DIR__, 2) . '/tools/routes/LegacyRouteSource.php';
+
 /**
  * NFX-E1.3 static/security gate (no vendor or DB access). Complements rather
  * than substitutes real erp_test integration and authenticated browser UAT.
@@ -29,7 +31,7 @@ $read = static function (string $file) use ($root): string {
     }
     return $source;
 };
-$routes = $read('app/Config/M11Routes.php');
+$routes = \DinkERP\Tools\Routes\LegacyRouteSource::source(dirname($root), 'M11Routes.php');
 $globalRoutes = $read('app/Config/Routes.php');
 $controller = $read('app/Modules/Notifications/NotificationOperationsOverviewController.php');
 $access = $read('app/Modules/Notifications/NotificationOperationsOverviewService.php');

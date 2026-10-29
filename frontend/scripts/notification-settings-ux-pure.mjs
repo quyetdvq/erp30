@@ -14,11 +14,11 @@ const names = [
   'import.completed.in_app', 'import.completed_with_errors.in_app', 'import.failed.in_app',
   'workflow.action_required.in_app', 'security.permission_changed.in_app',
   'import.completed.email', 'import.completed_with_errors.email', 'import.failed.email',
-  'import.completed.push', 'future.sms',
+  'import.completed.push', 'import.completed_with_errors.push', 'import.failed.push', 'workflow.action_required.push', 'future.sms',
 ]
 const groups = helper.groupedNotificationRows(names.map((key) => ({ key })))
 same(groups.map(({ channel, items }) => [channel, items.length]), [
-  ['in_app', 5], ['email', 3], ['push', 1], ['other', 1],
+  ['in_app', 5], ['email', 3], ['push', 4], ['other', 1],
 ])
 same(groups.flatMap(({ items }) => items.map(({ key }) => key)).length, names.length)
 same(helper.notificationLabelKey('import.failed.email'), 'importFailedEmail')

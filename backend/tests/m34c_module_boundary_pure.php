@@ -19,7 +19,8 @@ $read = static function (string $path) use ($root): string {
     }
     return $source;
 };
-$routes = $read('Config/Routes.php');
+require_once __DIR__ . '/../tools/routes/LegacyRouteSource.php';
+$routes = \DinkERP\Tools\Routes\LegacyRouteSource::core70(dirname(__DIR__, 2));
 $matched = preg_match_all("/\\\$routes->(get|post|patch|put|delete)\\('([^']+)', \\[[^,]+, '([^']+)'\\]\\);/", $routes, $matches, PREG_SET_ORDER);
 $pass('All reviewed API routes parse statically', $matched === 70);
 $footprint = [];

@@ -1,0 +1,447 @@
+{
+  "imports": [
+    "use App\\Modules\\Identity\\AuthController;",
+    "use App\\Shared\\Http\\HealthController;",
+    "use App\\Controllers\\Api\\ReadCatalogController;",
+    "use App\\Modules\\Access\\Management\\AccessReadController;",
+    "use App\\Modules\\Access\\Mutation\\AccessMutationController;",
+    "use App\\Modules\\Identity\\Management\\IdentityReadController;",
+    "use App\\Modules\\Identity\\Mutation\\SecurityUserMutationController;",
+    "use App\\Modules\\Workflow\\Management\\WorkflowReadController;",
+    "use App\\Modules\\Workflow\\Mutation\\WorkflowMutationController;"
+  ],
+  "routes": [
+    {
+      "method": "OPTIONS",
+      "path": "(:any)",
+      "controller": "HealthController",
+      "action": "options"
+    },
+    {
+      "method": "OPTIONS",
+      "path": "health",
+      "controller": "HealthController",
+      "action": "options"
+    },
+    {
+      "method": "GET",
+      "path": "health",
+      "controller": "HealthController",
+      "action": "index"
+    },
+    {
+      "method": "GET",
+      "path": "auth/csrf",
+      "controller": "AuthController",
+      "action": "csrf"
+    },
+    {
+      "method": "POST",
+      "path": "auth/login",
+      "controller": "AuthController",
+      "action": "login"
+    },
+    {
+      "method": "POST",
+      "path": "auth/logout",
+      "controller": "AuthController",
+      "action": "logout"
+    },
+    {
+      "method": "GET",
+      "path": "auth/me",
+      "controller": "AuthController",
+      "action": "me"
+    },
+    {
+      "method": "PATCH",
+      "path": "auth/profile",
+      "controller": "AuthController",
+      "action": "profile"
+    },
+    {
+      "method": "GET",
+      "path": "security/users",
+      "controller": "IdentityReadController",
+      "action": "securityUsers"
+    },
+    {
+      "method": "GET",
+      "path": "users/(:num)/permissions",
+      "controller": "IdentityReadController",
+      "action": "userPermissions"
+    },
+    {
+      "method": "GET",
+      "path": "authorization-groups",
+      "controller": "AccessReadController",
+      "action": "listAuthorizationGroups"
+    },
+    {
+      "method": "GET",
+      "path": "authorization-groups/(:num)/members",
+      "controller": "AccessReadController",
+      "action": "groupMembers"
+    },
+    {
+      "method": "GET",
+      "path": "authorization-groups/(:num)/permissions",
+      "controller": "AccessReadController",
+      "action": "groupPermissions"
+    },
+    {
+      "method": "GET",
+      "path": "authorization-groups/(:num)",
+      "controller": "AccessReadController",
+      "action": "showAuthorizationGroup"
+    },
+    {
+      "method": "GET",
+      "path": "resources",
+      "controller": "AccessReadController",
+      "action": "listResources"
+    },
+    {
+      "method": "GET",
+      "path": "resources/(:num)/actions",
+      "controller": "AccessReadController",
+      "action": "resourceActions"
+    },
+    {
+      "method": "GET",
+      "path": "resources/(:num)",
+      "controller": "AccessReadController",
+      "action": "showResource"
+    },
+    {
+      "method": "GET",
+      "path": "policies",
+      "controller": "AccessReadController",
+      "action": "listPolicies"
+    },
+    {
+      "method": "GET",
+      "path": "policies/(:num)",
+      "controller": "AccessReadController",
+      "action": "showPolicy"
+    },
+    {
+      "method": "GET",
+      "path": "authorization-logs",
+      "controller": "AccessReadController",
+      "action": "listAuthorizationLogs"
+    },
+    {
+      "method": "GET",
+      "path": "authorization-logs/(:num)",
+      "controller": "AccessReadController",
+      "action": "showAuthorizationLog"
+    },
+    {
+      "method": "GET",
+      "path": "workflow-states",
+      "controller": "WorkflowReadController",
+      "action": "listWorkflowStates"
+    },
+    {
+      "method": "GET",
+      "path": "workflow-states/(:num)",
+      "controller": "WorkflowReadController",
+      "action": "showWorkflowState"
+    },
+    {
+      "method": "GET",
+      "path": "lifecycles",
+      "controller": "WorkflowReadController",
+      "action": "listLifecycles"
+    },
+    {
+      "method": "GET",
+      "path": "lifecycles/(:num)/states",
+      "controller": "WorkflowReadController",
+      "action": "lifecycleStates"
+    },
+    {
+      "method": "GET",
+      "path": "lifecycles/(:num)/transitions",
+      "controller": "WorkflowReadController",
+      "action": "lifecycleTransitions"
+    },
+    {
+      "method": "GET",
+      "path": "lifecycles/(:num)",
+      "controller": "WorkflowReadController",
+      "action": "showLifecycle"
+    },
+    {
+      "method": "POST",
+      "path": "users",
+      "controller": "SecurityUserMutationController",
+      "action": "createUser"
+    },
+    {
+      "method": "PATCH",
+      "path": "users/(:num)",
+      "controller": "SecurityUserMutationController",
+      "action": "updateUser"
+    },
+    {
+      "method": "POST",
+      "path": "users/(:num)/actions/set-state",
+      "controller": "SecurityUserMutationController",
+      "action": "setUserState"
+    },
+    {
+      "method": "POST",
+      "path": "users/(:num)/actions/reset-password",
+      "controller": "SecurityUserMutationController",
+      "action": "resetUserPassword"
+    },
+    {
+      "method": "PUT",
+      "path": "users/(:num)/permissions",
+      "controller": "SecurityUserMutationController",
+      "action": "replaceUserPermissions"
+    },
+    {
+      "method": "POST",
+      "path": "authorization-groups",
+      "controller": "AccessMutationController",
+      "action": "createAuthorizationGroup"
+    },
+    {
+      "method": "PATCH",
+      "path": "authorization-groups/(:num)",
+      "controller": "AccessMutationController",
+      "action": "updateAuthorizationGroup"
+    },
+    {
+      "method": "POST",
+      "path": "authorization-groups/(:num)/actions/set-state",
+      "controller": "AccessMutationController",
+      "action": "setAuthorizationGroupState"
+    },
+    {
+      "method": "PUT",
+      "path": "authorization-groups/(:num)/members",
+      "controller": "AccessMutationController",
+      "action": "replaceAuthorizationGroupMembers"
+    },
+    {
+      "method": "PUT",
+      "path": "authorization-groups/(:num)/permissions",
+      "controller": "AccessMutationController",
+      "action": "replaceAuthorizationGroupPermissions"
+    },
+    {
+      "method": "POST",
+      "path": "resources",
+      "controller": "AccessMutationController",
+      "action": "createResource"
+    },
+    {
+      "method": "PATCH",
+      "path": "resources/(:num)",
+      "controller": "AccessMutationController",
+      "action": "updateResource"
+    },
+    {
+      "method": "POST",
+      "path": "resources/(:num)/actions/set-state",
+      "controller": "AccessMutationController",
+      "action": "setResourceState"
+    },
+    {
+      "method": "DELETE",
+      "path": "resources/(:num)",
+      "controller": "AccessMutationController",
+      "action": "deleteResource"
+    },
+    {
+      "method": "POST",
+      "path": "resources/(:num)/actions",
+      "controller": "AccessMutationController",
+      "action": "createResourceAction"
+    },
+    {
+      "method": "PATCH",
+      "path": "resources/(:num)/actions/(:num)",
+      "controller": "AccessMutationController",
+      "action": "updateResourceAction"
+    },
+    {
+      "method": "DELETE",
+      "path": "resources/(:num)/actions/(:num)",
+      "controller": "AccessMutationController",
+      "action": "deleteResourceAction"
+    },
+    {
+      "method": "POST",
+      "path": "policies",
+      "controller": "AccessMutationController",
+      "action": "createPolicy"
+    },
+    {
+      "method": "PATCH",
+      "path": "policies/(:num)",
+      "controller": "AccessMutationController",
+      "action": "updatePolicy"
+    },
+    {
+      "method": "POST",
+      "path": "policies/(:num)/actions/set-state",
+      "controller": "AccessMutationController",
+      "action": "setPolicyState"
+    },
+    {
+      "method": "DELETE",
+      "path": "policies/(:num)",
+      "controller": "AccessMutationController",
+      "action": "deletePolicy"
+    },
+    {
+      "method": "POST",
+      "path": "workflow-states",
+      "controller": "WorkflowMutationController",
+      "action": "createWorkflowState"
+    },
+    {
+      "method": "PATCH",
+      "path": "workflow-states/(:num)",
+      "controller": "WorkflowMutationController",
+      "action": "updateWorkflowState"
+    },
+    {
+      "method": "POST",
+      "path": "workflow-states/(:num)/actions/set-state",
+      "controller": "WorkflowMutationController",
+      "action": "setWorkflowStateState"
+    },
+    {
+      "method": "POST",
+      "path": "lifecycles",
+      "controller": "WorkflowMutationController",
+      "action": "createLifecycle"
+    },
+    {
+      "method": "PATCH",
+      "path": "lifecycles/(:num)",
+      "controller": "WorkflowMutationController",
+      "action": "updateLifecycle"
+    },
+    {
+      "method": "POST",
+      "path": "lifecycles/(:num)/actions/set-state",
+      "controller": "WorkflowMutationController",
+      "action": "setLifecycleState"
+    },
+    {
+      "method": "PUT",
+      "path": "lifecycles/(:num)/states",
+      "controller": "WorkflowMutationController",
+      "action": "configureLifecycleStates"
+    },
+    {
+      "method": "PUT",
+      "path": "lifecycles/(:num)/transitions",
+      "controller": "WorkflowMutationController",
+      "action": "configureLifecycleTransitions"
+    },
+    {
+      "method": "GET",
+      "path": "provinces",
+      "controller": "ReadCatalogController",
+      "action": "listProvinces"
+    },
+    {
+      "method": "GET",
+      "path": "provinces/(:num)",
+      "controller": "ReadCatalogController",
+      "action": "showProvince"
+    },
+    {
+      "method": "GET",
+      "path": "wards",
+      "controller": "ReadCatalogController",
+      "action": "listWards"
+    },
+    {
+      "method": "GET",
+      "path": "wards/(:num)",
+      "controller": "ReadCatalogController",
+      "action": "showWard"
+    },
+    {
+      "method": "GET",
+      "path": "organizations",
+      "controller": "ReadCatalogController",
+      "action": "listOrganizations"
+    },
+    {
+      "method": "GET",
+      "path": "organizations/tree",
+      "controller": "ReadCatalogController",
+      "action": "tree"
+    },
+    {
+      "method": "GET",
+      "path": "organizations/(:num)",
+      "controller": "ReadCatalogController",
+      "action": "showOrganization"
+    },
+    {
+      "method": "POST",
+      "path": "organizations/labels/resolve",
+      "controller": "ReadCatalogController",
+      "action": "resolveOrganizationLabels"
+    },
+    {
+      "method": "GET",
+      "path": "departments",
+      "controller": "ReadCatalogController",
+      "action": "listDepartments"
+    },
+    {
+      "method": "GET",
+      "path": "departments/(:num)",
+      "controller": "ReadCatalogController",
+      "action": "showDepartment"
+    },
+    {
+      "method": "GET",
+      "path": "positions",
+      "controller": "ReadCatalogController",
+      "action": "listPositions"
+    },
+    {
+      "method": "GET",
+      "path": "positions/(:num)",
+      "controller": "ReadCatalogController",
+      "action": "showPosition"
+    },
+    {
+      "method": "GET",
+      "path": "employees",
+      "controller": "ReadCatalogController",
+      "action": "listEmployees"
+    },
+    {
+      "method": "GET",
+      "path": "employees/(:num)",
+      "controller": "ReadCatalogController",
+      "action": "showEmployee"
+    },
+    {
+      "method": "GET",
+      "path": "employee-assignments",
+      "controller": "ReadCatalogController",
+      "action": "listEmployeeAssignments"
+    },
+    {
+      "method": "GET",
+      "path": "employee-assignments/(:num)",
+      "controller": "ReadCatalogController",
+      "action": "showEmployeeAssignment"
+    }
+  ]
+}

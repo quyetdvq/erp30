@@ -2,6 +2,8 @@
 
 declare(strict_types=1);
 
+require_once dirname(__DIR__, 2) . '/tools/routes/LegacyRouteSource.php';
+
 require_once __DIR__ . '/M61SourceAcceptance.php';
 
 /** M6.2A: exact Product Master GET list + detail; no mutation routes. */
@@ -45,11 +47,11 @@ final class M62ASourceAcceptance
         $prior = M61SourceAcceptance::verify($root);
         if ($prior['total'] !== 120) throw new RuntimeException('M6.2A requires pinned M6.1 120-route footprint.');
         $routes = (string) file_get_contents($root . '/backend/app/Config/Routes.php');
-        if (substr_count($routes, "require __DIR__ . '/M62ARoutes.php';") !== 1
+        if ((\DinkERP\Tools\Routes\LegacyRouteSource::mounted($root, 'M62ARoutes.php') ? 1 : 0) !== 1
             || str_contains($routes, 'setAutoRoute(true)')) {
             throw new RuntimeException('M6.2A reviewed routes must be included once, autoroute disabled.');
         }
-        $file = (string) file_get_contents($root . '/backend/app/Config/M62ARoutes.php');
+        $file = (string) \DinkERP\Tools\Routes\LegacyRouteSource::source($root, 'M62ARoutes.php');
         $pattern = '~\$routes->get\(\x27([^\x27]+)\x27,\s*\[\\\\App\\\\Modules\\\\Product\\\\Master\\\\ProductReadController::class,\s*\x27([A-Za-z][A-Za-z0-9_]*)\x27\]\);~';
         preg_match_all($pattern, $file, $found, PREG_SET_ORDER);
         if (count($found) !== 2 || substr_count($file, '$routes->') !== 2) {

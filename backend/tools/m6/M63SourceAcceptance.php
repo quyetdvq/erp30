@@ -2,6 +2,8 @@
 
 declare(strict_types=1);
 
+require_once dirname(__DIR__, 2) . '/tools/routes/LegacyRouteSource.php';
+
 require_once __DIR__ . '/M62BSourceAcceptance.php';
 
 /** M6.3A: two exact Product representative image mutation endpoints. */
@@ -51,11 +53,11 @@ final class M63SourceAcceptance
         $previous = M62BSourceAcceptance::verify($root);
         if ($previous['total'] !== 125) throw new RuntimeException('M6.3A requires 125-route Product Master milestone');
         $main = (string) file_get_contents($root.'/backend/app/Config/Routes.php');
-        if (substr_count($main, "require __DIR__ . '/M63Routes.php';") !== 1
+        if ((\DinkERP\Tools\Routes\LegacyRouteSource::mounted($root, 'M63Routes.php') ? 1 : 0) !== 1
             || str_contains($main,'setAutoRoute(true)')) {
             throw new RuntimeException('M6.3A must use one explicit route include and no autoroute');
         }
-        $routes = (string) file_get_contents($root.'/backend/app/Config/M63Routes.php');
+        $routes = (string) \DinkERP\Tools\Routes\LegacyRouteSource::source($root, 'M63Routes.php');
         $controller = (string) file_get_contents($root.'/backend/app/Modules/Product/Media/ProductImageController.php');
         $regex = '~\$routes->(post|delete)\(\x27([^\x27]+)\x27,\s*\[\\\\App\\\\Modules\\\\Product\\\\Media\\\\ProductImageController::class,\s*\x27([A-Za-z][A-Za-z0-9_]*)\x27\]\);~';
         preg_match_all($regex, $routes, $matches, PREG_SET_ORDER);

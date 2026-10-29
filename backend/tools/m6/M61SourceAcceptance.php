@@ -2,6 +2,8 @@
 
 declare(strict_types=1);
 
+require_once dirname(__DIR__, 2) . '/tools/routes/LegacyRouteSource.php';
+
 require_once __DIR__ . '/../m5/M55SourceAcceptance.php';
 
 /** Exact ten API-050 Group/UOM routes; source-only, NOT HTTP/MariaDB acceptance. */
@@ -49,10 +51,10 @@ final class M61SourceAcceptance
         foreach ($manifest['operations'] as $operation) $catalog[$operation['method'] . ' ' . $operation['path']] = $operation;
         if (count($catalog) !== 150) throw new RuntimeException('Frozen OpenAPI operation count changed.');
         $main = (string) file_get_contents($root . '/backend/app/Config/Routes.php');
-        if (substr_count($main, "require __DIR__ . '/M61Routes.php';") !== 1 || str_contains($main, 'setAutoRoute(true)')) {
+        if ((\DinkERP\Tools\Routes\LegacyRouteSource::mounted($root, 'M61Routes.php') ? 1 : 0) !== 1 || str_contains($main, 'setAutoRoute(true)')) {
             throw new RuntimeException('M6.1 routes must be included once, with autoroute disabled.');
         }
-        $routeFile = (string) file_get_contents($root . '/backend/app/Config/M61Routes.php');
+        $routeFile = (string) \DinkERP\Tools\Routes\LegacyRouteSource::source($root, 'M61Routes.php');
         $pattern = '~\$routes->(get|post|patch)\(\x27([^\x27]+)\x27,\s*\[\\\\App\\\\Modules\\\\Product\\\\Catalog\\\\ProductCatalogController::class,\s*\x27([A-Za-z][A-Za-z0-9_]*)\x27\]\);~';
         preg_match_all($pattern, $routeFile, $matches, PREG_SET_ORDER);
         if (count($matches) !== 10 || substr_count($routeFile, '$routes->') !== 10) {

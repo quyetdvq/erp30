@@ -2,6 +2,8 @@
 
 declare(strict_types=1);
 
+require_once dirname(__DIR__, 1) . '/tools/routes/LegacyRouteSource.php';
+
 require_once __DIR__.'/../tools/m5/M53SourceAcceptance.php';
 $root=dirname(__DIR__,2);
 $n=0;
@@ -12,7 +14,7 @@ $check=static function(bool $okay,string $label)use(&$n):void{
 $count=M53SourceAcceptance::verify($root);
 $check($count['prior']===93 && $count['added']===6 && $count['total']===99,'99/150 pinned operations');
 $check(count(M53SourceAcceptance::operations())===6,'six unique API-020 operations');
-$routes=(string)file_get_contents($root.'/backend/app/Config/M53Routes.php');
+$routes=(string)\DinkERP\Tools\Routes\LegacyRouteSource::source($root, 'M53Routes.php');
 $check(substr_count($routes,'$routes->')===6 && !str_contains($routes,'$routes->get('), 'no replacement of GET routes');
 $controller=(string)file_get_contents($root.'/backend/app/Modules/People/Mutation/PeopleMutationController.php');
 $service=(string)file_get_contents($root.'/backend/app/Modules/People/Mutation/PeopleMutationService.php');

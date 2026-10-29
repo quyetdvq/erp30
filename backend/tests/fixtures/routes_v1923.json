@@ -1,0 +1,1985 @@
+{
+    "version": "v1.9.23",
+    "routes": [
+        {
+            "method": "DELETE",
+            "path": "api/v1/notifications/push/subscriptions/(:num)",
+            "handler": [
+                "App\\Modules\\Notifications\\NotificationPushController",
+                "unsubscribe/$1"
+            ],
+            "options": {
+                "filter": "cors"
+            }
+        },
+        {
+            "method": "DELETE",
+            "path": "api/v1/policies/(:num)",
+            "handler": [
+                "App\\Modules\\Access\\Mutation\\AccessMutationController",
+                "deletePolicy"
+            ],
+            "options": {
+                "filter": "cors"
+            }
+        },
+        {
+            "method": "DELETE",
+            "path": "api/v1/products/(:num)/image",
+            "handler": [
+                "App\\Modules\\Product\\Media\\ProductImageController",
+                "deleteProductImage"
+            ],
+            "options": {
+                "filter": "cors"
+            }
+        },
+        {
+            "method": "DELETE",
+            "path": "api/v1/resources/(:num)",
+            "handler": [
+                "App\\Modules\\Access\\Mutation\\AccessMutationController",
+                "deleteResource"
+            ],
+            "options": {
+                "filter": "cors"
+            }
+        },
+        {
+            "method": "DELETE",
+            "path": "api/v1/resources/(:num)/actions/(:num)",
+            "handler": [
+                "App\\Modules\\Access\\Mutation\\AccessMutationController",
+                "deleteResourceAction"
+            ],
+            "options": {
+                "filter": "cors"
+            }
+        },
+        {
+            "method": "DELETE",
+            "path": "api/v1/users/(:num)/avatar",
+            "handler": [
+                "App\\Modules\\Identity\\Media\\UserAvatarController",
+                "deleteUserAvatar"
+            ],
+            "options": {
+                "filter": "cors"
+            }
+        },
+        {
+            "method": "GET",
+            "path": "api/v1/auth/csrf",
+            "handler": [
+                "App\\Modules\\Identity\\AuthController",
+                "csrf"
+            ],
+            "options": {
+                "filter": "cors"
+            }
+        },
+        {
+            "method": "GET",
+            "path": "api/v1/auth/me",
+            "handler": [
+                "App\\Modules\\Identity\\AuthController",
+                "me"
+            ],
+            "options": {
+                "filter": "cors"
+            }
+        },
+        {
+            "method": "GET",
+            "path": "api/v1/authorization-groups",
+            "handler": [
+                "App\\Modules\\Access\\Management\\AccessReadController",
+                "listAuthorizationGroups"
+            ],
+            "options": {
+                "filter": "cors"
+            }
+        },
+        {
+            "method": "GET",
+            "path": "api/v1/authorization-groups/(:num)",
+            "handler": [
+                "App\\Modules\\Access\\Management\\AccessReadController",
+                "showAuthorizationGroup"
+            ],
+            "options": {
+                "filter": "cors"
+            }
+        },
+        {
+            "method": "GET",
+            "path": "api/v1/authorization-groups/(:num)/members",
+            "handler": [
+                "App\\Modules\\Access\\Management\\AccessReadController",
+                "groupMembers"
+            ],
+            "options": {
+                "filter": "cors"
+            }
+        },
+        {
+            "method": "GET",
+            "path": "api/v1/authorization-groups/(:num)/permissions",
+            "handler": [
+                "App\\Modules\\Access\\Management\\AccessReadController",
+                "groupPermissions"
+            ],
+            "options": {
+                "filter": "cors"
+            }
+        },
+        {
+            "method": "GET",
+            "path": "api/v1/authorization-logs",
+            "handler": [
+                "App\\Modules\\Access\\Management\\AccessReadController",
+                "listAuthorizationLogs"
+            ],
+            "options": {
+                "filter": "cors"
+            }
+        },
+        {
+            "method": "GET",
+            "path": "api/v1/authorization-logs/(:num)",
+            "handler": [
+                "App\\Modules\\Access\\Management\\AccessReadController",
+                "showAuthorizationLog"
+            ],
+            "options": {
+                "filter": "cors"
+            }
+        },
+        {
+            "method": "GET",
+            "path": "api/v1/business-workflow/(:segment)/(:num)/assignee-candidates",
+            "handler": [
+                "App\\Modules\\Notifications\\WorkflowNotificationAssigneesController",
+                "candidates"
+            ],
+            "options": {
+                "filter": "cors"
+            }
+        },
+        {
+            "method": "GET",
+            "path": "api/v1/business-workflow/(:segment)/(:num)/notification-assignees",
+            "handler": [
+                "App\\Modules\\Notifications\\WorkflowNotificationAssigneesController",
+                "listing"
+            ],
+            "options": {
+                "filter": "cors"
+            }
+        },
+        {
+            "method": "GET",
+            "path": "api/v1/business-workflow/(:segment)/(:num)/options",
+            "handler": [
+                "App\\Modules\\Workflow\\Execution\\BusinessWorkflowController",
+                "options"
+            ],
+            "options": {
+                "filter": "cors"
+            }
+        },
+        {
+            "method": "GET",
+            "path": "api/v1/business-workflow/(:segment)/states",
+            "handler": [
+                "App\\Modules\\Workflow\\Execution\\BusinessWorkflowController",
+                "states"
+            ],
+            "options": {
+                "filter": "cors"
+            }
+        },
+        {
+            "method": "GET",
+            "path": "api/v1/configuration-settings/notifications",
+            "handler": [
+                "App\\Modules\\Notifications\\NotificationRuntimeConfigController",
+                "listing"
+            ],
+            "options": {
+                "filter": "cors"
+            }
+        },
+        {
+            "method": "GET",
+            "path": "api/v1/contacts",
+            "handler": [
+                "App\\Modules\\Contact\\ContactController",
+                "listContacts"
+            ],
+            "options": {
+                "filter": "cors"
+            }
+        },
+        {
+            "method": "GET",
+            "path": "api/v1/contacts/(:num)",
+            "handler": [
+                "App\\Modules\\Contact\\ContactController",
+                "getContact"
+            ],
+            "options": {
+                "filter": "cors"
+            }
+        },
+        {
+            "method": "GET",
+            "path": "api/v1/customers",
+            "handler": [
+                "App\\Modules\\Customer\\CustomerController",
+                "index"
+            ],
+            "options": {
+                "filter": "cors"
+            }
+        },
+        {
+            "method": "GET",
+            "path": "api/v1/customers/(:num)",
+            "handler": [
+                "App\\Modules\\Customer\\CustomerController",
+                "show"
+            ],
+            "options": {
+                "filter": "cors"
+            }
+        },
+        {
+            "method": "GET",
+            "path": "api/v1/customers/(:num)/interactions",
+            "handler": [
+                "App\\Modules\\Customer\\CustomerController",
+                "interactions"
+            ],
+            "options": {
+                "filter": "cors"
+            }
+        },
+        {
+            "method": "GET",
+            "path": "api/v1/departments",
+            "handler": [
+                "App\\Controllers\\Api\\ReadCatalogController",
+                "listDepartments"
+            ],
+            "options": {
+                "filter": "cors"
+            }
+        },
+        {
+            "method": "GET",
+            "path": "api/v1/departments/(:num)",
+            "handler": [
+                "App\\Controllers\\Api\\ReadCatalogController",
+                "showDepartment"
+            ],
+            "options": {
+                "filter": "cors"
+            }
+        },
+        {
+            "method": "GET",
+            "path": "api/v1/display-settings/definitions",
+            "handler": [
+                "App\\Modules\\Settings\\Display\\DisplaySettingsController",
+                "definitions"
+            ],
+            "options": {
+                "filter": "cors"
+            }
+        },
+        {
+            "method": "GET",
+            "path": "api/v1/display-settings/runtime",
+            "handler": [
+                "App\\Modules\\Settings\\Display\\DisplaySettingsController",
+                "runtime"
+            ],
+            "options": {
+                "filter": "cors"
+            }
+        },
+        {
+            "method": "GET",
+            "path": "api/v1/display-settings/values",
+            "handler": [
+                "App\\Modules\\Settings\\Display\\DisplaySettingsController",
+                "values"
+            ],
+            "options": {
+                "filter": "cors"
+            }
+        },
+        {
+            "method": "GET",
+            "path": "api/v1/employee-assignments",
+            "handler": [
+                "App\\Controllers\\Api\\ReadCatalogController",
+                "listEmployeeAssignments"
+            ],
+            "options": {
+                "filter": "cors"
+            }
+        },
+        {
+            "method": "GET",
+            "path": "api/v1/employee-assignments/(:num)",
+            "handler": [
+                "App\\Controllers\\Api\\ReadCatalogController",
+                "showEmployeeAssignment"
+            ],
+            "options": {
+                "filter": "cors"
+            }
+        },
+        {
+            "method": "GET",
+            "path": "api/v1/employees",
+            "handler": [
+                "App\\Controllers\\Api\\ReadCatalogController",
+                "listEmployees"
+            ],
+            "options": {
+                "filter": "cors"
+            }
+        },
+        {
+            "method": "GET",
+            "path": "api/v1/employees/(:num)",
+            "handler": [
+                "App\\Controllers\\Api\\ReadCatalogController",
+                "showEmployee"
+            ],
+            "options": {
+                "filter": "cors"
+            }
+        },
+        {
+            "method": "GET",
+            "path": "api/v1/health",
+            "handler": [
+                "App\\Shared\\Http\\HealthController",
+                "index"
+            ],
+            "options": {
+                "filter": "cors"
+            }
+        },
+        {
+            "method": "GET",
+            "path": "api/v1/import-jobs",
+            "handler": [
+                "App\\Modules\\Product\\Import\\ProductImportController",
+                "listImportJobs"
+            ],
+            "options": {
+                "filter": "cors"
+            }
+        },
+        {
+            "method": "GET",
+            "path": "api/v1/import-jobs/(:num)",
+            "handler": [
+                "App\\Modules\\Product\\Import\\ProductImportController",
+                "getImportJob"
+            ],
+            "options": {
+                "filter": "cors"
+            }
+        },
+        {
+            "method": "GET",
+            "path": "api/v1/import-jobs/(:num)/rows",
+            "handler": [
+                "App\\Modules\\Product\\Import\\ProductImportController",
+                "listImportJobRows"
+            ],
+            "options": {
+                "filter": "cors"
+            }
+        },
+        {
+            "method": "GET",
+            "path": "api/v1/lifecycles",
+            "handler": [
+                "App\\Modules\\Workflow\\Management\\WorkflowReadController",
+                "listLifecycles"
+            ],
+            "options": {
+                "filter": "cors"
+            }
+        },
+        {
+            "method": "GET",
+            "path": "api/v1/lifecycles/(:num)",
+            "handler": [
+                "App\\Modules\\Workflow\\Management\\WorkflowReadController",
+                "showLifecycle"
+            ],
+            "options": {
+                "filter": "cors"
+            }
+        },
+        {
+            "method": "GET",
+            "path": "api/v1/lifecycles/(:num)/states",
+            "handler": [
+                "App\\Modules\\Workflow\\Management\\WorkflowReadController",
+                "lifecycleStates"
+            ],
+            "options": {
+                "filter": "cors"
+            }
+        },
+        {
+            "method": "GET",
+            "path": "api/v1/lifecycles/(:num)/transitions",
+            "handler": [
+                "App\\Modules\\Workflow\\Management\\WorkflowReadController",
+                "lifecycleTransitions"
+            ],
+            "options": {
+                "filter": "cors"
+            }
+        },
+        {
+            "method": "GET",
+            "path": "api/v1/my-work",
+            "handler": [
+                "App\\Modules\\Notifications\\MyWorkflowController",
+                "listing"
+            ],
+            "options": {
+                "filter": "cors"
+            }
+        },
+        {
+            "method": "GET",
+            "path": "api/v1/notification-operations/diagnostics",
+            "handler": [
+                "App\\Modules\\Notifications\\NotificationOperationsOverviewController",
+                "diagnostics"
+            ],
+            "options": {
+                "filter": "cors"
+            }
+        },
+        {
+            "method": "GET",
+            "path": "api/v1/notification-operations/overview",
+            "handler": [
+                "App\\Modules\\Notifications\\NotificationOperationsOverviewController",
+                "overview"
+            ],
+            "options": {
+                "filter": "cors"
+            }
+        },
+        {
+            "method": "GET",
+            "path": "api/v1/notification-settings",
+            "handler": [
+                "App\\Modules\\Notifications\\NotificationSettingsController",
+                "listPolicies"
+            ],
+            "options": {
+                "filter": "cors"
+            }
+        },
+        {
+            "method": "GET",
+            "path": "api/v1/notifications",
+            "handler": [
+                "App\\Modules\\Notifications\\NotificationInboxController",
+                "listing"
+            ],
+            "options": {
+                "filter": "cors"
+            }
+        },
+        {
+            "method": "GET",
+            "path": "api/v1/notifications/preferences",
+            "handler": [
+                "App\\Modules\\Notifications\\NotificationSettingsController",
+                "listPreferences"
+            ],
+            "options": {
+                "filter": "cors"
+            }
+        },
+        {
+            "method": "GET",
+            "path": "api/v1/notifications/push/config",
+            "handler": [
+                "App\\Modules\\Notifications\\NotificationPushController",
+                "config"
+            ],
+            "options": {
+                "filter": "cors"
+            }
+        },
+        {
+            "method": "GET",
+            "path": "api/v1/notifications/push/subscriptions",
+            "handler": [
+                "App\\Modules\\Notifications\\NotificationPushController",
+                "listing"
+            ],
+            "options": {
+                "filter": "cors"
+            }
+        },
+        {
+            "method": "GET",
+            "path": "api/v1/notifications/summary",
+            "handler": [
+                "App\\Modules\\Notifications\\NotificationInboxController",
+                "summary"
+            ],
+            "options": {
+                "filter": "cors"
+            }
+        },
+        {
+            "method": "GET",
+            "path": "api/v1/organizations",
+            "handler": [
+                "App\\Controllers\\Api\\ReadCatalogController",
+                "listOrganizations"
+            ],
+            "options": {
+                "filter": "cors"
+            }
+        },
+        {
+            "method": "GET",
+            "path": "api/v1/organizations/(:num)",
+            "handler": [
+                "App\\Controllers\\Api\\ReadCatalogController",
+                "showOrganization"
+            ],
+            "options": {
+                "filter": "cors"
+            }
+        },
+        {
+            "method": "GET",
+            "path": "api/v1/organizations/tree",
+            "handler": [
+                "App\\Controllers\\Api\\ReadCatalogController",
+                "tree"
+            ],
+            "options": {
+                "filter": "cors"
+            }
+        },
+        {
+            "method": "GET",
+            "path": "api/v1/policies",
+            "handler": [
+                "App\\Modules\\Access\\Management\\AccessReadController",
+                "listPolicies"
+            ],
+            "options": {
+                "filter": "cors"
+            }
+        },
+        {
+            "method": "GET",
+            "path": "api/v1/policies/(:num)",
+            "handler": [
+                "App\\Modules\\Access\\Management\\AccessReadController",
+                "showPolicy"
+            ],
+            "options": {
+                "filter": "cors"
+            }
+        },
+        {
+            "method": "GET",
+            "path": "api/v1/positions",
+            "handler": [
+                "App\\Controllers\\Api\\ReadCatalogController",
+                "listPositions"
+            ],
+            "options": {
+                "filter": "cors"
+            }
+        },
+        {
+            "method": "GET",
+            "path": "api/v1/positions/(:num)",
+            "handler": [
+                "App\\Controllers\\Api\\ReadCatalogController",
+                "showPosition"
+            ],
+            "options": {
+                "filter": "cors"
+            }
+        },
+        {
+            "method": "GET",
+            "path": "api/v1/price-lists",
+            "handler": [
+                "App\\Modules\\Pricing\\PriceList\\PriceListController",
+                "listPriceLists"
+            ],
+            "options": {
+                "filter": "cors"
+            }
+        },
+        {
+            "method": "GET",
+            "path": "api/v1/price-lists/(:num)",
+            "handler": [
+                "App\\Modules\\Pricing\\PriceList\\PriceListController",
+                "getPriceList"
+            ],
+            "options": {
+                "filter": "cors"
+            }
+        },
+        {
+            "method": "GET",
+            "path": "api/v1/price-lists/(:num)/items",
+            "handler": [
+                "App\\Modules\\Pricing\\PriceList\\PriceListController",
+                "listPriceListItems"
+            ],
+            "options": {
+                "filter": "cors"
+            }
+        },
+        {
+            "method": "GET",
+            "path": "api/v1/product-groups",
+            "handler": [
+                "App\\Modules\\Product\\Catalog\\ProductCatalogController",
+                "listProductGroups"
+            ],
+            "options": {
+                "filter": "cors"
+            }
+        },
+        {
+            "method": "GET",
+            "path": "api/v1/product-groups/(:num)",
+            "handler": [
+                "App\\Modules\\Product\\Catalog\\ProductCatalogController",
+                "getProductGroup"
+            ],
+            "options": {
+                "filter": "cors"
+            }
+        },
+        {
+            "method": "GET",
+            "path": "api/v1/product-uoms",
+            "handler": [
+                "App\\Modules\\Product\\Catalog\\ProductCatalogController",
+                "listProductUoms"
+            ],
+            "options": {
+                "filter": "cors"
+            }
+        },
+        {
+            "method": "GET",
+            "path": "api/v1/product-uoms/(:num)",
+            "handler": [
+                "App\\Modules\\Product\\Catalog\\ProductCatalogController",
+                "getProductUom"
+            ],
+            "options": {
+                "filter": "cors"
+            }
+        },
+        {
+            "method": "GET",
+            "path": "api/v1/products",
+            "handler": [
+                "App\\Modules\\Product\\Master\\ProductReadController",
+                "listProducts"
+            ],
+            "options": {
+                "filter": "cors"
+            }
+        },
+        {
+            "method": "GET",
+            "path": "api/v1/products/(:num)",
+            "handler": [
+                "App\\Modules\\Product\\Master\\ProductReadController",
+                "getProduct"
+            ],
+            "options": {
+                "filter": "cors"
+            }
+        },
+        {
+            "method": "GET",
+            "path": "api/v1/products/(:num)/combo-items",
+            "handler": [
+                "App\\Modules\\Product\\Combo\\ProductComboController",
+                "listComboItems"
+            ],
+            "options": {
+                "filter": "cors"
+            }
+        },
+        {
+            "method": "GET",
+            "path": "api/v1/products/(:num)/uom-conversions",
+            "handler": [
+                "App\\Modules\\Product\\Conversion\\ProductConversionController",
+                "listProductUomConversions"
+            ],
+            "options": {
+                "filter": "cors"
+            }
+        },
+        {
+            "method": "GET",
+            "path": "api/v1/products/options",
+            "handler": [
+                "App\\Modules\\Product\\Lookup\\ProductLookupController",
+                "searchProductOptions"
+            ],
+            "options": {
+                "filter": "cors"
+            }
+        },
+        {
+            "method": "GET",
+            "path": "api/v1/provinces",
+            "handler": [
+                "App\\Controllers\\Api\\ReadCatalogController",
+                "listProvinces"
+            ],
+            "options": {
+                "filter": "cors"
+            }
+        },
+        {
+            "method": "GET",
+            "path": "api/v1/provinces/(:num)",
+            "handler": [
+                "App\\Controllers\\Api\\ReadCatalogController",
+                "showProvince"
+            ],
+            "options": {
+                "filter": "cors"
+            }
+        },
+        {
+            "method": "GET",
+            "path": "api/v1/resources",
+            "handler": [
+                "App\\Modules\\Access\\Management\\AccessReadController",
+                "listResources"
+            ],
+            "options": {
+                "filter": "cors"
+            }
+        },
+        {
+            "method": "GET",
+            "path": "api/v1/resources/(:num)",
+            "handler": [
+                "App\\Modules\\Access\\Management\\AccessReadController",
+                "showResource"
+            ],
+            "options": {
+                "filter": "cors"
+            }
+        },
+        {
+            "method": "GET",
+            "path": "api/v1/resources/(:num)/actions",
+            "handler": [
+                "App\\Modules\\Access\\Management\\AccessReadController",
+                "resourceActions"
+            ],
+            "options": {
+                "filter": "cors"
+            }
+        },
+        {
+            "method": "GET",
+            "path": "api/v1/resources/(:num)/numbering-series",
+            "handler": [
+                "App\\Modules\\Numbering\\Configuration\\NumberingController",
+                "listing"
+            ],
+            "options": {
+                "filter": "cors"
+            }
+        },
+        {
+            "method": "GET",
+            "path": "api/v1/resources/(:num)/numbering-series/(:num)",
+            "handler": [
+                "App\\Modules\\Numbering\\Configuration\\NumberingController",
+                "show"
+            ],
+            "options": {
+                "filter": "cors"
+            }
+        },
+        {
+            "method": "GET",
+            "path": "api/v1/security/users",
+            "handler": [
+                "App\\Modules\\Identity\\Management\\IdentityReadController",
+                "securityUsers"
+            ],
+            "options": {
+                "filter": "cors"
+            }
+        },
+        {
+            "method": "GET",
+            "path": "api/v1/users/(:num)/permissions",
+            "handler": [
+                "App\\Modules\\Identity\\Management\\IdentityReadController",
+                "userPermissions"
+            ],
+            "options": {
+                "filter": "cors"
+            }
+        },
+        {
+            "method": "GET",
+            "path": "api/v1/wards",
+            "handler": [
+                "App\\Controllers\\Api\\ReadCatalogController",
+                "listWards"
+            ],
+            "options": {
+                "filter": "cors"
+            }
+        },
+        {
+            "method": "GET",
+            "path": "api/v1/wards/(:num)",
+            "handler": [
+                "App\\Controllers\\Api\\ReadCatalogController",
+                "showWard"
+            ],
+            "options": {
+                "filter": "cors"
+            }
+        },
+        {
+            "method": "GET",
+            "path": "api/v1/workflow-states",
+            "handler": [
+                "App\\Modules\\Workflow\\Management\\WorkflowReadController",
+                "listWorkflowStates"
+            ],
+            "options": {
+                "filter": "cors"
+            }
+        },
+        {
+            "method": "GET",
+            "path": "api/v1/workflow-states/(:num)",
+            "handler": [
+                "App\\Modules\\Workflow\\Management\\WorkflowReadController",
+                "showWorkflowState"
+            ],
+            "options": {
+                "filter": "cors"
+            }
+        },
+        {
+            "method": "OPTIONS",
+            "path": "api/v1/(:any)",
+            "handler": [
+                "App\\Shared\\Http\\HealthController",
+                "options"
+            ],
+            "options": {
+                "filter": "cors"
+            }
+        },
+        {
+            "method": "OPTIONS",
+            "path": "api/v1/health",
+            "handler": [
+                "App\\Shared\\Http\\HealthController",
+                "options"
+            ],
+            "options": {
+                "filter": "cors"
+            }
+        },
+        {
+            "method": "PATCH",
+            "path": "api/v1/auth/profile",
+            "handler": [
+                "App\\Modules\\Identity\\AuthController",
+                "profile"
+            ],
+            "options": {
+                "filter": "cors"
+            }
+        },
+        {
+            "method": "PATCH",
+            "path": "api/v1/authorization-groups/(:num)",
+            "handler": [
+                "App\\Modules\\Access\\Mutation\\AccessMutationController",
+                "updateAuthorizationGroup"
+            ],
+            "options": {
+                "filter": "cors"
+            }
+        },
+        {
+            "method": "PATCH",
+            "path": "api/v1/configuration-settings/notifications",
+            "handler": [
+                "App\\Modules\\Notifications\\NotificationRuntimeConfigController",
+                "update"
+            ],
+            "options": {
+                "filter": "cors"
+            }
+        },
+        {
+            "method": "PATCH",
+            "path": "api/v1/contacts/(:num)",
+            "handler": [
+                "App\\Modules\\Contact\\ContactController",
+                "updateContact"
+            ],
+            "options": {
+                "filter": "cors"
+            }
+        },
+        {
+            "method": "PATCH",
+            "path": "api/v1/customers/(:num)",
+            "handler": [
+                "App\\Modules\\Customer\\CustomerController",
+                "update"
+            ],
+            "options": {
+                "filter": "cors"
+            }
+        },
+        {
+            "method": "PATCH",
+            "path": "api/v1/departments/(:num)",
+            "handler": [
+                "App\\Modules\\People\\Structure\\Mutation\\StructureMutationController",
+                "updateDepartment"
+            ],
+            "options": {
+                "filter": "cors"
+            }
+        },
+        {
+            "method": "PATCH",
+            "path": "api/v1/display-settings",
+            "handler": [
+                "App\\Modules\\Settings\\Display\\DisplaySettingsController",
+                "update"
+            ],
+            "options": {
+                "filter": "cors"
+            }
+        },
+        {
+            "method": "PATCH",
+            "path": "api/v1/employee-assignments/(:num)",
+            "handler": [
+                "App\\Modules\\People\\Mutation\\PeopleMutationController",
+                "updateEmployeeAssignment"
+            ],
+            "options": {
+                "filter": "cors"
+            }
+        },
+        {
+            "method": "PATCH",
+            "path": "api/v1/employees/(:num)",
+            "handler": [
+                "App\\Modules\\People\\Mutation\\PeopleMutationController",
+                "updateEmployee"
+            ],
+            "options": {
+                "filter": "cors"
+            }
+        },
+        {
+            "method": "PATCH",
+            "path": "api/v1/lifecycles/(:num)",
+            "handler": [
+                "App\\Modules\\Workflow\\Mutation\\WorkflowMutationController",
+                "updateLifecycle"
+            ],
+            "options": {
+                "filter": "cors"
+            }
+        },
+        {
+            "method": "PATCH",
+            "path": "api/v1/notification-settings",
+            "handler": [
+                "App\\Modules\\Notifications\\NotificationSettingsController",
+                "updatePolicies"
+            ],
+            "options": {
+                "filter": "cors"
+            }
+        },
+        {
+            "method": "PATCH",
+            "path": "api/v1/notifications/preferences",
+            "handler": [
+                "App\\Modules\\Notifications\\NotificationSettingsController",
+                "updatePreferences"
+            ],
+            "options": {
+                "filter": "cors"
+            }
+        },
+        {
+            "method": "PATCH",
+            "path": "api/v1/organizations/(:num)",
+            "handler": [
+                "App\\Modules\\Organization\\Mutation\\OrganizationMutationController",
+                "updateOrganization"
+            ],
+            "options": {
+                "filter": "cors"
+            }
+        },
+        {
+            "method": "PATCH",
+            "path": "api/v1/policies/(:num)",
+            "handler": [
+                "App\\Modules\\Access\\Mutation\\AccessMutationController",
+                "updatePolicy"
+            ],
+            "options": {
+                "filter": "cors"
+            }
+        },
+        {
+            "method": "PATCH",
+            "path": "api/v1/positions/(:num)",
+            "handler": [
+                "App\\Modules\\People\\Structure\\Mutation\\StructureMutationController",
+                "updatePosition"
+            ],
+            "options": {
+                "filter": "cors"
+            }
+        },
+        {
+            "method": "PATCH",
+            "path": "api/v1/price-lists/(:num)",
+            "handler": [
+                "App\\Modules\\Pricing\\PriceList\\PriceListController",
+                "updatePriceList"
+            ],
+            "options": {
+                "filter": "cors"
+            }
+        },
+        {
+            "method": "PATCH",
+            "path": "api/v1/product-groups/(:num)",
+            "handler": [
+                "App\\Modules\\Product\\Catalog\\ProductCatalogController",
+                "updateProductGroup"
+            ],
+            "options": {
+                "filter": "cors"
+            }
+        },
+        {
+            "method": "PATCH",
+            "path": "api/v1/product-uoms/(:num)",
+            "handler": [
+                "App\\Modules\\Product\\Catalog\\ProductCatalogController",
+                "updateProductUom"
+            ],
+            "options": {
+                "filter": "cors"
+            }
+        },
+        {
+            "method": "PATCH",
+            "path": "api/v1/products/(:num)",
+            "handler": [
+                "App\\Modules\\Product\\Master\\ProductMutationController",
+                "updateProduct"
+            ],
+            "options": {
+                "filter": "cors"
+            }
+        },
+        {
+            "method": "PATCH",
+            "path": "api/v1/provinces/(:num)",
+            "handler": [
+                "App\\Modules\\Locations\\Mutation\\LocationMutationController",
+                "updateProvince"
+            ],
+            "options": {
+                "filter": "cors"
+            }
+        },
+        {
+            "method": "PATCH",
+            "path": "api/v1/resources/(:num)",
+            "handler": [
+                "App\\Modules\\Access\\Mutation\\AccessMutationController",
+                "updateResource"
+            ],
+            "options": {
+                "filter": "cors"
+            }
+        },
+        {
+            "method": "PATCH",
+            "path": "api/v1/resources/(:num)/actions/(:num)",
+            "handler": [
+                "App\\Modules\\Access\\Mutation\\AccessMutationController",
+                "updateResourceAction"
+            ],
+            "options": {
+                "filter": "cors"
+            }
+        },
+        {
+            "method": "PATCH",
+            "path": "api/v1/resources/(:num)/numbering-series/(:num)",
+            "handler": [
+                "App\\Modules\\Numbering\\Configuration\\NumberingController",
+                "update"
+            ],
+            "options": {
+                "filter": "cors"
+            }
+        },
+        {
+            "method": "PATCH",
+            "path": "api/v1/users/(:num)",
+            "handler": [
+                "App\\Modules\\Identity\\Mutation\\SecurityUserMutationController",
+                "updateUser"
+            ],
+            "options": {
+                "filter": "cors"
+            }
+        },
+        {
+            "method": "PATCH",
+            "path": "api/v1/wards/(:num)",
+            "handler": [
+                "App\\Modules\\Locations\\Mutation\\LocationMutationController",
+                "updateWard"
+            ],
+            "options": {
+                "filter": "cors"
+            }
+        },
+        {
+            "method": "PATCH",
+            "path": "api/v1/workflow-states/(:num)",
+            "handler": [
+                "App\\Modules\\Workflow\\Mutation\\WorkflowMutationController",
+                "updateWorkflowState"
+            ],
+            "options": {
+                "filter": "cors"
+            }
+        },
+        {
+            "method": "POST",
+            "path": "api/v1/auth/login",
+            "handler": [
+                "App\\Modules\\Identity\\AuthController",
+                "login"
+            ],
+            "options": {
+                "filter": "cors"
+            }
+        },
+        {
+            "method": "POST",
+            "path": "api/v1/auth/logout",
+            "handler": [
+                "App\\Modules\\Identity\\AuthController",
+                "logout"
+            ],
+            "options": {
+                "filter": "cors"
+            }
+        },
+        {
+            "method": "POST",
+            "path": "api/v1/authorization-groups",
+            "handler": [
+                "App\\Modules\\Access\\Mutation\\AccessMutationController",
+                "createAuthorizationGroup"
+            ],
+            "options": {
+                "filter": "cors"
+            }
+        },
+        {
+            "method": "POST",
+            "path": "api/v1/authorization-groups/(:num)/actions/set-state",
+            "handler": [
+                "App\\Modules\\Access\\Mutation\\AccessMutationController",
+                "setAuthorizationGroupState"
+            ],
+            "options": {
+                "filter": "cors"
+            }
+        },
+        {
+            "method": "POST",
+            "path": "api/v1/business-workflow/(:segment)/(:num)/actions/(:segment)",
+            "handler": [
+                "App\\Modules\\Workflow\\Execution\\BusinessWorkflowController",
+                "execute"
+            ],
+            "options": {
+                "filter": "cors"
+            }
+        },
+        {
+            "method": "POST",
+            "path": "api/v1/contacts",
+            "handler": [
+                "App\\Modules\\Contact\\ContactController",
+                "createContact"
+            ],
+            "options": {
+                "filter": "cors"
+            }
+        },
+        {
+            "method": "POST",
+            "path": "api/v1/contacts/(:num)/actions/set-state",
+            "handler": [
+                "App\\Modules\\Contact\\ContactController",
+                "setContactState"
+            ],
+            "options": {
+                "filter": "cors"
+            }
+        },
+        {
+            "method": "POST",
+            "path": "api/v1/customers",
+            "handler": [
+                "App\\Modules\\Customer\\CustomerController",
+                "create"
+            ],
+            "options": {
+                "filter": "cors"
+            }
+        },
+        {
+            "method": "POST",
+            "path": "api/v1/customers/(:num)/actions/set-state",
+            "handler": [
+                "App\\Modules\\Customer\\CustomerController",
+                "setState"
+            ],
+            "options": {
+                "filter": "cors"
+            }
+        },
+        {
+            "method": "POST",
+            "path": "api/v1/customers/(:num)/interactions",
+            "handler": [
+                "App\\Modules\\Customer\\CustomerController",
+                "addInteraction"
+            ],
+            "options": {
+                "filter": "cors"
+            }
+        },
+        {
+            "method": "POST",
+            "path": "api/v1/departments",
+            "handler": [
+                "App\\Modules\\People\\Structure\\Mutation\\StructureMutationController",
+                "createDepartment"
+            ],
+            "options": {
+                "filter": "cors"
+            }
+        },
+        {
+            "method": "POST",
+            "path": "api/v1/departments/(:num)/actions/set-state",
+            "handler": [
+                "App\\Modules\\People\\Structure\\Mutation\\StructureMutationController",
+                "setDepartmentState"
+            ],
+            "options": {
+                "filter": "cors"
+            }
+        },
+        {
+            "method": "POST",
+            "path": "api/v1/display-settings/actions/reset",
+            "handler": [
+                "App\\Modules\\Settings\\Display\\DisplaySettingsController",
+                "reset"
+            ],
+            "options": {
+                "filter": "cors"
+            }
+        },
+        {
+            "method": "POST",
+            "path": "api/v1/employee-assignments",
+            "handler": [
+                "App\\Modules\\People\\Mutation\\PeopleMutationController",
+                "createEmployeeAssignment"
+            ],
+            "options": {
+                "filter": "cors"
+            }
+        },
+        {
+            "method": "POST",
+            "path": "api/v1/employee-assignments/(:num)/actions/set-state",
+            "handler": [
+                "App\\Modules\\People\\Mutation\\PeopleMutationController",
+                "setEmployeeAssignmentState"
+            ],
+            "options": {
+                "filter": "cors"
+            }
+        },
+        {
+            "method": "POST",
+            "path": "api/v1/employees",
+            "handler": [
+                "App\\Modules\\People\\Mutation\\PeopleMutationController",
+                "createEmployee"
+            ],
+            "options": {
+                "filter": "cors"
+            }
+        },
+        {
+            "method": "POST",
+            "path": "api/v1/employees/(:num)/actions/set-state",
+            "handler": [
+                "App\\Modules\\People\\Mutation\\PeopleMutationController",
+                "setEmployeeState"
+            ],
+            "options": {
+                "filter": "cors"
+            }
+        },
+        {
+            "method": "POST",
+            "path": "api/v1/lifecycles",
+            "handler": [
+                "App\\Modules\\Workflow\\Mutation\\WorkflowMutationController",
+                "createLifecycle"
+            ],
+            "options": {
+                "filter": "cors"
+            }
+        },
+        {
+            "method": "POST",
+            "path": "api/v1/lifecycles/(:num)/actions/set-state",
+            "handler": [
+                "App\\Modules\\Workflow\\Mutation\\WorkflowMutationController",
+                "setLifecycleState"
+            ],
+            "options": {
+                "filter": "cors"
+            }
+        },
+        {
+            "method": "POST",
+            "path": "api/v1/notifications/(:num)/actions/mark-read",
+            "handler": [
+                "App\\Modules\\Notifications\\NotificationInboxController",
+                "markRead"
+            ],
+            "options": {
+                "filter": "cors"
+            }
+        },
+        {
+            "method": "POST",
+            "path": "api/v1/notifications/actions/mark-all-read",
+            "handler": [
+                "App\\Modules\\Notifications\\NotificationInboxController",
+                "markAllRead"
+            ],
+            "options": {
+                "filter": "cors"
+            }
+        },
+        {
+            "method": "POST",
+            "path": "api/v1/notifications/actions/sync",
+            "handler": [
+                "App\\Modules\\Notifications\\NotificationInboxController",
+                "sync"
+            ],
+            "options": {
+                "filter": "cors"
+            }
+        },
+        {
+            "method": "POST",
+            "path": "api/v1/notifications/push/subscriptions",
+            "handler": [
+                "App\\Modules\\Notifications\\NotificationPushController",
+                "subscribe"
+            ],
+            "options": {
+                "filter": "cors"
+            }
+        },
+        {
+            "method": "POST",
+            "path": "api/v1/organizations",
+            "handler": [
+                "App\\Modules\\Organization\\Mutation\\OrganizationMutationController",
+                "createOrganization"
+            ],
+            "options": {
+                "filter": "cors"
+            }
+        },
+        {
+            "method": "POST",
+            "path": "api/v1/organizations/(:num)/actions/set-state",
+            "handler": [
+                "App\\Modules\\Organization\\Mutation\\OrganizationMutationController",
+                "setOrganizationState"
+            ],
+            "options": {
+                "filter": "cors"
+            }
+        },
+        {
+            "method": "POST",
+            "path": "api/v1/organizations/labels/resolve",
+            "handler": [
+                "App\\Controllers\\Api\\ReadCatalogController",
+                "resolveOrganizationLabels"
+            ],
+            "options": {
+                "filter": "cors"
+            }
+        },
+        {
+            "method": "POST",
+            "path": "api/v1/policies",
+            "handler": [
+                "App\\Modules\\Access\\Mutation\\AccessMutationController",
+                "createPolicy"
+            ],
+            "options": {
+                "filter": "cors"
+            }
+        },
+        {
+            "method": "POST",
+            "path": "api/v1/policies/(:num)/actions/set-state",
+            "handler": [
+                "App\\Modules\\Access\\Mutation\\AccessMutationController",
+                "setPolicyState"
+            ],
+            "options": {
+                "filter": "cors"
+            }
+        },
+        {
+            "method": "POST",
+            "path": "api/v1/positions",
+            "handler": [
+                "App\\Modules\\People\\Structure\\Mutation\\StructureMutationController",
+                "createPosition"
+            ],
+            "options": {
+                "filter": "cors"
+            }
+        },
+        {
+            "method": "POST",
+            "path": "api/v1/positions/(:num)/actions/set-state",
+            "handler": [
+                "App\\Modules\\People\\Structure\\Mutation\\StructureMutationController",
+                "setPositionState"
+            ],
+            "options": {
+                "filter": "cors"
+            }
+        },
+        {
+            "method": "POST",
+            "path": "api/v1/price-lists",
+            "handler": [
+                "App\\Modules\\Pricing\\PriceList\\PriceListController",
+                "createPriceList"
+            ],
+            "options": {
+                "filter": "cors"
+            }
+        },
+        {
+            "method": "POST",
+            "path": "api/v1/price-lists/(:num)/actions/set-state",
+            "handler": [
+                "App\\Modules\\Pricing\\PriceList\\PriceListController",
+                "setPriceListState"
+            ],
+            "options": {
+                "filter": "cors"
+            }
+        },
+        {
+            "method": "POST",
+            "path": "api/v1/product-groups",
+            "handler": [
+                "App\\Modules\\Product\\Catalog\\ProductCatalogController",
+                "createProductGroup"
+            ],
+            "options": {
+                "filter": "cors"
+            }
+        },
+        {
+            "method": "POST",
+            "path": "api/v1/product-groups/(:num)/actions/set-state",
+            "handler": [
+                "App\\Modules\\Product\\Catalog\\ProductCatalogController",
+                "setProductGroupState"
+            ],
+            "options": {
+                "filter": "cors"
+            }
+        },
+        {
+            "method": "POST",
+            "path": "api/v1/product-uoms",
+            "handler": [
+                "App\\Modules\\Product\\Catalog\\ProductCatalogController",
+                "createProductUom"
+            ],
+            "options": {
+                "filter": "cors"
+            }
+        },
+        {
+            "method": "POST",
+            "path": "api/v1/product-uoms/(:num)/actions/set-state",
+            "handler": [
+                "App\\Modules\\Product\\Catalog\\ProductCatalogController",
+                "setProductUomState"
+            ],
+            "options": {
+                "filter": "cors"
+            }
+        },
+        {
+            "method": "POST",
+            "path": "api/v1/product-uoms/labels/resolve",
+            "handler": [
+                "App\\Modules\\Product\\Lookup\\ProductLookupController",
+                "resolveProductUomLabels"
+            ],
+            "options": {
+                "filter": "cors"
+            }
+        },
+        {
+            "method": "POST",
+            "path": "api/v1/products",
+            "handler": [
+                "App\\Modules\\Product\\Master\\ProductMutationController",
+                "createProduct"
+            ],
+            "options": {
+                "filter": "cors"
+            }
+        },
+        {
+            "method": "POST",
+            "path": "api/v1/products/(:num)/actions/set-state",
+            "handler": [
+                "App\\Modules\\Product\\Master\\ProductMutationController",
+                "setProductState"
+            ],
+            "options": {
+                "filter": "cors"
+            }
+        },
+        {
+            "method": "POST",
+            "path": "api/v1/products/(:num)/image",
+            "handler": [
+                "App\\Modules\\Product\\Media\\ProductImageController",
+                "uploadProductImage"
+            ],
+            "options": {
+                "filter": "cors"
+            }
+        },
+        {
+            "method": "POST",
+            "path": "api/v1/products/details/resolve",
+            "handler": [
+                "App\\Modules\\Product\\Lookup\\ProductRelationshipController",
+                "resolveProductDetails"
+            ],
+            "options": {
+                "filter": "cors"
+            }
+        },
+        {
+            "method": "POST",
+            "path": "api/v1/products/import-jobs",
+            "handler": [
+                "App\\Modules\\Product\\Import\\ProductImportController",
+                "startProductImport"
+            ],
+            "options": {
+                "filter": "cors"
+            }
+        },
+        {
+            "method": "POST",
+            "path": "api/v1/products/options/resolve",
+            "handler": [
+                "App\\Modules\\Product\\Lookup\\ProductLookupController",
+                "resolveProductOptions"
+            ],
+            "options": {
+                "filter": "cors"
+            }
+        },
+        {
+            "method": "POST",
+            "path": "api/v1/products/relations-preview",
+            "handler": [
+                "App\\Modules\\Product\\Lookup\\ProductRelationshipController",
+                "previewProductRelations"
+            ],
+            "options": {
+                "filter": "cors"
+            }
+        },
+        {
+            "method": "POST",
+            "path": "api/v1/products/sales-uom-options/resolve",
+            "handler": [
+                "App\\Modules\\Product\\Lookup\\ProductRelationshipController",
+                "resolveProductSalesUomOptions"
+            ],
+            "options": {
+                "filter": "cors"
+            }
+        },
+        {
+            "method": "POST",
+            "path": "api/v1/provinces",
+            "handler": [
+                "App\\Modules\\Locations\\Mutation\\LocationMutationController",
+                "createProvince"
+            ],
+            "options": {
+                "filter": "cors"
+            }
+        },
+        {
+            "method": "POST",
+            "path": "api/v1/provinces/(:num)/actions/set-state",
+            "handler": [
+                "App\\Modules\\Locations\\Mutation\\LocationMutationController",
+                "setProvinceState"
+            ],
+            "options": {
+                "filter": "cors"
+            }
+        },
+        {
+            "method": "POST",
+            "path": "api/v1/resources",
+            "handler": [
+                "App\\Modules\\Access\\Mutation\\AccessMutationController",
+                "createResource"
+            ],
+            "options": {
+                "filter": "cors"
+            }
+        },
+        {
+            "method": "POST",
+            "path": "api/v1/resources/(:num)/actions",
+            "handler": [
+                "App\\Modules\\Access\\Mutation\\AccessMutationController",
+                "createResourceAction"
+            ],
+            "options": {
+                "filter": "cors"
+            }
+        },
+        {
+            "method": "POST",
+            "path": "api/v1/resources/(:num)/actions/set-state",
+            "handler": [
+                "App\\Modules\\Access\\Mutation\\AccessMutationController",
+                "setResourceState"
+            ],
+            "options": {
+                "filter": "cors"
+            }
+        },
+        {
+            "method": "POST",
+            "path": "api/v1/resources/(:num)/numbering-series",
+            "handler": [
+                "App\\Modules\\Numbering\\Configuration\\NumberingController",
+                "create"
+            ],
+            "options": {
+                "filter": "cors"
+            }
+        },
+        {
+            "method": "POST",
+            "path": "api/v1/resources/(:num)/numbering-series/(:num)/actions/set-state",
+            "handler": [
+                "App\\Modules\\Numbering\\Configuration\\NumberingController",
+                "setState"
+            ],
+            "options": {
+                "filter": "cors"
+            }
+        },
+        {
+            "method": "POST",
+            "path": "api/v1/resources/(:num)/numbering-series/actions/validate-config",
+            "handler": [
+                "App\\Modules\\Numbering\\Configuration\\NumberingController",
+                "validateConfig"
+            ],
+            "options": {
+                "filter": "cors"
+            }
+        },
+        {
+            "method": "POST",
+            "path": "api/v1/users",
+            "handler": [
+                "App\\Modules\\Identity\\Mutation\\SecurityUserMutationController",
+                "createUser"
+            ],
+            "options": {
+                "filter": "cors"
+            }
+        },
+        {
+            "method": "POST",
+            "path": "api/v1/users/(:num)/actions/reset-password",
+            "handler": [
+                "App\\Modules\\Identity\\Mutation\\SecurityUserMutationController",
+                "resetUserPassword"
+            ],
+            "options": {
+                "filter": "cors"
+            }
+        },
+        {
+            "method": "POST",
+            "path": "api/v1/users/(:num)/actions/set-state",
+            "handler": [
+                "App\\Modules\\Identity\\Mutation\\SecurityUserMutationController",
+                "setUserState"
+            ],
+            "options": {
+                "filter": "cors"
+            }
+        },
+        {
+            "method": "POST",
+            "path": "api/v1/users/(:num)/avatar",
+            "handler": [
+                "App\\Modules\\Identity\\Media\\UserAvatarController",
+                "uploadUserAvatar"
+            ],
+            "options": {
+                "filter": "cors"
+            }
+        },
+        {
+            "method": "POST",
+            "path": "api/v1/wards",
+            "handler": [
+                "App\\Modules\\Locations\\Mutation\\LocationMutationController",
+                "createWard"
+            ],
+            "options": {
+                "filter": "cors"
+            }
+        },
+        {
+            "method": "POST",
+            "path": "api/v1/wards/(:num)/actions/set-state",
+            "handler": [
+                "App\\Modules\\Locations\\Mutation\\LocationMutationController",
+                "setWardState"
+            ],
+            "options": {
+                "filter": "cors"
+            }
+        },
+        {
+            "method": "POST",
+            "path": "api/v1/workflow-states",
+            "handler": [
+                "App\\Modules\\Workflow\\Mutation\\WorkflowMutationController",
+                "createWorkflowState"
+            ],
+            "options": {
+                "filter": "cors"
+            }
+        },
+        {
+            "method": "POST",
+            "path": "api/v1/workflow-states/(:num)/actions/set-state",
+            "handler": [
+                "App\\Modules\\Workflow\\Mutation\\WorkflowMutationController",
+                "setWorkflowStateState"
+            ],
+            "options": {
+                "filter": "cors"
+            }
+        },
+        {
+            "method": "PUT",
+            "path": "api/v1/authorization-groups/(:num)/members",
+            "handler": [
+                "App\\Modules\\Access\\Mutation\\AccessMutationController",
+                "replaceAuthorizationGroupMembers"
+            ],
+            "options": {
+                "filter": "cors"
+            }
+        },
+        {
+            "method": "PUT",
+            "path": "api/v1/authorization-groups/(:num)/permissions",
+            "handler": [
+                "App\\Modules\\Access\\Mutation\\AccessMutationController",
+                "replaceAuthorizationGroupPermissions"
+            ],
+            "options": {
+                "filter": "cors"
+            }
+        },
+        {
+            "method": "PUT",
+            "path": "api/v1/business-workflow/(:segment)/(:num)/notification-assignees",
+            "handler": [
+                "App\\Modules\\Notifications\\WorkflowNotificationAssigneesController",
+                "replace"
+            ],
+            "options": {
+                "filter": "cors"
+            }
+        },
+        {
+            "method": "PUT",
+            "path": "api/v1/lifecycles/(:num)/states",
+            "handler": [
+                "App\\Modules\\Workflow\\Mutation\\WorkflowMutationController",
+                "configureLifecycleStates"
+            ],
+            "options": {
+                "filter": "cors"
+            }
+        },
+        {
+            "method": "PUT",
+            "path": "api/v1/lifecycles/(:num)/transitions",
+            "handler": [
+                "App\\Modules\\Workflow\\Mutation\\WorkflowMutationController",
+                "configureLifecycleTransitions"
+            ],
+            "options": {
+                "filter": "cors"
+            }
+        },
+        {
+            "method": "PUT",
+            "path": "api/v1/price-lists/(:num)/items",
+            "handler": [
+                "App\\Modules\\Pricing\\PriceList\\PriceListController",
+                "replacePriceListItems"
+            ],
+            "options": {
+                "filter": "cors"
+            }
+        },
+        {
+            "method": "PUT",
+            "path": "api/v1/products/(:num)/combo-items",
+            "handler": [
+                "App\\Modules\\Product\\Combo\\ProductComboController",
+                "replaceComboItems"
+            ],
+            "options": {
+                "filter": "cors"
+            }
+        },
+        {
+            "method": "PUT",
+            "path": "api/v1/products/(:num)/uom-conversions",
+            "handler": [
+                "App\\Modules\\Product\\Conversion\\ProductConversionController",
+                "replaceProductUomConversions"
+            ],
+            "options": {
+                "filter": "cors"
+            }
+        },
+        {
+            "method": "PUT",
+            "path": "api/v1/users/(:num)/permissions",
+            "handler": [
+                "App\\Modules\\Identity\\Mutation\\SecurityUserMutationController",
+                "replaceUserPermissions"
+            ],
+            "options": {
+                "filter": "cors"
+            }
+        }
+    ]
+}

@@ -2,6 +2,8 @@
 
 declare(strict_types=1);
 
+require_once dirname(__DIR__, 2) . '/tools/routes/LegacyRouteSource.php';
+
 /** Source contract smoke checks; no Composer, DB, auth bypass or network required. */
 $root=dirname(__DIR__,2);
 $n=0;
@@ -21,9 +23,9 @@ $helper=$read('app/Helpers/customer_helper.php');
 foreach(['STANDARD','TMDT','VIP1','VIP2'] as $code)
     $ok(str_contains($helper,"'$code'"),'helper '.$code);
 $ok(!str_contains($helper,"'VIP' =>"),'no obsolete VIP');
-$routes=$read('app/Config/CUSRoutes.php');
+$routes=\DinkERP\Tools\Routes\LegacyRouteSource::source(dirname($root), 'CUSRoutes.php');
 $ok(substr_count($routes,'$routes->')===7,'exactly 7 CUS routes');
-$ok(str_contains($read('app/Config/Routes.php'),"require __DIR__ . '/CUSRoutes.php'"),'routes mounted');
+$ok(\DinkERP\Tools\Routes\LegacyRouteSource::mounted(dirname($root), 'CUSRoutes.php'),'routes mounted');
 $access=$read('app/Modules/Access/UnifiedAccessService.php');
 foreach(['customer','customer_contact','customer_interaction'] as $type)
     $ok(str_contains($access,"'$type'"),'PBAC supports '.$type);

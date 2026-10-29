@@ -39,7 +39,7 @@ final class M86CSourceAcceptance
         foreach ([
             "in_array($" . "resource, ['employee', 'department', 'position'], true)",
             'peopleSqlService($user, $instant)->list(', 'peopleSqlService($user)->show(',
-            'ReadAccessBridge($user', 'AuthorizedListPage::paginate(',
+            'locationSqlService($user, $instant)->list(', 'locationSqlService($user)->show(',
             'organizationSqlService($user, $instant)->list(',
         ] as $term) {
             if (!str_contains($controller, $term)) {

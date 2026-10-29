@@ -16,6 +16,7 @@ final class NotificationDispatcher
 {
     private const LEASE_SECONDS = 120;
     private readonly string $outbox;
+    private readonly string $jobs;
 
     /** Fault injection is strictly test-only; never expose it via flags or HTTP. */
     public function __construct(private readonly BaseConnection $db, private readonly ?Closure $testingBeforeAck = null)
@@ -24,10 +25,34 @@ final class NotificationDispatcher
             throw new RuntimeException('M11_TEST_HOOK_FORBIDDEN');
         }
         $this->outbox = $this->table('notification_outbox');
+        $this->jobs = $this->table('import_jobs');
     }
 
     /** @return array{claimed:int,processed:int,suppressed:int,retry:int,dead:int,paused:int,lost_lease:int} */
     public function runOnce(int $batch = 25): array
+    {
+        return $this->run($batch, null);
+    }
+
+    /**
+     * Browser refresh may materialize only a small number of events addressed
+     * to the logged-in User. It never calls Push/Email HTTP workers; cron stays
+     * the main delivery mechanism and processes all other users normally.
+     * @return array{claimed:int,processed:int,suppressed:int,retry:int,dead:int,paused:int,lost_lease:int}
+     */
+    public function runForUserOnce(string $userId, int $batch = 2): array
+    {
+        if ($batch < 1 || $batch > 2) {
+            throw new RuntimeException('M11_SYNC_INVALID_BATCH');
+        }
+        // Validates canonical positive numeric Shield ID. The query additionally
+        // checks the Import owner or the immutable Workflow recipient snapshot.
+        NotificationOnDemandScope::forUser($userId, $this->outbox, $this->jobs);
+        return $this->run($batch, $userId);
+    }
+
+    /** @return array{claimed:int,processed:int,suppressed:int,retry:int,dead:int,paused:int,lost_lease:int} */
+    private function run(int $batch, ?string $userId): array
     {
         if ($batch < 1 || $batch > 100) {
             throw new RuntimeException('M11_INVALID_BATCH');
@@ -37,13 +62,15 @@ final class NotificationDispatcher
             return $stats;
         }
         $token = self::token();
-        // Claim and commit BEFORE resolving recipients or delivering any event.
-        $stats['dead'] += $this->reapExpiredExhausted($batch);
-        $ids = $this->claim($batch, $token);
+        // An authenticated HTTP request MUST NOT reap other users' abandoned
+        // leases; that global maintenance is exclusively the cron runner's job.
+        if ($userId === null) {
+            $stats['dead'] += $this->reapExpiredExhausted($batch);
+        }
+        $ids = $this->claim($batch, $token, $userId);
         $stats['claimed'] = count($ids);
         foreach ($ids as $id) {
-            $outcome = $this->deliver($id, $token);
-            $stats[$outcome]++;
+            ++$stats[$this->deliver($id, $token)];
         }
         return $stats;
     }
@@ -74,16 +101,16 @@ final class NotificationDispatcher
     }
 
     /** @return list<string> */
-    private function claim(int $batch, string $token): array
+    private function claim(int $batch, string $token, ?string $userId): array
     {
         $this->db->transBegin();
         try {
             $where = "status IN ('PENDING','RETRY') AND available_at <= UTC_TIMESTAMP(6)";
-            $ids = $this->selectClaimIds($where, $batch);
+            $ids = $this->selectClaimIds($where, $batch, $userId);
             $expired = false;
             if ($ids === []) {
                 $where = "status='LEASED' AND leased_until <= UTC_TIMESTAMP(6) AND attempts<6";
-                $ids = $this->selectClaimIds($where, $batch);
+                $ids = $this->selectClaimIds($where, $batch, $userId);
                 $expired = true;
             }
             if ($ids !== []) {
@@ -108,11 +135,18 @@ final class NotificationDispatcher
     }
 
     /** @return list<string> */
-    private function selectClaimIds(string $where, int $batch): array
+    private function selectClaimIds(string $where, int $batch, ?string $userId = null): array
     {
-        // $batch is range checked, not user supplied SQL. Lock the exact selected IDs.
+        // $batch is range checked, not user supplied SQL. Lock exact IDs;
+        // all user filters are parameterized and checked BEFORE selecting rows.
+        $binds = [];
+        if ($userId !== null) {
+            $scope = NotificationOnDemandScope::forUser($userId, $this->outbox, $this->jobs);
+            $where .= $scope['sql'];
+            $binds = $scope['binds'];
+        }
         $rows = $this->select("SELECT id FROM {$this->outbox} WHERE {$where} "
-            . "ORDER BY id LIMIT {$batch} FOR UPDATE")->getResultArray();
+            . "ORDER BY id LIMIT {$batch} FOR UPDATE", $binds)->getResultArray();
         return array_map(static fn (array $r): string => (string) $r['id'], $rows);
     }
 

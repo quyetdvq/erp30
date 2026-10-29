@@ -4,6 +4,9 @@ declare(strict_types=1);
 
 namespace App\Modules\Notifications;
 
+use App\Exceptions\DomainException;
+use App\Modules\Workflow\Execution\BusinessWorkflowService;
+use CodeIgniter\Shield\Entities\User;
 use CodeIgniter\Database\BaseConnection;
 use RuntimeException;
 use Throwable;
@@ -17,6 +20,8 @@ final class NotificationPushWorker
     private readonly string $users;
     private readonly string $settings;
     private readonly string $preferences;
+    private readonly string $outbox;
+    private readonly string $jobs;
     private ?NotificationPushSender $sender;
 
     public function __construct(private readonly BaseConnection $db, ?NotificationPushSender $sender = null)
@@ -30,6 +35,8 @@ final class NotificationPushWorker
         $this->users = $this->table('users');
         $this->settings = $this->table('notification_settings');
         $this->preferences = $this->table('notification_user_preferences');
+        $this->outbox = $this->table('notification_outbox');
+        $this->jobs = $this->table('import_jobs');
     }
 
     /** @return array{claimed:int,sent:int,retry:int,dead:int,cancelled:int,paused:int,lost_lease:int} */
@@ -127,16 +134,34 @@ final class NotificationPushWorker
                 return $this->terminal($id, $token, 'CANCELLED', 'M11_PUSH_SUBSCRIPTION_REVOKED');
             }
             $userId = (string) $row['recipient_user_id'];
-            $user = $this->select("SELECT id,active,status,deleted_at FROM {$this->users} WHERE id=?",
+            $user = $this->select("SELECT * FROM {$this->users} WHERE id=?",
                 [$userId])->getRowArray();
             if ($user === null || ! WorkflowNotificationRules::activeUser($user)) {
                 return $this->terminal($id, $token, 'CANCELLED', 'M11_PUSH_USER_INACTIVE');
+            }
+            $event = $this->select("SELECT event_type,source_type,source_id,payload_json FROM {$this->outbox} "
+                . "WHERE event_key=? AND status='PROCESSED'", [(string) $row['event_key']])->getRowArray();
+            if ($event === null || ! isset(NotificationCatalog::definitions()[(string) $event['event_type'] . '.push'])) {
+                return $this->terminal($id, $token, 'CANCELLED', 'M11_PUSH_EVENT_UNAVAILABLE');
+            }
+            $policyKey = (string) $event['event_type'] . '.push';
+            if ((string) $event['event_type'] === 'workflow.action_required') {
+                try {
+                    $payload = WorkflowNotificationRules::decode((string) $event['payload_json']);
+                    $live = (new BusinessWorkflowService(new User($user), $this->db))
+                        ->options($payload['resource_type'], (string) $event['source_id']);
+                    if ($live['current'] !== $payload['to_state'] || $live['options'] === []) {
+                        return $this->terminal($id, $token, 'CANCELLED', 'M11_PUSH_WORKFLOW_STALE');
+                    }
+                } catch (DomainException|\InvalidArgumentException $e) {
+                    return $this->terminal($id, $token, 'CANCELLED', 'M11_PUSH_WORKFLOW_UNAVAILABLE');
+                }
             }
             $policy = $this->select("SELECT s.*,p.override_value AS preference_value,"
                 . 'p.override_epoch AS preference_epoch,p.user_revision AS preference_revision '
                 . "FROM {$this->settings} s LEFT JOIN {$this->preferences} p"
                 . ' ON p.setting_key=s.setting_key AND p.user_id=? WHERE s.setting_key=?',
-                [$userId, 'import.completed.push'])->getRowArray();
+                [$userId, $policyKey])->getRowArray();
             if ($policy === null) {
                 return $this->terminal($id, $token, 'CANCELLED', 'M11_PUSH_POLICY_MISSING');
             }
@@ -145,10 +170,24 @@ final class NotificationPushWorker
                 'override_epoch' => $policy['preference_epoch'],
                 'user_revision' => $policy['preference_revision'],
             ];
-            if (! NotificationPushRules::consented($policy, $pref)) {
+            if (! NotificationPushRules::consented($policy, $pref, $policyKey)) {
                 return $this->terminal($id, $token, 'CANCELLED', 'M11_PUSH_CONSENT_REVOKED');
             }
+            // A subscription from before encrypted Push support cannot display
+            // an event topic. Do not silently send a generic empty Push: the
+            // user must explicitly refresh this browser subscription to opt in.
+            if (! is_string($subscription['key_material_cipher'] ?? null)
+                || $subscription['key_material_cipher'] === '') {
+                return $this->terminal($id, $token, 'CANCELLED', 'M11_PUSH_DEVICE_UPDATE_REQUIRED');
+            }
             $endpoint = NotificationPushCrypto::decrypt((string) $subscription['endpoint_cipher'], $key);
+            $keys = NotificationPushCrypto::decryptKeys($subscription['key_material_cipher'], $key);
+            $job = null;
+            if ((string) $event['source_type'] === 'import_job') {
+                $job = $this->select("SELECT success_rows,error_rows FROM {$this->jobs} WHERE id=?",
+                    [(string) $event['source_id']])->getRowArray();
+            }
+            $content = NotificationPushPresentation::payload($event, $job);
             // COMMIT before HTTP; no DB row or recipient identity is sent to the provider.
             $this->commit();
         } catch (Throwable $e) {
@@ -159,7 +198,10 @@ final class NotificationPushWorker
             return $this->pauseAfterClaim($id, $token);
         }
         try {
-            $status = $this->sender->send($endpoint);
+            if (! $this->sender instanceof NotificationPushPayloadSender) {
+                throw new \RuntimeException('M11_PUSH_ENCRYPTED_SENDER_REQUIRED');
+            }
+            $status = $this->sender->sendEncrypted($endpoint, $content, $keys['p256dh'], $keys['auth']);
         } catch (Throwable) {
             return $this->fail($id, $token);
         }

@@ -2,6 +2,8 @@
 
 declare(strict_types=1);
 
+require_once dirname(__DIR__, 2) . '/tools/routes/LegacyRouteSource.php';
+
 require_once __DIR__ . '/M5SourceAcceptance.php';
 
 /** M5.2 source/operation acceptance; does not claim HTTP or SQL integration. */
@@ -54,7 +56,8 @@ final class M52SourceAcceptance
             }
         }
         $routes = (string)file_get_contents($root.'/backend/app/Config/Routes.php');
-        if (substr_count($routes, "require __DIR__ . '/M52Routes.php';") !== 1) {
+        $routes .= (string)file_get_contents($root.'/backend/app/Config/Routes/ApiV1/OrganizationsRoutes.php');
+        if ((\DinkERP\Tools\Routes\LegacyRouteSource::mounted($root, 'M52Routes.php') ? 1 : 0) !== 1) {
             throw new RuntimeException('M5.2 routes not included exactly once.');
         }
         foreach (["organizations'", "organizations/tree'", "organizations/(:num)'"] as $path) {
@@ -62,7 +65,7 @@ final class M52SourceAcceptance
                 throw new RuntimeException('M5.2 removed a reviewed M2.1 GET Organization route: '.$path);
             }
         }
-        $definition = (string)file_get_contents($root.'/backend/app/Config/M52Routes.php');
+        $definition = (string)\DinkERP\Tools\Routes\LegacyRouteSource::source($root, 'M52Routes.php');
         $pattern = '~\$routes->(post|patch)\(\x27([^\x27]+)\x27,\s*\[\\\\App\\\\Modules\\\\Organization\\\\Mutation\\\\OrganizationMutationController::class,\s*\x27([A-Za-z][A-Za-z0-9_]*)\x27\]\);~';
         preg_match_all($pattern, $definition, $found, PREG_SET_ORDER);
         if (count($found)!==3 || substr_count($definition,'$routes->')!==3) {

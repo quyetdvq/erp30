@@ -2,6 +2,8 @@
 
 declare(strict_types=1);
 
+require_once dirname(__DIR__, 1) . '/tools/routes/LegacyRouteSource.php';
+
 require_once __DIR__ . '/../tools/m5/M55SourceAcceptance.php';
 $root = dirname(__DIR__, 2);
 $checks = 0;
@@ -16,7 +18,7 @@ $check(count($ops) === 5 && count(array_unique(array_column($ops, 'id'))) === 5,
 $check(count(array_filter(array_keys($ops), static fn (string $k): bool => str_starts_with($k, 'GET'))) === 2,
     'two missing GETs added along with mutations');
 $check(($ops['POST contacts']['status'] ?? null) === 201, 'Contact create returns 201');
-$routes = (string) file_get_contents($root . '/backend/app/Config/M55Routes.php');
+$routes = (string) \DinkERP\Tools\Routes\LegacyRouteSource::source($root, 'M55Routes.php');
 $check(substr_count($routes, '$routes->') === 5, 'no extra or implicit Contact routes');
 $registered = [];
 foreach ($ops as $key => $op) {

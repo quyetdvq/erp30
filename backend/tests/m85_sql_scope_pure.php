@@ -39,8 +39,10 @@ $slots=Scope::organization('price_list',[
 ]);
 $op=$slots->predicate('p');
 $ok($slots->domain==='ORGANIZATION','org domain explicit');
-$ok(substr_count($op['sql'],'p.organization_id = ?')===3,'two companies in ACTIVE distinct slots');
-$ok($op['binds']===['10','ACTIVE','20','ACTIVE','20','DRAFT'],'never merges organization scope by State');
+$ok(str_contains($op['sql'],'p.organization_id IN (?,?)') && str_contains($op['sql'],'p.organization_id = ?'),
+    'Organization slots compacted by canonical State');
+$ok($op['binds']===['10','20','ACTIVE','20','DRAFT'],
+    'compact grouping retains exact authorized owner-State pairs');
 $ok(count($op['binds'])===substr_count($op['sql'],'?'),'organization placeholders exact');
 $ok(Scope::organization('price_list',[])->predicate('p')['sql']==='1 = 0','no authorized organizations fail-closed');
 $reject(fn()=>Scope::organization('product',[['organization_id'=>'10','status'=>'ACTIVE']]),'MASTER cannot receive org buckets');

@@ -2,6 +2,8 @@
 
 declare(strict_types=1);
 
+require_once dirname(__DIR__, 1) . '/tools/routes/LegacyRouteSource.php';
+
 /** Source-only fail-closed, security and bilingual transport assertions. */
 require_once __DIR__.'/../app/Exceptions/DomainException.php';
 require_once __DIR__.'/../app/Modules/Access/ResourceStateCatalog.php';
@@ -30,7 +32,7 @@ $check(str_contains($controller,"'UNAUTHENTICATED',401") && str_contains($contro
 $check(!str_contains($controller,'setJSON(') && str_contains($controller,'ApiResponder::error('),'bilingual API responder');
 $check(str_contains($rules,'DEPARTMENT_') && str_contains($rules,'POSITION_'),'baseline stable error codes');
 $check(str_contains($rules,'self::AUDIT') && str_contains($rules,'FIELD_UNSUPPORTED'),'no client audit or custom scope');
-$check(str_contains($readRoutes,"require __DIR__ . '/M54Routes.php';"),'isolated route inclusion');
+$check(\DinkERP\Tools\Routes\LegacyRouteSource::mounted($root, 'M54Routes.php'),'isolated route inclusion');
 $check(str_contains($read('Shared/Http/ApiResponder.php'),'RequestMetadata::locale()'),'locale-specific API messages');
 $check(str_contains($read('Shared/Http/RequestMetadataFilter.php'),"['vi', 'en']"),'en/vi locale enumeration');
 foreach(['en','vi'] as $locale) {

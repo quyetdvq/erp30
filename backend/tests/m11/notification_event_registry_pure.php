@@ -40,7 +40,7 @@ foreach (['COMPLETED', 'COMPLETED_WITH_ERRORS', 'FAILED'] as $terminal) {
 $completed = NotificationEventRegistry::find('import.completed', 'import_job');
 $check($completed !== null && $completed->supports('email') && $completed->supports('push'));
 $failed = NotificationEventRegistry::find('import.failed', 'import_job');
-$check($failed !== null && $failed->supports('email') && ! $failed->supports('push'));
+$check($failed !== null && $failed->supports('email') && $failed->supports('push'));
 $workflow = NotificationEventRegistry::find('workflow.action_required', 'workflow_transition');
 $check($workflow !== null && $workflow->payloadSchemaVersion === 2);
 $check($workflow !== null && $workflow->targetKind === 'workflow_target');
@@ -62,7 +62,7 @@ foreach ([['in_app','in_app'], ['email','in_app'], ['in_app','webhook'], []] as 
     }
 }
 $catalog = NotificationCatalog::definitions();
-$check(count($catalog) === 9);
+$check(count($catalog) === 12);
 foreach ($registered as $event) {
     foreach ($event->supportedChannels as $channel) {
         $policy = $catalog[$event->type . '.' . $channel] ?? null;
@@ -78,6 +78,6 @@ try {
     $workflow->supportedChannels[] = 'push';
     throw new RuntimeException('Readonly registry entry was mutated');
 } catch (Error) {
-    $check(! $workflow->supports('push'));
+    $check($workflow->supports('push'));
 }
 echo "NFX-C0.1 REGISTRY PURE SMOKE: {$checks} checks PASS\n";

@@ -2,6 +2,8 @@
 
 declare(strict_types=1);
 
+require_once dirname(__DIR__, 1) . '/tools/routes/LegacyRouteSource.php';
+
 require_once __DIR__ . '/../tools/m6/M63BSourceAcceptance.php';
 $root = dirname(__DIR__, 2);
 $n = 0;
@@ -25,7 +27,7 @@ $ok(($pins['POST /api/v1/users/{id}/avatar']['operation_id'] ?? null) === 'uploa
 $ok(($pins['DELETE /api/v1/users/{id}/avatar']['operation_id'] ?? null) === 'deleteUserAvatar', 'DELETE from frozen manifest');
 $ok(!isset($pins['GET /api/v1/users/{id}/avatar']), 'no Avatar GET');
 $ok(!isset($pins['PUT /api/v1/users/{id}/avatar']), 'legacy PUT not in frozen manifest');
-foreach (['backend/app/Config/M63BRoutes.php',
+foreach (['backend/app/Config/Routes/ApiV1/IdentityRoutes.php',
     'backend/app/Modules/Identity/Media/UserAvatarController.php',
     'backend/app/Modules/Identity/Media/UserAvatarService.php',
     'backend/app/Modules/Identity/Media/UserAvatarRules.php'] as $relative) {
@@ -35,6 +37,5 @@ $routeTest = (string)file_get_contents($root.'/backend/tests/m33_routes_pure.php
 $ok(str_contains($routeTest, 'M63BSourceAcceptance::validateRegistered('), '129 footprint proved');
 $ok(str_contains($routeTest, 'M63BSourceAcceptance::projectedPrevious('), '127 footprint replayed');
 $ok(str_contains($routeTest, 'M63SourceAcceptance::validateRegistered('), 'M6.3A media regression replayed');
-$ok(str_contains((string)file_get_contents($root.'/backend/app/Config/Routes.php'),
-    "require __DIR__ . '/M63BRoutes.php';"), 'explicit route ownership');
+$ok(\DinkERP\Tools\Routes\LegacyRouteSource::mounted($root, 'M63BRoutes.php'), 'explicit route ownership');
 echo 'M6.3B AVATAR CONTRACT: '.$n.'/'.$n." PASS\n";

@@ -10,6 +10,8 @@
 #   .\tools\test-unit.ps1 RUN M4-INTEGRATION  # opt-in M4 14-route HTTP/SQL sandbox
 #   .\tools\test-unit.ps1 RUN M4-CONCURRENCY  # opt-in two-writer Numbering config race
 #   .\tools\test-unit.ps1 RUN CUS-UNIT       # offline CUS rules + source contract
+#   .\tools\test-unit.ps1 RUN P1-STANDARDS   # offline P1 SQL-first/PBAC improvement regression
+#   .\tools\test-unit.ps1 RUN ROUTES         # pinned 180-route registry, P1 150 and negative guards
 #   .\tools\test-unit.ps1 RUN M11-UNIT         # M11 PHPUnit unit, no DB
 #   .\tools\test-unit.ps1 RUN M11-INTEGRATION  # M11 MariaDB E2E, uses database.tests
 #   .\tools\test-unit.ps1 RUN M11-RELIABILITY # M11.3A two-process + failure-injection, commits isolated test fixture
@@ -22,7 +24,7 @@ Set-StrictMode -Version Latest
 $ErrorActionPreference = 'Stop'
 
 $tokens = @($args)
-$usage = 'Usage: .\tools\test-unit.ps1 CHECK|RUN [UNIT-STANDARD|DB-READ|ALL|INTEGRATION|ACCEPTANCE|M4-INTEGRATION|M4-CONCURRENCY|M11|M11-UNIT|M11-INTEGRATION|M11-RELIABILITY|CUS-UNIT] OR PREPARE M11'
+$usage = 'Usage: .\tools\test-unit.ps1 CHECK|RUN [UNIT-STANDARD|DB-READ|ALL|INTEGRATION|ACCEPTANCE|M4-INTEGRATION|M4-CONCURRENCY|M11|M11-UNIT|M11-INTEGRATION|M11-RELIABILITY|CUS-UNIT|P1-STANDARDS|ROUTES] OR PREPARE M11'
 if ($tokens.Count -lt 1 -or $tokens.Count -gt 3) { throw $usage }
 $action = ([string]$tokens[0]).ToUpperInvariant()
 if ($action -notin @('CHECK', 'RUN', 'PREPARE')) { throw $usage }
@@ -35,7 +37,7 @@ if ($tokens.Count -eq 2) {
 }
 $suite = $suite.TrimStart('-').ToUpperInvariant()
 if ($action -eq 'PREPARE' -and $suite -ne 'M11') { throw $usage }
-if ($suite -notin @('UNIT-STANDARD', 'DB-READ', 'ALL', 'INTEGRATION', 'ACCEPTANCE', 'M4-INTEGRATION', 'M4-CONCURRENCY', 'M11', 'M11-UNIT', 'M11-INTEGRATION', 'M11-RELIABILITY', 'CUS-UNIT')) { throw $usage }
+if ($suite -notin @('UNIT-STANDARD', 'DB-READ', 'ALL', 'INTEGRATION', 'ACCEPTANCE', 'M4-INTEGRATION', 'M4-CONCURRENCY', 'M11', 'M11-UNIT', 'M11-INTEGRATION', 'M11-RELIABILITY', 'CUS-UNIT', 'P1-STANDARDS', 'ROUTES')) { throw $usage }
 
 function Invoke-PHPChecked {
     param([string[]]$Arguments, [string]$Description)
@@ -133,7 +135,38 @@ try {
         Invoke-PHPChecked -Description 'CUS G1 source contract tests' -Arguments @('tests/cus/customer_source_contract_pure.php')
         Invoke-PHPChecked -Description 'CUS SQL-first scoped query plan tests' -Arguments @('tests/cus/customer_sql_plan_pure.php')
         Invoke-PHPChecked -Description 'CUS Workflow and User candidate regression tests' -Arguments @('tests/cus/customer_workflow_pure.php')
+        Invoke-PHPChecked -Description 'P1 Contact Workflow owner-scope regression' -Arguments @('tests/m1920_contact_workflow_scope_pure.php')
         Write-Host 'CUS-UNIT PASS: CUS offline rules and source contract. No DB, HTTP or browser validation.'
+        return
+    }
+
+    if ($suite -eq 'ROUTES') {
+        Write-Host '===== ROUTES: frozen v1.9.23 registry and routing migration gates (NO DB) ====='
+        Invoke-PHPChecked -Description '180 frozen method/path/handler/filter registrations' -Arguments @('tools/routes/route_inventory.php', '--verify')
+        Invoke-PHPChecked -Description 'M19.24 routing ownership and negative mutations' -Arguments @('tests/m1924_route_architecture_pure.php')
+        Invoke-PHPChecked -Description 'M3.3/P1 frozen 150 operations and historical extension chain' -Arguments @('tests/m33_routes_pure.php')
+        Invoke-PHPChecked -Description 'M3.4D pinned core route contract' -Arguments @('tests/m34d_contract_pure.php')
+        Write-Host 'ROUTES PASS: 180/180 frozen registrations; 150/150 P1; no DB/HTTP. CI4 Spark and DEV HTTP UAT remain pending.'
+        return
+    }
+
+    if ($suite -eq 'P1-STANDARDS') {
+        Write-Host '===== P1-STANDARDS: SQL-first/PBAC performance source regression (NO DB) ====='
+        foreach ($test in @(
+            'tests/m1923_location_sql_pure.php',
+            'tests/m1923_org_scope_pure.php',
+            'tests/m1923_contact_parent_batch_pure.php',
+            'tests/m85_sql_scope_pure.php',
+            'tests/m86_catalog_scope_pure.php',
+            'tests/m86b_org_scope_pure.php',
+            'tests/m86c_scope_pure.php',
+            'tests/m86e_contact_sql_pure.php',
+            'tests/m102_effective_row_actions_pure.php',
+            'tests/m1920_contact_workflow_scope_pure.php'
+        )) {
+            Invoke-PHPChecked -Description "P1 SQL/PBAC regression $test" -Arguments @($test)
+        }
+        Write-Host 'P1-STANDARDS PASS: offline SQL/PBAC source tests only. DEV EXPLAIN and HTTP UAT remain pending.'
         return
     }
 

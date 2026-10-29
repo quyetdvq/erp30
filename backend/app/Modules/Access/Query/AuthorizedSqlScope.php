@@ -24,7 +24,7 @@ final class AuthorizedSqlScope
     /** @param list<string> $states canonical states decided by UnifiedAccessService */
     public static function master(string $resource, array $states): self
     {
-        if (!in_array($resource, ['product', 'product_group', 'product_uom', 'employee', 'department', 'position', 'customer', 'customer_contact'], true)) {
+        if (!in_array($resource, ['product', 'product_group', 'product_uom', 'employee', 'department', 'position', 'province', 'ward', 'customer', 'customer_contact'], true)) {
             throw new InvalidArgumentException('Unreviewed MASTER scope provider.');
         }
         return new self($resource, 'MASTER', self::canonicalStates($states), []);
@@ -72,16 +72,10 @@ final class AuthorizedSqlScope
                 'binds'=>$this->states];
         }
         if ($this->slots === []) return ['sql'=>'1 = 0', 'binds'=>[]];
-        $parts = [];
-        $binds = [];
-        foreach ($this->slots as $slot) {
-            // Organization's own primary key is its PBAC scope; assignments and pricing use organization_id.
-            $idColumn = $this->resource === 'organization' ? 'id' : 'organization_id';
-            $parts[] = '(' . $alias . '.' . $idColumn . ' = ? AND ' . $column . ' = ?)';
-            $binds[] = $slot['organization_id'];
-            $binds[] = $slot['status'];
-        }
-        return ['sql'=>'(' . implode(' OR ', $parts) . ')', 'binds'=>$binds];
+        // Group by status: one IN list per canonical status rather than one
+        // OR clause per Organization/state pair. Preserves exact slot semantics.
+        return $this->organizationSlotPredicate($alias . '.' .
+            ($this->resource === 'organization' ? 'id' : 'organization_id'), $column);
     }
 
     /**
@@ -102,14 +96,25 @@ final class AuthorizedSqlScope
             }
         }
         if ($this->slots === []) return ['sql'=>'1 = 0', 'binds'=>[]];
-        $idColumn = $this->resource === 'organization_contact' ? 'id' : 'organization_id';
-        $state = 'UPPER(TRIM(' . $contactAlias . '.status)) COLLATE utf8mb4_bin';
+        $ownerColumn = $ownerAlias . '.' . ($this->resource === 'organization_contact' ? 'id' : 'organization_id');
+        $statusColumn = 'UPPER(TRIM(' . $contactAlias . '.status)) COLLATE utf8mb4_bin';
+        return $this->organizationSlotPredicate($ownerColumn, $statusColumn);
+    }
+
+    /** @return array{sql:string,binds:list<string>} */
+    private function organizationSlotPredicate(string $ownerColumn, string $statusColumn): array
+    {
+        if ($this->slots === []) return ['sql'=>'1 = 0', 'binds'=>[]];
+        $byStatus = [];
+        foreach ($this->slots as $slot) $byStatus[$slot['status']][] = $slot['organization_id'];
         $parts = [];
         $binds = [];
-        foreach ($this->slots as $slot) {
-            $parts[] = '(' . $ownerAlias . '.' . $idColumn . ' = ? AND ' . $state . ' = ?)';
-            $binds[] = $slot['organization_id'];
-            $binds[] = $slot['status'];
+        foreach ($byStatus as $status => $ids) {
+            $owner = count($ids) === 1
+                ? $ownerColumn . ' = ?'
+                : $ownerColumn . ' IN (' . implode(',', array_fill(0, count($ids), '?')) . ')';
+            $parts[] = '(' . $owner . ' AND ' . $statusColumn . ' = ?)';
+            $binds = [...$binds, ...$ids, $status];
         }
         return ['sql'=>'(' . implode(' OR ', $parts) . ')', 'binds'=>$binds];
     }

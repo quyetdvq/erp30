@@ -15,16 +15,16 @@ $check($accepted['read_engine'] === 'UNIFIED_ONLY', 'canonical engine only');
 $check($accepted['org_people_sql'] === 'MANDATORY', 'SQL mandatory');
 $controller=(string)file_get_contents($root.'/backend/app/Controllers/Api/ReadCatalogController.php');
 $bridge=(string)file_get_contents($root.'/backend/app/Modules/Access/ReadAccessBridge.php');
-// More than a string-presence check: the only reachable in-memory list branch
-// is expressly restricted to province/ward, and both SQL lists precede it.
+// All three resource families use mandatory SQL-first scope and pagination.
 $index=substr($controller, strpos($controller, 'private function index('),
     strpos($controller, 'public function tree()') - strpos($controller, 'private function index('));
 $peoplePos=strpos($index, "['employee', 'department', 'position']");
 $orgPos=strpos($index, "['organization', 'employee_assignment']");
-$legacyPos=strpos($index, "['province', 'ward']");
-$check($peoplePos!==false && $orgPos!==false && $legacyPos!==false &&
-    $peoplePos < $orgPos && $orgPos < $legacyPos, 'SQL dispatch before bounded in-memory branch');
-$check(substr_count($index, 'authorizedRows(') === 1, 'only one bounded in-memory list branch');
+$locationPos=strpos($index, "['province', 'ward']");
+$check($peoplePos!==false && $orgPos!==false && $locationPos!==false &&
+    $peoplePos < $orgPos && $orgPos < $locationPos, 'three mandatory SQL branches');
+$check(str_contains($index, 'locationSqlService($user, $instant)->list('), 'Location SQL list');
+$check(!str_contains($index, 'authorizedRows(') && !str_contains($index, 'AuthorizedListPage::paginate('), 'no in-memory list branch');
 $check(str_contains($index, 'throw new \\UnexpectedValueException('), 'unknown resource fails closed');
 $tree=substr($controller, strpos($controller, 'public function tree()'),
     strpos($controller, 'private function show(') - strpos($controller, 'public function tree()'));
@@ -35,7 +35,8 @@ $detail=substr($controller, strpos($controller, 'private function show('),
 $check(str_contains($detail, 'peopleSqlService($user)->show(') &&
     str_contains($detail, 'organizationSqlService($user)->show('), 'detail SQL scoped');
 $check(str_contains($detail, "in_array(\$resource, ['province', 'ward'], true)"),
-    'detail in-memory branch only for two unmigrated resources');
+    'Location detail remains explicitly reviewed');
+$check(str_contains($detail, 'locationSqlService($user)->show('), 'Location SQL detail');
 $label=substr($controller, strpos($controller, 'public function resolveOrganizationLabels()'),
     strpos($controller, 'private function peopleSqlService(') - strpos($controller, 'public function resolveOrganizationLabels()'));
 $check(str_contains($label, 'organizationSqlService($user)->organizationLabels('),

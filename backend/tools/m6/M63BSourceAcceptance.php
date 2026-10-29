@@ -2,6 +2,8 @@
 
 declare(strict_types=1);
 
+require_once dirname(__DIR__, 2) . '/tools/routes/LegacyRouteSource.php';
+
 require_once __DIR__ . '/M63SourceAcceptance.php';
 
 /** M6.3B: only the frozen User Avatar upload and delete operations. */
@@ -52,11 +54,11 @@ final class M63BSourceAcceptance
         $previous = M63SourceAcceptance::verify($root);
         if ($previous['total'] !== 127) throw new RuntimeException('M6.3B requires M6.3A Product Media milestone');
         $main = (string) file_get_contents($root . '/backend/app/Config/Routes.php');
-        if (substr_count($main, "require __DIR__ . '/M63BRoutes.php';") !== 1
+        if ((\DinkERP\Tools\Routes\LegacyRouteSource::mounted($root, 'M63BRoutes.php') ? 1 : 0) !== 1
             || str_contains($main, 'setAutoRoute(true)')) {
             throw new RuntimeException('M6.3B requires a single explicit route include, auto route OFF');
         }
-        $source = (string) file_get_contents($root . '/backend/app/Config/M63BRoutes.php');
+        $source = (string) \DinkERP\Tools\Routes\LegacyRouteSource::source($root, 'M63BRoutes.php');
         $controller = (string) file_get_contents($root . '/backend/app/Modules/Identity/Media/UserAvatarController.php');
         $service = (string) file_get_contents($root . '/backend/app/Modules/Identity/Media/UserAvatarService.php');
         $rules = (string) file_get_contents($root . '/backend/app/Modules/Identity/Media/UserAvatarRules.php');

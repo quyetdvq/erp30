@@ -19,8 +19,8 @@ foreach([
 foreach([
     "in_array($" . "resource, ['employee', 'department', 'position'], true)",
     'peopleSqlService($user, $instant)->list(',
-    'peopleSqlService($user)->show(', 'ReadAccessBridge($user',
-    'AuthorizedListPage::paginate(', 'organizationSqlService($user',
+    'peopleSqlService($user)->show(', 'locationSqlService($user)->show(',
+    'locationSqlService($user, $instant)->list(', 'organizationSqlService($user',
 ] as $term) $ok(str_contains($controller,$term),'mandatory SQL/canonical dispatch '.$term);
 foreach(['DINKERP_M86C_SQL_SCOPE_MODE', 'DINKERP_M32_READ_MODE',
     'peopleSqlEnabled('] as $obsolete) {

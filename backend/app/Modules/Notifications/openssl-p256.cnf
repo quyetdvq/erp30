@@ -1,0 +1,10 @@
+# Minimal OpenSSL configuration for ephemeral Web Push P-256 key generation.
+# Used only when PHP CLI cannot find its system OpenSSL configuration.
+# No secrets, fixed keys, or TLS/provider overrides are defined here.
+[ req ]
+distinguished_name = empty_distinguished_name
+# PHP's generic key-generation validator expects at least 384 here on
+# affected Windows/OpenSSL builds. EC key strength is set by prime256v1.
+default_bits = 384
+
+[ empty_distinguished_name ]

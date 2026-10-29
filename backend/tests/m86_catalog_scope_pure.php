@@ -23,7 +23,7 @@ $reject=static function(callable $call,string $message)use($ok):void{
     catch(InvalidArgumentException|UnexpectedValueException){$ok(true,$message);}
 };
 $src=(string)file_get_contents(__DIR__.'/../app/Modules/Access/UnifiedAccessService.php');
-$ok(str_contains($src,"['product', 'product_group', 'product_uom', 'employee', 'department', 'position']"), 'canonical VIEW state compiler keeps Catalog and reviewed People MASTER resources');
+$ok(str_contains($src,"['product', 'product_group', 'product_uom', 'employee', 'department', 'position', 'province', 'ward', 'customer', 'customer_contact']"), 'canonical VIEW state compiler keeps Catalog and reviewed People MASTER resources');
 $ok(str_contains($src, "\$resource['domain'] !== 'MASTER'"), 'MASTER Resource Domain checked');
 $ok(str_contains($src,'viewDecisionForState('), 'canonical view policy decision reused');
 $ok(str_contains($src,'policies->applicable('), 'DENY and ABSOLUTE_DENY not bypassed');

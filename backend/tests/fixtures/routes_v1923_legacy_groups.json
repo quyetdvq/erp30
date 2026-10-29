@@ -1,0 +1,474 @@
+{
+  "M4Routes.php": [
+    {
+      "method": "GET",
+      "path": "display-settings/runtime"
+    },
+    {
+      "method": "GET",
+      "path": "display-settings/definitions"
+    },
+    {
+      "method": "GET",
+      "path": "display-settings/values"
+    },
+    {
+      "method": "PATCH",
+      "path": "display-settings"
+    },
+    {
+      "method": "POST",
+      "path": "display-settings/actions/reset"
+    },
+    {
+      "method": "GET",
+      "path": "resources/(:num)/numbering-series"
+    },
+    {
+      "method": "POST",
+      "path": "resources/(:num)/numbering-series"
+    },
+    {
+      "method": "GET",
+      "path": "resources/(:num)/numbering-series/(:num)"
+    },
+    {
+      "method": "PATCH",
+      "path": "resources/(:num)/numbering-series/(:num)"
+    },
+    {
+      "method": "POST",
+      "path": "resources/(:num)/numbering-series/(:num)/actions/set-state"
+    },
+    {
+      "method": "POST",
+      "path": "resources/(:num)/numbering-series/actions/validate-config"
+    },
+    {
+      "method": "GET",
+      "path": "business-workflow/(:segment)/states"
+    },
+    {
+      "method": "GET",
+      "path": "business-workflow/(:segment)/(:num)/options"
+    },
+    {
+      "method": "POST",
+      "path": "business-workflow/(:segment)/(:num)/actions/(:segment)"
+    },
+    {
+      "method": "GET",
+      "path": "business-workflow/(:segment)/(:num)/notification-assignees"
+    },
+    {
+      "method": "PUT",
+      "path": "business-workflow/(:segment)/(:num)/notification-assignees"
+    }
+  ],
+  "M5Routes.php": [
+    {
+      "method": "POST",
+      "path": "provinces"
+    },
+    {
+      "method": "PATCH",
+      "path": "provinces/(:num)"
+    },
+    {
+      "method": "POST",
+      "path": "provinces/(:num)/actions/set-state"
+    },
+    {
+      "method": "POST",
+      "path": "wards"
+    },
+    {
+      "method": "PATCH",
+      "path": "wards/(:num)"
+    },
+    {
+      "method": "POST",
+      "path": "wards/(:num)/actions/set-state"
+    }
+  ],
+  "M52Routes.php": [
+    {
+      "method": "POST",
+      "path": "organizations"
+    },
+    {
+      "method": "PATCH",
+      "path": "organizations/(:num)"
+    },
+    {
+      "method": "POST",
+      "path": "organizations/(:num)/actions/set-state"
+    }
+  ],
+  "M53Routes.php": [
+    {
+      "method": "POST",
+      "path": "employees"
+    },
+    {
+      "method": "PATCH",
+      "path": "employees/(:num)"
+    },
+    {
+      "method": "POST",
+      "path": "employees/(:num)/actions/set-state"
+    },
+    {
+      "method": "POST",
+      "path": "employee-assignments"
+    },
+    {
+      "method": "PATCH",
+      "path": "employee-assignments/(:num)"
+    },
+    {
+      "method": "POST",
+      "path": "employee-assignments/(:num)/actions/set-state"
+    }
+  ],
+  "M54Routes.php": [
+    {
+      "method": "POST",
+      "path": "departments"
+    },
+    {
+      "method": "PATCH",
+      "path": "departments/(:num)"
+    },
+    {
+      "method": "POST",
+      "path": "departments/(:num)/actions/set-state"
+    },
+    {
+      "method": "POST",
+      "path": "positions"
+    },
+    {
+      "method": "PATCH",
+      "path": "positions/(:num)"
+    },
+    {
+      "method": "POST",
+      "path": "positions/(:num)/actions/set-state"
+    }
+  ],
+  "M55Routes.php": [
+    {
+      "method": "GET",
+      "path": "contacts"
+    },
+    {
+      "method": "POST",
+      "path": "contacts"
+    },
+    {
+      "method": "GET",
+      "path": "contacts/(:num)"
+    },
+    {
+      "method": "PATCH",
+      "path": "contacts/(:num)"
+    },
+    {
+      "method": "POST",
+      "path": "contacts/(:num)/actions/set-state"
+    }
+  ],
+  "M61Routes.php": [
+    {
+      "method": "GET",
+      "path": "product-groups"
+    },
+    {
+      "method": "POST",
+      "path": "product-groups"
+    },
+    {
+      "method": "GET",
+      "path": "product-groups/(:num)"
+    },
+    {
+      "method": "PATCH",
+      "path": "product-groups/(:num)"
+    },
+    {
+      "method": "POST",
+      "path": "product-groups/(:num)/actions/set-state"
+    },
+    {
+      "method": "GET",
+      "path": "product-uoms"
+    },
+    {
+      "method": "POST",
+      "path": "product-uoms"
+    },
+    {
+      "method": "GET",
+      "path": "product-uoms/(:num)"
+    },
+    {
+      "method": "PATCH",
+      "path": "product-uoms/(:num)"
+    },
+    {
+      "method": "POST",
+      "path": "product-uoms/(:num)/actions/set-state"
+    }
+  ],
+  "M62ARoutes.php": [
+    {
+      "method": "GET",
+      "path": "products"
+    },
+    {
+      "method": "GET",
+      "path": "products/(:num)"
+    }
+  ],
+  "M62BRoutes.php": [
+    {
+      "method": "POST",
+      "path": "products"
+    },
+    {
+      "method": "PATCH",
+      "path": "products/(:num)"
+    },
+    {
+      "method": "POST",
+      "path": "products/(:num)/actions/set-state"
+    }
+  ],
+  "M63Routes.php": [
+    {
+      "method": "POST",
+      "path": "products/(:num)/image"
+    },
+    {
+      "method": "DELETE",
+      "path": "products/(:num)/image"
+    }
+  ],
+  "M63BRoutes.php": [
+    {
+      "method": "POST",
+      "path": "users/(:num)/avatar"
+    },
+    {
+      "method": "DELETE",
+      "path": "users/(:num)/avatar"
+    }
+  ],
+  "M64ARoutes.php": [
+    {
+      "method": "GET",
+      "path": "products/options"
+    },
+    {
+      "method": "POST",
+      "path": "products/options/resolve"
+    },
+    {
+      "method": "POST",
+      "path": "product-uoms/labels/resolve"
+    }
+  ],
+  "M71Routes.php": [
+    {
+      "method": "GET",
+      "path": "products/(:num)/uom-conversions"
+    },
+    {
+      "method": "PUT",
+      "path": "products/(:num)/uom-conversions"
+    }
+  ],
+  "M72Routes.php": [
+    {
+      "method": "GET",
+      "path": "products/(:num)/combo-items"
+    },
+    {
+      "method": "PUT",
+      "path": "products/(:num)/combo-items"
+    }
+  ],
+  "M73Routes.php": [
+    {
+      "method": "GET",
+      "path": "price-lists"
+    },
+    {
+      "method": "POST",
+      "path": "price-lists"
+    },
+    {
+      "method": "GET",
+      "path": "price-lists/(:num)"
+    },
+    {
+      "method": "PATCH",
+      "path": "price-lists/(:num)"
+    },
+    {
+      "method": "POST",
+      "path": "price-lists/(:num)/actions/set-state"
+    },
+    {
+      "method": "GET",
+      "path": "price-lists/(:num)/items"
+    },
+    {
+      "method": "PUT",
+      "path": "price-lists/(:num)/items"
+    }
+  ],
+  "M74Routes.php": [
+    {
+      "method": "POST",
+      "path": "products/details/resolve"
+    },
+    {
+      "method": "POST",
+      "path": "products/relations-preview"
+    },
+    {
+      "method": "POST",
+      "path": "products/sales-uom-options/resolve"
+    }
+  ],
+  "M8Routes.php": [
+    {
+      "method": "POST",
+      "path": "products/import-jobs"
+    },
+    {
+      "method": "GET",
+      "path": "import-jobs"
+    },
+    {
+      "method": "GET",
+      "path": "import-jobs/(:num)"
+    },
+    {
+      "method": "GET",
+      "path": "import-jobs/(:num)/rows"
+    }
+  ],
+  "CUSRoutes.php": [
+    {
+      "method": "GET",
+      "path": "customers"
+    },
+    {
+      "method": "POST",
+      "path": "customers"
+    },
+    {
+      "method": "GET",
+      "path": "customers/(:num)"
+    },
+    {
+      "method": "PATCH",
+      "path": "customers/(:num)"
+    },
+    {
+      "method": "POST",
+      "path": "customers/(:num)/actions/set-state"
+    },
+    {
+      "method": "GET",
+      "path": "customers/(:num)/interactions"
+    },
+    {
+      "method": "POST",
+      "path": "customers/(:num)/interactions"
+    }
+  ],
+  "WorkflowAssigneeRoutes.php": [
+    {
+      "method": "GET",
+      "path": "business-workflow/(:segment)/(:num)/assignee-candidates"
+    }
+  ],
+  "M11Routes.php": [
+    {
+      "method": "GET",
+      "path": "notification-settings"
+    },
+    {
+      "method": "PATCH",
+      "path": "notification-settings"
+    },
+    {
+      "method": "GET",
+      "path": "notifications/preferences"
+    },
+    {
+      "method": "PATCH",
+      "path": "notifications/preferences"
+    },
+    {
+      "method": "GET",
+      "path": "notifications/summary"
+    },
+    {
+      "method": "POST",
+      "path": "notifications/actions/sync"
+    },
+    {
+      "method": "GET",
+      "path": "notifications"
+    },
+    {
+      "method": "GET",
+      "path": "my-work"
+    },
+    {
+      "method": "POST",
+      "path": "notifications/(:num)/actions/mark-read"
+    },
+    {
+      "method": "POST",
+      "path": "notifications/actions/mark-all-read"
+    },
+    {
+      "method": "GET",
+      "path": "notifications/push/config"
+    },
+    {
+      "method": "GET",
+      "path": "notifications/push/subscriptions"
+    },
+    {
+      "method": "POST",
+      "path": "notifications/push/subscriptions"
+    },
+    {
+      "method": "DELETE",
+      "path": "notifications/push/subscriptions/(:num)"
+    },
+    {
+      "method": "GET",
+      "path": "notification-operations/overview"
+    },
+    {
+      "method": "GET",
+      "path": "notification-operations/diagnostics"
+    },
+    {
+      "method": "GET",
+      "path": "configuration-settings/notifications"
+    },
+    {
+      "method": "PATCH",
+      "path": "configuration-settings/notifications"
+    }
+  ]
+}

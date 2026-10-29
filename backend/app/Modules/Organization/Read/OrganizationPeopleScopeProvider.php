@@ -6,6 +6,7 @@ namespace App\Modules\Organization\Read;
 
 use App\Modules\Access\Query\AuthorizedSqlScope;
 use App\Modules\Access\Query\ResourceScopeProvider;
+use App\Modules\Access\Query\TrustedOrganizationIdPager;
 use App\Modules\Access\UnifiedAccessService;
 use CodeIgniter\Database\BaseConnection;
 use InvalidArgumentException;
@@ -32,25 +33,17 @@ final class OrganizationPeopleScopeProvider implements ResourceScopeProvider
 
     public function compile(UnifiedAccessService $access): AuthorizedSqlScope
     {
-        $result = $this->db->table('organizations')->select('id')
-            ->orderBy('id', 'ASC')->limit(513)->get();
-        if ($result === false) {
-            throw new UnexpectedValueException('Organization scope metadata query failed.');
+        // Bypass expensive metadata enumeration when the actor has no base VIEW.
+        if (!$access->hasBaseViewPermission($this->type)) {
+            return AuthorizedSqlScope::organization($this->type, []);
         }
-        $rows = $result->getResultArray();
-        if (count($rows) > 512) {
-            // A future chunked/temporary-table compiler may remove this bound.
-            // Never weaken PBAC to return unscoped records.
-            throw new UnexpectedValueException('AUTH_SCOPE_COMPILATION_UNSUPPORTED: more than 512 organizations.');
-        }
-        $ids = [];
-        foreach ($rows as $row) {
-            $id = (string)($row['id'] ?? '');
-            if (preg_match('/\A[1-9][0-9]*\z/D', $id) !== 1) {
-                throw new UnexpectedValueException('Untrusted Organization identifier.');
-            }
-            $ids[] = $id;
-        }
+        $ids = TrustedOrganizationIdPager::collect(function (?string $last, int $size): array {
+            $builder = $this->db->table('organizations')->select('id');
+            if ($last !== null) $builder->where('id >', $last);
+            $query = $builder->orderBy('id', 'ASC')->limit($size)->get();
+            if ($query === false) throw new UnexpectedValueException('Organization metadata query failed.');
+            return $query->getResultArray();
+        });
         return AuthorizedSqlScope::organization(
             $this->type,
             $access->viewableOrganizationStateBuckets($this->type, $ids),

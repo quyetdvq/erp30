@@ -2,6 +2,8 @@
 
 declare(strict_types=1);
 
+require_once dirname(__DIR__, 2) . '/tools/routes/LegacyRouteSource.php';
+
 /** CUS-IMP-07: shared Workflow adapters and bounded assignee candidate search. */
 require_once __DIR__ . '/../../app/Exceptions/DomainException.php';
 require_once __DIR__ . '/../../app/Modules/Access/ResourceStateCatalog.php';
@@ -71,6 +73,6 @@ $ok(str_contains($source('Modules/Notifications/WorkflowNotificationAssigneesSer
 $ok(str_contains($source('Modules/Notifications/WorkflowNotificationAssigneesService.php'), '->where(\'deleted_at\', null)'), 'Candidate query filters deleted users');
 $ok(str_contains($source('Modules/Notifications/WorkflowNotificationAssigneesService.php'), '->where(\'active\', 1)'), 'Candidate query filters inactive users');
 $ok(str_contains($source('Modules/Notifications/WorkflowNotificationAssigneesService.php'), '(clone $builder)->countAllResults()'), 'Candidate count scoped server-side');
-$ok(str_contains($source('Config/WorkflowAssigneeRoutes.php'), 'assignee-candidates'), 'Exact route registered');
+$ok(str_contains(\DinkERP\Tools\Routes\LegacyRouteSource::source(dirname(__DIR__, 3), 'WorkflowAssigneeRoutes.php'), 'assignee-candidates'), 'Exact route registered');
 
 echo 'CUS WORKFLOW/ASSIGNEES PURE: ' . $count . '/' . $count . " PASS\n";

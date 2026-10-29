@@ -7,7 +7,7 @@ export type PushConfig = {
   queue_enabled: boolean
   send_enabled: boolean
 }
-export type PushDevice = { id: string; created_at: string }
+export type PushDevice = { id: string; created_at: string; detail_ready: boolean }
 const base = '/api/v1/notifications/push'
 
 export async function getPushConfig(): Promise<PushConfig> {

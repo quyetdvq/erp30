@@ -2,6 +2,8 @@
 
 declare(strict_types=1);
 
+require_once dirname(__DIR__, 2) . '/tools/routes/LegacyRouteSource.php';
+
 /**
  * M4 immutable contract extension. M3.4D's exact seventy prior routes and
  * the complete v1.2.4 baseline manifest remain independently SHA-256 pinned.
@@ -64,8 +66,8 @@ final class M4SourceAcceptance
         $baseline = [];
         foreach ($document['operations'] as $op) $baseline[$op['method'].' '.$op['path']] = $op;
         if (count($baseline) !== 150) throw new RuntimeException('M4 baseline operations changed');
-        $source = (string) file_get_contents($root.'/backend/app/Config/M4Routes.php');
-        preg_match_all('~\\$routes->(get|post|patch|put|delete)\(\x27([^\x27]+)\x27,\s*\[(\\\\App\\\\Modules\\\\[A-Za-z0-9_\\\\]+)::class,\x27([A-Za-z0-9_]+)\x27\]\);~', $source, $all, PREG_SET_ORDER);
+        $source = (string) \DinkERP\Tools\Routes\LegacyRouteSource::source($root, 'M4Routes.php');
+        preg_match_all('~\\$routes->(get|post|patch|put|delete)\(\x27([^\x27]+)\x27,\s*\[(\\\\App\\\\Modules\\\\[A-Za-z0-9_\\\\]+)::class,\s*\x27([A-Za-z0-9_]+)\x27\]\);~', $source, $all, PREG_SET_ORDER);
         // M11 added exactly two notification-assignee routes to this legacy file.
         // Keep all fourteen M4 operations pinned, and allow only these two named
         // additive routes. An arbitrary new operation must still fail closed.
@@ -119,7 +121,7 @@ final class M4SourceAcceptance
             $matched[$key]=$operationId;
         }
         if (count($matched)!==14 || count($seenExtensions)!==2) throw new RuntimeException('M4 baseline or approved M11 extension missing');
-        if (!str_contains((string)file_get_contents($root.'/backend/app/Config/Routes.php'),"require __DIR__ . '/M4Routes.php';")) {
+        if (!\DinkERP\Tools\Routes\LegacyRouteSource::mounted($root, 'M4Routes.php')) {
             throw new RuntimeException('M4 route registration not included');
         }
         return [

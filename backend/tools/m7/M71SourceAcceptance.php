@@ -2,6 +2,8 @@
 
 declare(strict_types=1);
 
+require_once dirname(__DIR__, 2) . '/tools/routes/LegacyRouteSource.php';
+
 require_once __DIR__.'/../m6/M64ASourceAcceptance.php';
 
 /** M7.1 two frozen Product UOM conversion operations; source-only gate. */
@@ -46,11 +48,11 @@ final class M71SourceAcceptance
         $prior = M64ASourceAcceptance::verify($root);
         if ($prior['total'] !== 132) throw new RuntimeException('Missing M6.4A.1 accepted source.');
         $config = (string)file_get_contents($root.'/backend/app/Config/Routes.php');
-        if (substr_count($config, "require __DIR__ . '/M71Routes.php';") !== 1
+        if ((\DinkERP\Tools\Routes\LegacyRouteSource::mounted($root, 'M71Routes.php') ? 1 : 0) !== 1
             || !str_contains($config, '$routes->setAutoRoute(false)')) {
             throw new RuntimeException('M7.1 route include/autoroute guard invalid.');
         }
-        $source = (string)file_get_contents($root.'/backend/app/Config/M71Routes.php');
+        $source = (string)\DinkERP\Tools\Routes\LegacyRouteSource::source($root, 'M71Routes.php');
         $regexp = '~\\$routes->(get|put)\(\x27([^\x27]+)\x27,\s*\[\\\\App\\\\Modules\\\\Product\\\\Conversion\\\\ProductConversionController::class,\s*\x27([A-Za-z][A-Za-z0-9_]*)\x27\]\);~';
         preg_match_all($regexp, $source, $matches, PREG_SET_ORDER);
         if (count($matches) !== 2 || substr_count($source, '$routes->') !== 2) {

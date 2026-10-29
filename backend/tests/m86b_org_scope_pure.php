@@ -28,9 +28,11 @@ $org=Scope::organization('organization',[
 ]);
 $orgPredicate=$org->predicate('p');
 $ok($org->domain==='ORGANIZATION'&&$org->resource==='organization','own resource and domain');
-$ok(substr_count($orgPredicate['sql'],'p.id = ?')===3,'Organization scope uses its OWN id');
+$ok(str_contains($orgPredicate['sql'],'p.id IN (?,?)') && str_contains($orgPredicate['sql'],'p.id = ?'),
+    'Organization own PK and compact status groups');
 $ok(!str_contains($orgPredicate['sql'],'p.organization_id'),'not nonexistent organization_id');
-$ok($orgPredicate['binds']===['1','ACTIVE','5','ACTIVE','5','DRAFT'],'same-state different companies remain distinct');
+$ok($orgPredicate['binds']===['1','5','ACTIVE','5','DRAFT'],
+    'same-state owners grouped without cross-state access');
 $ok(substr_count($orgPredicate['sql'],'?')===count($orgPredicate['binds']),'Organization slots parameterized');
 $assignment=Scope::organization('employee_assignment',[
     ['organization_id'=>'5','status'=>'ACTIVE'],

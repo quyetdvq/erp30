@@ -20,7 +20,7 @@ function rejectsDContract(callable $call): bool
 // checkouts on Windows may use CRLF while Linux packages use LF. The real
 // source and its 70-route footprint are checked independently by contract().
 $source = str_replace(["\r\n", "\r"], "\n",
-    (string)file_get_contents($root.'/backend/app/Config/Routes.php'));
+    \DinkERP\Tools\Routes\LegacyRouteSource::core70($root));
 $audit = M34DAcceptance::contract($root);
 passDContract('Baseline has 150 independent SHA-256-pinned operations', $audit['baseline_operations']===150);
 passDContract('Exactly 70 distinct reviewed routes', $audit['implemented_routes']===70);

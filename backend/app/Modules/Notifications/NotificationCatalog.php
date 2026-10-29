@@ -20,6 +20,9 @@ final class NotificationCatalog
             'import.completed_with_errors.email' => ['default' => false, 'override' => true, 'mandatory' => false, 'capability' => 'AVAILABLE', 'producer_state' => self::emailState(), 'requires_explicit_consent' => true],
             'import.failed.email' => ['default' => false, 'override' => true, 'mandatory' => false, 'capability' => 'AVAILABLE', 'producer_state' => self::emailState(), 'requires_explicit_consent' => true],
             'import.completed.push' => ['default' => false, 'override' => true, 'mandatory' => false, 'capability' => 'AVAILABLE', 'producer_state' => self::pushState(), 'requires_explicit_consent' => true],
+            'import.completed_with_errors.push' => ['default' => false, 'override' => true, 'mandatory' => false, 'capability' => 'AVAILABLE', 'producer_state' => self::pushState(), 'requires_explicit_consent' => true],
+            'import.failed.push' => ['default' => false, 'override' => true, 'mandatory' => false, 'capability' => 'AVAILABLE', 'producer_state' => self::pushState(), 'requires_explicit_consent' => true],
+            'workflow.action_required.push' => ['default' => false, 'override' => true, 'mandatory' => false, 'capability' => 'AVAILABLE', 'producer_state' => self::workflowPushState(), 'requires_explicit_consent' => true],
         ];
     }
 
@@ -32,6 +35,12 @@ final class NotificationCatalog
     private static function pushState(): string
     {
         return NotificationFlags::producerEnabled() && NotificationFlags::pushQueueEnabled()
+            ? 'ACTIVE' : 'INACTIVE';
+    }
+
+    private static function workflowPushState(): string
+    {
+        return NotificationFlags::workflowProducerEnabled() && NotificationFlags::pushQueueEnabled()
             ? 'ACTIVE' : 'INACTIVE';
     }
 

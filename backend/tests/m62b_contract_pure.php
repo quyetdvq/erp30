@@ -2,6 +2,8 @@
 
 declare(strict_types=1);
 
+require_once dirname(__DIR__, 1) . '/tools/routes/LegacyRouteSource.php';
+
 require_once __DIR__.'/../tools/m6/M62BSourceAcceptance.php';
 $root=dirname(__DIR__,2); $n=0;
 $check=static function(bool $b,string $why)use(&$n):void {if(!$b)throw new RuntimeException('M6.2B contract: '.$why);$n++;};
@@ -26,6 +28,6 @@ foreach (['wrong-owner','extra','missing'] as $case) {
     catch (RuntimeException $e) {$check(!str_starts_with($e->getMessage(),'accepted '),'reject '.$case);}
 }
 $main=(string)file_get_contents($root.'/backend/app/Config/Routes.php');
-$check(substr_count($main,"require __DIR__ . '/M62BRoutes.php';")===1,'router include once');
+$check((\DinkERP\Tools\Routes\LegacyRouteSource::mounted($root, 'M62BRoutes.php') ? 1 : 0)===1,'router include once');
 $check(!str_contains($main,'setAutoRoute(true)'),'autoroutes remain disabled');
 echo 'M6.2B CONTRACT: '.$n.'/'.$n." PASS\n";

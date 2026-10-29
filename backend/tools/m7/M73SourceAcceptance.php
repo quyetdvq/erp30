@@ -2,6 +2,8 @@
 
 declare(strict_types=1);
 
+require_once dirname(__DIR__, 2) . '/tools/routes/LegacyRouteSource.php';
+
 require_once __DIR__.'/M72SourceAcceptance.php';
 
 /** M7.3: exactly seven frozen Pricing CRUD/Price List Item route contracts. */
@@ -47,10 +49,10 @@ final class M73SourceAcceptance
         if ($before['total']!==136) throw new RuntimeException('Prior M7.2 source not accepted.');
         $app=$root.'/backend/app/';
         $routes=(string)file_get_contents($app.'Config/Routes.php');
-        if (substr_count($routes,"require __DIR__ . '/M73Routes.php';")!==1 || !str_contains($routes,'$routes->setAutoRoute(false)')) {
+        if ((\DinkERP\Tools\Routes\LegacyRouteSource::mounted($root, 'M73Routes.php') ? 1 : 0)!==1 || !str_contains($routes,'$routes->setAutoRoute(false)')) {
             throw new RuntimeException('M7.3 route include/auto-route guard is invalid.');
         }
-        $source=(string)file_get_contents($app.'Config/M73Routes.php');
+        $source=(string)\DinkERP\Tools\Routes\LegacyRouteSource::source($root, 'M73Routes.php');
         $pattern='~\\$routes->(get|post|patch|put)\(\x27([^\x27]+)\x27,\s*\[\\\\App\\\\Modules\\\\Pricing\\\\PriceList\\\\PriceListController::class,\s*\x27([A-Za-z][A-Za-z0-9_]*)\x27\]\);~';
         preg_match_all($pattern,$source,$matches,PREG_SET_ORDER);
         if (count($matches)!==7 || substr_count($source,'$routes->')!==7) {

@@ -19,6 +19,20 @@ final class NotificationInboxController extends Controller
         return ApiResponder::success($this->response, $this->service()->summary());
     }
 
+    /** Explicit CSRF-protected POST: never mutate Outbox via GET summary. */
+    public function sync(): ResponseInterface
+    {
+        $this->noStore();
+        $this->rejectQuery();
+        $this->rejectBody();
+        $actor = auth()->user();
+        if (! $actor instanceof User) {
+            throw new DomainException('UNAUTHENTICATED');
+        }
+        return ApiResponder::success($this->response,
+            (new NotificationOnDemandSync(db_connect()))->refresh($actor));
+    }
+
     public function listing(): ResponseInterface
     {
         $this->noStore();

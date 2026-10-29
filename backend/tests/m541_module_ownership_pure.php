@@ -28,7 +28,7 @@ $actual = array_values(array_filter(scandir($modules) ?: [], static fn (string $
     $v !== '.' && $v !== '..' && is_dir($modules . '/' . $v)
 ));
 sort($actual);
-$expected = ['Access', 'Contact', 'Identity', 'Import', 'Locations', 'Numbering', 'Organization', 'People', 'Pricing', 'Product', 'Settings', 'Workflow'];
+$expected = ['Access', 'Contact', 'Customer', 'Identity', 'Import', 'Location', 'Locations', 'Notifications', 'Numbering', 'Organization', 'People', 'Pricing', 'Product', 'Settings', 'Workflow'];
 $check($actual === $expected, 'runtime modules equal the current Backend Rewrite owner list');
 foreach (['OrganizationManagement', 'PeopleManagement', 'EmployeeStructureManagement', 'ReadApi', 'ContactsManagement', 'ProductManagement'] as $obsolete) {
     $check(! file_exists($modules . '/' . $obsolete), 'obsolete root removed: ' . $obsolete);
@@ -51,7 +51,9 @@ foreach ([
 }
 $controller = (string) file_get_contents($root . '/app/Controllers/Api/ReadCatalogController.php');
 $check(str_contains($controller, 'namespace App\\Controllers\\Api;')
-    && str_contains($controller, 'new ReadAccessBridge('),
+    && str_contains($controller, 'organizationSqlService(')
+    && str_contains($controller, 'peopleSqlService(')
+    && str_contains($controller, 'locationSqlService('),
     'M2 read compatibility controller is outside Modules and retains PBAC');
 
 foreach (['ScopeFactsReader.php', 'RuntimeActorReader.php', 'ReadViewGate.php', 'UnifiedAccessService.php'] as $reader) {
@@ -116,13 +118,14 @@ $check($scope->employeeFactsAt('9', $instant)['effective_assignments'] === [],
 $check($scope->organizationAncestorIds('12') === ['1', '12'],
     'injected organization port retains root-first ancestor IDs');
 
-$routes = (string) file_get_contents($root . '/app/Config/Routes.php');
+require_once __DIR__ . '/../tools/routes/LegacyRouteSource.php';
+$routes = \DinkERP\Tools\Routes\LegacyRouteSource::core70(dirname($root));
 $check(str_contains($routes, 'use App\\Controllers\\Api\\ReadCatalogController;'),
     'existing M2.1 GET routes use the relocated read compatibility controller');
 foreach (['M52Routes.php' => 'Organization\\Mutation\\OrganizationMutationController',
           'M53Routes.php' => 'People\\Mutation\\PeopleMutationController',
           'M54Routes.php' => 'People\\Structure\\Mutation\\StructureMutationController'] as $file => $fqcn) {
-    $s = (string) file_get_contents($root . '/app/Config/' . $file);
+    $s = \DinkERP\Tools\Routes\LegacyRouteSource::source(dirname($root), $file);
     $check(str_contains($s, $fqcn), $file . ' targets its domain owner');
 }
 

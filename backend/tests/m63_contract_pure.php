@@ -2,6 +2,8 @@
 
 declare(strict_types=1);
 
+require_once dirname(__DIR__, 1) . '/tools/routes/LegacyRouteSource.php';
+
 require_once __DIR__.'/../tools/m6/M63SourceAcceptance.php';
 $root = dirname(__DIR__,2);
 $n = 0;
@@ -21,11 +23,11 @@ $pins=[]; foreach($manifest['operations'] as $op) $pins[$op['method'].' '.$op['p
 $check(($pins['POST /api/v1/products/{id}/image']['operation_id']??'')==='uploadProductImage', 'POST exact OpenAPI');
 $check(($pins['DELETE /api/v1/products/{id}/image']['operation_id']??'')==='deleteProductImage', 'DELETE exact OpenAPI');
 $check(!isset($pins['GET /api/v1/products/{id}/image']), 'no image GET in API');
-foreach(['backend/app/Config/M63Routes.php','backend/app/Modules/Product/Media/ProductImageController.php',
+foreach(['backend/app/Config/Routes/ApiV1/ProductsRoutes.php','backend/app/Modules/Product/Media/ProductImageController.php',
     'backend/app/Modules/Product/Media/ProductImageService.php'] as $path) {
     $check(is_file($root.'/'.$path), 'required owner '.$path);
 }
 $checks = (string)file_get_contents($root.'/backend/tests/m33_routes_pure.php');
 $check(str_contains($checks,'M63SourceAcceptance::projectedPrevious('), 'prior footprint is replayed');
-$check(str_contains((string)file_get_contents($root.'/backend/app/Config/Routes.php'),"require __DIR__ . '/M63Routes.php';"),'explicit include');
+$check(\DinkERP\Tools\Routes\LegacyRouteSource::mounted($root, 'M63Routes.php'),'explicit include');
 echo 'M6.3A CONTRACT: '.$n.'/'.$n." PASS\n";

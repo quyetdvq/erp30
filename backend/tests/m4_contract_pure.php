@@ -2,6 +2,8 @@
 
 declare(strict_types=1);
 
+require_once dirname(__DIR__, 1) . '/tools/routes/LegacyRouteSource.php';
+
 require_once __DIR__.'/../tools/m4/M4SourceAcceptance.php';
 $root=dirname(__DIR__,2);
 $n=0;
@@ -19,7 +21,7 @@ $check(($e['POST resources/(:num)/numbering-series'][3]??null)===201,'Numbering 
 $check(($e['POST business-workflow/(:segment)/(:num)/actions/(:segment)'][3]??null)===200,'Business workflow success 200');
 // On purpose, test a forged route, reversed status, removed operation and missing
 // old reference: every one must fail instead of passing a self-defined manifest.
-$original=(string)file_get_contents($root.'/backend/app/Config/M4Routes.php');
+$original=(string)\DinkERP\Tools\Routes\LegacyRouteSource::source($root, 'M4Routes.php');
     // Avoid duplicating the full baseline by using the REAL immutable source's
     // independent pinned metadata and exercising installed-route guard directly.
     $registered=[];
@@ -42,5 +44,5 @@ $original=(string)file_get_contents($root.'/backend/app/Config/M4Routes.php');
     try {M4SourceAcceptance::validateRegistered($bad);throw new RuntimeException('Unreviewed mutation accepted');}
     catch(RuntimeException $x) {if($x->getMessage()==='Unreviewed mutation accepted')throw $x;}
     $check(true,'Arbitrary 85th route rejected');
-    $check(str_contains($original,'M4') && !str_contains($original,'setAutoRoute(true)'), 'Reviewed route file kept explicit');
+    $check(substr_count($original, '$routes->') === 16 && !str_contains($original,'setAutoRoute(true)'), 'Reviewed route file kept explicit');
 echo 'TOTAL: '.$n.' M4 contract assertions passed.'.PHP_EOL;

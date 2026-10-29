@@ -6,6 +6,7 @@ import { useRoute, useRouter } from 'vue-router'
 import { rowAllowedActions } from '@/components/lists/rowActionPolicy'
 import { ListPagination, ListQueryControls, ListShell, ListTable, TableRowActions } from '@/components/lists'
 import type { ListColumn, ListFilterDefinition, ListQuery } from '@/components/lists/listTypes'
+import { CUSTOMER_PAGE_SIZE_OPTIONS } from '@/components/lists/listPageSizePolicy'
 import { useListState } from '@/composables/useListState'
 import { useBasePermission } from '@/composables/useBasePermission'
 import { reportApiError } from '@/services/errorBoundary'
@@ -108,7 +109,7 @@ onMounted(() => {
   </div>
   <section class="content-panel customer-list-panel">
     <div class="customer-list-toolbar">
-      <ListQueryControls :model-value="state.query" :filters="filters" :page-size-options="[10, 15, 20, 25, 50, 100]" @apply="applyQuery" @reset="resetQuery" />
+      <ListQueryControls :model-value="state.query" :filters="filters" :page-size-options="CUSTOMER_PAGE_SIZE_OPTIONS" @apply="applyQuery" @reset="resetQuery" />
       <button type="button" class="secondary-button" @click="void load()">
         ↻ {{ t('common.refresh') }}
       </button>
@@ -139,7 +140,7 @@ onMounted(() => {
         </template>
       </ListTable>
       <ListPagination :page="state.query.page" :page-size="state.query.page_size"
-        :total="state.total.value" :page-size-options="[10, 15, 20, 25, 50, 100]" @update:page="(page) => { state.setPage(page); void load() }"
+        :total="state.total.value" :page-size-options="CUSTOMER_PAGE_SIZE_OPTIONS" @update:page="(page) => { state.setPage(page); void load() }"
         @update:page-size="(size) => { state.setPageSize(size); void load() }" />
     </ListShell>
   </section>

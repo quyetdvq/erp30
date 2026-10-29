@@ -17,7 +17,7 @@ for file in matching:
         assert ':view-scope-verified="true"' in chunk, f'No VIEW proof in {file}'
         assert ':allowed-actions=' in chunk or file.name == 'ProductImportJobsView.vue', f'Missing hints in {file}'
         counts += 1
-assert counts == 19 and len(matching) == 18, f'Expected 19 callsites/18 components, got {counts}/{len(matching)}'
+assert counts == 21 and len(matching) == 20, f'Expected 21 callsites/20 components, got {counts}/{len(matching)}'
 component = (frontend / 'components/lists/TableRowActions.vue').read_text(encoding='utf-8')
 assert "authorizationMode: 'effective'" in component
 assert 'snapshotState.value === \'ready\'' in component
@@ -31,7 +31,7 @@ for file in (
     'Modules/Access/Management/AccessReadService.php',
     'Modules/Workflow/Management/WorkflowReadService.php',
     'Modules/Identity/Management/IdentityReadService.php',
-    'Controllers/Api/ReadCatalogController.php',
+    'Modules/Location/Read/LocationMasterReadService.php',
 ):
     assert 'EffectiveRowActionHints::forViewedRow' in (backend / file).read_text(encoding='utf-8'), file
 contract = root / 'contracts/openapi/openapi.yaml'

@@ -59,7 +59,8 @@ foreach ([$manifest, $yaml] as $file) {
     copy($docs . $file, $sampleDocs . $file);
     copy($fixtures . $file, $sampleFixtures . $file);
 }
-copy($root . '/backend/app/Config/Routes.php', $sampleRoutes . 'Routes.php');
+require_once __DIR__ . '/../tools/routes/LegacyRouteSource.php';
+file_put_contents($sampleRoutes . 'Routes.php', \DinkERP\Tools\Routes\LegacyRouteSource::core70($root));
 
 try {
     m34ReferencePass('Isolated complete install loads exactly 29 operations', count(M34Contract::operations($temp)) === 29);

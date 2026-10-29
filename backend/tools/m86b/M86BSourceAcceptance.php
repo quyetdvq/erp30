@@ -44,7 +44,7 @@ final class M86BSourceAcceptance
             'organizationSqlService($user)->show(',
             'organizationSqlService($user)->list(\'organization\'',
             'organizationSqlService($user)->organizationLabels(',
-            'ReadAccessBridge($user', 'AuthorizedListPage::paginate(',
+            'locationSqlService($user, $instant)->list(', 'locationSqlService($user)->show(',
         ] as $term) if (!str_contains($controller,$term)) {
             throw new RuntimeException('Canonical Organization dispatch missing '.$term);
         }
@@ -60,8 +60,12 @@ final class M86BSourceAcceptance
             'SELECT p.id, p.code, p.name, p.type, p.status',
         ] as $term) if (!str_contains($sql,$term)) throw new RuntimeException('Org/Assignment SQL guard missing '.$term);
         foreach([
-            'limit(513)', 'count($rows) > 512', 'viewableOrganizationStateBuckets(',
+            'TrustedOrganizationIdPager::collect(', 'hasBaseViewPermission(',
+            'viewableOrganizationStateBuckets(',
         ] as $term) if (!str_contains($provider,$term)) throw new RuntimeException('Metadata trust boundary missing '.$term);
+        if (str_contains($controller, 'AuthorizedListPage::paginate(') || str_contains($controller, 'authorizedRows(')) {
+            throw new RuntimeException('Location full-table pagination reintroduced.');
+        }
         foreach([
             'SET TRANSACTION ISOLATION LEVEL REPEATABLE READ',
             'transBegin()', 'transCommit()', 'transRollback()', 'transDepth !== 0',

@@ -8,7 +8,7 @@ use App\Exceptions\DomainException;
 use App\Modules\Notifications\NotificationDispatcher;
 use App\Modules\Notifications\NotificationOutboxProducer;
 use App\Modules\Notifications\NotificationPushRules;
-use App\Modules\Notifications\NotificationPushSender;
+use App\Modules\Notifications\NotificationPushPayloadSender;
 use App\Modules\Notifications\NotificationPushService;
 use App\Modules\Notifications\NotificationPushWorker;
 use CodeIgniter\Database\BaseConnection;
@@ -172,13 +172,20 @@ final class PushNotificationsIntegrationTest extends TestCase
             'import-job:' . $this->jobId . ':terminal')->get()->getRowArray() ?? [];
     }
 
-    private function fake(string $result = 'sent'): NotificationPushSender
+    private function fake(string $result = 'sent'): NotificationPushPayloadSender
     {
-        return new class($result) implements NotificationPushSender {
+        return new class($result) implements NotificationPushPayloadSender {
             public array $calls = [];
             public function __construct(public string $result) {}
             public function send(string $endpoint): string
             {
+                throw new RuntimeException('M11_TEST_ENCRYPTED_PAYLOAD_REQUIRED');
+            }
+            public function sendEncrypted(string $endpoint, string $payload, string $p256dh, string $auth): string
+            {
+                if ($payload === '' || $p256dh === '' || $auth === '') {
+                    throw new RuntimeException('M11_TEST_MISSING_EVENT_CONTENT');
+                }
                 $this->calls[] = $endpoint;
                 return $this->result;
             }
@@ -209,6 +216,22 @@ final class PushNotificationsIntegrationTest extends TestCase
         self::assertCount(1, $fake->calls);
         self::assertSame($this->subscription['endpoint'], $fake->calls[0]);
         self::assertSame(0, $worker->runOnce(5)['claimed']);
+    }
+
+    public function testLegacyDeviceIsCancelledUntilItsKeysAreRenewed(): void
+    {
+        $id = $this->registered();
+        $receipt = $this->enqueue();
+        $this->db->table('notification_push_subscriptions')->where('id', $id)
+            ->update(['key_material_cipher' => null]);
+        $devices = (new NotificationPushService($this->user(), $this->db))->listing();
+        self::assertFalse($devices[0]['detail_ready']);
+        $fake = $this->fake();
+        self::assertSame(1, (new NotificationPushWorker($this->db, $fake))->runOnce(5)['cancelled']);
+        self::assertSame([], $fake->calls);
+        $saved = $this->db->table('notification_push_deliveries')
+            ->where('id', $receipt['id'])->get()->getRowArray();
+        self::assertSame('M11_PUSH_DEVICE_UPDATE_REQUIRED', $saved['last_error_code']);
     }
 
     public function testSameDeviceReregistrationPreservesExistingPendingReceipt(): void

@@ -62,12 +62,15 @@ final class ContactService
             if ($pageQuery === false) throw new UnexpectedValueException('Contact scoped page query failed.');
             $rows = array_values($pageQuery->getResultArray());
             if (count($rows) > $params['page_size']) throw new UnexpectedValueException('Contact page exceeded requested limit.');
+            // One indexed parent lookup per Contact PAGE, never per Contact row.
+            $customerParents = $this->customerParentsForPage($rows);
+            $customerView = [];
             foreach ($rows as &$row) {
                 // Defense in depth. A mismatch must fail the whole response,
                 // NEVER silently post-filter and corrupt an authorized total.
                 $scope = $readScope->resolve($row);
                 if (!$access->canView($scope['resource'], $scope['target'])
-                    || !$this->customerParentView($row,$access)) {
+                    || !$this->customerParentView($row,$access,$customerParents,$customerView)) {
                     throw new UnexpectedValueException('AUTH_SCOPE_PBAC_MISMATCH: Contact list.');
                 }
                 $row['allowed_actions'] = EffectiveRowActionHints::forViewedRow($access, $scope['resource'], $scope['target']);
@@ -124,12 +127,54 @@ final class ContactService
         ];
     }
 
-    /** Parent GROUP PBAC is independent of Contact's own GROUP PBAC. */
-    private function customerParentView(array $contact, UnifiedAccessService $access): bool
+    /**
+     * Read only the Customer parents referenced by this already-authorized page.
+     * No per-row SELECT and no client-provided owner IDs. Missing parents deny.
+     * @param list<array<string,mixed>> $rows
+     * @return array<string,array<string,mixed>>
+     */
+    private function customerParentsForPage(array $rows): array
     {
-        if (strtoupper(trim((string)($contact['contact_type']??'')))!=='CUSTOMER') return true;
-        $customer=$this->db->table('customers')->where('id',$contact['contact_ref_id'])->get()->getRowArray();
-        return $customer!==null && $access->canView('customer',$customer);
+        $ids = [];
+        foreach ($rows as $contact) {
+            if (strtoupper(trim((string)($contact['contact_type'] ?? ''))) !== 'CUSTOMER') continue;
+            $id = (string)($contact['contact_ref_id'] ?? '');
+            if (preg_match('/\A[1-9][0-9]*\z/D', $id) !== 1) {
+                throw new UnexpectedValueException('Invalid persisted Contact Customer owner.');
+            }
+            $ids[$id] = true;
+        }
+        if ($ids === []) return [];
+        $result = $this->db->table('customers')->whereIn('id', array_keys($ids))->get();
+        if ($result === false) throw new UnexpectedValueException('Contact Customer parent batch failed.');
+        $parents = [];
+        foreach ($result->getResultArray() as $row) $parents[(string)$row['id']] = $row;
+        return $parents;
+    }
+
+    /**
+     * Parent GROUP VIEW is independent of Contact's own GROUP VIEW.
+     * The optional page cache is trusted (read within the same snapshot).
+     * @param array<string,mixed>|null $parents
+     * @param array<string,bool>|null $decisions
+     */
+    private function customerParentView(
+        array $contact, UnifiedAccessService $access,
+        ?array $parents = null, ?array &$decisions = null,
+    ): bool {
+        if (strtoupper(trim((string)($contact['contact_type']??''))) !== 'CUSTOMER') return true;
+        $id = (string)($contact['contact_ref_id'] ?? '');
+        if ($parents !== null) {
+            if ($decisions !== null && array_key_exists($id, $decisions)) return $decisions[$id];
+            $parent = $parents[$id] ?? null;
+            $allowed = $parent !== null && $access->canView('customer', $parent);
+            if ($decisions !== null) $decisions[$id] = $allowed;
+            return $allowed;
+        }
+        $result = $this->db->table('customers')->where('id', $id)->get();
+        if ($result === false) throw new UnexpectedValueException('Contact Customer parent lookup failed.');
+        $parent = $result->getRowArray();
+        return $parent !== null && $access->canView('customer', $parent);
     }
 
     /** Consistent READ snapshot. Never commit or roll back a caller's write transaction. */

@@ -32,7 +32,7 @@ final class NotificationEventRegistryTest extends TestCase
             'import.failed' => ['import_job', 1, 'import_terminal', 'import_inbox',
                 ['in_app', 'email'], 'import_job'],
             'workflow.action_required' => ['workflow_transition', 2, 'workflow_action_required',
-                'workflow_inbox', ['in_app'], 'workflow_target'],
+                'workflow_inbox', ['in_app', 'push'], 'workflow_target'],
         ], $actual);
         self::assertCount(4, $actual);
     }
@@ -60,7 +60,7 @@ final class NotificationEventRegistryTest extends TestCase
     public function testDeclaredChannelCapabilitiesAgreeWithExistingCatalogPolicyKeys(): void
     {
         $catalog = NotificationCatalog::definitions();
-        self::assertCount(9, $catalog);
+        self::assertCount(12, $catalog);
         $registered = [];
         foreach (NotificationEventRegistry::all() as $event) {
             foreach ($event->supportedChannels as $channel) {
@@ -73,9 +73,9 @@ final class NotificationEventRegistryTest extends TestCase
         }
         self::assertSame([
             'import.completed.in_app', 'import.completed.email', 'import.completed.push',
-            'import.completed_with_errors.in_app', 'import.completed_with_errors.email',
-            'import.failed.in_app', 'import.failed.email',
-            'workflow.action_required.in_app',
+            'import.completed_with_errors.in_app', 'import.completed_with_errors.email', 'import.completed_with_errors.push',
+            'import.failed.in_app', 'import.failed.email', 'import.failed.push',
+            'workflow.action_required.in_app', 'workflow.action_required.push',
         ], $registered);
         self::assertSame('UNAVAILABLE', $catalog['security.permission_changed.in_app']['capability']);
         foreach ($catalog as $policyKey => $policy) {
@@ -84,7 +84,7 @@ final class NotificationEventRegistryTest extends TestCase
             }
         }
         self::assertTrue(NotificationEventRegistry::find('import.failed', 'import_job')->supports('email'));
-        self::assertFalse(NotificationEventRegistry::find('workflow.action_required', 'workflow_transition')->supports('push'));
+        self::assertTrue(NotificationEventRegistry::find('workflow.action_required', 'workflow_transition')->supports('push'));
     }
 
     public function testPayloadSchemaAndTerminalMappingMatchLegacyProducerContracts(): void

@@ -36,7 +36,7 @@ const keys = [
   'import.completed.in_app', 'import.completed_with_errors.in_app', 'import.failed.in_app',
   'workflow.action_required.in_app', 'security.permission_changed.in_app',
   'import.completed.email', 'import.completed_with_errors.email', 'import.failed.email',
-  'import.completed.push',
+  'import.completed.push', 'import.completed_with_errors.push', 'import.failed.push', 'workflow.action_required.push',
 ]
 function policy(key: string, updates: Partial<NotificationPolicy> = {}): NotificationPolicy {
   return {
@@ -72,7 +72,7 @@ describe('NFX-D1 channel and consent presentation helpers', () => {
   it('groups every key without dropping unknown future policies', () => {
     const grouped = groupedNotificationRows(keys.concat('future.sms').map(key => ({ key })))
     expect(grouped.map(({ channel, items }) => [channel, items.length])).toEqual([
-      ['in_app', 5], ['email', 3], ['push', 1], ['other', 1],
+      ['in_app', 5], ['email', 3], ['push', 4], ['other', 1],
     ])
     expect(notificationChannel('future.sms')).toBe('other')
     expect(notificationLabelKey('import.failed.email')).toBe('importFailedEmail')
@@ -97,11 +97,11 @@ describe('NFX-D1 channel and consent presentation helpers', () => {
 })
 
 describe('NFX-D1 personal notifications UX', () => {
-  it('groups all nine policies, clarifies opt-in and renders translated effective sources', async () => {
+  it('groups all twelve policies, clarifies opt-in and renders translated effective sources', async () => {
     const wrapper = mount(NotificationPreferencesTab, { global: { plugins: [i18n] } })
     await flushPromises()
     expect(wrapper.findAll('.m11-group')).toHaveLength(3)
-    expect(wrapper.findAll('.m11-row')).toHaveLength(9)
+    expect(wrapper.findAll('.m11-row')).toHaveLength(12)
     expect(wrapper.text()).toContain(i18n.global.t('notificationSettings.channels.email'))
     expect(wrapper.text()).toContain(i18n.global.t('notificationSettings.sourceSystem'))
     const emailRow = wrapper.findAll('.m11-row')[5]
@@ -229,7 +229,7 @@ describe('NFX-D1 system policy UX', () => {
     const wrapper = mount(NotificationPoliciesTab, { global: { plugins: [i18n] } })
     await flushPromises()
     expect(wrapper.findAll('.m11-group')).toHaveLength(3)
-    expect(wrapper.findAll('.m11-row')).toHaveLength(9)
+    expect(wrapper.findAll('.m11-row')).toHaveLength(12)
     expect(wrapper.text()).toContain(i18n.global.t('notificationSettings.channelHelpSystem.email'))
     for (const row of wrapper.findAll('.m11-row').slice(5)) {
       expect(row.get('input[type="checkbox"]').attributes('disabled')).toBeDefined()

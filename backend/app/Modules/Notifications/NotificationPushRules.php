@@ -9,7 +9,7 @@ use App\Exceptions\DomainException;
 /** Fail-closed subscription, consent and HTTPS push-service origin validation. */
 final class NotificationPushRules
 {
-    /** @param array<string,mixed> $body @return array{endpoint:string} */
+    /** @param array<string,mixed> $body @return array{endpoint:string,p256dh:string,auth:string} */
     public static function subscription(array $body): array
     {
         if (array_keys($body) !== ['endpoint', 'keys'] && array_keys($body) !== ['keys', 'endpoint']) {
@@ -27,7 +27,7 @@ final class NotificationPushRules
             || $auth === null || strlen($auth) !== 16) {
             throw new DomainException('NOTIFICATION_INVALID_REQUEST');
         }
-        return ['endpoint' => $endpoint]; // No key material is stored for payload-free pushes.
+        return ['endpoint' => $endpoint, 'p256dh' => (string) $keys['p256dh'], 'auth' => (string) $keys['auth']];
     }
 
     public static function endpoint(mixed $value): bool
@@ -52,9 +52,14 @@ final class NotificationPushRules
     }
 
     /** @param array<string,mixed> $policy @param array<string,mixed>|null $preference */
-    public static function consented(array $policy, ?array $preference): bool
+    public static function consented(array $policy, ?array $preference, string $key = 'import.completed.push'): bool
     {
-        NotificationPolicyResolver::assertPolicy($policy, NotificationCatalog::definitions()['import.completed.push']);
+        $definition = NotificationCatalog::definitions()[$key] ?? null;
+        if ($definition === null || ! str_ends_with($key, '.push')
+            || (string) ($policy['setting_key'] ?? '') !== $key) {
+            throw new \RuntimeException('M11_PUSH_POLICY_KEY_INVALID');
+        }
+        NotificationPolicyResolver::assertPolicy($policy, $definition);
         return (string) $policy['allow_user_override'] === '1'
             && $preference !== null
             && (string) ($preference['override_value'] ?? '') === '1'

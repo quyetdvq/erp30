@@ -158,7 +158,10 @@ final class BusinessWorkflowService
                 throw new DomainException('AUTH_POLICY_DENIED', ['action' => 'view']);
             }
         }
-        return $row;
+        // Unlike Customer Contacts (MASTER), Organization/Employee Contacts
+        // require an owner-derived ORGANIZATION ID before any PBAC check.
+        // The verified scope is also re-resolved after locking for execute().
+        return BusinessWorkflowContactScope::fromPersisted($type, $row, $this->db);
     }
 
     /**

@@ -2,6 +2,8 @@
 
 declare(strict_types=1);
 
+require_once dirname(__DIR__, 2) . '/tools/routes/LegacyRouteSource.php';
+
 require_once __DIR__.'/M53SourceAcceptance.php';
 
 /** Strict source-only gate for six M5.4 Department/Position mutations. */
@@ -53,7 +55,8 @@ final class M54SourceAcceptance
             }
         }
         $routes=(string)file_get_contents($root.'/backend/app/Config/Routes.php');
-        if(substr_count($routes,"require __DIR__ . '/M54Routes.php';")!==1 || str_contains($routes,'setAutoRoute(true)')) {
+        $routes .= (string)file_get_contents($root.'/backend/app/Config/Routes/ApiV1/PeopleRoutes.php');
+        if((\DinkERP\Tools\Routes\LegacyRouteSource::mounted($root, 'M54Routes.php') ? 1 : 0)!==1 || str_contains($routes,'setAutoRoute(true)')) {
             throw new RuntimeException('M5.4 route file not included exactly once with disabled autoroutes.');
         }
         foreach(['departments','departments/(:num)','positions','positions/(:num)'] as $path) {
@@ -61,7 +64,7 @@ final class M54SourceAcceptance
                 throw new RuntimeException('M5.4 changed reviewed M2.1 GET route: '.$path);
             }
         }
-        $definitions=(string)file_get_contents($root.'/backend/app/Config/M54Routes.php');
+        $definitions=(string)\DinkERP\Tools\Routes\LegacyRouteSource::source($root, 'M54Routes.php');
         $controller=(string)file_get_contents($root.'/backend/app/Modules/People/Structure/Mutation/StructureMutationController.php');
         $regex='~\$routes->(post|patch)\(\x27([^\x27]+)\x27,\s*\[\\\\App\\\\Modules\\\\People\\\\Structure\\\\Mutation\\\\StructureMutationController::class,\s*\x27([A-Za-z][A-Za-z0-9_]*)\x27\]\);~';
         preg_match_all($regex,$definitions,$matches,PREG_SET_ORDER);

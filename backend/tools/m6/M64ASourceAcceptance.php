@@ -2,6 +2,8 @@
 
 declare(strict_types=1);
 
+require_once dirname(__DIR__, 2) . '/tools/routes/LegacyRouteSource.php';
+
 require_once __DIR__ . '/M63BSourceAcceptance.php';
 
 /** Acceptance gate for exactly three frozen M6.4A Product lookup operations. */
@@ -42,11 +44,11 @@ final class M64ASourceAcceptance
         $prior = M63BSourceAcceptance::verify($root);
         if ($prior['total'] !== 129) throw new RuntimeException('M6.4A requires accepted 129-route M6.3B source.');
         $main = (string)file_get_contents($root.'/backend/app/Config/Routes.php');
-        if (substr_count($main, "require __DIR__ . '/M64ARoutes.php';") !== 1
+        if ((\DinkERP\Tools\Routes\LegacyRouteSource::mounted($root, 'M64ARoutes.php') ? 1 : 0) !== 1
             || !str_contains($main, '$routes->setAutoRoute(false)')) {
             throw new RuntimeException('M6.4A route include or autoroute guard invalid.');
         }
-        $source = (string)file_get_contents($root.'/backend/app/Config/M64ARoutes.php');
+        $source = (string)\DinkERP\Tools\Routes\LegacyRouteSource::source($root, 'M64ARoutes.php');
         $pattern = '~\\$routes->(get|post)\(\x27([^\x27]+)\x27,\s*\[\\\\App\\\\Modules\\\\Product\\\\Lookup\\\\ProductLookupController::class,\s*\x27([A-Za-z][A-Za-z0-9_]*)\x27\]\);~';
         preg_match_all($pattern, $source, $matches, PREG_SET_ORDER);
         if (count($matches) !== 3 || substr_count($source, '$routes->') !== 3) {

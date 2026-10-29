@@ -2,6 +2,8 @@
 
 declare(strict_types=1);
 
+require_once dirname(__DIR__, 1) . '/tools/routes/LegacyRouteSource.php';
+
 require_once __DIR__.'/../tools/m5/M54SourceAcceptance.php';
 $root=dirname(__DIR__,2);
 $n=0;
@@ -33,6 +35,6 @@ $wrong=$registered;$wrong['POST']['api/v1/positions']=['Backdoor','createPositio
 $wrong=$registered;$wrong['DELETE']['api/v1/positions/(:num)']=['Backdoor','delete'];$reject($wrong);
 $controller=(string)file_get_contents($root.'/backend/app/Modules/People/Structure/Mutation/StructureMutationController.php');
 $check(str_contains($controller,"env('DINKERP_M33B_WRITE_MODE','off')") && str_contains($controller,"'UNAUTHENTICATED',401"),'write gate and auth');
-$routes=(string)file_get_contents($root.'/backend/app/Config/M54Routes.php');
+$routes=(string)\DinkERP\Tools\Routes\LegacyRouteSource::source($root, 'M54Routes.php');
 $check(substr_count($routes,'$routes->')===6 && !str_contains($routes,'$routes->get('),'GET unchanged, six exact writes');
 echo "M5.4 CONTRACT: {$n}/{$n} PASS\n";

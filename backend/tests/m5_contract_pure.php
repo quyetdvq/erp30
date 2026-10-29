@@ -2,6 +2,8 @@
 
 declare(strict_types=1);
 
+require_once dirname(__DIR__, 1) . '/tools/routes/LegacyRouteSource.php';
+
 require_once __DIR__ . '/../tools/m5/M5SourceAcceptance.php';
 $root = dirname(__DIR__, 2);
 $checks = 0;
@@ -15,7 +17,7 @@ $pass(count(M5SourceAcceptance::operations()) === 6, 'Exactly six mutation contr
 $pass(count(array_filter(M5SourceAcceptance::operations(), static fn($op) => $op['status'] === 201)) === 2, 'POST create status 201');
 $controller = (string) file_get_contents($root . '/backend/app/Modules/Locations/Mutation/LocationMutationController.php');
 $service = (string) file_get_contents($root . '/backend/app/Modules/Locations/Mutation/LocationMutationService.php');
-$routes = (string) file_get_contents($root . '/backend/app/Config/M5Routes.php');
+$routes = (string) \DinkERP\Tools\Routes\LegacyRouteSource::source($root, 'M5Routes.php');
 $pass(str_contains($controller, "env('DINKERP_M33B_WRITE_MODE', 'off')") && str_contains($controller, "'ACCESS_MUTATION_NOT_ENABLED', 403"), 'Existing write gate is default OFF');
 $pass(strpos($controller, '! $actor instanceof User') < strpos($controller, 'new LocationMutationService($actor)'), 'Reject anonymous before service construction');
 $pass(str_contains($service, 'decideMutation(') && str_contains($service, 'decideTransitionAction('), 'Mutation and transition permissions are independently checked');

@@ -2,6 +2,8 @@
 
 declare(strict_types=1);
 
+require_once dirname(__DIR__, 2) . '/tools/routes/LegacyRouteSource.php';
+
 require_once __DIR__ . '/M62ASourceAcceptance.php';
 
 /** M6.2B: exact Product Master mutations, retaining the 122-route read baseline. */
@@ -48,10 +50,10 @@ final class M62BSourceAcceptance
         $old=M62ASourceAcceptance::verify($root);
         if ($old['total']!==122) throw new RuntimeException('M6.2B requires 122-route GET baseline');
         $main=(string)file_get_contents($root.'/backend/app/Config/Routes.php');
-        if (substr_count($main,"require __DIR__ . '/M62BRoutes.php';")!==1 || str_contains($main,'setAutoRoute(true)')) {
+        if ((\DinkERP\Tools\Routes\LegacyRouteSource::mounted($root, 'M62BRoutes.php') ? 1 : 0)!==1 || str_contains($main,'setAutoRoute(true)')) {
             throw new RuntimeException('M6.2B routing is not explicitly reviewed');
         }
-        $source=(string)file_get_contents($root.'/backend/app/Config/M62BRoutes.php');
+        $source=(string)\DinkERP\Tools\Routes\LegacyRouteSource::source($root, 'M62BRoutes.php');
         $pattern='~\$routes->(post|patch)\(\x27([^\x27]+)\x27,\s*\[\\\\App\\\\Modules\\\\Product\\\\Master\\\\ProductMutationController::class,\s*\x27([A-Za-z][A-Za-z0-9_]*)\x27\]\);~';
         preg_match_all($pattern,$source,$entries,PREG_SET_ORDER);
         if (count($entries)!==3 || substr_count($source,'$routes->')!==3) throw new RuntimeException('M6.2B has wrong route count');

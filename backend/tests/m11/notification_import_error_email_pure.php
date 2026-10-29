@@ -26,7 +26,7 @@ $check = static function (bool $value) use (&$checks): void {
     ++$checks;
 };
 $catalog = NotificationCatalog::definitions();
-$check(count($catalog) === 9);
+$check(count($catalog) === 12);
 foreach ($catalog as $key => $def) {
     $check($def['requires_explicit_consent'] === (str_ends_with($key, '.email') || str_ends_with($key, '.push')));
 }
@@ -67,7 +67,7 @@ foreach ($events as $event => $key) {
 }
 $check(Email::policyKeyForEvent('workflow.action_required') === null);
 $check(Email::policyKeyForEvent('import.failed OR 1=1') === null);
-$check(! NotificationEventRegistry::find('import.failed', 'import_job')->supports('push'));
+$check(NotificationEventRegistry::find('import.failed', 'import_job')->supports('push'));
 foreach (['import.completed', 'import.completed_with_errors', 'import.failed'] as $event) {
     $content = Email::content($event, '{"success_rows":5,"error_rows":2}');
     $check(str_starts_with($content['subject'], 'DinkERP - '));

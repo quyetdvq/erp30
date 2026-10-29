@@ -86,7 +86,14 @@ final class M34Contract
     /** @param array<string,array{method:string,path:string,status:int}> $ops */
     public static function assertRoutes(array $ops, string $routesPath): void
     {
-        $routes = (string) file_get_contents($routesPath);
+        $domainRoot = dirname($routesPath) . '/Routes/ApiV1/IdentityRoutes.php';
+        if (is_file($domainRoot)) {
+            require_once dirname(__DIR__) . '/routes/LegacyRouteSource.php';
+            $routes = \DinkERP\Tools\Routes\LegacyRouteSource::core70(dirname($routesPath, 4));
+        } else {
+            // Synthetic M3.4 reference copies contain just one Routes.php.
+            $routes = (string) file_get_contents($routesPath);
+        }
         if (! str_contains($routes, '$routes->setAutoRoute(false)')) {
             throw new M34Failure('Security blocker: CI4 auto-routing must remain OFF');
         }

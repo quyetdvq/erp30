@@ -2,6 +2,8 @@
 
 declare(strict_types=1);
 
+require_once dirname(__DIR__, 1) . '/tools/routes/LegacyRouteSource.php';
+
 require_once __DIR__.'/../tools/m4/M4SourceAcceptance.php';
 $root=dirname(__DIR__,2);
 $source=static fn(string $p): string => (string)file_get_contents($root.'/'.$p);
@@ -40,7 +42,7 @@ $check(str_contains($workflow, 'BusinessWorkflowRules::transitionForAction('),
 $check(str_contains($number, 'NumberingRules::collisionSignature($old)'),
     'Numbering validates canonical active-pattern collisions');
 $check(str_contains($pbac,"'reset_password', 'configure_numbering'") && str_contains($pbac,'decideTransitionAction('), 'Access PBAC owns Numbering and Workflow Action checks');
-$routes=$source('backend/app/Config/M4Routes.php');
+$routes=\DinkERP\Tools\Routes\LegacyRouteSource::source($root, 'M4Routes.php');
 $check(!str_contains($routes,'setAutoRoute(true)') && count(M4SourceAcceptance::expected())===14, 'Fourteen explicit approved HTTP operations only');
 $check(($result=M4SourceAcceptance::verify($root))['total_routes']===84,'M3.4D 70-route pin plus 14 M4 extensions still valid');
 echo 'TOTAL: '.$n.' M4 security and architecture assertions passed.'.PHP_EOL;

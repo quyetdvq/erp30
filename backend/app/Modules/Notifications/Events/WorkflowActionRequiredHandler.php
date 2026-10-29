@@ -8,6 +8,7 @@ use App\Exceptions\DomainException;
 use App\Modules\Notifications\NotificationCatalog;
 use App\Modules\Notifications\NotificationPermanentFailure;
 use App\Modules\Notifications\NotificationPolicyResolver;
+use App\Modules\Notifications\NotificationPushEnqueuer;
 use App\Modules\Notifications\WorkflowNotificationRules;
 use App\Modules\Workflow\Execution\BusinessWorkflowRules;
 use App\Modules\Workflow\Execution\BusinessWorkflowService;
@@ -96,9 +97,6 @@ final class WorkflowActionRequiredHandler extends AbstractNotificationEventHandl
             } catch (Throwable $e) {
                 throw new NotificationPermanentFailure('NOTIFICATION_POLICY_INVALID', 0, $e);
             }
-            if (! $effective['effective_value']) {
-                continue;
-            }
             // Explicit assignment is necessary, but never sufficient: recheck
             // the target's CURRENT per-user VIEW and executable next actions.
             try {
@@ -113,14 +111,20 @@ final class WorkflowActionRequiredHandler extends AbstractNotificationEventHandl
             if ($options['options'] === []) {
                 continue;
             }
-            $params = json_encode(['resource_type' => $resource, 'state_code' => $payload['to_state']], JSON_THROW_ON_ERROR);
-            $this->exec("INSERT INTO {$this->inbox}"
-                . ' (recipient_user_id,event_key,type,priority,title_key,body_key,params_json,target_type,target_id,created_at)'
-                . ' VALUES (?,?,?,?,?,?,?,?,?,UTC_TIMESTAMP(6)) ON DUPLICATE KEY UPDATE id=id',
-                [$userId, (string) $event['event_key'], 'workflow.action_required', 'NORMAL',
-                    'notifications.workflow.actionRequired.title', 'notifications.workflow.actionRequired.body',
-                    $params, 'workflow_target', $id]);
-            ++$inserted;
+            if ($effective['effective_value']) {
+                $params = json_encode(['resource_type' => $resource, 'state_code' => $payload['to_state']], JSON_THROW_ON_ERROR);
+                $this->exec("INSERT INTO {$this->inbox}"
+                    . ' (recipient_user_id,event_key,type,priority,title_key,body_key,params_json,target_type,target_id,created_at)'
+                    . ' VALUES (?,?,?,?,?,?,?,?,?,UTC_TIMESTAMP(6)) ON DUPLICATE KEY UPDATE id=id',
+                    [$userId, (string) $event['event_key'], 'workflow.action_required', 'NORMAL',
+                        'notifications.workflow.actionRequired.title', 'notifications.workflow.actionRequired.body',
+                        $params, 'workflow_target', $id]);
+                ++$inserted;
+            }
+            if (NotificationPushEnqueuer::enqueue($this->db, $userId,
+                'workflow.action_required', (string) $event['event_key'])) {
+                ++$inserted;
+            }
         }
         return $inserted > 0
             ? NotificationDeliveryResult::processed()

@@ -10,7 +10,7 @@ use App\Modules\Notifications\NotificationEmailRules;
 use App\Modules\Notifications\NotificationFlags;
 use App\Modules\Notifications\NotificationPermanentFailure;
 use App\Modules\Notifications\NotificationPolicyResolver;
-use App\Modules\Notifications\NotificationPushRules;
+use App\Modules\Notifications\NotificationPushEnqueuer;
 use Throwable;
 
 /** Existing Import terminal delivery (In-App, eligible Email and Push receipts).
@@ -121,44 +121,10 @@ final class ImportTerminalHandler extends AbstractNotificationEventHandler
                     [(string) $event['event_key'], $recipientId, $type, $params]);
             }
         }
-        // M11.3C: one opaque payload-free Push signal per active device, in the SAME
-        // Outbox ACK transaction. No external HTTP calls or endpoint plaintext here.
-        $queuePush = false;
-        if ($type === 'import.completed' && NotificationFlags::pushQueueEnabled($this->db)) {
-            $pushKey = 'import.completed.push';
-            $pushPolicy = $this->select("SELECT s.*,p.override_value AS preference_value,"
-                . 'p.override_epoch AS preference_epoch,p.user_revision AS preference_revision'
-                . " FROM {$this->settings} s LEFT JOIN {$this->preferences} p"
-                . ' ON p.setting_key=s.setting_key AND p.user_id=? WHERE s.setting_key=?',
-                [$recipientId, $pushKey])->getRowArray();
-            if ($pushPolicy === null) {
-                throw new NotificationPermanentFailure('NOTIFICATION_PUSH_POLICY_MISSING');
-            }
-            $pushPref = $pushPolicy['preference_revision'] === null ? null : [
-                'override_value' => $pushPolicy['preference_value'],
-                'override_epoch' => $pushPolicy['preference_epoch'],
-                'user_revision' => $pushPolicy['preference_revision'],
-            ];
-            try {
-                $pushConsent = NotificationPushRules::consented($pushPolicy, $pushPref);
-            } catch (Throwable $e) {
-                throw new NotificationPermanentFailure('NOTIFICATION_PUSH_POLICY_INVALID', 0, $e);
-            }
-            if ($pushConsent) {
-                $subs = $this->table('notification_push_subscriptions');
-                $receipts = $this->table('notification_push_deliveries');
-                $ids = $this->select("SELECT id FROM {$subs} WHERE user_id=? AND enabled=1 LIMIT 5", [$recipientId])
-                    ->getResultArray();
-                foreach ($ids as $device) {
-                    $this->exec("INSERT INTO {$receipts}"
-                        . ' (subscription_id,recipient_user_id,event_key,status,attempts,available_at,created_at)'
-                        . " VALUES (?,?,?,'PENDING',0,UTC_TIMESTAMP(6),UTC_TIMESTAMP(6))"
-                        . ' ON DUPLICATE KEY UPDATE id=id',
-                        [(string) $device['id'], $recipientId, (string) $event['event_key']]);
-                    $queuePush = true;
-                }
-            }
-        }
+        // All supported Import outcomes may enqueue Push when THIS event has explicit opt-in.
+        // The dispatcher owns this transaction; network calls remain in the Push worker.
+        $queuePush = NotificationPushEnqueuer::enqueue($this->db,
+            $recipientId, $type, (string) $event['event_key']);
         if (! $sendInApp && ! $queueEmail && ! $queuePush) {
             return NotificationDeliveryResult::suppressed('NOTIFICATION_PREFERENCE_DISABLED');
         }

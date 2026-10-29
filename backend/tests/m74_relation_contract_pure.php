@@ -2,6 +2,8 @@
 
 declare(strict_types=1);
 
+require_once dirname(__DIR__, 1) . '/tools/routes/LegacyRouteSource.php';
+
 require_once __DIR__.'/../tools/m7/M74SourceAcceptance.php';
 $n=0;
 $ok=static function(bool $value,string $name)use(&$n):void {if(!$value)throw new RuntimeException('M7.4 CONTRACT: '.$name);++$n;};
@@ -13,7 +15,7 @@ $service=(string)file_get_contents(__DIR__.'/../app/Modules/Product/Lookup/Produ
 $sql=(string)file_get_contents(__DIR__.'/../app/Modules/Product/Lookup/ProductRelationshipSql.php');
 $rules=(string)file_get_contents(__DIR__.'/../app/Modules/Product/Lookup/ProductRelationshipRules.php');
 $api=(string)file_get_contents($root.'/contracts/openapi/openapi.yaml');
-$routes=(string)file_get_contents(__DIR__.'/../app/Config/M74Routes.php');
+$routes=(string)\DinkERP\Tools\Routes\LegacyRouteSource::source($root, 'M74Routes.php');
 $ok(substr_count($routes,'$routes->post(')===3 && !str_contains($routes,'$routes->get('),'exact three read-only POST routes');
 foreach(M74SourceAcceptance::operations() as $key=>$op){
     $ok(str_contains($api,'operationId: '.$op['id']),'frozen contract exists '.$key);

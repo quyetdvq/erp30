@@ -21,6 +21,9 @@ const busy = ref(false)
 const error = ref('')
 const notice = ref('')
 const currentId = ref<string | null>(null)
+// Each Web Push registration is tied to this origin; subscriptions on other
+// ERP domains cannot be managed or silently upgraded from this page.
+const currentOrigin = typeof window !== 'undefined' ? window.location.origin : ''
 const supported = computed(() => typeof window !== 'undefined' && window.isSecureContext
   && 'serviceWorker' in navigator && 'PushManager' in window && 'Notification' in window)
 const canSubscribe = computed(() => supported.value && available.value?.available && props.consented)
@@ -50,6 +53,7 @@ async function subscribe(): Promise<void> {
     if (permission !== 'granted') throw new Error('PUSH_PERMISSION_DENIED')
     stage = 'service-worker'
     const worker = await navigator.serviceWorker.register('/notification-sw.js', { scope: '/' })
+    await worker.update() // Refresh an outdated worker on this exact origin.
     const ready = await navigator.serviceWorker.ready
     if (worker.scope !== ready.scope) throw new Error('PUSH_SERVICE_WORKER_SCOPE_MISMATCH')
     stage = 'vapid'
@@ -73,8 +77,8 @@ async function subscribe(): Promise<void> {
       userVisibleOnly: true,
       applicationServerKey: keyBytes as BufferSource,
     })
-    // WNS/Edge subscriptions cannot be delivered by our zero-payload Web Push
-    // sender. Do not store bearer endpoints we cannot deliver to; use Chrome/Firefox
+    // WNS/Edge subscriptions are not supported by our allowlisted Push providers.
+    // Do not store bearer endpoints we cannot deliver to; use Chrome/Firefox
     // for this E2E gate instead. Never show the actual endpoint or its token.
     if (isWindowsPushEndpoint(subscription.endpoint)) throw new UnsupportedWindowsPushProvider()
     // A session change must not bind an endpoint to another signed-in User.
@@ -118,13 +122,23 @@ async function remove(device: PushDevice): Promise<void> {
   }
 }
 
-onMounted(() => { void refresh() })
+onMounted(() => {
+  void refresh()
+  // Updating an existing SW is safe; this never creates a subscription or
+  // requests Notification permission without the user's explicit click.
+  if (supported.value) {
+    void navigator.serviceWorker.getRegistration('/notification-sw.js')
+      .then(registration => registration?.update()).catch(() => undefined)
+  }
+})
 </script>
 
 <template>
   <section class="push-devices">
     <h2>{{ t('pushDevices.title') }}</h2>
     <p>{{ t('pushDevices.description') }}</p>
+    <p>{{ t('pushDevices.currentOrigin') }}: <strong>{{ currentOrigin }}</strong></p>
+    <p class="push-devices__origin-note">{{ t('pushDevices.originNotice') }}</p>
     <p v-if="!supported">{{ t('pushDevices.unsupported') }}</p>
     <p v-else-if="!available?.available">{{ t('pushDevices.disabled') }}</p>
     <p v-else-if="!consented">{{ t('pushDevices.optInFirst') }}</p>
@@ -135,7 +149,11 @@ onMounted(() => { void refresh() })
     <p v-if="notice" role="status">{{ notice }}</p>
     <ul>
       <li v-for="device in devices" :key="device.id">
-        <span>{{ t('pushDevices.device') }} #{{ device.id }} ({{ device.created_at }})</span>
+        <span>
+          {{ t('pushDevices.device') }} #{{ device.id }} ({{ device.created_at }})
+          <strong v-if="!device.detail_ready" class="push-devices__warning">{{ t('pushDevices.legacyDevice') }}</strong>
+          <strong v-else class="push-devices__ready">{{ t('pushDevices.detailedReady') }}</strong>
+        </span>
         <button type="button" :disabled="busy" @click="remove(device)">
           {{ t('pushDevices.remove') }}
         </button>
@@ -151,4 +169,7 @@ onMounted(() => { void refresh() })
 .push-devices ul { display: grid; gap: 8px; list-style: none; padding: 0; }
 .push-devices li { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 8px; }
 .push-devices button { padding: 6px 12px; }
+.push-devices__origin-note { font-size: .85rem; color: #61758c; }
+.push-devices__warning { color: #9a6517; margin-left: 6px; }
+.push-devices__ready { color: #198754; margin-left: 6px; }
 </style>

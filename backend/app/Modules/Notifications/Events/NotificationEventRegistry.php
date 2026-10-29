@@ -24,11 +24,11 @@ final class NotificationEventRegistry
                 new NotificationEventDefinition('import.completed', 'import_job', 1,
                     'import_terminal', 'import_inbox', ['in_app', 'email', 'push'], 'import_job'),
                 new NotificationEventDefinition('import.completed_with_errors', 'import_job', 1,
-                    'import_terminal', 'import_inbox', ['in_app', 'email'], 'import_job'),
+                    'import_terminal', 'import_inbox', ['in_app', 'email', 'push'], 'import_job'),
                 new NotificationEventDefinition('import.failed', 'import_job', 1,
-                    'import_terminal', 'import_inbox', ['in_app', 'email'], 'import_job'),
+                    'import_terminal', 'import_inbox', ['in_app', 'email', 'push'], 'import_job'),
                 new NotificationEventDefinition('workflow.action_required', 'workflow_transition', 2,
-                    'workflow_action_required', 'workflow_inbox', ['in_app'], 'workflow_target'),
+                    'workflow_action_required', 'workflow_inbox', ['in_app', 'push'], 'workflow_target'),
             ];
             $indexed = [];
             foreach ($entries as $entry) {

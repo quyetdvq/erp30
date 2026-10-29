@@ -9,6 +9,7 @@ declare(strict_types=1);
  */
 require_once dirname(__DIR__) . '/m34b/M34BPlan.php';
 require_once __DIR__ . '/M34DSourceFingerprint.php';
+require_once dirname(__DIR__) . '/routes/LegacyRouteSource.php';
 
 final class M34DViolation extends RuntimeException {}
 
@@ -76,7 +77,8 @@ final class M34DAcceptance
             $reference[$key] = $op;
         }
         $routesPath = $root.'/backend/app/Config/Routes.php';
-        $routes = self::withoutComments($routesOverride ?? self::read($routesPath));
+        $routes = self::withoutComments($routesOverride
+            ?? \DinkERP\Tools\Routes\LegacyRouteSource::core70($root));
         self::must(str_contains($routes, '$routes->setAutoRoute(false)'), 'CI4 autorouting must remain disabled');
         preg_match_all("/\\\$routes->(get|post|patch|put|delete)\\('([^']+)',\\s*\\[([A-Za-z0-9_]+)::class,\\s*'([^']+)'\\]\\);/",
             $routes, $matches, PREG_SET_ORDER);

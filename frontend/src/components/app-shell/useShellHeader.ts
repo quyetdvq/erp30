@@ -39,28 +39,49 @@ export function useShellHeader(currentTabKey: ComputedRef<string>) {
   function canPoll(): boolean {
     return inboxUiEnabled && auth.isAuthenticated && typeof document !== 'undefined' && document.visibilityState === 'visible'
   }
-  function refreshIfVisible(): void { if (canPoll()) void inbox.refreshSummary() }
+  function refreshIfVisible(): void {
+    if (!canPoll()) return
+    void inbox.syncAndRefresh().then(() => {
+      if (!canPoll()) return
+      if (notificationsOpen.value) void inbox.loadPreview()
+      if (router.currentRoute.value.path === '/notifications') void inbox.loadPage(inbox.filter)
+    })
+  }
+  function refreshOnNavigation(): void {
+    if (!canPoll()) return
+    // Every route reads current Inbox status; the store/server separately bound
+    // the optional event materialization work to prevent request bursts.
+    refreshIfVisible()
+  }
+  function onPushMessage(event: MessageEvent): void {
+    if (event.data?.type !== 'DINKERP_NOTIFICATIONS_CHANGED' || !canPoll()) return
+    void inbox.refreshSummary()
+    if (notificationsOpen.value) void inbox.loadPreview()
+    if (router.currentRoute.value.path === '/notifications') void inbox.loadPage(inbox.filter)
+  }
   function setPolling(): void {
     if (poll !== null) { clearInterval(poll); poll = null }
     if (!canPoll()) return
     refreshIfVisible()
-    poll = setInterval(refreshIfVisible, 60000)
+    poll = setInterval(() => { if (canPoll()) void inbox.refreshSummary() }, 60000)
   }
   watch(() => auth.user?.id, () => {
     inbox.clearSession()
     notificationsOpen.value = false
     setPolling()
   })
+  watch(() => router.currentRoute.value.fullPath, refreshOnNavigation)
   watch(notificationsOpen, (open) => {
     if (open && canPoll()) {
       refreshIfVisible()
-      void inbox.loadPreview()
     }
   })
   onMounted(() => {
     if (!inboxUiEnabled) return
     document.addEventListener('visibilitychange', setPolling)
     window.addEventListener('focus', refreshIfVisible)
+    window.addEventListener('pageshow', refreshIfVisible)
+    navigator.serviceWorker?.addEventListener('message', onPushMessage)
     setPolling()
   })
   onUnmounted(() => {
@@ -68,6 +89,8 @@ export function useShellHeader(currentTabKey: ComputedRef<string>) {
     if (inboxUiEnabled) {
       document.removeEventListener('visibilitychange', setPolling)
       window.removeEventListener('focus', refreshIfVisible)
+      window.removeEventListener('pageshow', refreshIfVisible)
+      navigator.serviceWorker?.removeEventListener('message', onPushMessage)
     }
   })
 

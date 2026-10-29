@@ -2,6 +2,8 @@
 
 declare(strict_types=1);
 
+require_once dirname(__DIR__, 2) . '/tools/routes/LegacyRouteSource.php';
+
 require_once __DIR__.'/M52SourceAcceptance.php';
 
 /** Source-only contract gate for six API-020 Employee/Assignment mutations. */
@@ -55,7 +57,8 @@ final class M53SourceAcceptance
             }
         }
         $routes=(string)file_get_contents($root.'/backend/app/Config/Routes.php');
-        if (substr_count($routes,"require __DIR__ . '/M53Routes.php';")!==1) {
+        $routes .= (string)file_get_contents($root.'/backend/app/Config/Routes/ApiV1/PeopleRoutes.php');
+        if ((\DinkERP\Tools\Routes\LegacyRouteSource::mounted($root, 'M53Routes.php') ? 1 : 0)!==1) {
             throw new RuntimeException('M5.3 route extension not included once.');
         }
         foreach (['employees','employees/(:num)','employee-assignments','employee-assignments/(:num)'] as $path) {
@@ -63,7 +66,7 @@ final class M53SourceAcceptance
                 throw new RuntimeException('M5.3 removed a reviewed M2.1 GET: '.$path);
             }
         }
-        $definition=(string)file_get_contents($root.'/backend/app/Config/M53Routes.php');
+        $definition=(string)\DinkERP\Tools\Routes\LegacyRouteSource::source($root, 'M53Routes.php');
         $controllerPath=$root.'/backend/app/Modules/People/Mutation/PeopleMutationController.php';
         $controller=(string)file_get_contents($controllerPath);
         $regex='~\$routes->(post|patch)\(\x27([^\x27]+)\x27,\s*\[\\\\App\\\\Modules\\\\People\\\\Mutation\\\\PeopleMutationController::class,\s*\x27([A-Za-z][A-Za-z0-9_]*)\x27\]\);~';

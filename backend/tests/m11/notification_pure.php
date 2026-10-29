@@ -33,15 +33,15 @@ function error(string $code, callable $fn): void
 }
 
 $all = NotificationCatalog::definitions();
-check(count($all) === 7, 'seven catalog keys including Browser Push');
-check(count(array_filter($all, static fn (array $v): bool => $v['capability'] === 'AVAILABLE')) === 6, 'three Import, Workflow, Email and Push available; Security future');
+check(count($all) === 12, 'twelve catalog keys including four Browser Push choices');
+check(count(array_filter($all, static fn (array $v): bool => $v['capability'] === 'AVAILABLE')) === 11, 'Import, Workflow, Email and Push available; Security future');
 check(count(array_filter($all, static fn (array $v): bool => $v['producer_state'] === 'ACTIVE'))
     === ((\App\Modules\Notifications\NotificationFlags::producerEnabled() ? 3 : 0)
         + (\App\Modules\Notifications\NotificationFlags::workflowProducerEnabled() ? 1 : 0)
         + (\App\Modules\Notifications\NotificationFlags::producerEnabled()
-            && \App\Modules\Notifications\NotificationFlags::emailQueueEnabled() ? 1 : 0)
+            && \App\Modules\Notifications\NotificationFlags::emailQueueEnabled() ? 3 : 0)
         + (\App\Modules\Notifications\NotificationFlags::producerEnabled()
-            && \App\Modules\Notifications\NotificationFlags::pushQueueEnabled() ? 1 : 0)), 'M11 producer gates');
+            && \App\Modules\Notifications\NotificationFlags::pushQueueEnabled() ? 4 : 0)), 'M11 producer gates');
 $key = 'import.completed.in_app';
 $definition = $all[$key];
 $policy = ['default_value' => 1, 'allow_user_override' => 1, 'revision' => '3', 'override_epoch' => '4'];

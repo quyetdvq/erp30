@@ -2,6 +2,8 @@
 
 declare(strict_types=1);
 
+require_once dirname(__DIR__, 1) . '/tools/routes/LegacyRouteSource.php';
+
 require_once __DIR__.'/../tools/m6/M64ASourceAcceptance.php';
 $root=dirname(__DIR__,2);
 $n=0;
@@ -27,7 +29,7 @@ for ($i=0;$i<127;$i++) $routes['GET']['api/v1/reviewed-old-'.$i]=['Old','read'];
 // The parent validator reaches older registrations and expects real owners.
 // Source gate separately checks all prior reviewed routes, so inspect the new
 // projection with a purpose-built sentinel guard instead of fake old handlers.
-$ok(str_contains((string)file_get_contents($root.'/backend/app/Config/M64ARoutes.php'), 'ProductLookupController::class'),'Product owner routes');
+$ok(str_contains((string)\DinkERP\Tools\Routes\LegacyRouteSource::source($root, 'M64ARoutes.php'), 'ProductLookupController::class'),'Product owner routes');
 $service=(string)file_get_contents($root.'/backend/app/Modules/Product/Lookup/ProductLookupService.php');
 $controller=(string)file_get_contents($root.'/backend/app/Modules/Product/Lookup/ProductLookupController.php');
 foreach (['hasBaseViewPermission(', 'viewableMasterLifecycleStatuses(',
@@ -41,5 +43,5 @@ foreach (['public function searchProductOptions(', 'public function resolveProdu
     $ok(str_contains($controller,$method),'handler '.$method);
 }
 $ok(!str_contains($controller,'DINKERP_M33B_WRITE_MODE'),'read-only not gated by mutation toggle');
-$ok(!str_contains((string)file_get_contents($root.'/backend/app/Config/M64ARoutes.php'),'$routes->delete('),'no delete');
+$ok(!str_contains((string)\DinkERP\Tools\Routes\LegacyRouteSource::source($root, 'M64ARoutes.php'),'$routes->delete('),'no delete');
 echo 'M6.4A CONTRACT: '.$n.'/'.$n." PASS\n";

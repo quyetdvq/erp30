@@ -1,0 +1,602 @@
+[
+  {
+    "method": "GET",
+    "path": "api/v1/health"
+  },
+  {
+    "method": "GET",
+    "path": "api/v1/auth/csrf"
+  },
+  {
+    "method": "POST",
+    "path": "api/v1/auth/login"
+  },
+  {
+    "method": "POST",
+    "path": "api/v1/auth/logout"
+  },
+  {
+    "method": "GET",
+    "path": "api/v1/auth/me"
+  },
+  {
+    "method": "PATCH",
+    "path": "api/v1/auth/profile"
+  },
+  {
+    "method": "GET",
+    "path": "api/v1/security/users"
+  },
+  {
+    "method": "GET",
+    "path": "api/v1/users/(:num)/permissions"
+  },
+  {
+    "method": "GET",
+    "path": "api/v1/authorization-groups"
+  },
+  {
+    "method": "GET",
+    "path": "api/v1/authorization-groups/(:num)/members"
+  },
+  {
+    "method": "GET",
+    "path": "api/v1/authorization-groups/(:num)/permissions"
+  },
+  {
+    "method": "GET",
+    "path": "api/v1/authorization-groups/(:num)"
+  },
+  {
+    "method": "GET",
+    "path": "api/v1/resources"
+  },
+  {
+    "method": "GET",
+    "path": "api/v1/resources/(:num)/actions"
+  },
+  {
+    "method": "GET",
+    "path": "api/v1/resources/(:num)"
+  },
+  {
+    "method": "GET",
+    "path": "api/v1/policies"
+  },
+  {
+    "method": "GET",
+    "path": "api/v1/policies/(:num)"
+  },
+  {
+    "method": "GET",
+    "path": "api/v1/authorization-logs"
+  },
+  {
+    "method": "GET",
+    "path": "api/v1/authorization-logs/(:num)"
+  },
+  {
+    "method": "GET",
+    "path": "api/v1/workflow-states"
+  },
+  {
+    "method": "GET",
+    "path": "api/v1/workflow-states/(:num)"
+  },
+  {
+    "method": "GET",
+    "path": "api/v1/lifecycles"
+  },
+  {
+    "method": "GET",
+    "path": "api/v1/lifecycles/(:num)/states"
+  },
+  {
+    "method": "GET",
+    "path": "api/v1/lifecycles/(:num)/transitions"
+  },
+  {
+    "method": "GET",
+    "path": "api/v1/lifecycles/(:num)"
+  },
+  {
+    "method": "POST",
+    "path": "api/v1/users"
+  },
+  {
+    "method": "PATCH",
+    "path": "api/v1/users/(:num)"
+  },
+  {
+    "method": "POST",
+    "path": "api/v1/users/(:num)/actions/set-state"
+  },
+  {
+    "method": "POST",
+    "path": "api/v1/users/(:num)/actions/reset-password"
+  },
+  {
+    "method": "PUT",
+    "path": "api/v1/users/(:num)/permissions"
+  },
+  {
+    "method": "POST",
+    "path": "api/v1/authorization-groups"
+  },
+  {
+    "method": "PATCH",
+    "path": "api/v1/authorization-groups/(:num)"
+  },
+  {
+    "method": "POST",
+    "path": "api/v1/authorization-groups/(:num)/actions/set-state"
+  },
+  {
+    "method": "PUT",
+    "path": "api/v1/authorization-groups/(:num)/members"
+  },
+  {
+    "method": "PUT",
+    "path": "api/v1/authorization-groups/(:num)/permissions"
+  },
+  {
+    "method": "POST",
+    "path": "api/v1/resources"
+  },
+  {
+    "method": "PATCH",
+    "path": "api/v1/resources/(:num)"
+  },
+  {
+    "method": "POST",
+    "path": "api/v1/resources/(:num)/actions/set-state"
+  },
+  {
+    "method": "DELETE",
+    "path": "api/v1/resources/(:num)"
+  },
+  {
+    "method": "POST",
+    "path": "api/v1/resources/(:num)/actions"
+  },
+  {
+    "method": "PATCH",
+    "path": "api/v1/resources/(:num)/actions/(:num)"
+  },
+  {
+    "method": "DELETE",
+    "path": "api/v1/resources/(:num)/actions/(:num)"
+  },
+  {
+    "method": "POST",
+    "path": "api/v1/policies"
+  },
+  {
+    "method": "PATCH",
+    "path": "api/v1/policies/(:num)"
+  },
+  {
+    "method": "POST",
+    "path": "api/v1/policies/(:num)/actions/set-state"
+  },
+  {
+    "method": "DELETE",
+    "path": "api/v1/policies/(:num)"
+  },
+  {
+    "method": "POST",
+    "path": "api/v1/workflow-states"
+  },
+  {
+    "method": "PATCH",
+    "path": "api/v1/workflow-states/(:num)"
+  },
+  {
+    "method": "POST",
+    "path": "api/v1/workflow-states/(:num)/actions/set-state"
+  },
+  {
+    "method": "POST",
+    "path": "api/v1/lifecycles"
+  },
+  {
+    "method": "PATCH",
+    "path": "api/v1/lifecycles/(:num)"
+  },
+  {
+    "method": "POST",
+    "path": "api/v1/lifecycles/(:num)/actions/set-state"
+  },
+  {
+    "method": "PUT",
+    "path": "api/v1/lifecycles/(:num)/states"
+  },
+  {
+    "method": "PUT",
+    "path": "api/v1/lifecycles/(:num)/transitions"
+  },
+  {
+    "method": "GET",
+    "path": "api/v1/provinces"
+  },
+  {
+    "method": "GET",
+    "path": "api/v1/provinces/(:num)"
+  },
+  {
+    "method": "GET",
+    "path": "api/v1/wards"
+  },
+  {
+    "method": "GET",
+    "path": "api/v1/wards/(:num)"
+  },
+  {
+    "method": "GET",
+    "path": "api/v1/organizations"
+  },
+  {
+    "method": "GET",
+    "path": "api/v1/organizations/tree"
+  },
+  {
+    "method": "GET",
+    "path": "api/v1/organizations/(:num)"
+  },
+  {
+    "method": "POST",
+    "path": "api/v1/organizations/labels/resolve"
+  },
+  {
+    "method": "GET",
+    "path": "api/v1/departments"
+  },
+  {
+    "method": "GET",
+    "path": "api/v1/departments/(:num)"
+  },
+  {
+    "method": "GET",
+    "path": "api/v1/positions"
+  },
+  {
+    "method": "GET",
+    "path": "api/v1/positions/(:num)"
+  },
+  {
+    "method": "GET",
+    "path": "api/v1/employees"
+  },
+  {
+    "method": "GET",
+    "path": "api/v1/employees/(:num)"
+  },
+  {
+    "method": "GET",
+    "path": "api/v1/employee-assignments"
+  },
+  {
+    "method": "GET",
+    "path": "api/v1/employee-assignments/(:num)"
+  },
+  {
+    "method": "GET",
+    "path": "api/v1/display-settings/runtime"
+  },
+  {
+    "method": "GET",
+    "path": "api/v1/display-settings/definitions"
+  },
+  {
+    "method": "GET",
+    "path": "api/v1/display-settings/values"
+  },
+  {
+    "method": "PATCH",
+    "path": "api/v1/display-settings"
+  },
+  {
+    "method": "POST",
+    "path": "api/v1/display-settings/actions/reset"
+  },
+  {
+    "method": "GET",
+    "path": "api/v1/resources/(:num)/numbering-series"
+  },
+  {
+    "method": "POST",
+    "path": "api/v1/resources/(:num)/numbering-series"
+  },
+  {
+    "method": "GET",
+    "path": "api/v1/resources/(:num)/numbering-series/(:num)"
+  },
+  {
+    "method": "PATCH",
+    "path": "api/v1/resources/(:num)/numbering-series/(:num)"
+  },
+  {
+    "method": "POST",
+    "path": "api/v1/resources/(:num)/numbering-series/(:num)/actions/set-state"
+  },
+  {
+    "method": "POST",
+    "path": "api/v1/resources/(:num)/numbering-series/actions/validate-config"
+  },
+  {
+    "method": "GET",
+    "path": "api/v1/business-workflow/(:segment)/states"
+  },
+  {
+    "method": "GET",
+    "path": "api/v1/business-workflow/(:segment)/(:num)/options"
+  },
+  {
+    "method": "POST",
+    "path": "api/v1/business-workflow/(:segment)/(:num)/actions/(:segment)"
+  },
+  {
+    "method": "POST",
+    "path": "api/v1/provinces"
+  },
+  {
+    "method": "PATCH",
+    "path": "api/v1/provinces/(:num)"
+  },
+  {
+    "method": "POST",
+    "path": "api/v1/provinces/(:num)/actions/set-state"
+  },
+  {
+    "method": "POST",
+    "path": "api/v1/wards"
+  },
+  {
+    "method": "PATCH",
+    "path": "api/v1/wards/(:num)"
+  },
+  {
+    "method": "POST",
+    "path": "api/v1/wards/(:num)/actions/set-state"
+  },
+  {
+    "method": "POST",
+    "path": "api/v1/organizations"
+  },
+  {
+    "method": "PATCH",
+    "path": "api/v1/organizations/(:num)"
+  },
+  {
+    "method": "POST",
+    "path": "api/v1/organizations/(:num)/actions/set-state"
+  },
+  {
+    "method": "POST",
+    "path": "api/v1/employees"
+  },
+  {
+    "method": "PATCH",
+    "path": "api/v1/employees/(:num)"
+  },
+  {
+    "method": "POST",
+    "path": "api/v1/employees/(:num)/actions/set-state"
+  },
+  {
+    "method": "POST",
+    "path": "api/v1/employee-assignments"
+  },
+  {
+    "method": "PATCH",
+    "path": "api/v1/employee-assignments/(:num)"
+  },
+  {
+    "method": "POST",
+    "path": "api/v1/employee-assignments/(:num)/actions/set-state"
+  },
+  {
+    "method": "POST",
+    "path": "api/v1/departments"
+  },
+  {
+    "method": "PATCH",
+    "path": "api/v1/departments/(:num)"
+  },
+  {
+    "method": "POST",
+    "path": "api/v1/departments/(:num)/actions/set-state"
+  },
+  {
+    "method": "POST",
+    "path": "api/v1/positions"
+  },
+  {
+    "method": "PATCH",
+    "path": "api/v1/positions/(:num)"
+  },
+  {
+    "method": "POST",
+    "path": "api/v1/positions/(:num)/actions/set-state"
+  },
+  {
+    "method": "GET",
+    "path": "api/v1/contacts"
+  },
+  {
+    "method": "POST",
+    "path": "api/v1/contacts"
+  },
+  {
+    "method": "GET",
+    "path": "api/v1/contacts/(:num)"
+  },
+  {
+    "method": "PATCH",
+    "path": "api/v1/contacts/(:num)"
+  },
+  {
+    "method": "POST",
+    "path": "api/v1/contacts/(:num)/actions/set-state"
+  },
+  {
+    "method": "GET",
+    "path": "api/v1/product-groups"
+  },
+  {
+    "method": "POST",
+    "path": "api/v1/product-groups"
+  },
+  {
+    "method": "GET",
+    "path": "api/v1/product-groups/(:num)"
+  },
+  {
+    "method": "PATCH",
+    "path": "api/v1/product-groups/(:num)"
+  },
+  {
+    "method": "POST",
+    "path": "api/v1/product-groups/(:num)/actions/set-state"
+  },
+  {
+    "method": "GET",
+    "path": "api/v1/product-uoms"
+  },
+  {
+    "method": "POST",
+    "path": "api/v1/product-uoms"
+  },
+  {
+    "method": "GET",
+    "path": "api/v1/product-uoms/(:num)"
+  },
+  {
+    "method": "PATCH",
+    "path": "api/v1/product-uoms/(:num)"
+  },
+  {
+    "method": "POST",
+    "path": "api/v1/product-uoms/(:num)/actions/set-state"
+  },
+  {
+    "method": "GET",
+    "path": "api/v1/products"
+  },
+  {
+    "method": "GET",
+    "path": "api/v1/products/(:num)"
+  },
+  {
+    "method": "POST",
+    "path": "api/v1/products"
+  },
+  {
+    "method": "PATCH",
+    "path": "api/v1/products/(:num)"
+  },
+  {
+    "method": "POST",
+    "path": "api/v1/products/(:num)/actions/set-state"
+  },
+  {
+    "method": "POST",
+    "path": "api/v1/products/(:num)/image"
+  },
+  {
+    "method": "DELETE",
+    "path": "api/v1/products/(:num)/image"
+  },
+  {
+    "method": "POST",
+    "path": "api/v1/users/(:num)/avatar"
+  },
+  {
+    "method": "DELETE",
+    "path": "api/v1/users/(:num)/avatar"
+  },
+  {
+    "method": "GET",
+    "path": "api/v1/products/options"
+  },
+  {
+    "method": "POST",
+    "path": "api/v1/products/options/resolve"
+  },
+  {
+    "method": "POST",
+    "path": "api/v1/product-uoms/labels/resolve"
+  },
+  {
+    "method": "GET",
+    "path": "api/v1/products/(:num)/uom-conversions"
+  },
+  {
+    "method": "PUT",
+    "path": "api/v1/products/(:num)/uom-conversions"
+  },
+  {
+    "method": "GET",
+    "path": "api/v1/products/(:num)/combo-items"
+  },
+  {
+    "method": "PUT",
+    "path": "api/v1/products/(:num)/combo-items"
+  },
+  {
+    "method": "GET",
+    "path": "api/v1/price-lists"
+  },
+  {
+    "method": "POST",
+    "path": "api/v1/price-lists"
+  },
+  {
+    "method": "GET",
+    "path": "api/v1/price-lists/(:num)"
+  },
+  {
+    "method": "PATCH",
+    "path": "api/v1/price-lists/(:num)"
+  },
+  {
+    "method": "POST",
+    "path": "api/v1/price-lists/(:num)/actions/set-state"
+  },
+  {
+    "method": "GET",
+    "path": "api/v1/price-lists/(:num)/items"
+  },
+  {
+    "method": "PUT",
+    "path": "api/v1/price-lists/(:num)/items"
+  },
+  {
+    "method": "POST",
+    "path": "api/v1/products/details/resolve"
+  },
+  {
+    "method": "POST",
+    "path": "api/v1/products/relations-preview"
+  },
+  {
+    "method": "POST",
+    "path": "api/v1/products/sales-uom-options/resolve"
+  },
+  {
+    "method": "POST",
+    "path": "api/v1/products/import-jobs"
+  },
+  {
+    "method": "GET",
+    "path": "api/v1/import-jobs"
+  },
+  {
+    "method": "GET",
+    "path": "api/v1/import-jobs/(:num)"
+  },
+  {
+    "method": "GET",
+    "path": "api/v1/import-jobs/(:num)/rows"
+  }
+]

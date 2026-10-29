@@ -2,6 +2,8 @@
 
 declare(strict_types=1);
 
+require_once dirname(__DIR__, 2) . '/tools/routes/LegacyRouteSource.php';
+
 /** Source-only acceptance for M5.1. No database, Composer or HTTP required. */
 require_once dirname(__DIR__) . '/m4/M4SourceAcceptance.php';
 
@@ -68,10 +70,11 @@ final class M5SourceAcceptance
         }
         $routesFile = $root . '/backend/app/Config/Routes.php';
         $routes = (string) file_get_contents($routesFile);
-        if (substr_count($routes, "require __DIR__ . '/M5Routes.php';") !== 1 || str_contains($routes, 'setAutoRoute(true)')) {
+        $routes .= \DinkERP\Tools\Routes\LegacyRouteSource::core70($root);
+        if ((\DinkERP\Tools\Routes\LegacyRouteSource::mounted($root, 'M5Routes.php') ? 1 : 0) !== 1 || str_contains($routes, 'setAutoRoute(true)')) {
             throw new RuntimeException('M5.1 routes are not included exactly once under API group.');
         }
-        $m5 = (string) file_get_contents($root . '/backend/app/Config/M5Routes.php');
+        $m5 = (string) \DinkERP\Tools\Routes\LegacyRouteSource::source($root, 'M5Routes.php');
         $pattern = '~\$routes->(post|patch)\(\s*\x27([^\x27]+)\x27,\s*\[\\\\App\\\\Modules\\\\Locations\\\\Mutation\\\\LocationMutationController::class,\s*\x27([A-Za-z][A-Za-z0-9_]*)\x27\]\);~';
         preg_match_all($pattern, $m5, $matches, PREG_SET_ORDER);
         if (count($matches) !== 6 || substr_count($m5, '$routes->') !== 6) {

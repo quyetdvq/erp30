@@ -73,8 +73,8 @@ $ok(str_contains($source,'viewDecisionForState('),'canonical DENY and ABSOLUTE_D
 $ok(str_contains($source,'$this->ancestors($id)'),'scope evaluates org ancestry');
 $providerSource=(string)file_get_contents(__DIR__.'/../app/Modules/Contact/ContactScopeProvider.php');
 $ok(str_contains($providerSource,"->table('organizations')"),'provider enumerates trusted persisted Organizations');
-$ok(str_contains($providerSource,'->limit(513)')&&str_contains($providerSource,'> 512'),
-    'large organization namespace rejected without unscoped fallback');
+$ok(str_contains($providerSource,'TrustedOrganizationIdPager::collect(') && str_contains($providerSource,'hasBaseViewPermission('),
+    'keyset-bounded metadata and absent VIEW bypass');
 $ok(!str_contains($providerSource,"->table('contacts')"),'not deriving scope from contact rows');
 $ok(!str_contains($providerSource,'$_GET')&&!str_contains($providerSource,'$_POST'),'no client scopes');
 echo 'M8.6E CONTACT DUAL PBAC SCOPE: '.$n.'/'.$n." PASS\n";

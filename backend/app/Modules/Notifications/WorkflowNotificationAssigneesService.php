@@ -7,6 +7,7 @@ namespace App\Modules\Notifications;
 use App\Exceptions\DomainException;
 use App\Modules\Access\UnifiedAccessService;
 use App\Modules\Workflow\Execution\BusinessWorkflowRules;
+use App\Modules\Workflow\Execution\BusinessWorkflowContactScope;
 use App\Shared\Http\RequestMetadata;
 use CodeIgniter\Database\BaseConnection;
 use CodeIgniter\Shield\Entities\User;
@@ -178,7 +179,9 @@ final class WorkflowNotificationAssigneesService
                 throw new DomainException('AUTH_POLICY_DENIED');
             }
         }
-        return $row;
+        // Workflow OPTIONS and M11 assignee mutations must evaluate exactly
+        // the same trusted Contact scope; the contacts table has no org ID.
+        return BusinessWorkflowContactScope::fromPersisted($resource, $row, $this->db);
     }
 
     /** @param array<string,mixed> $row */

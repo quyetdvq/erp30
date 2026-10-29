@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 import { useI18n } from 'vue-i18n'
+import { STANDARD_PAGE_SIZE_OPTIONS } from './listPageSizePolicy'
 
 const props = withDefaults(
   defineProps<{
@@ -11,7 +12,7 @@ const props = withDefaults(
     disabled?: boolean
     ariaLabel?: string
   }>(),
-  { pageSizeOptions: () => [10, 15, 20, 25, 50, 100, 200], disabled: false },
+  { pageSizeOptions: () => STANDARD_PAGE_SIZE_OPTIONS, disabled: false },
 )
 
 const emit = defineEmits<{

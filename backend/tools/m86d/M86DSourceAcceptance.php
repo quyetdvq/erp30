@@ -34,6 +34,8 @@ final class M86DSourceAcceptance
             "in_array(\$resource, ['employee', 'department', 'position'], true)",
             "in_array(\$resource, ['organization', 'employee_assignment'], true)",
             "in_array(\$resource, ['province', 'ward'], true)",
+            'locationSqlService($user, $instant)->list(',
+            'locationSqlService($user)->show(',
             'peopleSqlService($user, $instant)->list(',
             'organizationSqlService($user, $instant)->list(',
             'peopleSqlService($user)->show(',
@@ -45,6 +47,9 @@ final class M86DSourceAcceptance
             if (!str_contains($controller, $term)) {
                 throw new RuntimeException('Mandatory SQL dispatch missing: ' . $term);
             }
+        }
+        if (str_contains($controller, 'authorizedRows(') || str_contains($controller, 'AuthorizedListPage::paginate(')) {
+            throw new RuntimeException('Location SQL-first regression: in-memory paging forbidden.');
         }
         foreach ([
             'new UnifiedAccessService(', 'func_num_args() > 3',

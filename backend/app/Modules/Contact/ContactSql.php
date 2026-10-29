@@ -104,7 +104,9 @@ final class ContactSql
             $where[] = '(' . implode(' OR ', $or) . ')';
         }
         foreach ($params['filter'] as $field => $values) {
-            $where[] = self::exactValues('c.' . $field, $values);
+            $where[] = $field === 'contact_ref_id' && self::canonicalIds($values)
+                ? 'c.contact_ref_id IN (' . implode(',', array_fill(0, count($values), '?')) . ')'
+                : self::exactValues('c.' . $field, $values);
             array_push($binds, ...$values);
         }
         $order = [];
@@ -198,6 +200,15 @@ final class ContactSql
                 ...$employeePredicate['binds'],...$customerBinds,
             ],
         ];
+    }
+
+    /** @param list<string> $ids */
+    private static function canonicalIds(array $ids): bool
+    {
+        foreach ($ids as $id) {
+            if (preg_match('/\A[1-9][0-9]*\z/D', $id) !== 1) return false;
+        }
+        return true;
     }
 
     /** @param list<string> $values */

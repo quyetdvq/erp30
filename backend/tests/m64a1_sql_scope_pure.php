@@ -106,7 +106,7 @@ foreach ([
 $access = (string) file_get_contents(__DIR__ . '/../app/Modules/Access/UnifiedAccessService.php');
 $service = (string) file_get_contents(__DIR__ . '/../app/Modules/Product/Lookup/ProductLookupService.php');
 $ok(str_contains($access, 'viewableMasterLifecycleStatuses('), 'compiler owned by canonical Access');
-$ok(str_contains($access, "['product', 'product_group', 'product_uom', 'employee', 'department', 'position']"), 'compiler retains Product/Catalog when extending to reviewed People types');
+$ok(str_contains($access, "['product', 'product_group', 'product_uom', 'employee', 'department', 'position', 'province', 'ward', 'customer', 'customer_contact']"), 'compiler retains Product/Catalog when extending to reviewed People types');
 $ok(str_contains($access, "!== 'MASTER'"), 'reject changed resource domain');
 $ok(str_contains($access, 'viewDecisionForState('), 'shared PBAC evaluation between persisted/SQL');
 $ok(str_contains($access, 'AccessDecisionCore::decide('), 'all policy lanes retained');

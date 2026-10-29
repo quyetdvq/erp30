@@ -7,8 +7,8 @@ namespace App\Modules\Notifications;
 use OpenSSLAsymmetricKey;
 use RuntimeException;
 
-/** Payload-free RFC 8030 / RFC 8292 Web Push, signed using an ES256 VAPID key. */
-final class NotificationVapidSender implements NotificationPushSender
+/** VAPID-authenticated RFC 8030 Push, with optional encrypted RFC 8291 content. */
+final class NotificationVapidSender implements NotificationPushPayloadSender
 {
     private readonly OpenSSLAsymmetricKey $private;
     private readonly string $public;
@@ -71,6 +71,16 @@ final class NotificationVapidSender implements NotificationPushSender
 
     public function send(string $endpoint): string
     {
+        return $this->request($endpoint, null);
+    }
+
+    public function sendEncrypted(string $endpoint, string $payload, string $p256dh, string $auth): string
+    {
+        return $this->request($endpoint, NotificationPushContentEncryption::encrypt($payload, $p256dh, $auth));
+    }
+
+    private function request(string $endpoint, ?string $body): string
+    {
         if (! NotificationPushRules::endpoint($endpoint)) {
             throw new RuntimeException('M11_PUSH_ENDPOINT_REJECTED');
         }
@@ -90,12 +100,13 @@ final class NotificationVapidSender implements NotificationPushSender
         try {
             $options = [
                 CURLOPT_POST => true,
-                CURLOPT_POSTFIELDS => '',
+                CURLOPT_POSTFIELDS => $body ?? '',
                 CURLOPT_HTTPHEADER => [
                     'Authorization: vapid t=' . $jwt . ', k=' . $this->public,
-                    'TTL: 60',
-                    'Content-Length: 0',
+                    'TTL: 300',
+                    'Content-Length: ' . strlen($body ?? ''),
                     'Urgency: normal',
+                    ...($body === null ? [] : ['Content-Encoding: aes128gcm', 'Content-Type: application/octet-stream']),
                 ],
                 CURLOPT_RETURNTRANSFER => true,
                 CURLOPT_FOLLOWLOCATION => false,

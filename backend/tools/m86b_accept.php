@@ -10,4 +10,4 @@ if ($result['operations']!==150 || $result['org_scope']!=='SQL_ALWAYS'
 }
 echo 'M8.6B SOURCE PASS: 150/150 routes unchanged; Organization and Employee Assignment multi-company SQL PBAC unconditional.' . PHP_EOL;
 echo 'M8.6B READ: canonical authorization and SQL scope are mandatory; no environment mode.' . PHP_EOL;
-echo 'M8.6B PENDING: authenticated MariaDB multi-company PBAC/HTTP, Unicode/sort, effective_at, EXPLAIN, 512-ID cap; Employee/Department/Position not migrated; production=BLOCKED.' . PHP_EOL;
+echo 'M8.6B PENDING: authenticated MariaDB multi-company PBAC/HTTP, Unicode/sort, effective_at, EXPLAIN, 4096-Organization metadata cap and 16384-scope-slot cap (v1.9.23 candidate); runtime parity pending; production=BLOCKED.' . PHP_EOL;

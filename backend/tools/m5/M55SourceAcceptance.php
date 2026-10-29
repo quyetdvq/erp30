@@ -2,6 +2,8 @@
 
 declare(strict_types=1);
 
+require_once dirname(__DIR__, 2) . '/tools/routes/LegacyRouteSource.php';
+
 require_once __DIR__ . '/M54SourceAcceptance.php';
 
 /** Five Contact-owned API-010 routes. Source inventory only; no HTTP/SQL claim. */
@@ -53,11 +55,11 @@ final class M55SourceAcceptance
             }
         }
         $routes = (string) file_get_contents($root . '/backend/app/Config/Routes.php');
-        if (substr_count($routes, "require __DIR__ . '/M55Routes.php';") !== 1
+        if ((\DinkERP\Tools\Routes\LegacyRouteSource::mounted($root, 'M55Routes.php') ? 1 : 0) !== 1
             || str_contains($routes, 'setAutoRoute(true)')) {
             throw new RuntimeException('M5.5 routes not registered exactly once.');
         }
-        $definitions = (string) file_get_contents($root . '/backend/app/Config/M55Routes.php');
+        $definitions = (string) \DinkERP\Tools\Routes\LegacyRouteSource::source($root, 'M55Routes.php');
         $pattern = '~\$routes->(get|post|patch)\(\x27([^\x27]+)\x27,\s*\[\\\\App\\\\Modules\\\\Contact\\\\ContactController::class,\s*\x27([A-Za-z][A-Za-z0-9_]*)\x27\]\);~';
         preg_match_all($pattern, $definitions, $matches, PREG_SET_ORDER);
         if (count($matches) !== 5 || substr_count($definitions, '$routes->') !== 5) {

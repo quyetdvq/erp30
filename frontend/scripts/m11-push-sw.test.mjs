@@ -16,10 +16,12 @@ function workerHarness(clients = []) {
     Promise,
     self: {
       location: { origin: 'https://erp2.monmin.net' },
+      async skipWaiting() {},
       registration: {
         async showNotification(title, options) { notifications.push({ title, options }) },
       },
       clients: {
+        async claim() {},
         async matchAll() { return clients },
         async openWindow(url) { opens.push(url) },
       },
@@ -67,4 +69,57 @@ test('click opens ERP Inbox when no existing same-origin tab exists', async () =
   const h = workerHarness([{ url: 'https://unrelated.example/path' }])
   await h.event('notificationclick', { notification: { close() {} } })
   assert.deepEqual(h.opens, ['/notifications'])
+})
+
+test('encrypted import facts show a meaningful summary without exposing arbitrary text', async () => {
+  const h = workerHarness()
+  await h.event('push', { data: { json: () => ({
+    v: 1, event: 'import.completed_with_errors', id: '87', success: 42, errors: 3,
+    private: 'secret-customer-email@example.com',
+  }) } })
+  assert.equal(h.notifications.length, 1)
+  assert.match(h.notifications[0].title, /Import Product có lỗi/)
+  assert.match(h.notifications[0].options.body, /#87.*42.*3/)
+  assert.ok(!JSON.stringify(h.notifications[0]).includes('secret-customer-email'))
+  assert.equal(h.notifications[0].options.data.path, '/notifications')
+})
+
+test('workflow fact identifies resource and state but rejects spoofed resource text', async () => {
+  const h = workerHarness()
+  await h.event('push', { data: { json: () => ({
+    v: 1, event: 'workflow.action_required', id: '29', resource: 'product', state: 'ACTIVE',
+  }) } })
+  assert.match(h.notifications[0].options.body, /Sản phẩm #29.*ACTIVE/)
+  await h.event('push', { data: { json: () => ({
+    v: 1, event: 'workflow.action_required', id: '29', resource: '<script>', state: 'ACTIVE',
+  }) } })
+  assert.equal(h.notifications[1].title, 'DinkERP')
+})
+
+
+test('custom Workflow approval states remain topic-specific and do not fall back to generic', async () => {
+  const h = workerHarness()
+  await h.event('push', { data: { json: () => ({
+    v: 1, event: 'workflow.action_required', id: '19', resource: 'customer_contact', state: 'WAITING_APPROVAL',
+  }) } })
+  assert.equal(h.notifications.length, 1)
+  assert.equal(h.notifications[0].title, 'Có quy trình cần xử lý')
+  assert.match(h.notifications[0].options.body, /Liên hệ khách hàng #19.*WAITING_APPROVAL/)
+})
+
+test('unknown safe Workflow resource produces a neutral label rather than arbitrary text', async () => {
+  const h = workerHarness()
+  await h.event('push', { data: { json: () => ({
+    v: 1, event: 'workflow.action_required', id: '23', resource: 'future_source', state: 'REVIEW',
+  }) } })
+  assert.equal(h.notifications[0].title, 'Có quy trình cần xử lý')
+  assert.match(h.notifications[0].options.body, /Đối tượng #23.*REVIEW/)
+  assert.ok(!h.notifications[0].options.body.includes('future_source'))
+})
+
+
+test('new Service Worker activates without requiring ERP tabs to close', async () => {
+  const h = workerHarness()
+  await h.event('install')
+  await h.event('activate')
 })

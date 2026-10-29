@@ -6,6 +6,7 @@ namespace App\Modules\Contact;
 
 use App\Modules\Access\Query\AuthorizedSqlScope;
 use App\Modules\Access\Query\ResourceScopeProvider;
+use App\Modules\Access\Query\TrustedOrganizationIdPager;
 use App\Modules\Access\UnifiedAccessService;
 use CodeIgniter\Database\BaseConnection;
 use InvalidArgumentException;
@@ -31,23 +32,17 @@ final class ContactScopeProvider implements ResourceScopeProvider
 
     public function compile(UnifiedAccessService $access): AuthorizedSqlScope
     {
-        // Same fail-closed bound as M8.6B. Future DB-backed scope compilation
-        // can replace this limit after authenticated MariaDB parity/EXPLAIN.
-        $query = $this->db->table('organizations')->select('id')
-            ->orderBy('id', 'ASC')->limit(513)->get();
-        if ($query === false) throw new UnexpectedValueException('Contact organization metadata query failed.');
-        $rows = $query->getResultArray();
-        if (count($rows) > 512) {
-            throw new UnexpectedValueException('AUTH_SCOPE_COMPILATION_UNSUPPORTED: more than 512 organizations.');
+        // Bypass expensive metadata enumeration when the actor has no base VIEW.
+        if (!$access->hasBaseViewPermission($this->type)) {
+            return AuthorizedSqlScope::organization($this->type, []);
         }
-        $ids = [];
-        foreach ($rows as $row) {
-            $id = (string)($row['id'] ?? '');
-            if (preg_match('/\A[1-9][0-9]*\z/D', $id) !== 1) {
-                throw new UnexpectedValueException('Invalid persisted Organization identifier.');
-            }
-            $ids[] = $id;
-        }
+        $ids = TrustedOrganizationIdPager::collect(function (?string $last, int $size): array {
+            $builder = $this->db->table('organizations')->select('id');
+            if ($last !== null) $builder->where('id >', $last);
+            $query = $builder->orderBy('id', 'ASC')->limit($size)->get();
+            if ($query === false) throw new UnexpectedValueException('Organization metadata query failed.');
+            return $query->getResultArray();
+        });
         return AuthorizedSqlScope::organization(
             $this->type,
             $access->viewableOrganizationStateBuckets($this->type, $ids),

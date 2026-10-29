@@ -3,7 +3,7 @@ import { ref } from 'vue'
 import axios from 'axios'
 import { useAuthStore } from '@/stores/auth'
 import {
-  getInboxPage, getInboxSummary, markInboxAllRead, markInboxRead,
+  getInboxPage, getInboxSummary, markInboxAllRead, markInboxRead, syncPendingNotifications,
   type InboxNotification, type InboxAdvancedFilters, type InboxEventGroup,
 } from '@/services/notificationInbox'
 
@@ -28,6 +28,8 @@ export const useNotificationsStore = defineStore('notifications', () => {
   let previewController: AbortController | null = null
   let summaryPending: Promise<void> | null = null
   let summarySource: AbortController | null = null
+  let syncPending: Promise<void> | null = null
+  let lastSyncAt = 0
 
   function clearSession(): void {
     ++generation
@@ -40,6 +42,8 @@ export const useNotificationsStore = defineStore('notifications', () => {
     controller = null
     previewController = null
     summaryPending = null
+    syncPending = null
+    lastSyncAt = 0
     items.value = []
     previewItems.value = []
     previewBusy.value = false
@@ -86,6 +90,30 @@ export const useNotificationsStore = defineStore('notifications', () => {
       if (summaryPending === pending) summaryPending = null
       if (summarySource === source) summarySource = null
     })
+    return pending
+  }
+
+  /** F5/route/focus: bounded POST for pending events, THEN read-only summary.
+   * Failure of the optional sync never prevents regular Inbox refresh.
+   * Session fencing prevents late responses leaking between signed-in Users.
+   */
+  function syncAndRefresh(): Promise<void> {
+    if (syncPending) return syncPending
+    const ctx = context()
+    if (!ctx) return Promise.resolve()
+    const now = Date.now()
+    if (now - lastSyncAt < 3000) return refreshSummary()
+    lastSyncAt = now
+    const pending = (async () => {
+      try {
+        await syncPendingNotifications()
+      } catch (e) {
+        if (current(ctx) && nonAbort(e)) error.value = 'sync'
+      }
+      if (current(ctx)) await refreshSummary()
+    })()
+    syncPending = pending
+    void pending.finally(() => { if (syncPending === pending) syncPending = null })
     return pending
   }
 
@@ -180,5 +208,5 @@ export const useNotificationsStore = defineStore('notifications', () => {
   }
   return { unreadCount, items, nextCursor, filter, eventGroup, dateFrom, dateTo, busy, error,
     previewItems, previewBusy, previewError, loadPreview,
-    clearSession, refreshSummary, loadPage, markRead, markAllRead }
+    clearSession, refreshSummary, syncAndRefresh, loadPage, markRead, markAllRead }
 })

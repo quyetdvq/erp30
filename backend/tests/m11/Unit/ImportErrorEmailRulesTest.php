@@ -30,7 +30,7 @@ final class ImportErrorEmailRulesTest extends TestCase
     public function testAllEmailAndPushPoliciesRequireExplicitConsentMetadata(): void
     {
         $catalog = NotificationCatalog::definitions();
-        self::assertCount(9, $catalog);
+        self::assertCount(12, $catalog);
         foreach ($catalog as $key => $definition) {
             self::assertSame(str_ends_with($key, '.email') || str_ends_with($key, '.push'),
                 $definition['requires_explicit_consent'], $key);

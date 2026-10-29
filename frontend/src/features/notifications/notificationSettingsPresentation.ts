@@ -17,6 +17,9 @@ const labelKeys: Readonly<Record<string, string>> = {
   'import.completed_with_errors.email': 'importCompletedWithErrorsEmail',
   'import.failed.email': 'importFailedEmail',
   'import.completed.push': 'importCompletedPush',
+  'import.completed_with_errors.push': 'importCompletedWithErrorsPush',
+  'import.failed.push': 'importFailedPush',
+  'workflow.action_required.push': 'workflowActionRequiredPush',
 }
 
 export function notificationLabelKey(key: string): string | null {

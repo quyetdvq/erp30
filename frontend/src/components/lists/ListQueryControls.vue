@@ -4,6 +4,7 @@ import { useI18n } from 'vue-i18n'
 
 import SearchableSelect from '@/components/forms/SearchableSelect.vue'
 import type { ListFilterDefinition, ListQuery, ListSortOption } from './listTypes'
+import { STANDARD_PAGE_SIZE_OPTIONS } from './listPageSizePolicy'
 
 const props = withDefaults(
   defineProps<{
@@ -17,7 +18,7 @@ const props = withDefaults(
   {
     filters: () => [],
     sortOptions: () => [],
-    pageSizeOptions: () => [10, 15, 20, 25, 50, 100, 200],
+    pageSizeOptions: () => STANDARD_PAGE_SIZE_OPTIONS,
     showPageSize: true,
     disabled: false,
   },

@@ -2,6 +2,8 @@
 
 declare(strict_types=1);
 
+require_once dirname(__DIR__, 1) . '/tools/routes/LegacyRouteSource.php';
+
 require_once __DIR__.'/../tools/m86e/M86ESourceAcceptance.php';
 $n=0;
 $ok=static function(bool $valid,string $name)use(&$n):void{
@@ -37,5 +39,5 @@ $ok(str_contains($rules,"'ORGANIZATION' => 'organization_contact'")&&
     str_contains($rules,"'EMPLOYEE' => 'employee_contact'"),'no generic Contact resource');
 $ok(!str_contains($controller,'DINKERP_M86E_SQL_SCOPE_MODE'),'no opt-in flag');
 $ok(!str_contains($service,'SELECT * FROM contacts'),'no unscoped raw SELECT');
-$ok(substr_count((string)file_get_contents($root.'/backend/app/Config/M55Routes.php'),'$routes->')===5,'exact five Contact routes');
+$ok(substr_count((string)\DinkERP\Tools\Routes\LegacyRouteSource::source($root, 'M55Routes.php'),'$routes->')===5,'exact five Contact routes');
 echo 'M8.6E CONTACT SOURCE/TRANSACTION CONTRACT: '.$n.'/'.$n." PASS\n";

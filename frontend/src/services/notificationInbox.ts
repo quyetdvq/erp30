@@ -16,6 +16,14 @@ export type InboxEventGroup = 'all' | 'import' | 'workflow'
 export type InboxAdvancedFilters = { eventGroup: InboxEventGroup; from: string | null; to: string | null }
 type Envelope<T> = { data: T; meta: { request_id: string } }
 
+/** Explicit CSRF-protected request to materialize only this user's due events. */
+export async function syncPendingNotifications(): Promise<{ status: string; processed: number }> {
+  const response = await apiClient.post<Envelope<{ status: string; processed: number }>>(
+    '/api/v1/notifications/actions/sync',
+  )
+  return response.data.data
+}
+
 export async function getInboxSummary(signal?: AbortSignal): Promise<number> {
   const response = await apiClient.get<Envelope<{ unread_count: number }>>('/api/v1/notifications/summary', { signal })
   return response.data.data.unread_count

@@ -2,6 +2,8 @@
 
 declare(strict_types=1);
 
+require_once dirname(__DIR__, 1) . '/tools/routes/LegacyRouteSource.php';
+
 require_once __DIR__ . '/../tools/m6/M62ASourceAcceptance.php';
 $root = dirname(__DIR__,2);
 $n = 0;
@@ -31,7 +33,7 @@ foreach (['missing','wrong-owner','extra','write'] as $mutation) {
     try { M62ASourceAcceptance::validateRegistered($candidate); throw new RuntimeException('accepted '.$mutation); }
     catch (RuntimeException $error) { $ok(!str_starts_with($error->getMessage(),'accepted '), 'reject '.$mutation); }
 }
-$source = (string)file_get_contents($root.'/backend/app/Config/M62ARoutes.php');
+$source = (string)\DinkERP\Tools\Routes\LegacyRouteSource::source($root, 'M62ARoutes.php');
 $ok(substr_count($source, '$routes->get(')===2 && !str_contains($source,'$routes->post('),'GET only');
 $ok(str_contains($root.'/backend/app/Modules/Product/Master/ProductReadRules.php','ProductReadRules.php'),'Product owned');
 echo 'M6.2A CONTRACT: '.$n.'/'.$n." PASS\n";

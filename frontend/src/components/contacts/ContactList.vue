@@ -12,14 +12,21 @@ import {
   ListTable,
   TableDetailModal,
   TableRowActions,
+  TableStatus,
 } from '@/components/lists'
-import { createListQuery, type ListColumn, type ListQuery } from '@/components/lists/listTypes'
+import {
+  createListQuery,
+  type ListColumn,
+  type ListFilterDefinition,
+  type ListQuery,
+} from '@/components/lists/listTypes'
 import type { TableDetailField } from '@/components/lists/TableDetailModal.vue'
 import { useListState } from '@/composables/useListState'
 import { useBasePermission } from '@/composables/useBasePermission'
 import { reportApiError } from '@/services/errorBoundary'
 import { useBusinessWorkflowStates } from '@/composables/useBusinessWorkflowStates'
 import ContactFormModal from './ContactFormModal.vue'
+import { scopedContactListQuery } from './contactListQuery'
 
 const props = withDefaults(
   defineProps<{
@@ -42,16 +49,25 @@ const workflowStates = useBusinessWorkflowStates(ownerResource, [
   'INACTIVE',
   'CLOSED',
 ])
-const initialState = computed(
-  () =>
-    workflowStates.initial.value ??
-    (workflowStates.codes.value.includes('DRAFT')
-      ? 'DRAFT'
-      : (workflowStates.codes.value[0] ?? 'ACTIVE')),
-)
-const historyStates = computed(() =>
-  workflowStates.codes.value.filter((code) => code !== 'ACTIVE' && code !== initialState.value),
-)
+function displayStatus(status: string): string {
+  const code = status.trim().toUpperCase()
+  const key = `status.${code.toLowerCase()}`
+  const localized = t(key)
+  return localized === key ? code : localized
+}
+
+const statusFilters = computed<readonly ListFilterDefinition[]>(() => [
+  {
+    key: 'status',
+    labelKey: 'contact.status',
+    type: 'select',
+    options: workflowStates.codes.value.map((code) => ({
+      value: code,
+      labelKey: 'contact.status',
+      label: displayStatus(code),
+    })),
+  },
+])
 function rowPermissionResource(contact: Contact): string {
   return contact.contact_type === 'ORGANIZATION'
     ? 'organization_contact'
@@ -59,7 +75,6 @@ function rowPermissionResource(contact: Contact): string {
       ? 'employee_contact'
       : ''
 }
-const mode = ref<'active' | 'draft' | 'history'>('active')
 const modalOpen = ref(false)
 const detailOpen = ref(false)
 const detailContact = ref<Contact | null>(null)
@@ -69,32 +84,11 @@ const error = ref<unknown | null>(null)
 const provinces = ref<Province[]>([])
 const wards = ref<Ward[]>([])
 
+// One authorized SQL page for every Contact status. An explicit status
+// filter is optional; absence means ALL states (including custom lifecycles).
 const state = useListState<Contact>(
-  (query) => {
-    const ownerFilters = { ...query.filter }
-    delete ownerFilters.status
-    if (mode.value === 'history' && historyStates.value.length === 0) {
-      return Promise.resolve({
-        data: [],
-        meta: { page: query.page, page_size: query.page_size, total: 0 },
-      })
-    }
-    return listContactPage({
-      ...query,
-      filter: {
-        ...ownerFilters,
-        contact_type: props.ownerType,
-        contact_ref_id: props.ownerId,
-        status:
-          mode.value === 'active'
-            ? 'ACTIVE'
-            : mode.value === 'draft'
-              ? initialState.value
-              : historyStates.value,
-      },
-    })
-  },
-  createListQuery({ filter: { status: 'ACTIVE' } }),
+  (query) => listContactPage(scopedContactListQuery(query, props.ownerType, props.ownerId)),
+  createListQuery({ sort: '-id' }),
 )
 
 const columns: readonly ListColumn<Contact>[] = [
@@ -106,13 +100,6 @@ const columns: readonly ListColumn<Contact>[] = [
   { key: 'actions', labelKey: 'contact.actions' },
 ]
 
-const statusLabel = computed(() =>
-  mode.value === 'active'
-    ? t('contact.activeView')
-    : mode.value === 'draft'
-      ? t('contact.draftView')
-      : t('contact.historyView'),
-)
 const detailFields = computed<readonly TableDetailField[]>(() => {
   const contact = detailContact.value
   if (!contact) return []
@@ -194,15 +181,12 @@ async function save(payload: Parameters<typeof saveContact>[0]): Promise<void> {
   mutationBusy.value = true
   error.value = null
   try {
-    const saved = await saveContact(payload, editing.value?.id)
+    await saveContact(payload, editing.value?.id)
     modalOpen.value = false
     if (!editing.value) {
-      mode.value =
-        saved.status === 'ACTIVE'
-          ? 'active'
-          : saved.status === initialState.value
-            ? 'draft'
-            : 'history'
+      // New Contacts default to the configured initial Lifecycle state.
+      // Clear a previous status/search filter so they are never hidden.
+      resetToAllContacts()
     }
     await load()
   } catch (caught: unknown) {
@@ -213,9 +197,15 @@ async function save(payload: Parameters<typeof saveContact>[0]): Promise<void> {
   }
 }
 
-async function afterWorkflowChange(status: string): Promise<void> {
-  mode.value = status === 'ACTIVE' ? 'active' : status === initialState.value ? 'draft' : 'history'
+async function afterWorkflowChange(): Promise<void> {
+  // Leave the user's optional status filter intact. Without a filter the
+  // transitioned Contact stays visible in the same unified list.
   await load()
+}
+
+function resetToAllContacts(): void {
+  state.reset()
+  state.setSort('-id')
 }
 
 function applyQuery(query: ListQuery): void {
@@ -227,23 +217,14 @@ function applyQuery(query: ListQuery): void {
 }
 
 function resetQuery(): void {
-  state.reset()
+  resetToAllContacts()
   void load()
 }
-
-watch(historyStates, () => {
-  if (mode.value === 'history') void load()
-})
-
-watch(mode, () => {
-  state.setPage(1)
-  void load()
-})
 
 watch(
   () => [props.ownerId, props.ownerType] as const,
   () => {
-    state.reset()
+    resetToAllContacts()
     void load()
   },
 )
@@ -256,33 +237,6 @@ onMounted(async () => {
 <template>
   <section class="contact-list" :aria-label="t('contact.title')">
     <header class="contact-list__header">
-      <div class="contact-list__modes" role="tablist" :aria-label="t('contact.historyToggle')">
-        <button
-          type="button"
-          role="tab"
-          :aria-selected="mode === 'active'"
-          @click="mode = 'active'"
-        >
-          {{ t('contact.activeView') }}
-        </button>
-        <button
-          v-if="initialState !== 'ACTIVE'"
-          type="button"
-          role="tab"
-          :aria-selected="mode === 'draft'"
-          @click="mode = 'draft'"
-        >
-          {{ t('contact.draftView') }} ({{ initialState }})
-        </button>
-        <button
-          type="button"
-          role="tab"
-          :aria-selected="mode === 'history'"
-          @click="mode = 'history'"
-        >
-          {{ t('contact.historyView') }}
-        </button>
-      </div>
       <button
         v-if="hasBasePermission(ownerResource, 'create')"
         type="button"
@@ -293,7 +247,12 @@ onMounted(async () => {
       </button>
     </header>
     <div class="contact-list__toolbar">
-      <ListQueryControls :model-value="state.query" @apply="applyQuery" @reset="resetQuery" />
+      <ListQueryControls
+        :model-value="state.query"
+        :filters="statusFilters"
+        @apply="applyQuery"
+        @reset="resetQuery"
+      />
       <button type="button" class="secondary-button" @click="void load()">
         ↻ {{ t('common.refresh') }}
       </button>
@@ -318,6 +277,12 @@ onMounted(async () => {
           }
         "
       >
+        <template #cell-status="{ row }">
+          <span class="contact-list__status">
+            <TableStatus :status="row.status" />
+            <span>{{ displayStatus(row.status) }}</span>
+          </span>
+        </template>
         <template #cell-actions="{ row }">
           <TableRowActions authorization-mode="effective" :view-scope-verified="true" :allowed-actions="rowAllowedActions(row)"
             :active="row.status === 'ACTIVE'"
@@ -375,9 +340,6 @@ onMounted(async () => {
       :fields="detailFields"
       @close="detailOpen = false"
     />
-    <div class="contact-actions" aria-live="polite">
-      <span>{{ statusLabel }}</span>
-    </div>
   </section>
 </template>
 
@@ -396,22 +358,14 @@ onMounted(async () => {
   gap: 10px;
   flex-wrap: wrap;
 }
-.contact-list__modes {
+.contact-list__header {
+  justify-content: flex-end;
+}
+.contact-list__status {
   display: inline-flex;
-  gap: 4px;
-}
-.contact-list__modes button {
-  border: 1px solid #c7d6df;
-  border-radius: 4px;
-  padding: 7px 11px;
-  background: #fff;
-  color: #536b7b;
-  cursor: pointer;
-}
-.contact-list__modes button[aria-selected='true'] {
-  border-color: #1876a8;
-  background: #eaf5fa;
-  color: #1876a8;
+  align-items: center;
+  gap: 8px;
+  white-space: nowrap;
 }
 .contact-list__toolbar input {
   min-height: 34px;
@@ -423,14 +377,6 @@ onMounted(async () => {
 .inline-error {
   margin: 0;
   color: #b64444;
-  font-size: 12px;
-}
-.contact-actions {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  flex-wrap: wrap;
-  color: #536b7b;
   font-size: 12px;
 }
 </style>

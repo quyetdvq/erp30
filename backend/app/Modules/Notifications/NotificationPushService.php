@@ -46,27 +46,30 @@ final class NotificationPushService
             'queue_enabled' => $queue, 'send_enabled' => $send];
     }
 
-    /** @return list<array{id:string,created_at:string}> */
+    /** @return list<array{id:string,created_at:string,detail_ready:bool}> */
     public function listing(): array
     {
         $rows = $this->db->table('notification_push_subscriptions')
-            ->select('id,created_at')->where('user_id', $this->userId)->where('enabled', 1)
+            ->select('id,created_at,key_material_cipher')->where('user_id', $this->userId)->where('enabled', 1)
             ->orderBy('id', 'DESC')->get()->getResultArray();
         return array_map(static fn (array $row): array => [
             'id' => (string) $row['id'], 'created_at' => (string) $row['created_at'],
+            'detail_ready' => is_string($row['key_material_cipher']) && $row['key_material_cipher'] !== '',
         ], $rows);
     }
 
-    /** @param array<string,mixed> $body @return array{id:string,created_at:string} */
+    /** @param array<string,mixed> $body @return array{id:string,created_at:string,detail_ready:bool} */
     public function subscribe(array $body): array
     {
-        $endpoint = NotificationPushRules::subscription($body)['endpoint'];
+        $validated = NotificationPushRules::subscription($body);
+        $endpoint = $validated['endpoint'];
         if (! $this->config()['available']) {
             throw new DomainException('NOTIFICATION_PUSH_DISABLED');
         }
         $key = NotificationPushCrypto::key();
         $hash = NotificationPushCrypto::fingerprint($endpoint, $key);
         $cipher = NotificationPushCrypto::encrypt($endpoint, $key);
+        $keysCipher = NotificationPushCrypto::encryptKeys($validated['p256dh'], $validated['auth'], $key);
         if (! $this->db->transBegin()) {
             throw new RuntimeException('M11_PUSH_TRANSACTION_FAILED');
         }
@@ -91,7 +94,7 @@ final class NotificationPushService
                 }
                 $ok = $this->db->table('notification_push_subscriptions')->insert([
                     'user_id' => $this->userId, 'endpoint_hash' => $hash,
-                    'endpoint_cipher' => $cipher, 'enabled' => 1,
+                    'endpoint_cipher' => $cipher, 'key_material_cipher' => $keysCipher, 'enabled' => 1,
                     'created_at' => $now, 'updated_at' => $now,
                 ]);
                 $id = (string) $this->db->insertID();
@@ -116,6 +119,7 @@ final class NotificationPushService
                 }
                 $ok = $this->db->table('notification_push_subscriptions')->where('id', $row['id'])->update([
                     'user_id' => $this->userId, 'endpoint_cipher' => $cipher,
+                    'key_material_cipher' => $keysCipher,
                     'enabled' => 1, 'revoked_at' => null, 'updated_at' => $now,
                 ]);
                 $id = (string) $row['id'];
@@ -123,7 +127,8 @@ final class NotificationPushService
             if (! $ok || ! $this->db->transStatus() || ! $this->db->transCommit()) {
                 throw new DomainException('NOTIFICATION_STORAGE_FAILED');
             }
-            return ['id' => $id, 'created_at' => $row === null ? $now : (string) $row['created_at']];
+            return ['id' => $id, 'created_at' => $row === null ? $now : (string) $row['created_at'],
+                'detail_ready' => true];
         } catch (Throwable $e) {
             $this->db->transRollback();
             $this->db->resetTransStatus();
@@ -164,21 +169,27 @@ final class NotificationPushService
         }
     }
 
+    /** A user may subscribe after explicitly opting into ANY supported Push category. */
     private function consented(): bool
     {
-        $policy = $this->db->table('notification_settings s')
+        $keys = array_keys(array_filter(NotificationCatalog::definitions(),
+            static fn (array $definition, string $key): bool => str_ends_with($key, '.push'), ARRAY_FILTER_USE_BOTH));
+        $rows = $this->db->table('notification_settings s')
             ->select('s.*,p.override_value AS preference_value,p.override_epoch AS preference_epoch,'
                 . 'p.user_revision AS preference_revision')
-            ->join('notification_user_preferences p', 'p.setting_key=s.setting_key AND p.user_id=' . (int) $this->userId, 'left')
-            ->where('s.setting_key', 'import.completed.push')->get()->getRowArray();
-        if ($policy === null) {
-            throw new DomainException('NOTIFICATION_CONFIGURATION_INVALID');
+            ->join('notification_user_preferences p',
+                'p.setting_key=s.setting_key AND p.user_id=' . (int) $this->userId, 'left')
+            ->whereIn('s.setting_key', $keys)->get()->getResultArray();
+        foreach ($rows as $policy) {
+            $pref = $policy['preference_revision'] === null ? null : [
+                'override_value' => $policy['preference_value'],
+                'override_epoch' => $policy['preference_epoch'], 'user_revision' => $policy['preference_revision'],
+            ];
+            if (NotificationPushRules::consented($policy, $pref, (string) $policy['setting_key'])) {
+                return true;
+            }
         }
-        $pref = $policy['preference_revision'] === null ? null : [
-            'override_value' => $policy['preference_value'],
-            'override_epoch' => $policy['preference_epoch'], 'user_revision' => $policy['preference_revision'],
-        ];
-        return NotificationPushRules::consented($policy, $pref);
+        return false;
     }
 
     private function table(string $logical): string

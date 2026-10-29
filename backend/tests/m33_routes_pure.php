@@ -182,8 +182,21 @@ namespace {
     // then independently replay the unchanged 132/129/... historical gates.
     // Validate all four frozen Import routes and replay the complete M7.4
     // footprint after subtracting exactly these four operations.
-    M8SourceAcceptance::validateRegistered($routes->registered);
-    $m74Projection = $routes->registered;
+    $pins = json_decode((string) file_get_contents(
+        __DIR__ . '/fixtures/routes_v1923_frozen150.json'), true, 512, JSON_THROW_ON_ERROR);
+    if (count($pins) !== 150) {
+        throw new \RuntimeException('Frozen P1 projection count changed');
+    }
+    $reviewed150 = [];
+    foreach ($pins as $pin) {
+        $handler = $routes->registered[$pin['method']][$pin['path']] ?? null;
+        if ($handler === null) {
+            throw new \RuntimeException('Missing frozen P1 route: ' . $pin['method'] . ' ' . $pin['path']);
+        }
+        $reviewed150[$pin['method']][$pin['path']] = $handler;
+    }
+    M8SourceAcceptance::validateRegistered($reviewed150);
+    $m74Projection = $reviewed150;
     foreach (M8SourceAcceptance::operations() as $newKey => $_operation) {
         [$verb,$path] = explode(' ', $newKey, 2);
         unset($m74Projection[$verb]['api/v1/'.$path]);
@@ -292,9 +305,11 @@ namespace {
     foreach ($routes->registered as $method => $entries) {
         if ($method !== 'OPTIONS') { $count += count($entries); }
     }
-    if ($count !== 150 || count($expected) !== 19 || count($mutations) !== 16 || count($userMutations) !== 5 || count($workflowMutations) !== 8) {
+    $approved = json_decode((string) file_get_contents(
+        __DIR__ . '/fixtures/routes_extensions_approved.json'), true, 512, JSON_THROW_ON_ERROR);
+    if ($count !== 178 + count($approved['routes'] ?? []) || count($reviewed150) === 0 || count($expected) !== 19 || count($mutations) !== 16 || count($userMutations) !== 5 || count($workflowMutations) !== 8) {
         throw new \RuntimeException('Unexpected registered operation count: ' . $count . ' (expected 70 M3 + 14 M4 + 6 M5.1 + 3 M5.2 + 6 M5.3 + 6 M5.4 + 5 M5.5 + 10 M6.1 + 2 M6.2A + 3 M6.2B + 2 M6.3A + 2 M6.3B + 3 M6.4A + 2 M7.1 + 2 M7.2 + 7 M7.3 + 3 M7.4 + 4 M8).');
     }
-    echo 'PASS: 70 pinned M3.4D + 14 M4 + 6 M5.1 + 3 M5.2  + 6 M5.3 + 6 M5.4 + 5 M5.5 + 10 M6.1 + 2 M6.2A + 3 M6.2B + 2 M6.3A + 2 M6.3B + 3 M6.4A + 2 M7.1 + 2 M7.2 + 7 M7.3 + 3 M7.4 + 4 M8 = 150 approved routes' . PHP_EOL;
+    echo 'PASS: ' . $count . ' non-OPTIONS registrations (178 baseline + approved extensions), of which 150 are frozen P1. 70 pinned M3.4D + 14 M4 + 6 M5.1 + 3 M5.2  + 6 M5.3 + 6 M5.4 + 5 M5.5 + 10 M6.1 + 2 M6.2A + 3 M6.2B + 2 M6.3A + 2 M6.3B + 3 M6.4A + 2 M7.1 + 2 M7.2 + 7 M7.3 + 3 M7.4 + 4 M8 = 150 approved routes' . PHP_EOL;
     echo 'TOTAL: ' . (++$passed) . ' M3.3 route assertions passed.' . PHP_EOL;
 }
