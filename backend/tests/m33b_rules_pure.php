@@ -147,7 +147,7 @@ okB('Access mutation uses action-specific PBAC',str_contains($source,'->decideMu
 okB('Resource Lifecycle reassignment validates policies',str_contains($source,'->assertReassignmentSafe('));
 okB('Group member replacement uses Shield tables',str_contains(file_get_contents(__DIR__.'/../app/Modules/Access/Mutation/AccessMutationRepository.php'),"['groups_users']"));
 $controller=file_get_contents(__DIR__.'/../app/Modules/Access/Mutation/AccessMutationController.php');
-okB('Write endpoints require explicit opt-in',str_contains($controller,"DINKERP_M33B_WRITE_MODE"));
-okB('Write endpoints default closed',str_contains($controller,"'off'"));
+okB('Write endpoints require authentication',str_contains($controller,'UNAUTHENTICATED'));
+okB('No obsolete global write-mode response',!str_contains($controller,'ACCESS_MUTATION_NOT_ENABLED'));
 
 echo 'TOTAL: '.$count.' M3.3B1 pure assertions passed.'.PHP_EOL;

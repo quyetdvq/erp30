@@ -82,8 +82,7 @@ final class M71SourceAcceptance
             }
             $seen[$key] = true;
         }
-        foreach (["'UNAUTHENTICATED', 401", "'ACCESS_MUTATION_NOT_ENABLED', 403",
-            "env('DINKERP_M33B_WRITE_MODE', 'off')", 'JsonRequest::readObject(', 'replacementBody(', 'BadRequestException'] as $gate) {
+        foreach (["'UNAUTHENTICATED', 401", 'new ProductConversionService($actor)', 'JsonRequest::readObject(', 'replacementBody(', 'BadRequestException'] as $gate) {
             if (!str_contains($controller, $gate)) throw new RuntimeException('M7.1 HTTP gate missing: '.$gate);
         }
         foreach (["viewableMasterLifecycleStatuses('product')", 'hasBaseViewPermission(',

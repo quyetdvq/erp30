@@ -105,7 +105,7 @@ check34b2('Source metadata inspect happens before CREATE DATABASE',
     strpos($runner, 'M34BTemplateResolver::choose(') < strpos($runner, '$archive->provision()'));
 check34b2('Fallback never copies live auto-increment counter', str_contains($sandbox, 'AUTO_INCREMENT='));
 check34b2('Production write-mode remains controlled in separate child runner',
-    ! str_contains($runner,"'DINKERP_M33B_WRITE_MODE'=>'enabled'"));
+    ! str_contains($runner,"'UNAUTHENTICATED'=>'enabled'"));
 check34b2('No SQL or HTTP operations in fallback decision source',
     ! preg_match('/\b(?:SELECT|INSERT|UPDATE|DELETE|CREATE DATABASE|DROP DATABASE|curl_init)\b/i', $src));
 

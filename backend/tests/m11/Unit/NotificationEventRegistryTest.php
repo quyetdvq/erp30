@@ -28,9 +28,9 @@ final class NotificationEventRegistryTest extends TestCase
             'import.completed' => ['import_job', 1, 'import_terminal', 'import_inbox',
                 ['in_app', 'email', 'push'], 'import_job'],
             'import.completed_with_errors' => ['import_job', 1, 'import_terminal', 'import_inbox',
-                ['in_app', 'email'], 'import_job'],
+                ['in_app', 'email', 'push'], 'import_job'],
             'import.failed' => ['import_job', 1, 'import_terminal', 'import_inbox',
-                ['in_app', 'email'], 'import_job'],
+                ['in_app', 'email', 'push'], 'import_job'],
             'workflow.action_required' => ['workflow_transition', 2, 'workflow_action_required',
                 'workflow_inbox', ['in_app', 'push'], 'workflow_target'],
         ], $actual);

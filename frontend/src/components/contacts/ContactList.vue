@@ -27,11 +27,12 @@ import { reportApiError } from '@/services/errorBoundary'
 import { useBusinessWorkflowStates } from '@/composables/useBusinessWorkflowStates'
 import ContactFormModal from './ContactFormModal.vue'
 import { scopedContactListQuery } from './contactListQuery'
+import { contactOwnerResource, type ContactOwnerType } from './contactOwnerPolicy'
 
 const props = withDefaults(
   defineProps<{
     ownerId: string
-    ownerType?: 'EMPLOYEE' | 'ORGANIZATION'
+    ownerType?: ContactOwnerType
   }>(),
   { ownerType: 'ORGANIZATION' },
 )
@@ -40,15 +41,12 @@ const { t } = useI18n()
 const { hasBasePermission } = useBasePermission()
 // Permission boundaries follow the persisted Contact owner kind; legacy
 // contact.* is never a fallback for an unregistered/future owner.
-const ownerResource = computed(() =>
-  props.ownerType === 'ORGANIZATION' ? 'organization_contact' : 'employee_contact',
-)
-const workflowStates = useBusinessWorkflowStates(ownerResource, [
-  'ACTIVE',
-  'DRAFT',
-  'INACTIVE',
-  'CLOSED',
-])
+const ownerResource = computed(() => contactOwnerResource(props.ownerType))
+// Supplier Contacts must not display invented fixed State codes when the
+// configured Lifecycle cannot be read. Keep the pre-existing fallback for
+// other legacy owner kinds to avoid changing their behavior in this patch.
+const workflowStates = useBusinessWorkflowStates(ownerResource, props.ownerType === 'SUPPLIER'
+  ? [] : ['ACTIVE', 'DRAFT', 'INACTIVE', 'CLOSED'])
 function displayStatus(status: string): string {
   const code = status.trim().toUpperCase()
   const key = `status.${code.toLowerCase()}`
@@ -69,11 +67,7 @@ const statusFilters = computed<readonly ListFilterDefinition[]>(() => [
   },
 ])
 function rowPermissionResource(contact: Contact): string {
-  return contact.contact_type === 'ORGANIZATION'
-    ? 'organization_contact'
-    : contact.contact_type === 'EMPLOYEE'
-      ? 'employee_contact'
-      : ''
+  return contactOwnerResource(contact.contact_type)
 }
 const modalOpen = ref(false)
 const detailOpen = ref(false)

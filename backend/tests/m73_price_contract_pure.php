@@ -24,7 +24,8 @@ $controller=(string)file_get_contents($base.'PriceListController.php');
 $service=(string)file_get_contents($base.'PriceListService.php');
 $sql=(string)file_get_contents($base.'PriceListSql.php');
 $ok(substr_count($controller,'$this->service()')===7,'all paths authenticate');
-$ok(substr_count($controller,'$this->canMutate()')===4,'four mutation routes gated');
+$ok(!str_contains($controller,'canMutate()') && !str_contains($controller,'ACCESS_MUTATION_NOT_ENABLED')
+    && str_contains($service, 'decideMutation('),'four mutation routes use service PBAC without a global switch');
 $ok(str_contains($controller,"if ($".'raw[0]' ."==='{' && !array_key_exists('items',\$body))"),'empty JSON object guarded');
 $ok(str_contains($service,'PriceListItemPlan::build('),'plan for atomic items');
 $ok(str_contains($service,'BINARY p.status')===false,'SQL predicate not rebuilt in service');

@@ -17,7 +17,7 @@ use CodeIgniter\Database\BaseConnection;
  * inventing a GROUP/current-Company scope or accepting a client hint.
  *
  * The returned organization_id is an authorization-only projection: it is
- * NEVER persisted back to contacts. Customer Contacts remain MASTER-scoped.
+ * NEVER persisted back to contacts. Customer/Supplier Contacts remain MASTER-scoped.
  */
 final class BusinessWorkflowContactScope
 {

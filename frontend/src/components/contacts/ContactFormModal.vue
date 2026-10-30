@@ -6,12 +6,13 @@ import type { Contact, ContactCreate, Province, Ward } from '@/api/generated/typ
 import type { ContactUpdate } from '@/services/foundation'
 import SearchableSelect from '@/components/forms/SearchableSelect.vue'
 import { useUnsavedChanges } from '@/composables/useUnsavedChanges'
+import type { ContactOwnerType } from './contactOwnerPolicy'
 
 const props = withDefaults(
   defineProps<{
     open: boolean
     ownerId: string
-    ownerType: 'EMPLOYEE' | 'ORGANIZATION'
+    ownerType: ContactOwnerType
     contact?: Contact | null
     provinces?: readonly Province[]
     wards?: readonly Ward[]

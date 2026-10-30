@@ -91,7 +91,7 @@ final class M33B3Verify extends BaseCommand
             . ', targets=' . count($targets) . ', checked=' . $checked
             . ', allowed=' . $allow . ', denied=' . $deny . ', errors=' . $errors);
         CLI::write('NOTE: no database writes; not HTTP, password hashing, or MariaDB rollback parity.', 'yellow');
-        CLI::write('NOTE: DINKERP_M33B_WRITE_MODE=off remains the default.', 'yellow');
+        CLI::write('NOTE: Shield user mutations require canonical PBAC; runtime UAT remains separate.', 'yellow');
         if ($checked === 0 || $errors > 0) {
             throw new UnexpectedValueException('M3.3B3 sampled User mutation PBAC failed.');
         }

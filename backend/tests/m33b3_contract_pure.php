@@ -32,8 +32,8 @@ $repository = (string) file_get_contents($base . 'Modules/Identity/Mutation/Secu
 $guard = (string) file_get_contents($base . 'Modules/Access/UnifiedAccessService.php');
 $checks = [
  'Only five User mutation routes' => count($userMutations) === 5,
- 'Explicit write opt-in gate' => str_contains($controller, "env('DINKERP_M33B_WRITE_MODE', 'off')"),
- 'Writes stay closed unless enabled' => str_contains($controller, "!== 'enabled'"),
+ 'Shield authentication required' => str_contains($controller, 'UNAUTHENTICATED'),
+ 'No temporary global write toggle' => !str_contains($controller, 'ACCESS_MUTATION_NOT_ENABLED'),
  'Auth before creating service' => strpos($controller, '! $actor instanceof User') < strpos($controller,'new SecurityUserMutationService($actor)'),
  'Controller never accepts file upload here' => !str_contains($controller, 'avatarFilename'),
  'Reset password uses distinct action' => str_contains($service, "'user', 'reset_password'"),

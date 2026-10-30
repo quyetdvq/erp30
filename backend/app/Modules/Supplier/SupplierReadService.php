@@ -115,6 +115,20 @@ final class SupplierReadService
             $row['company_ids'] = array_map('strval', array_column($usage, 'company_organization_id'));
             // Neither the client nor a DB view can use usage as a PBAC grant.
             $row['allowed_actions'] = EffectiveRowActionHints::forViewedRow($access, 'supplier', $row);
+            // T08: advisory, VIEW-scoped transition target. A Supplier POST still
+            // validates CAS + current PBAC + its canonical Workflow transition.
+            // Never route this mutation through generic BusinessWorkflowService.
+            $row['setstate_targets'] = [];
+            if (($row['allowed_actions']['setstate'] ?? false) === true) {
+                try {
+                    $row['setstate_targets'][] = $this->states->transitionTarget('supplier', $row, 'setstate');
+                } catch (UnexpectedValueException $e) {
+                    if ($e->getMessage() !== 'Transition not allowed or ambiguous for current State.') {
+                        throw $e;
+                    }
+                    // No unambiguous configured setstate transition: no UI action.
+                }
+            }
             return $row;
         });
     }

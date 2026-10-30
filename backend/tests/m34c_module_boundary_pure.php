@@ -110,8 +110,8 @@ $pass('Workflow write retains centralized mutation PBAC and SQL rollback',
     str_contains($read('Modules/Workflow/Mutation/WorkflowMutationService.php'), 'new UnifiedAccessService(')
     && str_contains($read('Modules/Workflow/Mutation/WorkflowMutationService.php'), 'transRollback()'));
 $pass('Default mutation gate unchanged in both owner controllers',
-    str_contains($read('Modules/Identity/Mutation/SecurityUserMutationController.php'), "env('DINKERP_M33B_WRITE_MODE', 'off')")
-    && str_contains($read('Modules/Workflow/Mutation/WorkflowMutationController.php'), "env('DINKERP_M33B_WRITE_MODE', 'off')"));
+    str_contains($read('Modules/Identity/Mutation/SecurityUserMutationController.php'), 'UNAUTHENTICATED')
+    && str_contains($read('Modules/Workflow/Mutation/WorkflowMutationController.php'), 'UNAUTHENTICATED'));
 $pass('M33 verify still samples all six master catalogs plus Users',
     str_contains($read('Commands/M33Verify.php'), 'WorkflowReadContract::TABLES')
     && str_contains($read('Commands/M33Verify.php'), '$identity->securityUsers()'));

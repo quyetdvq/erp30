@@ -131,7 +131,7 @@ final class M33B2Verify extends BaseCommand
             . ', policies=' . count($policies) . ', checked=' . $decisions
             . ', allowed=' . $allow . ', denied=' . $deny . ', errors=' . $errors);
         CLI::write('NOTE: zero writes; no HTTP/transaction equivalence to running baseline.', 'yellow');
-        CLI::write('NOTE: DINKERP_M33B_WRITE_MODE=off remains the default.', 'yellow');
+        CLI::write('NOTE: policy mutations require Shield session and canonical PBAC; runtime UAT remains separate.', 'yellow');
         if ($decisions === 0 || $errors !== 0) {
             throw new UnexpectedValueException('M3.3B2 Policy runtime readiness failed.');
         }

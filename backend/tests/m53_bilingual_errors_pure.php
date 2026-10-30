@@ -75,7 +75,7 @@ $check(str_contains($source('backend/app/Shared/Http/ApiResponder.php'), "'ApiRu
 $check(str_contains($source('backend/app/Shared/Http/ApiExceptionHandler.php'), 'ApiResponder::error('), 'HTTP exception handler uses localized API error');
 foreach (['Locations/Mutation/LocationMutationController.php', 'Organization/Mutation/OrganizationMutationController.php', 'People/Mutation/PeopleMutationController.php'] as $controller) {
     $body = $source('backend/app/Modules/' . $controller);
-    $check(str_contains($body, 'DINKERP_M33B_WRITE_MODE') && str_contains($body, "'ACCESS_MUTATION_NOT_ENABLED'"), $controller . ' keeps gated PBAC mutation');
+    $check(str_contains($body, 'UNAUTHENTICATED') && !str_contains($body, 'ACCESS_MUTATION_NOT_ENABLED'), $controller . ' keeps authenticated PBAC mutation');
 }
 
 echo "M5.3 I18N CONTRACT: {$assertions}/{$assertions} PASS (en/vi, internal errors, DEV gate, baseline messages).\n";

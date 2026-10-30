@@ -89,7 +89,7 @@ final class M63SourceAcceptance
             'PublicImageStorage', "':product-master'", 'ImageUrl::for(', 'cleanup(', 'ProductReadService'] as $guard) {
             if (!str_contains($service, $guard)) throw new RuntimeException('Product Media security/atomicity guard missing: '.$guard);
         }
-        foreach (["env('DINKERP_M33B_WRITE_MODE', 'off')", "'UNAUTHENTICATED', 401", "getFile('image')"] as $guard) {
+        foreach (['UNAUTHENTICATED', "'UNAUTHENTICATED', 401", "getFile('image')"] as $guard) {
             if (!str_contains($controller, $guard)) throw new RuntimeException('Product Media request boundary missing: '.$guard);
         }
         foreach (['en','vi'] as $lang) {

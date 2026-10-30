@@ -10,7 +10,7 @@ use UnexpectedValueException;
 /** A single fail-closed entry point for reviewed resource SQL VIEW providers. */
 final class AuthorizationSqlScopeCompiler
 {
-    private const REVIEWED_DOMAINS = ['product'=>'MASTER', 'product_group'=>'MASTER', 'product_uom'=>'MASTER', 'price_list'=>'ORGANIZATION', 'organization'=>'ORGANIZATION', 'employee_assignment'=>'ORGANIZATION', 'employee'=>'MASTER', 'department'=>'MASTER', 'position'=>'MASTER', 'province'=>'MASTER', 'ward'=>'MASTER', 'organization_contact'=>'ORGANIZATION', 'employee_contact'=>'ORGANIZATION', 'customer'=>'MASTER', 'customer_contact'=>'MASTER', 'supplier'=>'MASTER'];
+    private const REVIEWED_DOMAINS = ['product'=>'MASTER', 'product_group'=>'MASTER', 'product_uom'=>'MASTER', 'price_list'=>'ORGANIZATION', 'organization'=>'ORGANIZATION', 'employee_assignment'=>'ORGANIZATION', 'employee'=>'MASTER', 'department'=>'MASTER', 'position'=>'MASTER', 'province'=>'MASTER', 'ward'=>'MASTER', 'organization_contact'=>'ORGANIZATION', 'employee_contact'=>'ORGANIZATION', 'customer'=>'MASTER', 'customer_contact'=>'MASTER', 'supplier'=>'MASTER', 'supplier_contact'=>'MASTER'];
 
     public function __construct(private readonly UnifiedAccessService $access) {}
 

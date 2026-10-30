@@ -14,6 +14,117 @@ servers:
 security:
   - sessionAuth: []
 paths:
+  # P2-SUP T07B: only the seven T07A Core endpoints, no Bank/History bypass.
+  /api/v1/suppliers:
+    get:
+      operationId: listSuppliers
+      summary: List VIEW-authorized Suppliers under the server-trusted GROUP root
+      description: "Flat filters. SQL-first authorized COUNT/page, including all Lifecycle states unless explicitly filtered. Company Usage never grants PBAC. Session authentication and DB-backed record PBAC are mandatory."
+      parameters:
+        - {name: page, in: query, schema: {type: integer, minimum: 1, default: 1}}
+        - {name: page_size, in: query, schema: {type: integer, minimum: 1, maximum: 100, default: 25}}
+        - {name: q, in: query, schema: {type: string, maxLength: 1024}}
+        - {name: status, in: query, schema: {$ref: '#/components/schemas/BusinessWorkflowStatus'}}
+        - {name: supplier_type, in: query, schema: {$ref: '#/components/schemas/SupplierType'}}
+        - {name: supplier_group_code, in: query, schema: {$ref: '#/components/schemas/SupplierGroupCode'}}
+        - {name: company_id, in: query, schema: {$ref: '#/components/schemas/PositiveBigInt'}}
+        - {name: sort, in: query, schema: {type: string, enum: [name, '-name', supplier_code, '-supplier_code', id, '-id'], default: name}}
+      responses:
+        '200': {description: Authorized Supplier page, content: {application/json: {schema: {$ref: '#/components/schemas/SupplierCollectionResponse'}}}}
+        '400': {$ref: '#/components/responses/BadRequest'}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+    post:
+      operationId: createSupplier
+      summary: Create a Supplier with a canonical Lifecycle initial State
+      description: "Requires supplier.create plus DB-backed PBAC and trusted GROUP; Company Usage is eligibility only. No Bank material. Manual code is forbidden whenever a default Supplier numbering series exists, even if inactive."
+      requestBody: {required: true, content: {application/json: {schema: {$ref: '#/components/schemas/SupplierCreate'}}}}
+      responses:
+        '201': {description: Created Supplier, content: {application/json: {schema: {$ref: '#/components/schemas/SupplierResponse'}}}}
+        '400': {$ref: '#/components/responses/BadRequest'}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+        '409': {$ref: '#/components/responses/Conflict'}
+        '422': {$ref: '#/components/responses/UnprocessableEntity'}
+  /api/v1/suppliers/{id}:
+    parameters: [{name: id, in: path, required: true, schema: {$ref: '#/components/schemas/PositiveBigInt'}}]
+    get:
+      operationId: getSupplier
+      summary: Get a scoped Supplier profile with safe fields only
+      responses:
+        '200': {description: Supplier profile, content: {application/json: {schema: {$ref: '#/components/schemas/SupplierResponse'}}}}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+        '404': {$ref: '#/components/responses/NotFound'}
+    patch:
+      operationId: updateSupplier
+      summary: CAS update of Supplier profile (not State, Bank or Company Usage)
+      requestBody: {required: true, content: {application/json: {schema: {$ref: '#/components/schemas/SupplierPatch'}}}}
+      responses:
+        '200': {description: Updated Supplier, content: {application/json: {schema: {$ref: '#/components/schemas/SupplierResponse'}}}}
+        '400': {$ref: '#/components/responses/BadRequest'}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+        '404': {$ref: '#/components/responses/NotFound'}
+        '409': {$ref: '#/components/responses/Conflict'}
+        '422': {$ref: '#/components/responses/UnprocessableEntity'}
+  /api/v1/suppliers/{id}/company-usages:
+    parameters: [{name: id, in: path, required: true, schema: {$ref: '#/components/schemas/PositiveBigInt'}}]
+    get:
+      operationId: getSupplierCompanyUsages
+      summary: Get only Company Usage data from the VIEW-scoped Supplier
+      responses:
+        '200': {description: Supplier Company Usage, content: {application/json: {schema: {$ref: '#/components/schemas/SupplierCompanyUsageResponse'}}}}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+        '404': {$ref: '#/components/responses/NotFound'}
+    put:
+      operationId: replaceSupplierCompanyUsages
+      summary: CAS replace all Supplier Company Usage, never a PBAC grant
+      requestBody: {required: true, content: {application/json: {schema: {$ref: '#/components/schemas/SupplierCompanyUsagePut'}}}}
+      responses:
+        '200': {description: Updated Supplier, content: {application/json: {schema: {$ref: '#/components/schemas/SupplierResponse'}}}}
+        '400': {$ref: '#/components/responses/BadRequest'}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+        '404': {$ref: '#/components/responses/NotFound'}
+        '409': {$ref: '#/components/responses/Conflict'}
+        '422': {$ref: '#/components/responses/UnprocessableEntity'}
+  /api/v1/suppliers/{id}/actions/set-state:
+    parameters: [{name: id, in: path, required: true, schema: {$ref: '#/components/schemas/PositiveBigInt'}}]
+    post:
+      operationId: setSupplierState
+      summary: Canonical Supplier CAS Lifecycle transition; no generic Workflow execute
+      description: "The backend validates one unambiguous configured transition from the persisted State, checks supplier.setstate and rechecks Company facts for operational states."
+      requestBody: {required: true, content: {application/json: {schema: {$ref: '#/components/schemas/SupplierSetState'}}}}
+      responses:
+        '200': {description: Transitioned Supplier, content: {application/json: {schema: {$ref: '#/components/schemas/SupplierResponse'}}}}
+        '400': {$ref: '#/components/responses/BadRequest'}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+        '404': {$ref: '#/components/responses/NotFound'}
+        '409': {$ref: '#/components/responses/Conflict'}
+        '422': {$ref: '#/components/responses/UnprocessableEntity'}
+  # SUP master audit is separate from deferred PUR/INV/FIN transaction history.
+  /api/v1/history/suppliers/{id}:
+    parameters: [{name: id, in: path, required: true, schema: {$ref: '#/components/schemas/PositiveBigInt'}}]
+    get:
+      operationId: listSupplierChangeHistory
+      summary: Read selective Supplier master change history
+      description: >-
+        Requires enabled Supplier API and SQL/PBAC-authorized supplier.view on the persisted
+        Group-owned Supplier in the same REPEATABLE READ snapshot as COUNT and page.
+        This endpoint never contains Purchase, Receipt, Return or Payment documents.
+        Changes and checkpoints are server redacted; bank account plaintext is never returned.
+      parameters:
+        - {name: page, in: query, schema: {type: integer, minimum: 1, default: 1}}
+        - {name: page_size, in: query, schema: {type: integer, minimum: 1, maximum: 50, default: 25}}
+      responses:
+        '200': {description: Authorized redacted Supplier events, content: {application/json: {schema: {$ref: '#/components/schemas/SupplierHistoryCollectionResponse'}}}}
+        '400': {$ref: '#/components/responses/BadRequest'}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+        '404': {$ref: '#/components/responses/NotFound'}
   /api/v1/health:
     get:
       operationId: getHealth
@@ -1092,7 +1203,7 @@ paths:
         '422': {$ref: '#/components/responses/UnprocessableEntity'}
   /api/v1/business-workflow/{resource}/{id}/notification-assignees:
     parameters:
-      - $ref: '#/components/parameters/BusinessWorkflowResource'
+      - $ref: '#/components/parameters/WorkflowNotificationResource'
       - $ref: '#/components/parameters/Id'
     get:
       operationId: getWorkflowNotificationAssignees
@@ -1113,6 +1224,50 @@ paths:
         '403': {$ref: '#/components/responses/Forbidden'}
         '404': {$ref: '#/components/responses/NotFound'}
         '409': {$ref: '#/components/responses/Conflict'}
+        '422': {$ref: '#/components/responses/UnprocessableEntity'}
+  /api/v1/business-workflow/{resource}/{id}/assignee-candidates:
+    parameters:
+      - $ref: '#/components/parameters/WorkflowNotificationResource'
+      - $ref: '#/components/parameters/Id'
+    get:
+      operationId: listWorkflowAssigneeCandidates
+      summary: Search active Shield Users for explicitly authorized per-record notification configuration
+      description: >-
+        Candidate identities are not approvers and confer no PBAC rights.
+        The server requires record-level VIEW and SETSTATE. Supplier searches
+        are scoped to the trusted persisted GROUP, not Company Usage.
+      parameters:
+        - {name: q, in: query, schema: {type: string, maxLength: 100}}
+        - {name: ids, in: query, description: Comma-separated positive Shield User IDs for selected-label resolution., schema: {type: string, maxLength: 500}}
+        - {name: page, in: query, schema: {type: integer, minimum: 1, maximum: 10000, default: 1}}
+        - {name: page_size, in: query, schema: {type: integer, minimum: 1, maximum: 50, default: 25}}
+      responses:
+        '200':
+          description: Bounded active-user candidates; not a permission grant.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data, meta]
+                properties:
+                  data:
+                    type: array
+                    items:
+                      type: object
+                      required: [id, username, name]
+                      properties:
+                        id: {$ref: '#/components/schemas/BigInt'}
+                        username: {type: string}
+                        name: {type: [string, 'null']}
+                  meta:
+                    type: object
+                    properties:
+                      page: {type: integer, minimum: 1}
+                      page_size: {type: integer, minimum: 1, maximum: 50}
+                      total: {type: integer, minimum: 0}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+        '404': {$ref: '#/components/responses/NotFound'}
         '422': {$ref: '#/components/responses/UnprocessableEntity'}
   /api/v1/configuration-settings/notifications:
     get:
@@ -1262,7 +1417,7 @@ paths:
       parameters:
         - {$ref: '#/components/parameters/AcceptLanguage'}
         - {$ref: '#/components/parameters/RequestId'}
-        - {name: resource_type, in: query, schema: {type: string, default: all, enum: [all, province, ward, organization, department, position, employee, product_group, product_uom, product, price_list, organization_contact, employee_contact]}}
+        - {name: resource_type, in: query, schema: {type: string, default: all, enum: [all, province, ward, organization, department, position, employee, product_group, product_uom, product, price_list, organization_contact, employee_contact, customer, customer_contact, supplier_contact, supplier]}}
         - {name: page_size, in: query, schema: {type: integer, minimum: 1, maximum: 20, default: 10}}
         - {name: cursor, in: query, schema: {type: string, maxLength: 1024}}
       responses:
@@ -1349,6 +1504,16 @@ components:
       schema:
         type: string
         enum: [province, ward, organization, department, position, employee, product_group, product_uom, product, price_list, organization_contact, employee_contact]
+    WorkflowNotificationResource:
+      name: resource
+      in: path
+      required: true
+      description: >-
+        M11 read/assignment targets only. The Supplier option is NOT authorized
+        for generic business-workflow execution; Supplier SetState requires CAS.
+      schema:
+        type: string
+        enum: [province, ward, organization, department, position, employee, product_group, product_uom, product, price_list, organization_contact, employee_contact, customer, customer_contact, supplier_contact, supplier]
     BusinessWorkflowActionCode:
       name: action_code
       in: path
@@ -2919,12 +3084,185 @@ components:
         description: {type: string}
         active_from: {type: string, format: date}
         active_to: {type: string, format: date}
+    # P2-SUP T07B Core contract; no bank fields, no phantom routes.
+    SupplierType: {type: string, enum: [INDIVIDUAL, COMPANY]}
+    SupplierGroupCode: {type: string, enum: [STANDARD]}
+    SupplierPaymentTerm: {type: string, enum: [IMMEDIATE, NET15, NET30, NET60]}
+    SupplierRowVersion:
+      description: "Persisted UINT32 CAS version from MariaDB; may be serialized as an integer or decimal string."
+      oneOf:
+        - {type: integer, minimum: 1, maximum: 4294967295}
+        - {type: string, pattern: '^[1-9][0-9]{0,9}$'}
+    SupplierExpectedVersion:
+      type: integer
+      minimum: 1
+      maximum: 4294967294
+      description: "Required exact CAS version; integer JSON input, not a string or optional hint."
+    SupplierCompanyIdList:
+      type: array
+      uniqueItems: true
+      maxItems: 512
+      items: {$ref: '#/components/schemas/PositiveBigInt'}
+    Supplier:
+      type: object
+      description: "Authorized Supplier list/detail/response DTO. Never includes Bank ciphertext, metadata, account number or History; Company Usage is not a PBAC grant."
+      required: [id, supplier_code, name, supplier_type, supplier_group_code, phone, status, all_companies, row_version]
+      properties:
+        id: {$ref: '#/components/schemas/PositiveBigInt'}
+        supplier_code: {type: string, maxLength: 50}
+        name: {type: string, maxLength: 255}
+        supplier_type: {$ref: '#/components/schemas/SupplierType'}
+        supplier_group_code: {$ref: '#/components/schemas/SupplierGroupCode'}
+        phone: {type: string, maxLength: 50, description: "NOT unique across Suppliers."}
+        email: {type: [string, 'null']}
+        tax_code: {type: [string, 'null']}
+        address: {type: string}
+        province_id: {$ref: '#/components/schemas/PositiveBigInt'}
+        ward_id: {$ref: '#/components/schemas/PositiveBigInt'}
+        payment_term_code: {oneOf: [{$ref: '#/components/schemas/SupplierPaymentTerm'}, {type: 'null'}]}
+        all_companies:
+          oneOf:
+            - {type: boolean}
+            - {type: integer, enum: [0, 1]}
+            - {type: string, enum: ['0', '1']}
+        company_ids: {$ref: '#/components/schemas/SupplierCompanyIdList'}
+        status: {$ref: '#/components/schemas/BusinessWorkflowStatus'}
+        row_version: {$ref: '#/components/schemas/SupplierRowVersion'}
+        created_at: {type: string}
+        updated_at: {type: [string, 'null']}
+        allowed_actions:
+          type: object
+          additionalProperties: false
+          description: Advisory effective row hints; the server rechecks every mutation.
+          properties:
+            edit: {type: boolean}
+            setstate: {type: boolean}
+        setstate_targets:
+          type: array
+          description: "Optional VIEW-scoped, SETSTATE-authorized and unambiguous advisory target; POST must recheck PBAC and CAS."
+          maxItems: 1
+          items: {$ref: '#/components/schemas/BusinessWorkflowStatus'}
+    SupplierCreate:
+      type: object
+      additionalProperties: false
+      required: [name, supplier_type, phone, address, province_id, ward_id, all_companies, company_ids]
+      properties:
+        name: {type: string, minLength: 1, maxLength: 255}
+        supplier_type: {$ref: '#/components/schemas/SupplierType'}
+        supplier_group_code: {$ref: '#/components/schemas/SupplierGroupCode'}
+        phone: {type: string, minLength: 1, maxLength: 50}
+        email: {type: [string, 'null']}
+        tax_code: {type: [string, 'null']}
+        address: {type: string, minLength: 1}
+        province_id: {$ref: '#/components/schemas/PositiveBigInt'}
+        ward_id: {$ref: '#/components/schemas/PositiveBigInt'}
+        payment_term_code: {oneOf: [{$ref: '#/components/schemas/SupplierPaymentTerm'}, {type: 'null'}]}
+        supplier_code: {type: string, maxLength: 50, description: "Manual code only when no default numbering series exists (even inactive default forbids manual)."}
+        numbering_series_code: {type: string, description: "Optional issuer request; server validates canonical Supplier numbering."}
+        all_companies: {type: boolean}
+        company_ids: {$ref: '#/components/schemas/SupplierCompanyIdList'}
+    SupplierPatch:
+      type: object
+      additionalProperties: false
+      required: [expected_version]
+      minProperties: 2
+      description: "Patch profile only. No Supplier code, owner, State, Company Usage or Bank data."
+      properties:
+        expected_version: {$ref: '#/components/schemas/SupplierExpectedVersion'}
+        name: {type: string, minLength: 1, maxLength: 255}
+        supplier_type: {$ref: '#/components/schemas/SupplierType'}
+        supplier_group_code: {$ref: '#/components/schemas/SupplierGroupCode'}
+        phone: {type: string, minLength: 1, maxLength: 50}
+        email: {type: [string, 'null']}
+        tax_code: {type: [string, 'null']}
+        address: {type: string, minLength: 1}
+        province_id: {$ref: '#/components/schemas/PositiveBigInt'}
+        ward_id: {$ref: '#/components/schemas/PositiveBigInt'}
+        payment_term_code: {oneOf: [{$ref: '#/components/schemas/SupplierPaymentTerm'}, {type: 'null'}]}
+    SupplierCompanyUsage:
+      type: object
+      additionalProperties: false
+      required: [all_companies, company_ids, row_version]
+      properties:
+        all_companies: {type: boolean}
+        company_ids: {$ref: '#/components/schemas/SupplierCompanyIdList'}
+        row_version: {type: string, pattern: '^[1-9][0-9]{0,9}$'}
+    SupplierCompanyUsagePut:
+      type: object
+      additionalProperties: false
+      required: [expected_version, all_companies, company_ids]
+      properties:
+        expected_version: {$ref: '#/components/schemas/SupplierExpectedVersion'}
+        all_companies: {type: boolean}
+        company_ids: {$ref: '#/components/schemas/SupplierCompanyIdList'}
+    SupplierSetState:
+      type: object
+      additionalProperties: false
+      required: [expected_version, status]
+      properties:
+        expected_version: {$ref: '#/components/schemas/SupplierExpectedVersion'}
+        status: {$ref: '#/components/schemas/BusinessWorkflowStatus'}
+    SupplierResponse:
+      allOf: [{$ref: '#/components/schemas/SuccessResponse'}]
+      properties:
+        data: {$ref: '#/components/schemas/Supplier'}
+    SupplierCollectionResponse:
+      allOf: [{$ref: '#/components/schemas/CollectionResponse'}]
+      properties:
+        data: {type: array, items: {$ref: '#/components/schemas/Supplier'}}
+    SupplierCompanyUsageResponse:
+      allOf: [{$ref: '#/components/schemas/SuccessResponse'}]
+      properties:
+        data: {$ref: '#/components/schemas/SupplierCompanyUsage'}
+    SupplierHistoryChangeValue:
+      description: "HIS-POL-002 compact tuple [old,new] for safe scalar codes/counts or empty object {} for redacted change."
+      oneOf:
+        - type: array
+          minItems: 2
+          maxItems: 2
+          items: {type: [string, integer, number, boolean, 'null']}
+        - type: object
+          additionalProperties: false
+          maxProperties: 0
+    SupplierHistoryEvent:
+      type: object
+      description: "Immutable redacted event for Supplier master. No raw profile PII, bank payload, PUR/FIN document or bank credentials."
+      required: [id, resource_type, resource_id, event_type, action_code, status_before, status_after, changes, checkpoint, actor_user_id, actor_type, created_at, request_id]
+      properties:
+        id: {$ref: '#/components/schemas/PositiveBigInt'}
+        resource_type: {type: string, const: supplier}
+        resource_id: {$ref: '#/components/schemas/PositiveBigInt'}
+        event_type: {type: string, enum: [CREATE, UPDATE, STATE_CHANGE, SENSITIVE_CHANGE, SUBMIT, APPROVE, REJECT, DELETE, RESTORE]}
+        action_code: {type: [string, 'null']}
+        status_before: {oneOf: [{$ref: '#/components/schemas/BusinessWorkflowStatus'}, {type: 'null'}]}
+        status_after: {oneOf: [{$ref: '#/components/schemas/BusinessWorkflowStatus'}, {type: 'null'}]}
+        changes:
+          oneOf:
+            - {type: 'null'}
+            - type: object
+              additionalProperties: {$ref: '#/components/schemas/SupplierHistoryChangeValue'}
+        checkpoint: {type: [object, 'null'], description: "Allowlisted non-sensitive checkpoint only; never a full Supplier record."}
+        actor_user_id: {oneOf: [{$ref: '#/components/schemas/PositiveBigInt'}, {type: 'null'}]}
+        actor_type: {type: string, enum: [USER, SYSTEM]}
+        actor_username: {type: [string, 'null']}
+        actor_full_name: {type: [string, 'null']}
+        request_id: {type: string}
+        created_at: {type: string, format: date-time}
+    SupplierHistoryCollectionResponse:
+      allOf: [{$ref: '#/components/schemas/CollectionResponse'}]
+      properties:
+        data: {type: array, items: {$ref: '#/components/schemas/SupplierHistoryEvent'}}
+    # P2-SUP T06C: shared owner identity, additive to existing API-010 endpoints.
+    ContactOwnerType:
+      type: string
+      enum: [EMPLOYEE, ORGANIZATION, CUSTOMER, SUPPLIER]
+      description: "Persisted Shared Contact owner; never confers PBAC. CUSTOMER/SUPPLIER additionally require independent parent VIEW and trusted GROUP scope."
     Contact:
       type: object
       required: [id, contact_type, contact_ref_id, status]
       properties:
         id: {$ref: '#/components/schemas/BigInt'}
-        contact_type: {type: string, enum: [EMPLOYEE, ORGANIZATION]}
+        contact_type: {$ref: '#/components/schemas/ContactOwnerType'}
         contact_ref_id: {$ref: '#/components/schemas/BigInt'}
         description: {type: [string, 'null']}
         status: {$ref: '#/components/schemas/BusinessWorkflowStatus'}
@@ -2937,12 +3275,19 @@ components:
         ward_id: {$ref: '#/components/schemas/BigInt'}
         province_name: {type: [string, 'null']}
         ward_name: {type: [string, 'null']}
+        allowed_actions:
+          type: object
+          additionalProperties: false
+          description: "Optional advisory row hints on VIEW-authorized Contact reads; the server reauthorizes every mutation and parent VIEW. Some write responses omit hints."
+          properties:
+            edit: {type: boolean}
+            setstate: {type: boolean}
     ContactCreate:
       type: object
-      description: "Owner type selects organization_contact or employee_contact. Backend derives initial status from the configured Lifecycle (DRAFT for BASIC); without a Lifecycle, defaults to native ACTIVE. Other owner kinds are denied."
+      description: "Shared Contact CREATE supports EMPLOYEE, ORGANIZATION, CUSTOMER and SUPPLIER. The backend checks canonical Contact CREATE, persisted parent VIEW and trusted GROUP scope; it derives initial State from the Contact owner Lifecycle. Missing configuration fails with WF_INITIAL_STATE_REQUIRED (never implicitly ACTIVE). Owner/status cannot be changed through PATCH."
       required: [contact_type, contact_ref_id]
       properties:
-        contact_type: {type: string, enum: [EMPLOYEE, ORGANIZATION]}
+        contact_type: {$ref: '#/components/schemas/ContactOwnerType'}
         contact_ref_id: {$ref: '#/components/schemas/BigInt'}
         description: {type: string}
         name: {type: string}

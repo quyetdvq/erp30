@@ -16,7 +16,7 @@ $ok=static function(bool $test,string $label)use(&$n):void {
     $n++;
 };
 $ok(str_contains($ctrl,"'UNAUTHENTICATED', 401"),'Shield authentication gate');
-$ok(str_contains($ctrl,"'ACCESS_MUTATION_NOT_ENABLED', 403"),'write gate');
+$ok(!str_contains($ctrl,'ACCESS_MUTATION_NOT_ENABLED'),'write gate');
 $ok(strpos($ctrl,'$this->authenticatedWriter()') < strpos($ctrl,"getFile('image')"),'actor resolved before file parsing');
 $ok(str_contains($svc,'UserAvatarRules::isOwner((string) $this->actor->id, $id)'), 'owner derived from server Shield user');
 $ok(str_contains($svc,"$".'access->canView(\'user\', $row)'), 'target VIEW PBAC');

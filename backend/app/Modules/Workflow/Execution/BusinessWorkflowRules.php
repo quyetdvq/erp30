@@ -16,8 +16,19 @@ final class BusinessWorkflowRules
         'product_group'=>'product_groups', 'product_uom'=>'product_uoms',
         'product'=>'products', 'price_list'=>'price_lists',
         'organization_contact'=>'contacts', 'employee_contact'=>'contacts',
-        'customer'=>'customers', 'customer_contact'=>'contacts',
+        'customer'=>'customers', 'customer_contact'=>'contacts', 'supplier_contact'=>'contacts',
     ];
+
+    /**
+     * State definitions need only a Resource + Lifecycle binding, not a business
+     * row adapter. Supplier is metadata-only here: options/execute must still
+     * fail closed because Supplier writes require optimistic CAS.
+     */
+    public static function assertStateCatalogReadable(string $type): void
+    {
+        if ($type === 'supplier') return;
+        self::table($type);
+    }
 
     public static function table(string $type): string
     {
@@ -34,6 +45,7 @@ final class BusinessWorkflowRules
             'organization_contact' => 'ORGANIZATION',
             'employee_contact' => 'EMPLOYEE',
             'customer_contact' => 'CUSTOMER',
+            'supplier_contact' => 'SUPPLIER',
             default => null,
         };
         return $required === null || strtoupper((string) ($row['contact_type'] ?? '')) === $required;

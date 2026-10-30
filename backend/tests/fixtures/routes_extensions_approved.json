@@ -2,7 +2,8 @@
   "schema_version": 1,
   "baseline": "v1.9.23",
   "modules": [
-    "HistoryRoutes.php"
+    "HistoryRoutes.php",
+    "SuppliersRoutes.php"
   ],
   "routes": [
     {
@@ -18,10 +19,98 @@
     },
     {
       "method": "GET",
+      "path": "api/v1/history/suppliers/(:num)",
+      "handler": [
+        "App\\Controllers\\Api\\BusinessHistoryController",
+        "supplier/$1"
+      ],
+      "options": {
+        "filter": "cors"
+      }
+    },
+    {
+      "method": "GET",
       "path": "api/v1/history/monitor",
       "handler": [
         "App\\Controllers\\Api\\BusinessHistoryController",
         "monitor"
+      ],
+      "options": {
+        "filter": "cors"
+      }
+    },
+    {
+      "method": "GET",
+      "path": "api/v1/suppliers",
+      "handler": [
+        "App\\Modules\\Supplier\\SupplierController",
+        "index"
+      ],
+      "options": {
+        "filter": "cors"
+      }
+    },
+    {
+      "method": "POST",
+      "path": "api/v1/suppliers",
+      "handler": [
+        "App\\Modules\\Supplier\\SupplierController",
+        "create"
+      ],
+      "options": {
+        "filter": "cors"
+      }
+    },
+    {
+      "method": "GET",
+      "path": "api/v1/suppliers/(:num)",
+      "handler": [
+        "App\\Modules\\Supplier\\SupplierController",
+        "show"
+      ],
+      "options": {
+        "filter": "cors"
+      }
+    },
+    {
+      "method": "PATCH",
+      "path": "api/v1/suppliers/(:num)",
+      "handler": [
+        "App\\Modules\\Supplier\\SupplierController",
+        "update"
+      ],
+      "options": {
+        "filter": "cors"
+      }
+    },
+    {
+      "method": "POST",
+      "path": "api/v1/suppliers/(:num)/actions/set-state",
+      "handler": [
+        "App\\Modules\\Supplier\\SupplierController",
+        "setState"
+      ],
+      "options": {
+        "filter": "cors"
+      }
+    },
+    {
+      "method": "GET",
+      "path": "api/v1/suppliers/(:num)/company-usages",
+      "handler": [
+        "App\\Modules\\Supplier\\SupplierController",
+        "companyUsages"
+      ],
+      "options": {
+        "filter": "cors"
+      }
+    },
+    {
+      "method": "PUT",
+      "path": "api/v1/suppliers/(:num)/company-usages",
+      "handler": [
+        "App\\Modules\\Supplier\\SupplierController",
+        "replaceCompanyUsages"
       ],
       "options": {
         "filter": "cors"

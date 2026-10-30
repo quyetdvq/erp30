@@ -104,7 +104,7 @@ final class M62BSourceAcceptance
         if (!str_contains($responder, "'ProductRuntime.'")) {
             throw new RuntimeException('M6.2B Product EN/VI responder mapping is missing');
         }
-        if (!str_contains($controller,"env('DINKERP_M33B_WRITE_MODE','off')")
+        if (!str_contains($controller,'UNAUTHENTICATED')
             || !str_contains($controller,"'UNAUTHENTICATED',401")
             || is_dir($root.'/backend/app/Modules/ProductManagement')) {
             throw new RuntimeException('Product mutation write/auth/ownership boundary is missing');

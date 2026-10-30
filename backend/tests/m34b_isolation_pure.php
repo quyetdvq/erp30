@@ -25,7 +25,8 @@ check34bi('Sandbox guard marker created before any fixtures',strpos($sandbox,'CR
 check34bi('Schema name collision prevents reusing existing DB',str_contains($sandbox,'Sandbox name collision'));
 check34bi('Sandbox owner attest required for delete',preg_match('/function dropOwnSandbox\(\): void\s*\{\s*\$this->attest\(\);/', $sandbox) === 1);
 check34bi('Runner child attests CI4 database before HTTP server',strpos($runner,'$this->childAttest($env)')<strpos($runner,'$this->launchServer($env, $port)'));
-check34bi('Child write flag enabled only in test process',str_contains($runner, "'DINKERP_M33B_WRITE_MODE'=>'enabled'"));
+check34bi('Child uses development and attested sandbox only',str_contains($runner, "'CI_ENVIRONMENT'=>'development'")
+    && str_contains($runner, "'M34B_ONLY_NONCE'=>"));
 check34bi('Child-only schema and nonce passed to router',str_contains($runner,"'M34B_ONLY_SCHEMA'=>") && str_contains($runner,"'M34B_ONLY_NONCE'=>"));
 check34bi('Router checks schema and marker on every HTTP request',str_contains($router,'m34b_sandbox_guard') && str_contains($router,'SELECT DATABASE()'));
 check34bi('Router denies unverified requests before public index', strpos($router,'if (! $allowed)') < strpos($router,"require __DIR__ . '/child_web.php';"));

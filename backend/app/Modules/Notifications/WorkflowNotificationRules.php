@@ -45,7 +45,9 @@ final class WorkflowNotificationRules
     /** @param list<string> $userIds */
     public static function eventPayload(string $resource, string $from, string $to, string $action, array $userIds): string
     {
-        BusinessWorkflowRules::table($resource);
+        if ($resource !== 'supplier') {
+            BusinessWorkflowRules::table($resource);
+        }
         if ($from === '' || $to === '' || $from === $to || strlen($from) > 50 || strlen($to) > 50
             || preg_match('/\A[A-Z][A-Z0-9_:-]{0,49}\z/D', $from) !== 1
             || preg_match('/\A[A-Z][A-Z0-9_:-]{0,49}\z/D', $to) !== 1
@@ -53,6 +55,9 @@ final class WorkflowNotificationRules
             throw new InvalidArgumentException('Invalid Workflow event');
         }
         BusinessWorkflowRules::action($action);
+        if ($resource === 'supplier' && $action !== 'setstate') {
+            throw new InvalidArgumentException('Supplier notification must describe the CAS setstate action');
+        }
         foreach ($userIds as $id) {
             if (preg_match('/\A[1-9][0-9]*\z/D', $id) !== 1
                 || NotificationDeliveryRules::shieldUserId($id) !== $id) {

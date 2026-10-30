@@ -36,6 +36,7 @@ export const breadcrumbTrails = {
   configuration: [...system, { labelKey: 'breadcrumbs.configuration' }],
   products,
   customers: [...organization, { labelKey: 'nav.customers', to: '/customers', permission: 'customer.view' }],
+  suppliers: [...organization, { labelKey: 'nav.suppliers', to: '/suppliers', permission: 'supplier.view' }],
   importJobDetail: [
     ...products,
     {

@@ -16,7 +16,7 @@ final class ContactScope
     }
 
     /** @param array<string,mixed> $row @return array{resource:string,target:array<string,mixed>} */
-    public function resolve(array $row): array
+    public function resolve(array $row, ?array $supplierParents = null): array
     {
         $owner = ContactRules::owner($row);
         if ($owner['type'] === 'ORGANIZATION') {
@@ -24,6 +24,20 @@ final class ContactScope
             if ($this->db->table('organizations')->select('id')->where('id', $organizationId)->get()->getRowArray() === null) {
                 throw new DomainException('CONTACT_OWNER_NOT_FOUND');
             }
+        } elseif ($owner['type'] === 'SUPPLIER') {
+            // MASTER scope must NOT inherit an Employee Organization. Supplier
+            // existence is verified using persisted facts, never a client hint.
+            // For a list page the page-local batch avoids per-row SELECTs.
+            if ($supplierParents === null) {
+                $parent = $this->db->table('suppliers')->select('id')
+                    ->where('id', $owner['id'])->get();
+                if ($parent === false || $parent->getRowArray() === null) {
+                    throw new DomainException('CONTACT_OWNER_NOT_FOUND');
+                }
+            } elseif (!isset($supplierParents[$owner['id']])) {
+                throw new DomainException('CONTACT_OWNER_NOT_FOUND');
+            }
+            return ['resource' => 'supplier_contact', 'target' => $row];
         } elseif ($owner['type'] === 'CUSTOMER') {
             $customer = $this->db->table('customers')->where('id', $owner['id'])->get()->getRowArray();
             if ($customer === null) throw new DomainException('CONTACT_OWNER_NOT_FOUND');

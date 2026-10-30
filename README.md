@@ -78,7 +78,7 @@ Tài liệu: [docs/backend-rewrite/M2_IMPLEMENTATION_AND_QA.md](docs/backend-rew
 
 M3.3A đã đăng ký 19 Access GET. M3.3B1 đăng ký thêm **12 HTTP mutation operations** của Authorization Groups và Resources/Resource Actions theo OpenAPI baseline v1.2.4 (**53 non-OPTIONS operations** hiện tại).
 
-**Quan trọng:** `DINKERP_M33B_WRITE_MODE=off` là mặc định. Đừng kích hoạt ghi trên cơ sở dữ liệu production. Khi chưa bật, route ghi tồn tại nhưng trả 403, không thay đổi SQL. Chỉ thử `enabled` trên **Database clone**, sau khi chạy kiểm tra và đối chiếu HTTP/transaction với baseline.
+**Cập nhật sau khi loại bỏ công tắc tạm:** Các mutation routes yêu cầu Shield, CSRF và PBAC theo bản ghi/Action. Việc bỏ công tắc môi trường không đồng nghĩa đã nghiệm thu production; chỉ triển khai thay đổi trên DEV clone đã sao lưu và thử negative permission, CAS, rollback trước phát hành.
 
 ```powershell
 php backend\tests\m33b_rules_pure.php
@@ -92,14 +92,14 @@ php spark routes
 
 Chi tiết: [M3.3B1 — Implementation & QA](docs/backend-rewrite/M3_3B1_MUTATION_IMPLEMENTATION_QA.md).
 
-M3.3B1 là đợt đầu của M3.3B; các đợt sau được phát triển độc lập. M3.3B4 đã bổ sung Workflow/Lifecycle writes nhưng vẫn khóa mặc định.
+M3.3B1 là đợt đầu của M3.3B; các đợt sau được phát triển độc lập. Các kiểm soát runtime hiện hành dùng xác thực và PBAC, không dùng công tắc ghi tạm.
 
 
 ## Milestone mới nhất: M3.3B4 — Workflow State / Lifecycle mutations
 
 - Đã đăng ký thêm 8 mutation operation, tổng cộng **70 non-OPTIONS** API.
 - Hai URL PUT cấu hình Lifecycle đều **bổ sung (append)** States/Transitions theo baseline v1.2.4, không thay thế.
-- Giữ `DINKERP_M33B_WRITE_MODE=off` và `DINKERP_M32_READ_MODE` ở chế độ đang nghiệm thu.
+- Các mutation vẫn yêu cầu xác thực và PBAC; giữ nguyên các ranh giới kiểm thử đọc riêng biệt.
 - Test chạy offline: `php backend/tests/m33b4_rules_pure.php`,
   `php backend/tests/m33b4_transaction_fixture.php`,
   `php backend/tests/m33b4_contract_pure.php`, `php backend/tests/m33b4_verify_pure.php`.
@@ -147,13 +147,13 @@ Có thể chạy `RUN ACCEPTANCE` để xem riêng báo cáo static, không cầ
 
 M3.4D report: `backend/writable/m34d/reports/`. **Chưa có independent live baseline
 HTTP/DB side-effect parity và concurrency/isolation parity**; `production_cutover=BLOCKED`
-trong mọi trường hợp. Giữ `DINKERP_M33B_WRITE_MODE=off` ở production.
+trong mọi trường hợp. Không suy ra quyền phát hành production từ việc loại bỏ các công tắc tạm.
 
 Chi tiết: [M3.4D Final Regression & Architecture Acceptance](docs/backend-rewrite/M3_4D_FINAL_REGRESSION_ARCHITECTURE_ACCEPTANCE_QA.md).
 
 ## M4 — Settings, Workflow Execution, Numbering (Backend v2)
 
-M4 adds 14 explicit v1.2.4 operations (70 -> 84/150) in the owning Settings, Workflow and Numbering modules. The M3.4D.1 seventy-route footprint remains pinned. Use `backend/tools/test-unit.ps1 CHECK`, `RUN`, `RUN ACCEPTANCE` for source gates; `DB-READ` and `INTEGRATION` still cover the earlier M3 readiness / **29 M3 mutations only**. Real M4 HTTP and MariaDB rollback/concurrency parity are **NOT TESTED**; production write mode remains `off`. Details: `docs/backend-rewrite/M4_SETTINGS_WORKFLOW_NUMBERING_QA.md`.
+M4 adds 14 explicit v1.2.4 operations (70 -> 84/150) in the owning Settings, Workflow and Numbering modules. The M3.4D.1 seventy-route footprint remains pinned. Use `backend/tools/test-unit.ps1 CHECK`, `RUN`, `RUN ACCEPTANCE` for source gates; `DB-READ` and `INTEGRATION` still cover the earlier M3 readiness / **29 M3 mutations only**. Real M4 HTTP and MariaDB rollback/concurrency parity are **NOT TESTED**; production release remains BLOCKED pending runtime acceptance. Details: `docs/backend-rewrite/M4_SETTINGS_WORKFLOW_NUMBERING_QA.md`.
 
 ## M4.1 — Source-parity hardening (2026-10-24)
 

@@ -25,7 +25,7 @@ final class UnifiedAccessService
         'department' => 'MASTER', 'position' => 'MASTER', 'employee' => 'MASTER',
         'employee_assignment' => 'ORGANIZATION',
         'organization_contact' => 'ORGANIZATION', 'employee_contact' => 'ORGANIZATION',
-        'customer' => 'MASTER', 'customer_contact' => 'MASTER', 'supplier' => 'MASTER', 'customer_interaction' => 'ORGANIZATION',
+        'customer' => 'MASTER', 'customer_contact' => 'MASTER', 'supplier' => 'MASTER', 'supplier_contact' => 'MASTER', 'customer_interaction' => 'ORGANIZATION',
         // Pinned M3.3 API-030 domains from baseline ResourceActionSeeder.
         'user' => 'SYSTEM', 'authorization_group' => 'SYSTEM',
         'notification_setting' => 'SYSTEM', 'notification_operations' => 'SYSTEM',
@@ -88,7 +88,7 @@ final class UnifiedAccessService
     {
         $type = ResourceStateCatalog::normalizedType($type);
         if (! in_array($type, ['product', 'product_group', 'product_uom', 'employee', 'department', 'position', 'province', 'ward', 'customer', 'customer_contact'], true)
-            && $type !== 'supplier') {
+            && !in_array($type, ['supplier', 'supplier_contact'], true)) {
             throw new UnexpectedValueException('SQL VIEW scope is not approved for resource: ' . $type);
         }
         $resource = $this->policies->resourceAction($type, 'view');

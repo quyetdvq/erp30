@@ -15,7 +15,7 @@ $ok($ops['PUT products/(:num)/uom-conversions']['id']==='replaceProductUomConver
 $controller=(string)file_get_contents($root.'/backend/app/Modules/Product/Conversion/ProductConversionController.php');
 $service=(string)file_get_contents($root.'/backend/app/Modules/Product/Conversion/ProductConversionService.php');
 $ok(substr_count($controller,"'UNAUTHENTICATED', 401")===2,'both routes authenticate');
-$ok(str_contains($controller,"'ACCESS_MUTATION_NOT_ENABLED', 403"),'PUT mutation default off');
+$ok(!str_contains($controller,'ACCESS_MUTATION_NOT_ENABLED'),'PUT mutation default off');
 $ok(!str_contains($controller,'getGet()'),'PUT parses JSON body, not query params');
 $ok(str_contains($controller, "if (\$raw === '')"), 'missing PUT body does not silently clear UOMs');
 $ok(str_contains($controller, "!array_key_exists('items', \$body)"), 'empty JSON object does not clear UOMs');

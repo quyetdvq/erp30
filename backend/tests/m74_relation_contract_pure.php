@@ -41,6 +41,6 @@ $ok(str_contains($sql,"BINARY u.status = 'ACTIVE'"),'inactive UOM not selectable
 $ok(str_contains($sql,'candidate.priority ASC'),'base UOM first');
 $ok(str_contains($rules,'ProductLookupRules::ids('),'same exact ID validation as M6.4A');
 $ok(!str_contains($service,'->orderBy(\'id\', \'ASC\')->get()'),'no whole catalog read');
-$ok(!str_contains($controller,'DINKERP_M33B_WRITE_MODE'),'read projections independent of write-mode');
+$ok(!str_contains($controller,'ACCESS_MUTATION_NOT_ENABLED'),'read projections independent of write-mode');
 $ok(!str_contains($service,'insert(') && !str_contains($service,'update(') && !str_contains($service,'delete('),'read service has no DB mutation');
 echo 'M7.4 RELATION CONTRACT: '.$n.'/'.$n." PASS\n";

@@ -187,7 +187,8 @@ final class NotificationOperationsAuditTest extends TestCase
             'missing_tables' => [], 'flags' => $flags,
             'policy_guards' => ['import.completed.email' => true,
                 'import.completed_with_errors.email' => true, 'import.failed.email' => true,
-                'import.completed.push' => true],
+                'import.completed.push' => true, 'import.completed_with_errors.push' => true,
+                'import.failed.push' => true, 'workflow.action_required.push' => true],
             'queues' => ['outbox' => $queue(), 'email' => $queue(), 'push' => $queue()],
             'credentials' => [
                 'cursor_secret' => true, 'smtp' => true, 'openssl' => true, 'curl' => true,

@@ -19,7 +19,7 @@ final class BusinessWorkflowDisplay
         'product' => ['product_name', 'product_child_name'],
         'price_list' => ['name'],
         'organization_contact' => ['name'], 'employee_contact' => ['name'],
-        'customer' => ['name'], 'customer_contact' => ['name'],
+        'customer' => ['name'], 'customer_contact' => ['name'], 'supplier_contact' => ['name'],
     ];
 
     /** @var array<string,list<string>> */

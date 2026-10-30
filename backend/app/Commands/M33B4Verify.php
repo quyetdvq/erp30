@@ -129,7 +129,7 @@ final class M33B4Verify extends BaseCommand
             . ', checked=' . $checked . ', allowed=' . $allowed
             . ', denied=' . $denied . ', errors=' . $errors);
         CLI::write('NOTE: read-only; no HTTP/baseline transaction or mutation parity.', 'yellow');
-        CLI::write('NOTE: DINKERP_M33B_WRITE_MODE=off remains default.', 'yellow');
+        CLI::write('NOTE: write permissions are checked per operation; runtime UAT remains separate.', 'yellow');
         if ($checked === 0 || $errors > 0) {
             throw new UnexpectedValueException('M3.3B4 Workflow PBAC audit failed.');
         }

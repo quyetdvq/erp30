@@ -35,6 +35,15 @@ export async function customerHistory(customerId: string, page = 1, pageSize = 2
   return result.data
 }
 
+/** Canonical GROUP Supplier VIEW + feature gate is rechecked by the server. */
+export async function supplierHistory(supplierId: string, page = 1, pageSize = 25): Promise<BusinessHistoryPage> {
+  if (!/^[1-9][0-9]*$/.test(supplierId)) throw new Error('Invalid Supplier identifier')
+  const result = await apiClient.get<BusinessHistoryPage>(`/api/v1/history/suppliers/${supplierId}`, {
+    params: { page, page_size: pageSize },
+  })
+  return result.data
+}
+
 /** Only authorized SYSTEM auditors can use this independent monitoring endpoint. */
 export type BusinessHistoryMonitorFilters = {
   from: string

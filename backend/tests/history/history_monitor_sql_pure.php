@@ -25,7 +25,10 @@ $ok(str_contains($plan['rows_sql'],'`dinktech_business_history_events`'), 'prefi
 $ok(str_contains($plan['rows_sql'],'`dinktech_users`'), 'prefixed one-page actor JOIN');
 $ok(str_contains($plan['rows_sql'],'u.username AS actor_username,u.full_name AS actor_full_name'), 'identity projection');
 $ok(str_contains($plan['rows_sql'],'`dinktech_customers`'), 'one-to-one Customer enrichment');
-$ok(str_contains($plan['rows_sql'],'c.customer_code AS resource_code,c.name AS resource_name'), 'resource code/name included');
+$ok(str_contains($plan['rows_sql'],'COALESCE(c.customer_code,s.supplier_code) AS resource_code')
+    && str_contains($plan['rows_sql'],'COALESCE(c.name,s.name) AS resource_name'), 'typed Customer/Supplier resource code/name');
+$ok(str_contains($plan['rows_sql'],'`dinktech_suppliers`'), 'one-to-one Supplier enrichment');
+$ok(str_contains($plan['rows_sql'],"h.resource_type = 'supplier' AND s.id = h.resource_id"), 'typed, trusted Supplier JOIN');
 $ok(str_contains($plan['rows_sql'],"h.resource_type = 'customer' AND c.id = h.resource_id"), 'typed, trusted Customer JOIN');
 $ok(!str_contains($plan['count_sql'],'customers'), 'count stays unjoined and stable');
 $ok(str_contains($plan['rows_sql'],'h.created_at DESC,h.id DESC LIMIT ? OFFSET ?'), 'bounded indexed sort');

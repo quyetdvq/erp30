@@ -1,12 +1,12 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { flushPromises, mount, type VueWrapper } from '@vue/test-utils'
-import type { Product, ProductUom } from '@/api/generated/types.gen'
+import type { Product, ProductUom, ProductUomConversion } from '@/api/generated/types.gen'
 import { i18n } from '@/i18n'
 import ProductDetailModal from '../ProductDetailModal.vue'
 
 const actions = vi.hoisted(() => ({
-  listConversions: vi.fn(),
-  replaceConversions: vi.fn(),
+  listConversions: vi.fn<typeof import('@/services/productCatalog').listProductConversions>(),
+  replaceConversions: vi.fn<typeof import('@/services/productCatalog').replaceProductConversions>(),
 }))
 vi.mock('@/stores/auth', () => ({
   useAuthStore: () => ({ getSessionGeneration: () => 1 }),
@@ -24,15 +24,15 @@ vi.mock('@/composables/useFormatters', () => ({
     formatMoney: (value: string) => value,
   }),
 }))
-vi.mock('@/services/errorBoundary', () => ({ reportApiError: vi.fn() }))
+vi.mock('@/services/errorBoundary', () => ({ reportApiError: vi.fn<typeof import('@/services/errorBoundary').reportApiError>() }))
 vi.mock('@/services/productCatalog', () => ({
-  getProductById: vi.fn(),
-  listProductComboItems: vi.fn(),
+  getProductById: vi.fn<typeof import('@/services/productCatalog').getProductById>(),
+  listProductComboItems: vi.fn<typeof import('@/services/productCatalog').listProductComboItems>(),
   listProductConversions: actions.listConversions,
-  listProductPage: vi.fn(),
-  replaceProductComboItems: vi.fn(),
+  listProductPage: vi.fn<typeof import('@/services/productCatalog').listProductPage>(),
+  replaceProductComboItems: vi.fn<typeof import('@/services/productCatalog').replaceProductComboItems>(),
   replaceProductConversions: actions.replaceConversions,
-  saveProduct: vi.fn(),
+  saveProduct: vi.fn<typeof import('@/services/productCatalog').saveProduct>(),
 }))
 
 const product = {
@@ -46,7 +46,7 @@ const uoms = [
   { id: '2', code: 'DM', name: 'dm', status: 'ACTIVE' },
   { id: '3', code: 'TREE', name: 'Cây', status: 'ACTIVE' },
 ] as ProductUom[]
-const rows = [
+const rows: ProductUomConversion[] = [
   { id: '101', product_id: '1479', uom_id: '2', conversion_factor: '22',
     usage_type: 'BOTH', status: 'ACTIVE', price: '333333' },
   { id: '102', product_id: '1479', uom_id: '3', conversion_factor: '12',
@@ -85,7 +85,7 @@ beforeEach(() => {
   actions.listConversions.mockReset()
   actions.listConversions.mockResolvedValue(rows)
   actions.replaceConversions.mockReset()
-  actions.replaceConversions.mockResolvedValue({})
+  actions.replaceConversions.mockResolvedValue([])
 })
 afterEach(() => { cleanups.splice(0).forEach((cleanup) => cleanup()) })
 
@@ -148,8 +148,10 @@ describe('FE-PRODUCT-DETAIL: shared modal and UOM conversion actions', () => {
     expect(actions.replaceConversions).toHaveBeenCalledTimes(1)
     const [id, body] = actions.replaceConversions.mock.calls[0]!
     expect(id).toBe('1479')
+    expect(Array.isArray(body)).toBe(true)
+    if (!Array.isArray(body)) throw new Error('Expected Product UOM array payload')
     expect(body).toHaveLength(1)
-    expect(body[0].uom_id).toBe('3')
+    expect(body[0]?.uom_id).toBe('3')
   })
 
   it('never exposes conversion mutation icons without the persisted Product edit hint', async () => {

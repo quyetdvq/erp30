@@ -1,0 +1,409 @@
+diff --git a/contracts/openapi/openapi.yaml b/contracts/openapi/openapi.yaml
+index 3cec47a..2362ff1 100644
+--- a/contracts/openapi/openapi.yaml
++++ b/contracts/openapi/openapi.yaml
+@@ -2919,12 +2919,17 @@ components:
+         description: {type: string}
+         active_from: {type: string, format: date}
+         active_to: {type: string, format: date}
++    # P2-SUP T06C: shared owner identity, additive to existing API-010 endpoints.
++    ContactOwnerType:
++      type: string
++      enum: [EMPLOYEE, ORGANIZATION, CUSTOMER, SUPPLIER]
++      description: "Persisted Shared Contact owner; never confers PBAC. CUSTOMER/SUPPLIER additionally require independent parent VIEW and trusted GROUP scope."
+     Contact:
+       type: object
+       required: [id, contact_type, contact_ref_id, status]
+       properties:
+         id: {$ref: '#/components/schemas/BigInt'}
+-        contact_type: {type: string, enum: [EMPLOYEE, ORGANIZATION]}
++        contact_type: {$ref: '#/components/schemas/ContactOwnerType'}
+         contact_ref_id: {$ref: '#/components/schemas/BigInt'}
+         description: {type: [string, 'null']}
+         status: {$ref: '#/components/schemas/BusinessWorkflowStatus'}
+@@ -2937,12 +2942,19 @@ components:
+         ward_id: {$ref: '#/components/schemas/BigInt'}
+         province_name: {type: [string, 'null']}
+         ward_name: {type: [string, 'null']}
++        allowed_actions:
++          type: object
++          additionalProperties: false
++          description: "Optional advisory row hints on VIEW-authorized Contact reads; the server reauthorizes every mutation and parent VIEW. Some write responses omit hints."
++          properties:
++            edit: {type: boolean}
++            setstate: {type: boolean}
+     ContactCreate:
+       type: object
+-      description: "Owner type selects organization_contact or employee_contact. Backend derives initial status from the configured Lifecycle (DRAFT for BASIC); without a Lifecycle, defaults to native ACTIVE. Other owner kinds are denied."
++      description: "Shared Contact CREATE supports EMPLOYEE, ORGANIZATION, CUSTOMER and SUPPLIER. The backend checks canonical Contact CREATE, persisted parent VIEW and trusted GROUP scope; it derives initial State from the Contact owner Lifecycle. Missing configuration fails with WF_INITIAL_STATE_REQUIRED (never implicitly ACTIVE). Owner/status cannot be changed through PATCH."
+       required: [contact_type, contact_ref_id]
+       properties:
+-        contact_type: {type: string, enum: [EMPLOYEE, ORGANIZATION]}
++        contact_type: {$ref: '#/components/schemas/ContactOwnerType'}
+         contact_ref_id: {$ref: '#/components/schemas/BigInt'}
+         description: {type: string}
+         name: {type: string}
+diff --git a/docs/p2-sup/SUP_T06C_CONTACT_CONTRACT_STAGED_IMPLEMENTATION_2026-10-30.md b/docs/p2-sup/SUP_T06C_CONTACT_CONTRACT_STAGED_IMPLEMENTATION_2026-10-30.md
+new file mode 100644
+index 0000000..2ee896c
+--- /dev/null
++++ b/docs/p2-sup/SUP_T06C_CONTACT_CONTRACT_STAGED_IMPLEMENTATION_2026-10-30.md
+@@ -0,0 +1,50 @@
++# P2-SUP / SUP-T06C — Shared Contact canonical contract + Vue consumer STAGED SOURCE
++
++**Prepared:** 2026-10-30. **Input baseline:** `erp_v2.1.0.zip` + SUP-T06A backend + T06B1 FE owner prep + independent typed mock fix + T06B2 contract candidate. This patch is incremental to T06B2. The PC-06/PC-07 review-record document (T06C0) is OPTIONAL for patch matching, but its signed decisions are REQUIRED before applying the candidate.
++
++**Current gate:** `STAGED_SOURCE_PREPARED / NOT_AUTHORIZED_FOR_ACTIVATION / PC-06_PENDING / CONTACT_PC-07_PENDING / MOD-G2_PENDING / DEV_UAT_NOT_RUN`. Creating/testing this candidate does not constitute PC-06, PC-07 or MOD-G2 approval.
++
++## Scope included (no Supplier API or production changes)
++
++- Canonical `contracts/openapi/openapi.yaml`: shared `ContactOwnerType` enum EXACTLY `EMPLOYEE, ORGANIZATION, CUSTOMER, SUPPLIER`, referenced by existing `Contact` and `ContactCreate`; optional `Contact.allowed_actions.edit/setstate` boolean hints; truthful fail-closed Lifecycle description (`WF_INITIAL_STATE_REQUIRED`). Existing `ContactPatch`, required fields, BIGINT JSON string and five Contact API-010 operationIds remain untouched. Contact list remains the nested `filter` wire and default 50/cap 200, not Supplier T07 flat filters.
++- `ContactList.vue` and `ContactFormModal.vue` consume the same four-owner `ContactOwnerType` derived from the explicit PBAC resource map. The map is exhaustively checked against **generated** `ContactOwnerType` after official SDK generation. Unknown owners have no permission fallback.
++- Added source and post-generation parity Node tests, repaired T06B2 review regression to accept both pre-freeze inline legacy enum and post-freeze canonical enum without removing assertions.
++- Not included: generated files (must be produced by `pnpm run openapi:generate` on the authorized Windows checkout), Supplier routes/UI, migrations, Catalog, BANK cryptography/audit, purchase adapter, Workflow CAS implementation or DEV/production DB writes. Generated code must **never** be manually patched.
++
++## Required approvals before applying the canonical candidate
++
++1. **PC-06 Security + Backend:** Supplier Contact parent VIEW, dual PBAC, persisted trusted GROUP, SQL COUNT/page/detail, mutation re-check, Notification/Workflow/audit parity. Record reviewer, role, reviewed commit, conditions and signature in the existing review record.
++2. **PC-07 Contact API / FE:** exact four-owner schema, optional boolean action hints, old API-010 five operations and nested filter, unchanged PATCH, and compatibility/error policy.
++3. **MOD-G2 Contact sub-contract authorization** to modify canonical OpenAPI and regenerate SDK. The full Supplier T07 API MOD-G2 remains separate/pending.
++
++**Do NOT apply this patch or run SDK generation** based only on the user's implementation-plan agreement or the offline PASS. Use `DinkERP_P2_SUP_T06C_Apply_After_Signoff.ps1` only *after* real authorized signoff; its switches are a deliberate operator attestation and **do not independently verify signatures**.
++
++## Offline validation on preparation environment
++
++- `node --test frontend/scripts/sup-t06c-contact-contract-source.test.mjs` (source only; no DB)
++- `node --test frontend/scripts/sup-t06b2-contact-contract-review.test.mjs` (upgraded legacy contract review)
++- PHP SUP/CUS offline source/regression tests. **No frontend deps in packaging environment**, so Redocly, SDK generation, Vitest/type-check/lint/build must be run on the Windows checkout after signoff and source patch application.
++
++## Post-signoff Windows activation checks (staging/dev only)
++
++From repo root (post-signoff), place the `.patch` and `DinkERP_P2_SUP_T06C_Apply_After_Signoff.ps1` in the root, then run:
++
++```powershell
++cd D:\XAMPP\htdocs\erp
++.\DinkERP_P2_SUP_T06C_Apply_After_Signoff.ps1 `
++  -ReviewRecord '.\docs\p2-sup\SUP_T06_PC06_PC07_TECHNICAL_REVIEW_RECORD_2026-10-30.md' `
++  -Pc06Signed -ContactPc07Signed -ContactModG2Signed
++```
++
++The command requires actual documented review signatures/conditions. On Windows it performs `git apply --check`, applies patch, Redocly lint, **official generated SDK**, source/SDK parity, Contact/CUS/SUP regressions, typed FE tests, `pnpm` lint/types/imports/build. It will STOP on any failed gate. No migration, catalog provisioning, database or production deployment is performed by this script.
++
++If any gate fails, **stop**, keep output and review `git diff` and generated SDK files; do not mark `SOURCE PASS` or `G2 SIGNED`. Do not use a static source PASS in place of generated client/type-check evidence.
++
++## Separate unresolved blockers
++
++- `PC-03` Bank secure storage, key custody, reveal/clear audit and DBA approval; T04B not implemented.
++- `PC-05` Supplier-owned Workflow SetState must be routed through Supplier CAS `expected_version`, never generic execute.
++- Full `PC-07` Supplier T07 API including flat filters (25/100), bank endpoints and secure errors.
++- `PC-01/02/09/10` schema, DEV MariaDB/HTTP two-actor PBAC, query EXPLAIN/COUNT performance, browser UAT and release signoff.
++
++**Exit criteria:** After the authorized post-signoff script and manual backend/security review have passed, mark only `SUP-T06C_CANONICAL_SDK_FE_SOURCE_PASS`. SUP-T06 overall remains `DEV_UAT_PENDING`, Supplier G1 `RELEASE_BLOCKED` until all runtime gates pass.
+diff --git a/frontend/scripts/sup-t06b2-contact-contract-review.test.mjs b/frontend/scripts/sup-t06b2-contact-contract-review.test.mjs
+index 8576c26..b183c71 100644
+--- a/frontend/scripts/sup-t06b2-contact-contract-review.test.mjs
++++ b/frontend/scripts/sup-t06b2-contact-contract-review.test.mjs
+@@ -100,7 +100,8 @@ test('read Contact keeps required ID/owner/status and BIGINT string shape', () =
+ })
+ 
+ test('candidate does not remove or rename any existing Contact response fields', () => {
+-  const legacy = propertiesOf(block(canonical, 'Contact', 'ContactCreate'))
++  const canonicalFields = propertiesOf(block(canonical, 'Contact', 'ContactCreate'))
++  const legacy = canonicalFields.filter((name) => name !== 'allowed_actions')
+   assert.deepEqual(Object.keys(schemas.Contact.properties).filter((name) => name !== 'allowed_actions'), legacy)
+ })
+ 
+@@ -173,13 +174,19 @@ test('Supplier parent VIEW is independent from Supplier Contact rights', () => {
+   assert.match(backendSql, /su\.group_organization_id = \?/)
+ })
+ 
+-test('candidate preserves old canonical owner coverage (no narrowing)', () => {
++test('candidate never narrows any legacy owner in pre-freeze or canonical four-owner mode', () => {
+   for (const section of [block(canonical, 'Contact', 'ContactCreate'), block(canonical, 'ContactCreate', 'ContactPatch')]) {
+-    const match = section.match(/contact_type:\s*\{type: string, enum:\s*\[([^\]]+)\]\}/)
+-    assert.ok(match, 'Current canonical enum not found')
+-    for (const owner of match[1].split(',').map((x) => x.trim())) {
++    const original = section.match(/contact_type:\s*\{type: string, enum:\s*\[([^\]]+)\]\}/)
++    const canonicalRef = section.match(/contact_type:\s*\{\$ref:\s*['"]#\/components\/schemas\/ContactOwnerType['"]\}/)
++    assert.ok(original || canonicalRef, 'Canonical Contact owner schema absent')
++    const owners = original
++      ? original[1].split(',').map((x) => x.trim())
++      : (canonical.match(/    ContactOwnerType:[\s\S]*?enum: \[([^\]]+)\]/)?.[1] ?? '').split(',').map((x) => x.trim())
++    assert.ok(owners.length >= 2)
++    for (const owner of owners) {
+       assert.ok(expectedOwners.includes(owner), `Candidate removes canonical ${owner}`)
+     }
++    for (const owner of ['EMPLOYEE', 'ORGANIZATION']) assert.ok(owners.includes(owner), `Legacy owner ${owner} removed`)
+   }
+ })
+ 
+@@ -190,7 +197,11 @@ test('generated types remain a valid subset pending authorized MOD-G2 regenerati
+     const match = typeBlock[1].match(/contact_type:\s*([^;]+);/)
+     assert.ok(match)
+     const actual = [...match[1].matchAll(/'([A-Z]+)'/g)].map((m) => m[1])
+-    assert.ok(actual.length >= 2)
+-    assert.ok(actual.every((owner) => expectedOwners.includes(owner)))
++    if (match[1].trim() === 'ContactOwnerType') {
++      assert.match(generated, /export type ContactOwnerType\s*=/)
++    } else {
++      assert.ok(actual.length >= 2)
++      assert.ok(actual.every((owner) => expectedOwners.includes(owner)))
++    }
+   }
+ })
+diff --git a/frontend/scripts/sup-t06c-contact-contract-source.test.mjs b/frontend/scripts/sup-t06c-contact-contract-source.test.mjs
+new file mode 100644
+index 0000000..d716e5d
+--- /dev/null
++++ b/frontend/scripts/sup-t06c-contact-contract-source.test.mjs
+@@ -0,0 +1,134 @@
++// SUP-T06C source contract gates: no pnpm, database or code generator required.
++// This checks the proposed canonical/frontend delta, NOT PC-06/PC-07/MOD-G2 signoff.
++import assert from 'node:assert/strict'
++import { readFileSync } from 'node:fs'
++import { dirname, join } from 'node:path'
++import { fileURLToPath } from 'node:url'
++import test from 'node:test'
++
++const root = join(dirname(fileURLToPath(import.meta.url)), '../..')
++const read = (name) => readFileSync(join(root, name), 'utf8')
++const canonical = read('contracts/openapi/openapi.yaml')
++const review = JSON.parse(read('contracts/openapi/p2-sup-contact.review.openapi.json'))
++const list = read('frontend/src/components/contacts/ContactList.vue')
++const form = read('frontend/src/components/contacts/ContactFormModal.vue')
++const policy = read('frontend/src/components/contacts/contactOwnerPolicy.ts')
++const query = read('frontend/src/components/contacts/contactListQuery.ts')
++const backend = read('backend/app/Modules/Contact/ContactRules.php')
++const parent = read('backend/app/Modules/Contact/SupplierContactParentView.php')
++const sql = read('backend/app/Modules/Contact/ContactSql.php')
++const service = read('backend/app/Modules/Contact/ContactService.php')
++const expected = ['EMPLOYEE', 'ORGANIZATION', 'CUSTOMER', 'SUPPLIER']
++
++function schemaBlock(name, nextName) {
++  const anchor = canonical.indexOf('\n  schemas:')
++  assert.ok(anchor >= 0, 'components.schemas missing')
++  const begin = canonical.indexOf(`    ${name}:`, anchor)
++  const end = canonical.indexOf(`    ${nextName}:`, begin + name.length + 5)
++  assert.ok(begin > anchor && end > begin, `missing or reordered schema ${name}`)
++  return canonical.slice(begin, end)
++}
++const owner = schemaBlock('ContactOwnerType', 'Contact')
++const contact = schemaBlock('Contact', 'ContactCreate')
++const create = schemaBlock('ContactCreate', 'ContactPatch')
++const patch = schemaBlock('ContactPatch', 'Department')
++const fields = (block) => [...block.matchAll(/^        ([a-z_]+):/gm)].map((m) => m[1])
++
++for (const [name, block] of [['Contact', contact], ['ContactCreate', create]]) {
++  test(`${name}: exact shared ContactOwnerType reference`, () => {
++    assert.match(block, /contact_type: \{\$ref: '#\/components\/schemas\/ContactOwnerType'\}/)
++    assert.doesNotMatch(block, /contact_type: \{type: string, enum:/)
++  })
++}
++test('canonical owner enum exactly matches Backend/CUS/SUP candidate (no extra or missing kind)', () => {
++  const match = owner.match(/enum: \[([^\]]+)\]/)
++  assert.ok(match)
++  const actual = match[1].split(',').map((x) => x.trim())
++  assert.deepEqual(actual, expected)
++  assert.deepEqual(actual, review.components.schemas.ContactOwnerType.enum)
++  for (const value of expected) assert.match(backend, new RegExp(`'${value}'\\s*=>`))
++})
++test('owner identity is a type, never a permission grant', () => {
++  assert.match(owner, /never confers PBAC/)
++  assert.match(policy, /contactOwnerResource/)
++  assert.match(policy, /return ''/)
++  assert.match(parent, /canView\('supplier'/)
++})
++test('Contact mandatory fields and BIGINT ref shape preserved', () => {
++  assert.match(contact, /required: \[id, contact_type, contact_ref_id, status\]/)
++  assert.match(contact, /contact_ref_id: \{\$ref: '#\/components\/schemas\/BigInt'\}/)
++  assert.match(contact, /id: \{\$ref: '#\/components\/schemas\/BigInt'\}/)
++})
++test('legacy Contact read fields retained exactly; hints are additive only', () => {
++  assert.deepEqual(fields(contact), Object.keys(review.components.schemas.Contact.properties))
++  assert.equal(review.components.schemas.Contact.required.includes('allowed_actions'), false)
++  assert.match(contact, /allowed_actions:/)
++})
++test('read row action hints boolean-only, optional and non-granting', () => {
++  const hints = contact.match(/        allowed_actions:\n([\s\S]*)/)
++  assert.ok(hints)
++  assert.match(hints[1], /additionalProperties: false/)
++  assert.match(hints[1], /edit: \{type: boolean\}/)
++  assert.match(hints[1], /setstate: \{type: boolean\}/)
++  assert.doesNotMatch(hints[1], /required:/)
++  assert.match(hints[1], /reauthorizes every mutation/)
++})
++test('ContactCreate required legacy owner keys retained, no status/usage/bank fields', () => {
++  assert.match(create, /required: \[contact_type, contact_ref_id\]/)
++  assert.deepEqual(fields(create), Object.keys(review.components.schemas.ContactCreate.properties))
++  assert.doesNotMatch(create, /^        (status|company_id|supplier_id|group_organization_id):/m)
++})
++test('actual initial-state failure is described, no ACTIVE fallback', () => {
++  assert.match(create, /WF_INITIAL_STATE_REQUIRED/)
++  assert.doesNotMatch(create, /defaults? to native ACTIVE/i)
++  assert.match(service, /WF_INITIAL_STATE_REQUIRED/)
++})
++test('ContactPatch remains exactly the legacy field set without changing owner/state', () => {
++  assert.deepEqual(fields(patch), Object.keys(review.components.schemas.ContactPatch.properties))
++  for (const forbidden of ['contact_type', 'contact_ref_id', 'status']) {
++    assert.doesNotMatch(patch, new RegExp(`^        ${forbidden}:`, 'm'))
++  }
++})
++test('preserve five existing Contact API operationIds', () => {
++  for (const id of review['x-existing-operations-must-remain']) {
++    assert.match(canonical, new RegExp(`operationId: ${id}\\b`))
++  }
++  assert.equal(review['x-existing-operations-must-remain'].length, 5)
++})
++test('old Contact filters and cap stay distinct from Supplier future flat list', () => {
++  assert.match(canonical, /operationId: listContacts[\s\S]*?components\/parameters\/Filter'/)
++  assert.match(sql, /private const FILTER\s*=\s*\['contact_type',\s*'contact_ref_id',\s*'status'\]/)
++  assert.match(query, /contact_type: ownerType/)
++  assert.match(query, /contact_ref_id: ownerId/)
++  assert.match(sql, /\$size > 200/)
++})
++test('frontend map has exact owners with SDK exhaustiveness (no fallback)', () => {
++  assert.match(policy, /satisfies Record<ApiContactOwnerType, string>/)
++  assert.match(policy, /return ''/)
++  const mapping = [...policy.matchAll(/^  (EMPLOYEE|ORGANIZATION|CUSTOMER|SUPPLIER):/gm)].map((m) => m[1])
++  assert.deepEqual([...mapping].sort(), [...expected].sort())
++})
++test('ContactList and Form consume same four-owner typed policy', () => {
++  assert.match(list, /ownerType\?: ContactOwnerType/)
++  assert.match(form, /ownerType: ContactOwnerType/)
++  assert.match(list, /:owner-type="props\.ownerType"/)
++  assert.match(form, /contact_type: props\.ownerType/)
++})
++test('frontend does not invent a Supplier route or transfer owner via PATCH', () => {
++  assert.match(form, /if \(props\.contact\) \{[\s\S]*?emit\('save', editablePayload\)/)
++  assert.doesNotMatch(form, /supplier_contact\.\w+|\/suppliers\/.*\/contacts/)
++  assert.doesNotMatch(list, /\/suppliers\/.*\/contacts/)
++})
++test('Supplier contact read predicate remains dual-PBAC + group-root, pre-LIMIT', () => {
++  assert.match(sql, /\$supplierContact->predicate\('c'\)/)
++  assert.match(sql, /\$supplierMaster->predicate\('su'\)/)
++  assert.match(sql, /su\.group_organization_id = \?/)
++})
++test('review-only candidate remains protected; not active SDK input', () => {
++  assert.equal(review['x-do-not-generate-client'], true)
++  assert.equal(review['x-review-only'], true)
++  assert.deepEqual(review.paths, {})
++  const config = read('frontend/openapi-ts.config.ts')
++  assert.match(config, /\.\.\/contracts\/openapi\/openapi\.yaml/)
++  assert.doesNotMatch(config, /p2-sup-contact\.review/)
++})
+diff --git a/frontend/scripts/sup-t06c-generated-parity.test.mjs b/frontend/scripts/sup-t06c-generated-parity.test.mjs
+new file mode 100644
+index 0000000..3480cf6
+--- /dev/null
++++ b/frontend/scripts/sup-t06c-generated-parity.test.mjs
+@@ -0,0 +1,53 @@
++// Run ONLY after pnpm run openapi:generate; never hand-edit generated SDK.
++import assert from 'node:assert/strict'
++import { readFileSync } from 'node:fs'
++import { dirname, join } from 'node:path'
++import { fileURLToPath } from 'node:url'
++import test from 'node:test'
++const root = join(dirname(fileURLToPath(import.meta.url)), '..')
++const source = readFileSync(join(root, 'src/api/generated/types.gen.ts'), 'utf8')
++const sdk = readFileSync(join(root, 'src/api/generated/sdk.gen.ts'), 'utf8')
++const marker = '// This file is auto-generated by @hey-api/openapi-ts'
++function bodyOfType(name) {
++  const match = source.match(new RegExp(`export type ${name} = \\{([\\s\\S]*?)\\};`))
++  assert.ok(match, `missing generated ${name}`)
++  return match[1]
++}
++function ownerTypes(block) {
++  const line = block.match(/contact_type:\s*([^;]+);/)
++  assert.ok(line, 'generated contact_type missing')
++  if (line[1].trim() === 'ContactOwnerType') return ['EMPLOYEE', 'ORGANIZATION', 'CUSTOMER', 'SUPPLIER']
++  return [...line[1].matchAll(/'([A-Z]+)'/g)].map((match) => match[1])
++}
++test('SDK files retain authoritative code-generator marker', () => {
++  assert.ok(source.startsWith(marker))
++  assert.ok(sdk.startsWith(marker))
++})
++test('generated shared owner union has four canonical names', () => {
++  assert.match(source, /export type ContactOwnerType\s*=/)
++  const owner = source.match(/export type ContactOwnerType\s*=\s*([^;]+);/)
++  assert.ok(owner)
++  assert.deepEqual([...owner[1].matchAll(/'([A-Z]+)'/g)].map((m) => m[1]), ['EMPLOYEE', 'ORGANIZATION', 'CUSTOMER', 'SUPPLIER'])
++})
++for (const name of ['Contact', 'ContactCreate']) {
++  test(`generated ${name} supports four owner values`, () => {
++    assert.deepEqual(ownerTypes(bodyOfType(name)), ['EMPLOYEE', 'ORGANIZATION', 'CUSTOMER', 'SUPPLIER'])
++  })
++}
++test('generated Contact includes optional typed boolean action hints', () => {
++  const body = bodyOfType('Contact')
++  assert.match(body, /allowed_actions\?:\s*\{/)
++  assert.match(body, /edit\?: boolean/)
++  assert.match(body, /setstate\?: boolean/)
++})
++test('generated ContactCreate does not accept state and PATCH cannot transfer owner', () => {
++  assert.doesNotMatch(bodyOfType('ContactCreate'), /\bstatus\??:/)
++  for (const field of ['contact_type', 'contact_ref_id', 'status']) {
++    assert.doesNotMatch(bodyOfType('ContactPatch'), new RegExp(`\\b${field}\\??:`))
++  }
++})
++test('SDK retains five Contact operation exports', () => {
++  for (const name of ['listContacts', 'createContact', 'getContact', 'updateContact', 'setContactState']) {
++    assert.match(sdk, new RegExp(`export const ${name}\\b`))
++  }
++})
+diff --git a/frontend/src/components/contacts/ContactFormModal.vue b/frontend/src/components/contacts/ContactFormModal.vue
+index a28986c..bfc8442 100644
+--- a/frontend/src/components/contacts/ContactFormModal.vue
++++ b/frontend/src/components/contacts/ContactFormModal.vue
+@@ -6,12 +6,13 @@ import type { Contact, ContactCreate, Province, Ward } from '@/api/generated/typ
+ import type { ContactUpdate } from '@/services/foundation'
+ import SearchableSelect from '@/components/forms/SearchableSelect.vue'
+ import { useUnsavedChanges } from '@/composables/useUnsavedChanges'
++import type { ContactOwnerType } from './contactOwnerPolicy'
+ 
+ const props = withDefaults(
+   defineProps<{
+     open: boolean
+     ownerId: string
+-    ownerType: 'EMPLOYEE' | 'ORGANIZATION'
++    ownerType: ContactOwnerType
+     contact?: Contact | null
+     provinces?: readonly Province[]
+     wards?: readonly Ward[]
+diff --git a/frontend/src/components/contacts/ContactList.vue b/frontend/src/components/contacts/ContactList.vue
+index 42e3660..0023386 100644
+--- a/frontend/src/components/contacts/ContactList.vue
++++ b/frontend/src/components/contacts/ContactList.vue
+@@ -27,12 +27,12 @@ import { reportApiError } from '@/services/errorBoundary'
+ import { useBusinessWorkflowStates } from '@/composables/useBusinessWorkflowStates'
+ import ContactFormModal from './ContactFormModal.vue'
+ import { scopedContactListQuery } from './contactListQuery'
+-import { contactOwnerResource } from './contactOwnerPolicy'
++import { contactOwnerResource, type ContactOwnerType } from './contactOwnerPolicy'
+ 
+ const props = withDefaults(
+   defineProps<{
+     ownerId: string
+-    ownerType?: 'EMPLOYEE' | 'ORGANIZATION'
++    ownerType?: ContactOwnerType
+   }>(),
+   { ownerType: 'ORGANIZATION' },
+ )
+diff --git a/frontend/src/components/contacts/contactOwnerPolicy.ts b/frontend/src/components/contacts/contactOwnerPolicy.ts
+index 0a0bdfe..2c41686 100644
+--- a/frontend/src/components/contacts/contactOwnerPolicy.ts
++++ b/frontend/src/components/contacts/contactOwnerPolicy.ts
+@@ -1,3 +1,5 @@
++import type { ContactOwnerType as ApiContactOwnerType } from '@/api/generated/types.gen'
++
+ /**
+  * P2 SUP-T06B1: Shared Contact resource ownership is explicit and fail-closed.
+  * This map is NOT a permission grant. The server still decides both Contact
+@@ -8,7 +10,7 @@ const RESOURCE_BY_OWNER = {
+   EMPLOYEE: 'employee_contact',
+   CUSTOMER: 'customer_contact',
+   SUPPLIER: 'supplier_contact',
+-} as const
++} as const satisfies Record<ApiContactOwnerType, string>
+ 
+ export type ContactOwnerType = keyof typeof RESOURCE_BY_OWNER
+ 

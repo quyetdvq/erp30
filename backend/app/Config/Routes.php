@@ -30,6 +30,7 @@ $routes->group('api/v1', ['filter' => 'cors'], static function (RouteCollection 
     require __DIR__ . '/Routes/ApiV1/PricingRoutes.php';
     require __DIR__ . '/Routes/ApiV1/ImportsRoutes.php';
     require __DIR__ . '/Routes/ApiV1/CustomersRoutes.php';
+    require __DIR__ . '/Routes/ApiV1/SuppliersRoutes.php';
     require __DIR__ . '/Routes/ApiV1/HistoryRoutes.php';
     require __DIR__ . '/Routes/ApiV1/NotificationsRoutes.php';
 });

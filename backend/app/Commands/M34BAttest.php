@@ -27,7 +27,7 @@ final class M34BAttest extends BaseCommand
             throw new \RuntimeException('M34B child schema/nonce guard mismatch.');
         }
         // Fail before even opening a CI4 database connection if the process
-        // lost its disposable-schema context or inherited an unsafe mode.
+        // lost its disposable-schema context or inherited an unsafe schema.
         if (ENVIRONMENT !== 'development') {
             throw new \RuntimeException('M34B_CHILD_ENVIRONMENT: Unexpected CI4 child environment.');
         }
@@ -35,8 +35,7 @@ final class M34BAttest extends BaseCommand
             || getenv('database.default.database') !== $name
             || getenv('database.tests.database') !== $name
             || getenv('database.default.hostname') !== '127.0.0.1'
-            || getenv('database.tests.hostname') !== '127.0.0.1'
-            || getenv('DINKERP_M33B_WRITE_MODE') !== 'enabled') {
+            || getenv('database.tests.hostname') !== '127.0.0.1') {
             throw new \RuntimeException('M34B_CHILD_GUARD: Child did not receive matching sandbox settings.');
         }
         // Use the same cached Config instance as Database::connect(). A fresh

@@ -93,8 +93,8 @@ $service = (string) file_get_contents($root . '/AccessMutationService.php');
 $guard = (string) file_get_contents(dirname(__DIR__) . '/app/Modules/Access/UnifiedAccessService.php');
 $cases = [
     'CSRF filter unchanged' => str_contains(file_get_contents(dirname(__DIR__).'/app/Config/Filters.php'),'csrf'),
-    'feature flag explicit opt-in' => str_contains($controller,"env('DINKERP_M33B_WRITE_MODE', 'off')"),
-    'feature flag fails closed' => str_contains($controller,"!== 'enabled'"),
+    'authenticated mutation entrypoint' => str_contains($controller,'UNAUTHENTICATED'),
+    'temporary write gate removed' => !str_contains($controller,'ACCESS_MUTATION_NOT_ENABLED'),
     'unauthenticated denied before a write service is created' => strpos($controller,'! $actor instanceof User') < strpos($controller, 'new AccessMutationService($actor)'),
     'mutation action must not be view' => str_contains($guard, "['create', 'edit', 'setstate', 'delete', 'assign_member', 'assign_permission', 'reset_password', 'configure_numbering']") && str_contains($guard, 'in_array($action, [\'view\',\'create\'], true)'),
     'never trust client State for persisted mutation' => str_contains($guard,'$target = $persistedRow;'),

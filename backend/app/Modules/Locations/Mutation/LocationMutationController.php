@@ -50,11 +50,6 @@ final class LocationMutationController extends Controller
         if (! $actor instanceof User) {
             return ApiResponder::error($this->response, 'UNAUTHENTICATED', 401);
         }
-        // Feature gate is shared with reviewed M3/M4 mutations; never enable
-        // writes by merely applying the M5.1 patch on an existing installation.
-        if (strtolower((string) env('DINKERP_M33B_WRITE_MODE', 'off')) !== 'enabled') {
-            return ApiResponder::error($this->response, 'ACCESS_MUTATION_NOT_ENABLED', 403);
-        }
         return ApiResponder::success($this->response, $callback(new LocationMutationService($actor)), $status);
     }
 }

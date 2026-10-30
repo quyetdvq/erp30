@@ -14,8 +14,7 @@ use Throwable;
 use UnexpectedValueException;
 
 /**
- * HIS-01 read adapter: ONLY Customer is onboarded. Supplier gains its own
- * canonical parent guard when SUP module is implemented (not a generic SELECT).
+ * Both GROUP MASTER parent resources have independently owned VIEW adapters.
  * Same snapshot covers parent PBAC and history COUNT/ROWS (no TOCTOU leak).
  */
 final class HistoryReadService
@@ -31,6 +30,21 @@ final class HistoryReadService
     /** @param array<string,mixed>|null $query @return array<string,mixed> */
     public function customer(string $id, ?array $query): array
     {
+        return $this->page('customer', $id, $query);
+    }
+
+    /** @param array<string,mixed>|null $query @return array<string,mixed> */
+    public function supplier(string $id, ?array $query): array
+    {
+        return $this->page('supplier', $id, $query);
+    }
+
+    /** @param array<string,mixed>|null $query @return array<string,mixed> */
+    private function page(string $resource, string $id, ?array $query): array
+    {
+        if (!in_array($resource, ['customer', 'supplier'], true)) {
+            throw new UnexpectedValueException('HISTORY_PARENT_RESOURCE_UNSUPPORTED');
+        }
         if (preg_match('/\A[1-9][0-9]*\z/D', $id) !== 1 || strlen($id) > 20) {
             throw new \CodeIgniter\HTTP\Exceptions\BadRequestException('Invalid history parent ID.');
         }
@@ -46,8 +60,8 @@ final class HistoryReadService
             $access = new UnifiedAccessService(
                 $this->actor, $this->db, new DateTimeImmutable('now', new DateTimeZone('UTC'))
             );
-            $this->parent->assertVisible('customer', $id, $access, $this->db);
-            $plan = HistorySql::forVisibleParent('customer', $id, $params, (string)$this->db->DBPrefix, (string) config('Auth')->tables['users']);
+            $this->parent->assertVisible($resource, $id, $access, $this->db);
+            $plan = HistorySql::forVisibleParent($resource, $id, $params, (string)$this->db->DBPrefix, (string) config('Auth')->tables['users']);
             $countResult = $this->db->query($plan['count_sql'], $plan['count_binds']);
             if ($countResult === false) throw new UnexpectedValueException('HISTORY_COUNT_SQL_FAILED');
             $totalRaw = $countResult->getRowArray()['total'] ?? null;

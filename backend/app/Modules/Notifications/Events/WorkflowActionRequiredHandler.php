@@ -32,7 +32,9 @@ final class WorkflowActionRequiredHandler extends AbstractNotificationEventHandl
             BusinessWorkflowRules::id($id);
             $payload = WorkflowNotificationRules::decode((string) $event['payload_json']);
             $resource = $payload['resource_type'];
-            $table = $this->table(BusinessWorkflowRules::table($resource));
+            $table = $this->table($resource === 'supplier'
+                ? \App\Modules\Notifications\SupplierNotificationTarget::TABLE
+                : BusinessWorkflowRules::table($resource));
         } catch (Throwable $e) {
             throw new NotificationPermanentFailure('NOTIFICATION_INVALID_EVENT', 0, $e);
         }
@@ -100,10 +102,16 @@ final class WorkflowActionRequiredHandler extends AbstractNotificationEventHandl
             // Explicit assignment is necessary, but never sufficient: recheck
             // the target's CURRENT per-user VIEW and executable next actions.
             try {
-                $options = (new BusinessWorkflowService(new User($userRow), $this->db))
-                    ->options($resource, $id);
+                $options = $resource === 'supplier'
+                    ? \App\Modules\Notifications\SupplierNotificationTarget::options(new User($userRow), $this->db, $id, $target)
+                    : (new BusinessWorkflowService(new User($userRow), $this->db))->options($resource, $id);
             } catch (DomainException $e) {
-                if ($e->getErrorCode() === 'AUTH_POLICY_DENIED') {
+                if ($e->getErrorCode() === 'AUTH_POLICY_DENIED'
+                    || ($resource === 'supplier_contact' && $e->getErrorCode() === 'WF_TARGET_NOT_FOUND')
+                    || ($resource === 'supplier' && in_array($e->getErrorCode(),
+                        ['WF_TARGET_NOT_FOUND', 'SUPPLIER_API_NOT_ENABLED'], true))) {
+                    // A Supplier parent may be outside the recipient's GROUP
+                    // or denied by Supplier VIEW; never block other assignees.
                     continue;
                 }
                 throw $e;

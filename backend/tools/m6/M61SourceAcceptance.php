@@ -85,7 +85,7 @@ final class M61SourceAcceptance
             if (! str_contains($service, $signal)) throw new RuntimeException('M6.1 missing review guard: ' . $signal);
         }
         if (! str_contains($rules, "'product_group', 'product_uom'")
-            || ! str_contains($controller, "env('DINKERP_M33B_WRITE_MODE', 'off')")
+            || ! str_contains($controller, 'UNAUTHENTICATED')
             || ! str_contains($controller, "'UNAUTHENTICATED', 401")) {
             throw new RuntimeException('M6.1 catalog command authorization/write gate missing.');
         }

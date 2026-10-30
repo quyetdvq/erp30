@@ -11,7 +11,7 @@ use CodeIgniter\HTTP\Exceptions\BadRequestException;
 use CodeIgniter\HTTP\ResponseInterface;
 use CodeIgniter\Shield\Entities\User;
 
-/** Exactly seven frozen API-050 Price List routes; writes default OFF. */
+/** Exactly seven frozen API-050 Price List routes; mutations require canonical PBAC. */
 final class PriceListController extends Controller
 {
     private function service():?PriceListService
@@ -34,7 +34,6 @@ final class PriceListController extends Controller
     {
         $service=$this->service();
         if ($service===null) return $this->unauthenticated();
-        if (!$this->canMutate()) return $this->disabled();
         return ApiResponder::success($this->response,$service->create($this->objectBody()),201);
     }
 
@@ -49,7 +48,6 @@ final class PriceListController extends Controller
     {
         $service=$this->service();
         if ($service===null) return $this->unauthenticated();
-        if (!$this->canMutate()) return $this->disabled();
         return ApiResponder::success($this->response,$service->update($id,$this->objectBody()));
     }
 
@@ -57,7 +55,6 @@ final class PriceListController extends Controller
     {
         $service=$this->service();
         if ($service===null) return $this->unauthenticated();
-        if (!$this->canMutate()) return $this->disabled();
         return ApiResponder::success($this->response,$service->setState($id,$this->objectBody()));
     }
 
@@ -72,7 +69,6 @@ final class PriceListController extends Controller
     {
         $service=$this->service();
         if ($service===null) return $this->unauthenticated();
-        if (!$this->canMutate()) return $this->disabled();
         return ApiResponder::success($this->response,$service->replaceItems($id,$this->itemsBody()));
     }
 
@@ -109,10 +105,5 @@ final class PriceListController extends Controller
         return $body;
     }
 
-    private function canMutate():bool
-    {
-        return strtolower((string)env('DINKERP_M33B_WRITE_MODE','off'))==='enabled';
-    }
     private function unauthenticated():ResponseInterface { return ApiResponder::error($this->response,'UNAUTHENTICATED',401); }
-    private function disabled():ResponseInterface { return ApiResponder::error($this->response,'ACCESS_MUTATION_NOT_ENABLED',403); }
 }

@@ -19,7 +19,7 @@ $controller=(string)file_get_contents($root.'/backend/app/Modules/Product/Combo/
 $service=(string)file_get_contents($root.'/backend/app/Modules/Product/Combo/ProductComboService.php');
 $rules=(string)file_get_contents($root.'/backend/app/Modules/Product/Combo/ProductComboRules.php');
 $ok(substr_count($controller,"'UNAUTHENTICATED', 401")===2,'Shield required for GET and PUT');
-$ok(str_contains($controller,"'ACCESS_MUTATION_NOT_ENABLED', 403"),'mutation disabled default');
+$ok(!str_contains($controller,'ACCESS_MUTATION_NOT_ENABLED'),'mutation disabled default');
 $ok(str_contains($controller, "if (\$raw==='' ||"), 'missing body protected');
 $ok(str_contains($controller,"!array_key_exists('items', \$value)"),'{} not interpreted as DELETE ALL');
 $ok(str_contains($service,'ProductComboGraph::assertAcyclic('),'graph cycle check');

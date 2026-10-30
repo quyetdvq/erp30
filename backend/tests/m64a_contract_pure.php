@@ -42,6 +42,6 @@ foreach (['hasBaseViewPermission(', 'viewableMasterLifecycleStatuses(',
 foreach (['public function searchProductOptions(', 'public function resolveProductOptions(', 'public function resolveProductUomLabels('] as $method) {
     $ok(str_contains($controller,$method),'handler '.$method);
 }
-$ok(!str_contains($controller,'DINKERP_M33B_WRITE_MODE'),'read-only not gated by mutation toggle');
+$ok(!str_contains($controller,'ACCESS_MUTATION_NOT_ENABLED'),'read-only not gated by mutation toggle');
 $ok(!str_contains((string)\DinkERP\Tools\Routes\LegacyRouteSource::source($root, 'M64ARoutes.php'),'$routes->delete('),'no delete');
 echo 'M6.4A CONTRACT: '.$n.'/'.$n." PASS\n";

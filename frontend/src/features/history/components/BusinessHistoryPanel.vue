@@ -3,11 +3,12 @@ import { computed, onBeforeUnmount, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { ListPagination } from '@/components/lists'
 import { reportApiError } from '@/services/errorBoundary'
-import { customerHistory, type BusinessHistoryEvent } from '@/services/history'
+import { customerHistory, supplierHistory, type BusinessHistoryEvent } from '@/services/history'
 import { useFormatters } from '@/composables/useFormatters'
 import { historyActorLabel, historyChangeDisplay } from '@/features/history/historyPresentation'
 
-const props = defineProps<{ customerId: string }>()
+// Exactly one parent may be supplied. An invalid combination never calls an API.
+const props = defineProps<{ customerId?: string; supplierId?: string }>()
 const { t } = useI18n()
 const formatters = useFormatters()
 const items = ref<BusinessHistoryEvent[]>([])
@@ -23,7 +24,12 @@ async function load(): Promise<void> {
   error.value = false
   busy.value = true
   try {
-    const result = await customerHistory(props.customerId, page.value, pageSize.value)
+    const parent = props.supplierId && !props.customerId ? 'supplier'
+      : props.customerId && !props.supplierId ? 'customer' : null
+    if (!parent) throw new Error('HISTORY_PARENT_REQUIRED')
+    const result = parent === 'supplier'
+      ? await supplierHistory(props.supplierId!, page.value, pageSize.value)
+      : await customerHistory(props.customerId!, page.value, pageSize.value)
     if (token !== generation) return
     items.value = result.data
     total.value = result.meta.total
@@ -39,11 +45,11 @@ async function load(): Promise<void> {
 }
 function setPage(next: number): void { page.value = next; void load() }
 function setPageSize(next: number): void { pageSize.value = next; page.value = 1; void load() }
-watch(() => props.customerId, () => { page.value = 1; void load() }, { immediate: true })
+watch([() => props.customerId, () => props.supplierId], () => { page.value = 1; void load() }, { immediate: true })
 onBeforeUnmount(() => { ++generation })
 
 // Present each row once. A malformed event remains visible, but its untrusted
-// diff is never rendered and cannot blank the complete Customer modal.
+// diff is never rendered and cannot blank the complete Customer or Supplier modal.
 const displayedItems = computed(() => items.value.map((event) => ({
   event, changeDisplay: historyChangeDisplay(event, t('history.redactedChange')),
 })))

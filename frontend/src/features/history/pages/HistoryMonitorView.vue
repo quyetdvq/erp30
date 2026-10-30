@@ -12,6 +12,7 @@ import { monitorBusinessHistory, type BusinessHistoryEvent } from '@/services/hi
 import { historyActorLabel, historyChangeDisplay } from '@/features/history/historyPresentation'
 // Canonical Customer detail, also used by /customers. No copied profile modal.
 import CustomerDetailView from '@/features/customer/pages/CustomerDetailView.vue'
+import SupplierDetailView from '@/features/supplier/pages/SupplierDetailView.vue'
 
 const { t } = useI18n()
 const formatters = useFormatters()
@@ -38,7 +39,7 @@ const loading = ref(false)
 const error = ref(false)
 const invalidRange = ref(false)
 const selected = ref<BusinessHistoryEvent | null>(null)
-const selectedObject = ref<{ type: 'customer'; id: string } | null>(null)
+const selectedObject = ref<{ type: 'customer' | 'supplier'; id: string } | null>(null)
 let generation = 0
 
 const columns: readonly ListColumn<BusinessHistoryEvent>[] = [
@@ -118,16 +119,16 @@ function objectLabel(event: BusinessHistoryEvent): string {
     || `${event.resource_type} #${event.resource_id}`
 }
 function canOpenObject(event: BusinessHistoryEvent): boolean {
-  // SYSTEM monitor authority does NOT grant Customer master VIEW. This only
-  // exposes a button: canonical customerById() rechecks persisted row PBAC.
-  return allowed.value && event.resource_type === 'customer'
-    && Boolean(event.resource_code) && hasBasePermission('customer', 'view')
+  // SYSTEM monitor authority never grants Customer/Supplier master VIEW.
+  // The canonical detail modal rechecks persisted row PBAC on every opening.
+  return allowed.value && (event.resource_type === 'customer' || event.resource_type === 'supplier')
+    && Boolean(event.resource_code) && hasBasePermission(event.resource_type, 'view')
     && /^[1-9][0-9]*$/.test(event.resource_id)
 }
 function openObject(event: BusinessHistoryEvent): void {
   if (!canOpenObject(event)) return
   selected.value = null
-  selectedObject.value = { type: 'customer', id: event.resource_id }
+  selectedObject.value = { type: event.resource_type as 'customer' | 'supplier', id: event.resource_id }
 }
 
 // Only present the already-authorized, server-redacted event received in the
@@ -219,10 +220,10 @@ onBeforeUnmount(() => { ++generation })
               @view="selected = row" />
           </template>
           <template #cell-object_actions="{ row }">
-            <!-- This is NOT a Customer SQL-scoped list. Base permission is
-                 advisory only; the canonical detail API enforces row PBAC. -->
+            <!-- SYSTEM monitor only supplies an advisory VIEW action;
+                 canonical Customer/Supplier detail still enforces row PBAC. -->
             <TableRowActions v-if="canOpenObject(row)" authorization-mode="legacy-base-only"
-              view-permission="customer.view" :show-view="true" :busy="loading"
+              :view-permission="`${row.resource_type}.view`" :show-view="true" :busy="loading"
               :view-label="t('history.monitorOpenObject')" @view="openObject(row)" />
           </template>
         </ListTable>
@@ -240,6 +241,9 @@ onBeforeUnmount(() => { ++generation })
         <!-- Exact Customer modal used by /customers; source fetch is PBAC guarded. -->
         <CustomerDetailView v-if="allowed && selectedObject?.type === 'customer'"
           :key="`customer-${selectedObject.id}`" :customer-id="selectedObject.id"
+          @close="selectedObject = null" @saved="void load()" />
+        <SupplierDetailView v-if="allowed && selectedObject?.type === 'supplier'"
+          :key="`supplier-${selectedObject.id}`" :supplier-id="selectedObject.id"
           @close="selectedObject = null" @saved="void load()" />
       </Teleport>
     </template>

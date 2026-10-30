@@ -180,32 +180,18 @@ final class MyWorkflowIntegrationTest extends TestCase
         }
     }
 
-    public function testWriteGateOffReturnsNoActionCandidates(): void
+    public function testMyWorkActionabilityDependsOnRecordPbacNotNotificationWriteSwitch(): void
     {
         $this->fixture->assign();
-        $oldGetenv = getenv('DINKERP_M33B_WRITE_MODE');
-        $oldEnv = $_ENV['DINKERP_M33B_WRITE_MODE'] ?? null;
-        $oldServer = $_SERVER['DINKERP_M33B_WRITE_MODE'] ?? null;
-        try {
-            putenv('DINKERP_M33B_WRITE_MODE=off');
-            $_ENV['DINKERP_M33B_WRITE_MODE'] = 'off';
-            $_SERVER['DINKERP_M33B_WRITE_MODE'] = 'off';
-            $this->db->table('settings')
-                ->where(['class' => 'NotificationRuntime', 'context' => 'system',
-                    'key' => 'DINKERP_M11_WORKFLOW_WRITE_MODE'])
-                ->update(['value' => '0']);
-            $result = $this->reader($this->fixture->firstRecipientId)->listing([]);
-            self::assertFalse($result['execution_enabled']);
-            self::assertSame([], $result['items']);
-            self::assertNull($result['next_cursor']);
-        } finally {
-            if ($oldGetenv === false) putenv('DINKERP_M33B_WRITE_MODE');
-            else putenv('DINKERP_M33B_WRITE_MODE=' . $oldGetenv);
-            if ($oldEnv === null) unset($_ENV['DINKERP_M33B_WRITE_MODE']);
-            else $_ENV['DINKERP_M33B_WRITE_MODE'] = $oldEnv;
-            if ($oldServer === null) unset($_SERVER['DINKERP_M33B_WRITE_MODE']);
-            else $_SERVER['DINKERP_M33B_WRITE_MODE'] = $oldServer;
-        }
+        // The notification assignment write setting does not control the
+        // independent authenticated Workflow execution and row PBAC checks.
+        $this->db->table('settings')
+            ->where(['class' => 'NotificationRuntime', 'context' => 'system',
+                'key' => 'DINKERP_M11_WORKFLOW_WRITE_MODE'])
+            ->update(['value' => '0']);
+        $result = $this->reader($this->fixture->firstRecipientId)->listing([]);
+        self::assertTrue($result['execution_enabled']);
+        self::assertIsArray($result['items']);
     }
 
     private function reader(string $userId): MyWorkflowService

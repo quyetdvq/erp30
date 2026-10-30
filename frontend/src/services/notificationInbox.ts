@@ -77,6 +77,7 @@ export function workflowDestination(resourceType: string, id: string): Notificat
   if (!/^[1-9][0-9]{0,19}$/.test(id)) return null
   if (resourceType === 'product') return { path: `/products/${id}`, kind: 'detail' }
   if (resourceType === 'customer') return { path: `/customers/${id}`, kind: 'detail' }
+  if (resourceType === 'supplier') return { path: `/suppliers/${id}`, kind: 'detail' }
   const path = workflowListRoutes.get(resourceType)
   return path ? { path, kind: 'list' } : null
 }

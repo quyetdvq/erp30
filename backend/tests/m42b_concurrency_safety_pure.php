@@ -32,9 +32,9 @@ $check(str_contains($entry,'$archive->dropOwnSandbox()')
 $check(str_contains($race,"'M34B_ONLY_SCHEMA'=>\$this->sandbox->name")
     && str_contains($race,"'database.default.database'=>\$this->sandbox->name")
     && str_contains($race,"'database.tests.database'=>\$this->sandbox->name"), 'child DBs pinned to same fresh schema');
-$check(str_contains($race,"'DINKERP_M33B_WRITE_MODE'=>'enabled'")
-    && str_contains($race,"'CI_ENVIRONMENT'=>'development'")
-    && str_contains($race,'M42_RACE_ROLE'), 'child-only write mode and attested role');
+$check(str_contains($race,"'CI_ENVIRONMENT'=>'development'")
+    && str_contains($race,"'M34B_ONLY_NONCE'")
+    && str_contains($race,'M42_RACE_ROLE'), 'child-only schema, nonce and attested role');
 $check(str_contains($race,"'session.savePath'=>\$this->dir.'/session'")
     && str_contains($race,'race_a_ready')
     && str_contains($race,'race_b_ready'), 'independent HTTP sessions and synchronized workers');

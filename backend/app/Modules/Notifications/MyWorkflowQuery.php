@@ -29,7 +29,7 @@ final class MyWorkflowQuery
             || ($cursorProvided && (! is_string($cursor) || $cursor === '' || strlen($cursor) > 1024))) {
             throw new DomainException('NOTIFICATION_INVALID_REQUEST');
         }
-        if ($type !== 'all') {
+        if ($type !== 'all' && $type !== 'supplier') {
             try {
                 BusinessWorkflowRules::table($type);
             } catch (DomainException) {

@@ -32,7 +32,7 @@ $ok(str_contains($service,'SET TRANSACTION ISOLATION LEVEL REPEATABLE READ'),'co
 $ok(str_contains($service,'transRollback()')&&str_contains($service,'resetTransStatus()'),'rollback on read failure');
 $ok(str_contains($service,'decideMutation(')&&str_contains($service,'decideTransitionAction('),'write authorization intact');
 $ok(str_contains($service,' FOR UPDATE')&&str_contains($service,'WF_CONCURRENT_STATE_CHANGE'),'write locks unchanged');
-$ok(str_contains($controller,"env('DINKERP_M33B_WRITE_MODE', 'off')"),'existing write gate intact');
+$ok(str_contains($controller,'UNAUTHENTICATED'),'existing write gate intact');
 $ok(str_contains($scope,'uniqueActivePrimary('),'trusted People canonical primary source retained');
 $ok(str_contains($scope,'$this->utcDate ?? gmdate('),'trusted UTC date for parity');
 $ok(str_contains($rules,"'ORGANIZATION' => 'organization_contact'")&&

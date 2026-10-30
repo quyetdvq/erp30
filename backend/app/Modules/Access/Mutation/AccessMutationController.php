@@ -126,11 +126,6 @@ final class AccessMutationController extends Controller
         if (! $actor instanceof User) {
             return ApiResponder::error($this->response, 'UNAUTHENTICATED', 401);
         }
-        // Deliberate deployment gate. Existing read flows are untouched, and
-        // no write is enabled merely by installing the overlay.
-        if (strtolower((string) env('DINKERP_M33B_WRITE_MODE', 'off')) !== 'enabled') {
-            return ApiResponder::error($this->response, 'ACCESS_MUTATION_NOT_ENABLED', 403);
-        }
         $result = $callback(new AccessMutationService($actor));
         return ApiResponder::success($this->response, $result, $status);
     }

@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Controllers\Api;
 
 use App\Bootstrap\CustomerHistoryVisibility;
+use App\Bootstrap\SupplierHistoryVisibility;
 use App\Modules\History\HistoryReadService;
 use App\Modules\History\HistoryMonitorReadService;
 use App\Shared\Http\ApiResponder;
@@ -38,6 +39,19 @@ final class BusinessHistoryController extends Controller
         $page = (new HistoryReadService($actor, new CustomerHistoryVisibility()))
             ->customer($id, $this->request->getGet());
         $this->response->setHeader('Cache-Control', 'private, no-store');
+        return ApiResponder::success($this->response, $page['data'], 200,
+            ['page'=>$page['page'], 'page_size'=>$page['page_size'], 'total'=>$page['total']]);
+    }
+    /** Supplier master change audit only, not deferred PUR/FIN transaction history. */
+    public function supplier(string $id): ResponseInterface
+    {
+        $actor = auth()->user();
+        if (!$actor instanceof User) {
+            return ApiResponder::error($this->response, 'UNAUTHENTICATED', 401);
+        }
+        $this->response->setHeader('Cache-Control', 'private, no-store');
+        $page = (new HistoryReadService($actor, new SupplierHistoryVisibility()))
+            ->supplier($id, $this->request->getGet());
         return ApiResponder::success($this->response, $page['data'], 200,
             ['page'=>$page['page'], 'page_size'=>$page['page_size'], 'total'=>$page['total']]);
     }

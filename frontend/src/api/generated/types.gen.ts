@@ -1066,9 +1066,181 @@ export type OrganizationPatch = {
     active_to?: string;
 };
 
+export type SupplierType = 'INDIVIDUAL' | 'COMPANY';
+
+export type SupplierGroupCode = 'STANDARD';
+
+export type SupplierPaymentTerm = 'IMMEDIATE' | 'NET15' | 'NET30' | 'NET60';
+
+/**
+ * Persisted UINT32 CAS version from MariaDB; may be serialized as an integer or decimal string.
+ */
+export type SupplierRowVersion = number | string;
+
+/**
+ * Required exact CAS version; integer JSON input, not a string or optional hint.
+ */
+export type SupplierExpectedVersion = number;
+
+export type SupplierCompanyIdList = Array<PositiveBigInt>;
+
+/**
+ * Authorized Supplier list/detail/response DTO. Never includes Bank ciphertext, metadata, account number or History; Company Usage is not a PBAC grant.
+ */
+export type Supplier = {
+    id: PositiveBigInt;
+    supplier_code: string;
+    name: string;
+    supplier_type: SupplierType;
+    supplier_group_code: SupplierGroupCode;
+    /**
+     * NOT unique across Suppliers.
+     */
+    phone: string;
+    email?: string | null;
+    tax_code?: string | null;
+    address?: string;
+    province_id?: PositiveBigInt;
+    ward_id?: PositiveBigInt;
+    payment_term_code?: SupplierPaymentTerm | null;
+    all_companies: boolean | 0 | 1 | '0' | '1';
+    company_ids?: SupplierCompanyIdList;
+    status: BusinessWorkflowStatus;
+    row_version: SupplierRowVersion;
+    created_at?: string;
+    updated_at?: string | null;
+    /**
+     * Advisory effective row hints; the server rechecks every mutation.
+     */
+    allowed_actions?: {
+        edit?: boolean;
+        setstate?: boolean;
+    };
+    /**
+     * Optional VIEW-scoped, SETSTATE-authorized and unambiguous advisory target; POST must recheck PBAC and CAS.
+     */
+    setstate_targets?: Array<BusinessWorkflowStatus>;
+};
+
+export type SupplierCreate = {
+    name: string;
+    supplier_type: SupplierType;
+    supplier_group_code?: SupplierGroupCode;
+    phone: string;
+    email?: string | null;
+    tax_code?: string | null;
+    address: string;
+    province_id: PositiveBigInt;
+    ward_id: PositiveBigInt;
+    payment_term_code?: SupplierPaymentTerm | null;
+    /**
+     * Manual code only when no default numbering series exists (even inactive default forbids manual).
+     */
+    supplier_code?: string;
+    /**
+     * Optional issuer request; server validates canonical Supplier numbering.
+     */
+    numbering_series_code?: string;
+    all_companies: boolean;
+    company_ids: SupplierCompanyIdList;
+};
+
+/**
+ * Patch profile only. No Supplier code, owner, State, Company Usage or Bank data.
+ */
+export type SupplierPatch = {
+    expected_version: SupplierExpectedVersion;
+    name?: string;
+    supplier_type?: SupplierType;
+    supplier_group_code?: SupplierGroupCode;
+    phone?: string;
+    email?: string | null;
+    tax_code?: string | null;
+    address?: string;
+    province_id?: PositiveBigInt;
+    ward_id?: PositiveBigInt;
+    payment_term_code?: SupplierPaymentTerm | null;
+};
+
+export type SupplierCompanyUsage = {
+    all_companies: boolean;
+    company_ids: SupplierCompanyIdList;
+    row_version: string;
+};
+
+export type SupplierCompanyUsagePut = {
+    expected_version: SupplierExpectedVersion;
+    all_companies: boolean;
+    company_ids: SupplierCompanyIdList;
+};
+
+export type SupplierSetState = {
+    expected_version: SupplierExpectedVersion;
+    status: BusinessWorkflowStatus;
+};
+
+export type SupplierResponse = SuccessResponse & {
+    data?: Supplier;
+};
+
+export type SupplierCollectionResponse = CollectionResponse & {
+    data?: Array<Supplier>;
+};
+
+export type SupplierCompanyUsageResponse = SuccessResponse & {
+    data?: SupplierCompanyUsage;
+};
+
+/**
+ * HIS-POL-002 compact tuple [old,new] for safe scalar codes/counts or empty object {} for redacted change.
+ */
+export type SupplierHistoryChangeValue = [
+    string | number | number | boolean | null,
+    string | number | number | boolean | null
+] | {
+    [key: string]: never;
+};
+
+/**
+ * Immutable redacted event for Supplier master. No raw profile PII, bank payload, PUR/FIN document or bank credentials.
+ */
+export type SupplierHistoryEvent = {
+    id: PositiveBigInt;
+    resource_type: 'supplier';
+    resource_id: PositiveBigInt;
+    event_type: 'CREATE' | 'UPDATE' | 'STATE_CHANGE' | 'SENSITIVE_CHANGE' | 'SUBMIT' | 'APPROVE' | 'REJECT' | 'DELETE' | 'RESTORE';
+    action_code: string | null;
+    status_before: BusinessWorkflowStatus | null;
+    status_after: BusinessWorkflowStatus | null;
+    changes: null | {
+        [key: string]: SupplierHistoryChangeValue;
+    };
+    /**
+     * Allowlisted non-sensitive checkpoint only; never a full Supplier record.
+     */
+    checkpoint: {
+        [key: string]: unknown;
+    } | null;
+    actor_user_id: PositiveBigInt | null;
+    actor_type: 'USER' | 'SYSTEM';
+    actor_username?: string | null;
+    actor_full_name?: string | null;
+    request_id: string;
+    created_at: string;
+};
+
+export type SupplierHistoryCollectionResponse = CollectionResponse & {
+    data?: Array<SupplierHistoryEvent>;
+};
+
+/**
+ * Persisted Shared Contact owner; never confers PBAC. CUSTOMER/SUPPLIER additionally require independent parent VIEW and trusted GROUP scope.
+ */
+export type ContactOwnerType = 'EMPLOYEE' | 'ORGANIZATION' | 'CUSTOMER' | 'SUPPLIER';
+
 export type Contact = {
     id: BigInt;
-    contact_type: 'EMPLOYEE' | 'ORGANIZATION';
+    contact_type: ContactOwnerType;
     contact_ref_id: BigInt;
     description?: string | null;
     status: BusinessWorkflowStatus;
@@ -1081,13 +1253,20 @@ export type Contact = {
     ward_id?: BigInt;
     province_name?: string | null;
     ward_name?: string | null;
+    /**
+     * Optional advisory row hints on VIEW-authorized Contact reads; the server reauthorizes every mutation and parent VIEW. Some write responses omit hints.
+     */
+    allowed_actions?: {
+        edit?: boolean;
+        setstate?: boolean;
+    };
 };
 
 /**
- * Owner type selects organization_contact or employee_contact. Backend derives initial status from the configured Lifecycle (DRAFT for BASIC); without a Lifecycle, defaults to native ACTIVE. Other owner kinds are denied.
+ * Shared Contact CREATE supports EMPLOYEE, ORGANIZATION, CUSTOMER and SUPPLIER. The backend checks canonical Contact CREATE, persisted parent VIEW and trusted GROUP scope; it derives initial State from the Contact owner Lifecycle. Missing configuration fails with WF_INITIAL_STATE_REQUIRED (never implicitly ACTIVE). Owner/status cannot be changed through PATCH.
  */
 export type ContactCreate = {
-    contact_type: 'EMPLOYEE' | 'ORGANIZATION';
+    contact_type: ContactOwnerType;
     contact_ref_id: BigInt;
     description?: string;
     name?: string;
@@ -1715,6 +1894,8 @@ export type LifecycleCollection = CollectionResponse & {
 
 export type NullableBigIntWritable = BigInt | null;
 
+export type SupplierCompanyIdListWritable = Array<PositiveBigInt>;
+
 export type UserIdentityCreateWritable = {
     username: string;
     email: string;
@@ -1743,6 +1924,11 @@ export type AcceptLanguage = 'vi' | 'en';
 export type RequestId2 = RequestId;
 
 export type BusinessWorkflowResource = 'province' | 'ward' | 'organization' | 'department' | 'position' | 'employee' | 'product_group' | 'product_uom' | 'product' | 'price_list' | 'organization_contact' | 'employee_contact';
+
+/**
+ * M11 read/assignment targets only. The Supplier option is NOT authorized for generic business-workflow execution; Supplier SetState requires CAS.
+ */
+export type WorkflowNotificationResource = 'province' | 'ward' | 'organization' | 'department' | 'position' | 'employee' | 'product_group' | 'product_uom' | 'product' | 'price_list' | 'organization_contact' | 'employee_contact' | 'customer' | 'customer_contact' | 'supplier_contact' | 'supplier';
 
 export type BusinessWorkflowActionCode = string;
 
@@ -1905,6 +2091,342 @@ export type ProductImportStart2 = ProductImportStart;
 export type DisplaySettingsPatch2 = DisplaySettingsPatch;
 
 export type DisplaySettingsReset2 = DisplaySettingsReset;
+
+export type ListSuppliersData = {
+    body?: never;
+    path?: never;
+    query?: {
+        page?: number;
+        page_size?: number;
+        q?: string;
+        status?: BusinessWorkflowStatus;
+        supplier_type?: SupplierType;
+        supplier_group_code?: SupplierGroupCode;
+        company_id?: PositiveBigInt;
+        sort?: 'name' | '-name' | 'supplier_code' | '-supplier_code' | 'id' | '-id';
+    };
+    url: '/api/v1/suppliers';
+};
+
+export type ListSuppliersErrors = {
+    /**
+     * Malformed request or query.
+     */
+    400: ErrorResponse;
+    /**
+     * Unauthenticated or invalid authentication.
+     */
+    401: ErrorResponse;
+    /**
+     * Visible target but action denied.
+     */
+    403: ErrorResponse;
+};
+
+export type ListSuppliersError = ListSuppliersErrors[keyof ListSuppliersErrors];
+
+export type ListSuppliersResponses = {
+    /**
+     * Authorized Supplier page
+     */
+    200: SupplierCollectionResponse;
+};
+
+export type ListSuppliersResponse = ListSuppliersResponses[keyof ListSuppliersResponses];
+
+export type CreateSupplierData = {
+    body: SupplierCreate;
+    path?: never;
+    query?: never;
+    url: '/api/v1/suppliers';
+};
+
+export type CreateSupplierErrors = {
+    /**
+     * Malformed request or query.
+     */
+    400: ErrorResponse;
+    /**
+     * Unauthenticated or invalid authentication.
+     */
+    401: ErrorResponse;
+    /**
+     * Visible target but action denied.
+     */
+    403: ErrorResponse;
+    /**
+     * Conflict, concurrency, uniqueness, or current-state failure.
+     */
+    409: ErrorResponse;
+    /**
+     * Semantically invalid request.
+     */
+    422: ErrorResponse;
+};
+
+export type CreateSupplierError = CreateSupplierErrors[keyof CreateSupplierErrors];
+
+export type CreateSupplierResponses = {
+    /**
+     * Created Supplier
+     */
+    201: SupplierResponse;
+};
+
+export type CreateSupplierResponse = CreateSupplierResponses[keyof CreateSupplierResponses];
+
+export type GetSupplierData = {
+    body?: never;
+    path: {
+        id: PositiveBigInt;
+    };
+    query?: never;
+    url: '/api/v1/suppliers/{id}';
+};
+
+export type GetSupplierErrors = {
+    /**
+     * Unauthenticated or invalid authentication.
+     */
+    401: ErrorResponse;
+    /**
+     * Visible target but action denied.
+     */
+    403: ErrorResponse;
+    /**
+     * Target not found or not visible.
+     */
+    404: ErrorResponse;
+};
+
+export type GetSupplierError = GetSupplierErrors[keyof GetSupplierErrors];
+
+export type GetSupplierResponses = {
+    /**
+     * Supplier profile
+     */
+    200: SupplierResponse;
+};
+
+export type GetSupplierResponse = GetSupplierResponses[keyof GetSupplierResponses];
+
+export type UpdateSupplierData = {
+    body: SupplierPatch;
+    path: {
+        id: PositiveBigInt;
+    };
+    query?: never;
+    url: '/api/v1/suppliers/{id}';
+};
+
+export type UpdateSupplierErrors = {
+    /**
+     * Malformed request or query.
+     */
+    400: ErrorResponse;
+    /**
+     * Unauthenticated or invalid authentication.
+     */
+    401: ErrorResponse;
+    /**
+     * Visible target but action denied.
+     */
+    403: ErrorResponse;
+    /**
+     * Target not found or not visible.
+     */
+    404: ErrorResponse;
+    /**
+     * Conflict, concurrency, uniqueness, or current-state failure.
+     */
+    409: ErrorResponse;
+    /**
+     * Semantically invalid request.
+     */
+    422: ErrorResponse;
+};
+
+export type UpdateSupplierError = UpdateSupplierErrors[keyof UpdateSupplierErrors];
+
+export type UpdateSupplierResponses = {
+    /**
+     * Updated Supplier
+     */
+    200: SupplierResponse;
+};
+
+export type UpdateSupplierResponse = UpdateSupplierResponses[keyof UpdateSupplierResponses];
+
+export type GetSupplierCompanyUsagesData = {
+    body?: never;
+    path: {
+        id: PositiveBigInt;
+    };
+    query?: never;
+    url: '/api/v1/suppliers/{id}/company-usages';
+};
+
+export type GetSupplierCompanyUsagesErrors = {
+    /**
+     * Unauthenticated or invalid authentication.
+     */
+    401: ErrorResponse;
+    /**
+     * Visible target but action denied.
+     */
+    403: ErrorResponse;
+    /**
+     * Target not found or not visible.
+     */
+    404: ErrorResponse;
+};
+
+export type GetSupplierCompanyUsagesError = GetSupplierCompanyUsagesErrors[keyof GetSupplierCompanyUsagesErrors];
+
+export type GetSupplierCompanyUsagesResponses = {
+    /**
+     * Supplier Company Usage
+     */
+    200: SupplierCompanyUsageResponse;
+};
+
+export type GetSupplierCompanyUsagesResponse = GetSupplierCompanyUsagesResponses[keyof GetSupplierCompanyUsagesResponses];
+
+export type ReplaceSupplierCompanyUsagesData = {
+    body: SupplierCompanyUsagePut;
+    path: {
+        id: PositiveBigInt;
+    };
+    query?: never;
+    url: '/api/v1/suppliers/{id}/company-usages';
+};
+
+export type ReplaceSupplierCompanyUsagesErrors = {
+    /**
+     * Malformed request or query.
+     */
+    400: ErrorResponse;
+    /**
+     * Unauthenticated or invalid authentication.
+     */
+    401: ErrorResponse;
+    /**
+     * Visible target but action denied.
+     */
+    403: ErrorResponse;
+    /**
+     * Target not found or not visible.
+     */
+    404: ErrorResponse;
+    /**
+     * Conflict, concurrency, uniqueness, or current-state failure.
+     */
+    409: ErrorResponse;
+    /**
+     * Semantically invalid request.
+     */
+    422: ErrorResponse;
+};
+
+export type ReplaceSupplierCompanyUsagesError = ReplaceSupplierCompanyUsagesErrors[keyof ReplaceSupplierCompanyUsagesErrors];
+
+export type ReplaceSupplierCompanyUsagesResponses = {
+    /**
+     * Updated Supplier
+     */
+    200: SupplierResponse;
+};
+
+export type ReplaceSupplierCompanyUsagesResponse = ReplaceSupplierCompanyUsagesResponses[keyof ReplaceSupplierCompanyUsagesResponses];
+
+export type SetSupplierStateData = {
+    body: SupplierSetState;
+    path: {
+        id: PositiveBigInt;
+    };
+    query?: never;
+    url: '/api/v1/suppliers/{id}/actions/set-state';
+};
+
+export type SetSupplierStateErrors = {
+    /**
+     * Malformed request or query.
+     */
+    400: ErrorResponse;
+    /**
+     * Unauthenticated or invalid authentication.
+     */
+    401: ErrorResponse;
+    /**
+     * Visible target but action denied.
+     */
+    403: ErrorResponse;
+    /**
+     * Target not found or not visible.
+     */
+    404: ErrorResponse;
+    /**
+     * Conflict, concurrency, uniqueness, or current-state failure.
+     */
+    409: ErrorResponse;
+    /**
+     * Semantically invalid request.
+     */
+    422: ErrorResponse;
+};
+
+export type SetSupplierStateError = SetSupplierStateErrors[keyof SetSupplierStateErrors];
+
+export type SetSupplierStateResponses = {
+    /**
+     * Transitioned Supplier
+     */
+    200: SupplierResponse;
+};
+
+export type SetSupplierStateResponse = SetSupplierStateResponses[keyof SetSupplierStateResponses];
+
+export type ListSupplierChangeHistoryData = {
+    body?: never;
+    path: {
+        id: PositiveBigInt;
+    };
+    query?: {
+        page?: number;
+        page_size?: number;
+    };
+    url: '/api/v1/history/suppliers/{id}';
+};
+
+export type ListSupplierChangeHistoryErrors = {
+    /**
+     * Malformed request or query.
+     */
+    400: ErrorResponse;
+    /**
+     * Unauthenticated or invalid authentication.
+     */
+    401: ErrorResponse;
+    /**
+     * Visible target but action denied.
+     */
+    403: ErrorResponse;
+    /**
+     * Target not found or not visible.
+     */
+    404: ErrorResponse;
+};
+
+export type ListSupplierChangeHistoryError = ListSupplierChangeHistoryErrors[keyof ListSupplierChangeHistoryErrors];
+
+export type ListSupplierChangeHistoryResponses = {
+    /**
+     * Authorized redacted Supplier events
+     */
+    200: SupplierHistoryCollectionResponse;
+};
+
+export type ListSupplierChangeHistoryResponse = ListSupplierChangeHistoryResponses[keyof ListSupplierChangeHistoryResponses];
 
 export type GetHealthData = {
     body?: never;
@@ -7944,7 +8466,10 @@ export type ExecuteBusinessWorkflowActionResponse = ExecuteBusinessWorkflowActio
 export type GetWorkflowNotificationAssigneesData = {
     body?: never;
     path: {
-        resource: 'province' | 'ward' | 'organization' | 'department' | 'position' | 'employee' | 'product_group' | 'product_uom' | 'product' | 'price_list' | 'organization_contact' | 'employee_contact';
+        /**
+         * M11 read/assignment targets only. The Supplier option is NOT authorized for generic business-workflow execution; Supplier SetState requires CAS.
+         */
+        resource: 'province' | 'ward' | 'organization' | 'department' | 'position' | 'employee' | 'product_group' | 'product_uom' | 'product' | 'price_list' | 'organization_contact' | 'employee_contact' | 'customer' | 'customer_contact' | 'supplier_contact' | 'supplier';
         id: BigInt;
     };
     query?: never;
@@ -7980,7 +8505,10 @@ export type GetWorkflowNotificationAssigneesResponse = GetWorkflowNotificationAs
 export type ReplaceWorkflowNotificationAssigneesData = {
     body: WorkflowNotificationAssigneesPut2;
     path: {
-        resource: 'province' | 'ward' | 'organization' | 'department' | 'position' | 'employee' | 'product_group' | 'product_uom' | 'product' | 'price_list' | 'organization_contact' | 'employee_contact';
+        /**
+         * M11 read/assignment targets only. The Supplier option is NOT authorized for generic business-workflow execution; Supplier SetState requires CAS.
+         */
+        resource: 'province' | 'ward' | 'organization' | 'department' | 'position' | 'employee' | 'product_group' | 'product_uom' | 'product' | 'price_list' | 'organization_contact' | 'employee_contact' | 'customer' | 'customer_contact' | 'supplier_contact' | 'supplier';
         id: BigInt;
     };
     query?: never;
@@ -8020,6 +8548,68 @@ export type ReplaceWorkflowNotificationAssigneesResponses = {
 };
 
 export type ReplaceWorkflowNotificationAssigneesResponse = ReplaceWorkflowNotificationAssigneesResponses[keyof ReplaceWorkflowNotificationAssigneesResponses];
+
+export type ListWorkflowAssigneeCandidatesData = {
+    body?: never;
+    path: {
+        /**
+         * M11 read/assignment targets only. The Supplier option is NOT authorized for generic business-workflow execution; Supplier SetState requires CAS.
+         */
+        resource: 'province' | 'ward' | 'organization' | 'department' | 'position' | 'employee' | 'product_group' | 'product_uom' | 'product' | 'price_list' | 'organization_contact' | 'employee_contact' | 'customer' | 'customer_contact' | 'supplier_contact' | 'supplier';
+        id: BigInt;
+    };
+    query?: {
+        q?: string;
+        /**
+         * Comma-separated positive Shield User IDs for selected-label resolution.
+         */
+        ids?: string;
+        page?: number;
+        page_size?: number;
+    };
+    url: '/api/v1/business-workflow/{resource}/{id}/assignee-candidates';
+};
+
+export type ListWorkflowAssigneeCandidatesErrors = {
+    /**
+     * Unauthenticated or invalid authentication.
+     */
+    401: ErrorResponse;
+    /**
+     * Visible target but action denied.
+     */
+    403: ErrorResponse;
+    /**
+     * Target not found or not visible.
+     */
+    404: ErrorResponse;
+    /**
+     * Semantically invalid request.
+     */
+    422: ErrorResponse;
+};
+
+export type ListWorkflowAssigneeCandidatesError = ListWorkflowAssigneeCandidatesErrors[keyof ListWorkflowAssigneeCandidatesErrors];
+
+export type ListWorkflowAssigneeCandidatesResponses = {
+    /**
+     * Bounded active-user candidates; not a permission grant.
+     */
+    200: {
+        data: Array<{
+            id: BigInt;
+            username: string;
+            name: string | null;
+        }>;
+        meta: {
+            page?: number;
+            page_size?: number;
+            total?: number;
+        };
+    };
+};
+
+export type ListWorkflowAssigneeCandidatesResponse = ListWorkflowAssigneeCandidatesResponses[keyof ListWorkflowAssigneeCandidatesResponses];
 
 export type GetNotificationRuntimeConfigurationData = {
     body?: never;
@@ -8553,7 +9143,7 @@ export type ListOwnActionableWorkflowsData = {
     };
     path?: never;
     query?: {
-        resource_type?: 'all' | 'province' | 'ward' | 'organization' | 'department' | 'position' | 'employee' | 'product_group' | 'product_uom' | 'product' | 'price_list' | 'organization_contact' | 'employee_contact';
+        resource_type?: 'all' | 'province' | 'ward' | 'organization' | 'department' | 'position' | 'employee' | 'product_group' | 'product_uom' | 'product' | 'price_list' | 'organization_contact' | 'employee_contact' | 'customer' | 'customer_contact' | 'supplier_contact' | 'supplier';
         page_size?: number;
         cursor?: string;
     };

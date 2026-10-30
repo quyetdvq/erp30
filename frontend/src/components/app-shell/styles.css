@@ -348,6 +348,11 @@
   align-items: flex-start;
 }
 
+.error-copy {
+  display: block;
+  margin-top: 2px;
+}
+
 .error-meta {
   display: block;
   margin-top: 4px;

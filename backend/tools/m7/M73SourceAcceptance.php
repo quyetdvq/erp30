@@ -79,8 +79,7 @@ final class M73SourceAcceptance
             }
             $seen[$key]=true;
         }
-        foreach (["'UNAUTHENTICATED',401", "'ACCESS_MUTATION_NOT_ENABLED',403",
-            "env('DINKERP_M33B_WRITE_MODE','off')", 'JsonRequest::readObject(',
+        foreach (["'UNAUTHENTICATED',401", 'UNAUTHENTICATED', 'JsonRequest::readObject(',
             "!array_key_exists('items',\$body)", 'PriceListService($actor)'] as $gate) {
             if (!str_contains($controller,$gate))throw new RuntimeException('M7.3 HTTP guard missing: '.$gate);
         }

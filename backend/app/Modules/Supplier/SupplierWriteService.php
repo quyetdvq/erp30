@@ -182,8 +182,12 @@ final class SupplierWriteService
             $after['company_ids'] = $this->companyIds($id, $after);
             (new HistoryRecorder($this->db))->transitioned('supplier', $id, $this->actorId,
                 (string)$old['status'], $target, 'setstate', $after);
-            // M11 outbox integration is deferred pending explicit SUP workflow
-            // source support; never invoke an unreviewed producer here.
+            // Snapshot assigned recipients transactionally, after successful
+            // CAS+History and before COMMIT. A producer failure rolls back all.
+            // This is NOT generic Workflow execution; Supplier retains CAS.
+            \App\Modules\Notifications\NotificationOutboxProducer::enqueueWorkflowTransition(
+                $this->db, 'supplier', $id, (string)$old['status'], $target, 'setstate',
+            );
             return $this->visible($access, $after);
         });
     }

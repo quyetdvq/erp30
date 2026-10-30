@@ -101,10 +101,10 @@ final class M33BVerify extends BaseCommand
                 }
             }
         }
-        CLI::write('M3.3B1 WRITE-GATE readiness: checked=' . $total . ', allowed=' . $allow
+        CLI::write('M3.3B1 PBAC readiness: checked=' . $total . ', allowed=' . $allow
             . ', denied=' . $deny . ', errors=' . $errors);
         CLI::write('NOTE: zero DB writes. This tests decisions, NOT mutation transactions/HTTP parity.', 'yellow');
-        CLI::write('NOTE: new write routes stay disabled unless DINKERP_M33B_WRITE_MODE=enabled.', 'yellow');
+        CLI::write('NOTE: write access now requires authenticated PBAC; offline tests do not authorize production release.', 'yellow');
         if ($total === 0 || $errors !== 0) {
             throw new UnexpectedValueException('M3.3B1 read-only readiness verification failed.');
         }

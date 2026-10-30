@@ -264,6 +264,12 @@ final class M87SqlVerifier
             throw $error;
         }
         if (!$access->canView($target['resource'],$target['target'])) return false;
+        if ($target['resource'] === 'supplier_contact') {
+            $query = $this->db->table('suppliers')->select('id,group_organization_id,status')
+                ->where('id', $row['contact_ref_id'])->get();
+            $parent = $query === false ? null : $query->getRowArray();
+            return \App\Modules\Contact\SupplierContactParentView::allowed($access, $parent);
+        }
         if ($target['resource'] !== 'customer_contact') return true;
         // The canonical Contact API also checks VIEW of the owning Customer.
         // ContactScope::resolve() validates parent existence, not parent PBAC.
@@ -316,21 +322,26 @@ final class M87SqlVerifier
         if ($resource==='contact') {
             $org=$compiler->compile(new ContactScopeProvider('organization_contact',$this->db));
             $emp=$compiler->compile(new ContactScopeProvider('employee_contact',$this->db));
-            // M19.25A: mirror all four scopes used by the production ContactService.
-            // Omitting these two MASTER scopes silently excludes CUSTOMER contacts
-            // from the audit SQL while the PBAC oracle can still see them.
+            // M19.25A / SUP-T06: mirror all six independent production scopes.
+            // Omitting either Customer or Supplier MASTER pair silently changes
+            // audit COUNT/page coverage relative to ContactService and oracle.
             $customerContact=AuthorizedSqlScope::master(
                 'customer_contact',$access->viewableMasterLifecycleStatuses('customer_contact'));
             $customerMaster=AuthorizedSqlScope::master(
                 'customer',$access->viewableMasterLifecycleStatuses('customer'));
+            $supplierContact=AuthorizedSqlScope::master(
+                'supplier_contact',$access->viewableMasterLifecycleStatuses('supplier_contact'));
+            $supplierMaster=AuthorizedSqlScope::master(
+                'supplier',$access->viewableMasterLifecycleStatuses('supplier'));
+            $group=$access->trustedGroupRootId();
             $date=$this->instant->format('Y-m-d');
             return [
                 'normalize'=>static fn(int $p,int $s):array=>ContactSql::normalize(['page'=>$p,'page_size'=>$s,'sort'=>'id']),
                 'query'=>static fn(array $q):array=>ContactSql::normalize($q),
                 'collection'=>static fn(array $n):array=>ContactSql::collection(
-                    $n,$org,$emp,$date,$prefix,$customerContact,$customerMaster),
+                    $n,$org,$emp,$date,$prefix,$customerContact,$customerMaster,$supplierContact,$supplierMaster,$group),
                 'detail'=>static fn(string $id):array=>ContactSql::detail(
-                    $id,$org,$emp,$date,$prefix,$customerContact,$customerMaster),
+                    $id,$org,$emp,$date,$prefix,$customerContact,$customerMaster,$supplierContact,$supplierMaster,$group),
             ];
         }
         throw new InvalidArgumentException('Unreviewed source in M8.7.');

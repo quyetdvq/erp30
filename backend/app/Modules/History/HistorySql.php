@@ -36,7 +36,8 @@ final class HistorySql
      */
     public static function forVisibleParent(string $resource, string $id, array $params, string $prefix, string $usersLogical = 'users'): array
     {
-        if ($resource !== 'customer' || preg_match('/\A[1-9][0-9]*\z/D', $id) !== 1) {
+        if (!in_array($resource, ['customer', 'supplier'], true)
+            || preg_match('/\A[1-9][0-9]*\z/D', $id) !== 1 || strlen($id) > 20) {
             throw new InvalidArgumentException('Unreviewed History parent.');
         }
         if ($prefix !== '' && preg_match('/\A[A-Za-z][A-Za-z0-9_]*\z/D', $prefix) !== 1) {
@@ -130,6 +131,7 @@ final class HistorySql
         $table = self::identifier($prefix, 'business_history_events');
         $users = self::identifier($prefix, $usersLogical);
         $customers = self::identifier($prefix, 'customers');
+        $suppliers = self::identifier($prefix, 'suppliers');
         $where = ' WHERE h.created_at >= ? AND h.created_at < ?';
         $binds = [$params['from_db'], $params['to_exclusive_db']];
         foreach (['resource_type','event_type','actor_user_id','resource_id'] as $field) {
@@ -141,13 +143,16 @@ final class HistorySql
             'count_sql'=>'SELECT COUNT(*) AS total FROM ' . $table . ' h' . $where,
             'count_binds'=>$binds,
             'rows_sql'=>'SELECT ' . self::projection()
-                . ',c.customer_code AS resource_code,c.name AS resource_name'
+                . ',COALESCE(c.customer_code,s.supplier_code) AS resource_code'
+                . ',COALESCE(c.name,s.name) AS resource_name'
                 . ' FROM ' . $table . ' h LEFT JOIN ' . $users
                 . " u ON u.id = h.actor_user_id AND h.actor_type = 'USER'"
-                // HIS-03 reviewed one-to-one enrichment. No Supplier JOIN
-                // until SUP exists. Monitor SYSTEM authorization precedes SQL.
+                // SYSTEM monitor authorization precedes SQL; no Company Usage join.
+                // Each one-to-one enrichment is type-gated and cannot fan out COUNT.
                 . ' LEFT JOIN ' . $customers
                 . " c ON h.resource_type = 'customer' AND c.id = h.resource_id"
+                . ' LEFT JOIN ' . $suppliers
+                . " s ON h.resource_type = 'supplier' AND s.id = h.resource_id"
                 . $where . ' ORDER BY h.created_at DESC,h.id DESC LIMIT ? OFFSET ?',
             'rows_binds'=>[...$binds, $params['page_size'], ($params['page']-1)*$params['page_size']],
         ];

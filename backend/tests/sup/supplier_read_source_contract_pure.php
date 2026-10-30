@@ -28,7 +28,7 @@ $ok(str_contains($compiler, "'supplier'=>'MASTER'"), 'compiler review whitelist'
 $ok(str_contains($allowed, "'customer_contact', 'supplier'"), 'scope object explicit allowlist');
 $ok(str_contains($access, "'supplier' => 'MASTER'"), 'runtime PBAC domain');
 $ok(str_contains($access, 'public function trustedGroupRootId()'), 'trusted Group ID accessor');
-$ok(str_contains($access, '&& $type !== \'supplier\''), 'canonical PBAC state compilation allowlist');
+$ok(str_contains($access, "['supplier', 'supplier_contact']"), 'canonical PBAC state compilation allowlist');
 $ok(str_contains($hints, "'supplier' => ['edit', 'setstate']"), 'row action registry approved');
 $ok(str_contains($read, "hasBaseViewPermission('supplier')"), 'base permission required for list/detail');
 $ok(substr_count($read, 'new SupplierScopeProvider()') === 2, 'list and detail compile same scope');

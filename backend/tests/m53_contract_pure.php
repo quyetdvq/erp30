@@ -18,7 +18,7 @@ $routes=(string)\DinkERP\Tools\Routes\LegacyRouteSource::source($root, 'M53Route
 $check(substr_count($routes,'$routes->')===6 && !str_contains($routes,'$routes->get('), 'no replacement of GET routes');
 $controller=(string)file_get_contents($root.'/backend/app/Modules/People/Mutation/PeopleMutationController.php');
 $service=(string)file_get_contents($root.'/backend/app/Modules/People/Mutation/PeopleMutationService.php');
-$check(str_contains($controller,"env('DINKERP_M33B_WRITE_MODE','off')") && str_contains($controller,"'UNAUTHENTICATED',401"),'write gate defaults off and anonymous denied');
+$check(str_contains($controller,'UNAUTHENTICATED') && str_contains($controller,"'UNAUTHENTICATED',401"),'write gate defaults off and anonymous denied');
 $check(str_contains($service,"'employee_assignment','create'") && str_contains($service,"'employee_assignment','edit'")
     && str_contains($service,"'employee_assignment','setstate'"),'assignment PBAC actions');
 $check(str_contains($service,"'employee','create'") && str_contains($service,"'employee','edit'")

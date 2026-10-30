@@ -13,7 +13,7 @@ test('HIS-03.3: Customer detail keeps the same viewport-bounded height across ta
   assert.match(customer, /\.customer-detail-modal--workspace \{[^}]*height: min\(760px, calc\(100dvh - 40px\)\)/s)
   assert.match(customer, /max-height: calc\(100dvh - 40px\)/)
   assert.match(customer, /\.customer-detail-tabs \{ flex: 0 0 auto;/)
-  assert.match(customer, /\.customer-detail-toolbar \{ flex: 0 0 auto;/)
+  assert.match(customer, /\.customer-detail-modal > \.modal-card__footer \{ align-items: center; flex-wrap: wrap; \}/)
   assert.match(global, /\.modal-card__footer \{[\s\S]*?flex: 0 0 auto;/)
   assert.match(customer, /\.customer-detail-modal--workspace \{ height: calc\(100vh - 16px\); height: calc\(100dvh - 16px\); \}/)
   assert.match(customer, /\.customer-detail-backdrop \{ padding: 8px; \}/)

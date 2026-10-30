@@ -87,7 +87,7 @@ final class M54SourceAcceptance
             'WF_CONCURRENT_STATE_CHANGE', 'transitionTarget('] as $guard) {
             if(!str_contains($service,$guard)) throw new RuntimeException('M5.4 missing safety guard: '.$guard);
         }
-        if(!str_contains($controller,"env('DINKERP_M33B_WRITE_MODE','off')")
+        if(!str_contains($controller,'UNAUTHENTICATED')
             || !str_contains($controller,"'UNAUTHENTICATED',401")) {
             throw new RuntimeException('M5.4 must remain auth- and write-gated.');
         }

@@ -106,7 +106,7 @@ final class M64ASourceAcceptance
             'array_slice(', 'count($selected)', 'PositiveId::value('] as $guard) {
             if (!str_contains($rules, $guard)) throw new RuntimeException('M6.4A projection/bounds missing: '.$guard);
         }
-        if (str_contains($service, 'DINKERP_M33B_WRITE_MODE') || str_contains($controller, 'DINKERP_M33B_WRITE_MODE')
+        if (str_contains($service, 'ACCESS_MUTATION_NOT_ENABLED') || str_contains($controller, 'ACCESS_MUTATION_NOT_ENABLED')
             || str_contains($source, '$routes->put(') || str_contains($source, '$routes->delete(')) {
             throw new RuntimeException('M6.4A is read-only and may not inherit mutation gate.');
         }

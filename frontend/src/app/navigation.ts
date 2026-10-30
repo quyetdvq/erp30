@@ -68,6 +68,7 @@ export const ORGANIZATION_NAV_PATHS = new Set([
   '/people/positions',
   '/people/employees',
   '/customers',
+  '/suppliers',
 ])
 
 export const navItems: NavigationItem[] = [
@@ -182,6 +183,7 @@ export const navItems: NavigationItem[] = [
     permission: 'resource.configure_numbering',
   },
   { labelKey: 'nav.customers', to: '/customers', icon: PeopleOutline, permission: 'customer.view' },
+  { labelKey: 'nav.suppliers', to: '/suppliers', icon: BusinessOutline, permission: 'supplier.view' },
   {
     labelKey: 'nav.products',
     to: '/products',

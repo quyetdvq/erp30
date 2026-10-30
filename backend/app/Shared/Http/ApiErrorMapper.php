@@ -33,6 +33,14 @@ final class ApiErrorMapper
         }
         if ($exception instanceof DomainException) {
             $code = strtoupper($exception->getErrorCode());
+            // SUP-DEC-07: ambiguous/nonexistent set-state transition is a
+            // domain conflict, never an arbitrary fallback or a 422 status.
+            if ($code === 'SUPPLIER_STATE_TRANSITION_INVALID') {
+                return 409;
+            }
+            if ($code === 'SUPPLIER_API_NOT_ENABLED') {
+                return 403;
+            }
             if ($code === 'DISPLAY_SETTING_NOT_FOUND') {
                 return 422;
             }

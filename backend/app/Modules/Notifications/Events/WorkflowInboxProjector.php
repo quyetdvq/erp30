@@ -30,7 +30,9 @@ final class WorkflowInboxProjector implements NotificationInboxProjector
             throw new DomainException('NOTIFICATION_STORAGE_FAILED');
         }
         try {
-            BusinessWorkflowRules::table($params['resource_type']);
+            if ($params['resource_type'] !== 'supplier') {
+                BusinessWorkflowRules::table($params['resource_type']);
+            }
         } catch (Throwable) {
             throw new DomainException('NOTIFICATION_STORAGE_FAILED');
         }

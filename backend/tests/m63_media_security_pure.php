@@ -17,7 +17,7 @@ $service=(string)file_get_contents($root.'/backend/app/Modules/Product/Media/Pro
 $mutation=(string)file_get_contents($root.'/backend/app/Modules/Product/Master/ProductMutationService.php');
 $check(str_contains($ctrl, "getFile('image')"), 'named form part only');
 $check(str_contains($ctrl,"'UNAUTHENTICATED', 401"),'login gate');
-$check(str_contains($ctrl,"'ACCESS_MUTATION_NOT_ENABLED', 403"), 'DEV write gate');
+$check(!str_contains($ctrl,'ACCESS_MUTATION_NOT_ENABLED'), 'DEV write gate');
 $check(strpos($ctrl,'$this->authenticatedWriter()')<strpos($ctrl,"getFile('image')"),'identity before body');
 $check(str_contains($service,"'product', 'edit', \$row"), 'persisted Product EDIT PBAC');
 $check(str_contains($service,"'product', \$row"), 'persisted Product VIEW PBAC');

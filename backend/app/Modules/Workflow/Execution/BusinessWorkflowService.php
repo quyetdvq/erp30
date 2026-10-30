@@ -36,7 +36,9 @@ final class BusinessWorkflowService
     /** @return array{mode:string,initial:?string,states:list<string>} */
     public function states(string $type): array
     {
-        BusinessWorkflowRules::table($type);
+        // Supplier may read its configured Lifecycle States, but MUST NOT
+        // acquire a generic Workflow row/execute adapter (no CAS on that path).
+        BusinessWorkflowRules::assertStateCatalogReadable($type);
         $resource = $this->resource($type);
         $base = (new BasePermissionReader($this->db))->forUser($this->actor);
         if ((string) ($resource['status'] ?? '') !== 'ACTIVE' || !in_array($type.'.view',$base,true)) {
@@ -79,6 +81,11 @@ final class BusinessWorkflowService
     /** @return array{status:string,action_code:string} */
     public function execute(string $type,string $id,string $action): array
     {
+        // Supplier transitions MUST pass through the version-aware Supplier
+        // endpoint. Never allow a generic Workflow SQL update to bypass CAS.
+        if ($type === 'supplier') {
+            throw new DomainException('WF_TARGET_ADAPTER_UNAVAILABLE', ['resource'=>'supplier']);
+        }
         $action = BusinessWorkflowRules::action($action);
         BusinessWorkflowRules::table($type);
         if ($type === 'customer') {
@@ -161,7 +168,15 @@ final class BusinessWorkflowService
                 throw new DomainException('AUTH_POLICY_DENIED', ['action' => 'view']);
             }
         }
-        // Unlike Customer Contacts (MASTER), Organization/Employee Contacts
+        if ($type === 'supplier_contact') {
+            $parentQuery = $this->db->table('suppliers')->select('id,group_organization_id,status')
+                ->where('id', $row['contact_ref_id'])->get();
+            $parent = $parentQuery === false ? null : $parentQuery->getRowArray();
+            if (!\App\Modules\Contact\SupplierContactParentView::allowed($this->access, $parent)) {
+                throw new DomainException('WF_TARGET_NOT_FOUND');
+            }
+        }
+        // Unlike Customer/Supplier Contacts (MASTER), Organization/Employee Contacts
         // require an owner-derived ORGANIZATION ID before any PBAC check.
         // The verified scope is also re-resolved after locking for execute().
         return BusinessWorkflowContactScope::fromPersisted($type, $row, $this->db);

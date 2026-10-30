@@ -22,7 +22,6 @@ $sandbox = new M34BSandbox($pdo, 'erp_test', $name, $nonce);
 $root = dirname(__DIR__, 2);
 $runner = new M34BIntegration($root, $sandbox, M34Contract::operations($root), [],
     'm34b_fixture_user', 'SYNTHETIC_PASSWORD_NEVER_LOG', 3306, sys_get_temp_dir());
-$originalWrite = getenv('DINKERP_M33B_WRITE_MODE');
 $originalNonce = getenv('M34B_ONLY_NONCE');
 $env = (new ReflectionMethod(M34BIntegration::class, 'childEnv'))->invoke($runner, 19001);
 check34b4('Child uses development (normal CI4 HTTP), not reserved PHPUnit testing mode',
@@ -35,11 +34,10 @@ check34b4('Both DB groups are restricted to 127.0.0.1',
     $env['database.default.hostname'] === '127.0.0.1' && $env['database.tests.hostname'] === '127.0.0.1');
 check34b4('No inherited default or test schema can replace nonce-owned DB',
     ! in_array($env['database.default.database'], ['erp', 'erp_test'], true));
-check34b4('Nonce and child write flag exist only in generated child environment',
-    $env['M34B_ONLY_SCHEMA'] === $name && $env['M34B_ONLY_NONCE'] === $nonce
-    && $env['DINKERP_M33B_WRITE_MODE'] === 'enabled');
-check34b4('Original process write mode never changed by childEnv',
-    getenv('DINKERP_M33B_WRITE_MODE') === $originalWrite && getenv('M34B_ONLY_NONCE') === $originalNonce);
+check34b4('Nonce-owned schema is the only allowed child target',
+    $env['M34B_ONLY_SCHEMA'] === $name && $env['M34B_ONLY_NONCE'] === $nonce);
+check34b4('Original process nonce never changed by childEnv',
+    getenv('M34B_ONLY_NONCE') === $originalNonce);
 check34b4('No protected credential passed through command-line arguments',
     ! str_contains(file_get_contents($root.'/backend/tools/m34b/M34BIntegration.php'), "'spark', 'm34b:attest', $".'this->mysqlPassword'));
 

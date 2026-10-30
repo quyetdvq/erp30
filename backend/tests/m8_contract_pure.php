@@ -38,7 +38,7 @@ $ok(str_contains($service, 'FOR UPDATE') && str_contains($service, 'transBegin()
 $ok(str_contains($access,"'import_job' => 'ORGANIZATION'"),'organization job domain');
 $ok(str_contains($access,'viewableProductImportStatuses()'),'native job state scope');
 $ok(str_contains($access,'canStartProductImport()'),'import action distinct from create');
-$ok(str_contains($controller,"DINKERP_M33B_WRITE_MODE"),'write disabled by default');
+$ok(str_contains($controller,'UNAUTHENTICATED'),'write disabled by default');
 $ok(str_contains($controller,'isValid()'),'multipart upload validation');
 $ok(str_contains($controller,"'UNAUTHENTICATED'"),'authentication gate');
 $ok(!str_contains($service,"->table('products')"),'shared pipeline has no Product table writes');

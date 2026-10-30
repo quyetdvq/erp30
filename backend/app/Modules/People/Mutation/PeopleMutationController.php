@@ -48,9 +48,6 @@ final class PeopleMutationController extends Controller
     {
         $actor=auth()->user();
         if (!$actor instanceof User) return ApiResponder::error($this->response,'UNAUTHENTICATED',401);
-        if (strtolower((string)env('DINKERP_M33B_WRITE_MODE','off'))!=='enabled') {
-            return ApiResponder::error($this->response,'ACCESS_MUTATION_NOT_ENABLED',403);
-        }
         return ApiResponder::success($this->response,$run(new PeopleMutationService($actor)),$status);
     }
 }

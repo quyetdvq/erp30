@@ -58,13 +58,7 @@ final class MyWorkflowService
         $position = $cursor === null ? null : MyWorkflowCursor::decode(
             $cursor, $this->userId, $type, $size, $secret,
         );
-        // No "actionable" claim when the existing Workflow mutation gate is OFF.
-        $executionEnabled = strtolower((string) env('DINKERP_M33B_WRITE_MODE', 'off')) === 'enabled'
-            || NotificationFlags::workflowWriteEnabled($this->db);
-        if (! $executionEnabled) {
-            return ['items' => [], 'next_cursor' => null, 'execution_enabled' => false];
-        }
-
+        // Actual actionability is established below via per-target PBAC and Lifecycle.
         $where = 'recipient_user_id=?';
         $binds = [$this->userId];
         if ($type !== 'all') {
@@ -101,13 +95,15 @@ final class MyWorkflowService
             ++$scanned;
             $last = $row; // Advance on *examined candidate*, including unauthorized ones.
             try {
-                $details = $workflow->options((string) $row['resource_type'], (string) $row['resource_id'], true);
+                $details = (string) $row['resource_type'] === 'supplier'
+                    ? SupplierNotificationTarget::options($this->actor, $this->db, (string) $row['resource_id'])
+                    : $workflow->options((string) $row['resource_type'], (string) $row['resource_id'], true);
             } catch (DomainException $e) {
                 // The actor cannot see this target, or it no longer has a usable adapter/state.
                 // Do NOT return the reason, even as an aggregate or a count.
                 if (! in_array($e->getErrorCode(), [
                     'AUTH_POLICY_DENIED', 'WF_TARGET_NOT_FOUND', 'WF_TARGET_ADAPTER_UNAVAILABLE',
-                    'WF_TRANSITION_REQUIRED', 'WF_STATE_NOT_MAPPED',
+                    'WF_TRANSITION_REQUIRED', 'WF_STATE_NOT_MAPPED', 'SUPPLIER_API_NOT_ENABLED',
                 ], true)) {
                     throw $e;
                 }

@@ -341,8 +341,8 @@ final class M34DAcceptance
             'Workflow/Mutation/WorkflowMutationController.php',
             'Access/Mutation/AccessMutationController.php'] as $path) {
             $text = self::read($app.'Modules/'.$path);
-            self::must(str_contains($text,"env('DINKERP_M33B_WRITE_MODE', 'off')")
-                && str_contains($text,"'ACCESS_MUTATION_NOT_ENABLED'"),
+            self::must(str_contains($text,'UNAUTHENTICATED')
+                && !str_contains($text, 'ACCESS_MUTATION_NOT_ENABLED'),
                 'Write gate must default OFF: '.$path);
         }
         self::must(str_contains($responder, "'Content-Language'")

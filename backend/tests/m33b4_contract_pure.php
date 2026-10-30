@@ -37,8 +37,8 @@ $repository = (string) file_get_contents($root . 'Modules/Workflow/Mutation/Work
 $rules = (string) file_get_contents($root . 'Modules/Workflow/Mutation/WorkflowMutationRules.php');
 $verify = (string) file_get_contents($root . 'Commands/M33B4Verify.php');
 $checks = [
-    'Writes gated OFF unless explicitly enabled' => str_contains($controller, "env('DINKERP_M33B_WRITE_MODE', 'off')")
-        && str_contains($controller, "!== 'enabled'"),
+    'Authenticated Workflow mutations have no global write gate' => str_contains($controller, 'UNAUTHENTICATED')
+        && !str_contains($controller, 'ACCESS_MUTATION_NOT_ENABLED'),
     'Authentication evaluated before Workflow service allocation' => strpos($controller, '! $actor instanceof User')
         < strpos($controller, 'new WorkflowMutationService($actor)'),
     'Workflow create and edit use independent PBAC' => str_contains($service, "'create', null")

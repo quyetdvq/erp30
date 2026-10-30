@@ -7,7 +7,8 @@ import type { BusinessHistoryEvent } from '@/services/history'
 const state = vi.hoisted(() => ({
   allowed: true,
   customerVisible: false,
-  monitor: vi.fn(),
+  supplierVisible: false,
+  monitor: vi.fn<typeof import('@/services/history').monitorBusinessHistory>(),
 }))
 vi.mock('@/services/history', () => ({ monitorBusinessHistory: state.monitor }))
 // Assert that the monitor mounts the SAME CustomerDetailView via an explicit ID.
@@ -26,6 +27,20 @@ vi.mock('@/features/customer/pages/CustomerDetailView.vue', async () => {
     },
   }) }
 })
+vi.mock('@/features/supplier/pages/SupplierDetailView.vue', async () => {
+  const { defineComponent, h } = await import('vue')
+  return { default: defineComponent({
+    name: 'SupplierDetailView',
+    props: { supplierId: { type: String, required: false } },
+    emits: ['close', 'saved'],
+    setup(props, { emit }) {
+      return () => h('section', { 'data-testid': 'canonical-supplier-modal', role: 'dialog' }, [
+        h('span', { 'data-testid': 'canonical-supplier-id' }, props.supplierId || ''),
+        h('button', { type: 'button', onClick: () => emit('close') }, 'Close supplier'),
+      ])
+    },
+  }) }
+})
 vi.mock('@/stores/auth', () => ({ useAuthStore: () => ({
   user: { id: '1' }, getSessionGeneration: () => 1,
 }) }))
@@ -33,14 +48,16 @@ vi.mock('@/composables/useBasePermission', () => ({ useBasePermission: () => ({
   snapshotState: { value: 'ready' },
   hasBasePermission: (resource: string, action: string) =>
     state.allowed && ((resource === 'business_history_monitor' && action === 'view') ||
-      (state.customerVisible && resource === 'customer' && action === 'view')),
+      (state.customerVisible && resource === 'customer' && action === 'view') ||
+      (state.supplierVisible && resource === 'supplier' && action === 'view')),
   hasBasePermissionKey: (key: string) => state.allowed &&
-    (key === 'business_history_monitor.view' || (state.customerVisible && key === 'customer.view')),
+    (key === 'business_history_monitor.view' || (state.customerVisible && key === 'customer.view') ||
+      (state.supplierVisible && key === 'supplier.view')),
 }) }))
 vi.mock('@/composables/useFormatters', () => ({ useFormatters: () => ({
   formatDateTime: (_raw: string) => '29/10/2026 16:52',
 }) }))
-vi.mock('@/services/errorBoundary', () => ({ reportApiError: vi.fn() }))
+vi.mock('@/services/errorBoundary', () => ({ reportApiError: vi.fn<typeof import('@/services/errorBoundary').reportApiError>() }))
 
 const event: BusinessHistoryEvent = {
   id: '70000000000001', resource_type: 'customer', resource_id: '42', event_type: 'UPDATE',
@@ -70,6 +87,7 @@ function documentView(): DOMWrapper<HTMLElement> { return new DOMWrapper(documen
 beforeEach(() => {
   state.allowed = true
   state.customerVisible = false
+  state.supplierVisible = false
   state.monitor.mockReset()
   state.monitor.mockResolvedValue({ data: [event], meta: { page: 1, page_size: 25, total: 1 } })
 })
@@ -171,7 +189,7 @@ describe('HIS-02.1 System History Monitor standard detail UI', () => {
     expect(documentView().find('[data-testid="canonical-customer-modal"]').exists()).toBe(false)
   })
 
-  it('never offers Customer modal for an unimplemented Supplier resource', async () => {
+  it('does not grant Supplier profile VIEW through Customer profile permission', async () => {
     state.customerVisible = true
     state.monitor.mockResolvedValue({ data: [{ ...event, resource_type: 'supplier',
       resource_code: 'SUP-0042', resource_name: 'Supplier Example' }],
@@ -202,5 +220,29 @@ describe('HIS-02.1 System History Monitor standard detail UI', () => {
     expect(wrapper.find('.table-row-actions').exists()).toBe(false)
     expect(documentView().find('[role="dialog"]').exists()).toBe(false)
     expect(wrapper.text()).toContain(i18n.global.t('history.monitorRestricted'))
+  })
+  it('opens the canonical Supplier modal only with independent supplier.view', async () => {
+    state.monitor.mockResolvedValue({ data: [{ ...event, resource_type: 'supplier',
+      resource_id: '125', resource_code: 'SUP-0125', resource_name: 'Supplier ABC' }],
+    meta: { page: 1, page_size: 25, total: 1 } })
+    state.supplierVisible = true
+    const wrapper = view()
+    await flushPromises()
+    const buttons = wrapper.findAll('.table-row-actions button')
+    expect(buttons.length).toBeGreaterThanOrEqual(2)
+    await buttons[buttons.length - 1]!.trigger('click')
+    await flushPromises()
+    expect(documentView().get('[data-testid="canonical-supplier-id"]').text()).toBe('125')
+    expect(documentView().find('[data-testid="canonical-customer-modal"]').exists()).toBe(false)
+  })
+
+  it('does not expose Supplier open action with SYSTEM monitor permission alone', async () => {
+    state.monitor.mockResolvedValue({ data: [{ ...event, resource_type: 'supplier',
+      resource_id: '125', resource_code: 'SUP-0125', resource_name: 'Supplier ABC' }],
+    meta: { page: 1, page_size: 25, total: 1 } })
+    const wrapper = view()
+    await flushPromises()
+    const buttons = wrapper.findAll('.table-row-actions button')
+    expect(buttons).toHaveLength(1) // event detail only, no Supplier link
   })
 })

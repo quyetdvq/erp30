@@ -1,0 +1,222 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "DinkERP Shared Contact four-owner G2 REVIEW candidate (not canonical)",
+    "version": "SUP-T06B2-review-only",
+    "description": "Schema-only review candidate for MOD-G2/PC-07. Not a deployable API specification; canonical OpenAPI, generated frontend client and active routes are untouched."
+  },
+  "x-review-only": true,
+  "x-approval-required": [
+    "MOD-G2",
+    "PC-07",
+    "PC-06"
+  ],
+  "x-canonical-path": "contracts/openapi/openapi.yaml",
+  "x-do-not-generate-client": true,
+  "x-existing-operations-must-remain": [
+    "listContacts",
+    "createContact",
+    "getContact",
+    "updateContact",
+    "setContactState"
+  ],
+  "paths": {},
+  "components": {
+    "schemas": {
+      "BigInt": {
+        "type": "string",
+        "pattern": "^-?[0-9]+$",
+        "description": "Database BIGINT values are serialized as JSON strings."
+      },
+      "BusinessWorkflowStatus": {
+        "type": "string",
+        "minLength": 1,
+        "maxLength": 50,
+        "pattern": "^[A-Z][A-Z0-9_:-]*$",
+        "description": "Lifecycle member code when bound; otherwise a permitted fallback native code."
+      },
+      "Contact": {
+        "type": "object",
+        "required": [
+          "id",
+          "contact_type",
+          "contact_ref_id",
+          "status"
+        ],
+        "properties": {
+          "id": {
+            "$ref": "#/components/schemas/BigInt"
+          },
+          "contact_type": {
+            "$ref": "#/components/schemas/ContactOwnerType"
+          },
+          "contact_ref_id": {
+            "$ref": "#/components/schemas/BigInt"
+          },
+          "description": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "status": {
+            "$ref": "#/components/schemas/BusinessWorkflowStatus"
+          },
+          "name": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "email": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "phone": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "mobile": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "address": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "province_id": {
+            "$ref": "#/components/schemas/BigInt"
+          },
+          "ward_id": {
+            "$ref": "#/components/schemas/BigInt"
+          },
+          "province_name": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "ward_name": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "allowed_actions": {
+            "type": "object",
+            "description": "Optional boolean-only advisory hints on a VIEW-authorized read row. Mutation endpoints always reauthorize persisted owner/State and parent VIEW. Not present on every write response.",
+            "additionalProperties": false,
+            "properties": {
+              "edit": {
+                "type": "boolean"
+              },
+              "setstate": {
+                "type": "boolean"
+              }
+            }
+          }
+        }
+      },
+      "ContactCreate": {
+        "type": "object",
+        "description": "Review candidate: one shared Contact POST for EMPLOYEE, ORGANIZATION, CUSTOMER and SUPPLIER. The server validates persisted owner and GROUP, canonical contact resource CREATE, and independent Customer/Supplier parent VIEW. The server derives initial status from the Contact owner resource Lifecycle; missing initial state is rejected with WF_INITIAL_STATE_REQUIRED, never implicitly set to ACTIVE. Contact owner fields cannot be changed by PATCH. Status changes use /actions/set-state.",
+        "required": [
+          "contact_type",
+          "contact_ref_id"
+        ],
+        "properties": {
+          "contact_type": {
+            "$ref": "#/components/schemas/ContactOwnerType"
+          },
+          "contact_ref_id": {
+            "$ref": "#/components/schemas/BigInt"
+          },
+          "description": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "email": {
+            "type": "string"
+          },
+          "phone": {
+            "type": "string"
+          },
+          "mobile": {
+            "type": "string"
+          },
+          "address": {
+            "type": "string"
+          },
+          "province_id": {
+            "$ref": "#/components/schemas/BigInt"
+          },
+          "ward_id": {
+            "$ref": "#/components/schemas/BigInt"
+          },
+          "province_name": {
+            "type": "string"
+          },
+          "ward_name": {
+            "type": "string"
+          }
+        }
+      },
+      "ContactPatch": {
+        "type": "object",
+        "description": "Contact ownership and status are immutable through PATCH. Use the set-state action for status changes.",
+        "properties": {
+          "description": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "email": {
+            "type": "string"
+          },
+          "phone": {
+            "type": "string"
+          },
+          "mobile": {
+            "type": "string"
+          },
+          "address": {
+            "type": "string"
+          },
+          "province_id": {
+            "$ref": "#/components/schemas/BigInt"
+          },
+          "ward_id": {
+            "$ref": "#/components/schemas/BigInt"
+          },
+          "province_name": {
+            "type": "string"
+          },
+          "ward_name": {
+            "type": "string"
+          }
+        }
+      },
+      "ContactOwnerType": {
+        "type": "string",
+        "enum": [
+          "EMPLOYEE",
+          "ORGANIZATION",
+          "CUSTOMER",
+          "SUPPLIER"
+        ],
+        "description": "P2-SUP G2 review candidate only: persisted Shared Contact owner type; not a permission grant. CUSTOMER/SUPPLIER also require independent parent VIEW; SUPPLIER parent must match the trusted GROUP."
+      }
+    }
+  }
+}

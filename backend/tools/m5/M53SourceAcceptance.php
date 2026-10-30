@@ -90,7 +90,7 @@ final class M53SourceAcceptance
             'EMP_PRIMARY_ASSIGNMENT_OVERLAP', 'assertManagerChain(', 'assertAssignmentReferences('] as $required) {
             if (!str_contains($service,$required)) throw new RuntimeException('M5.3 missing safety gate: '.$required);
         }
-        if (!str_contains($controller,"env('DINKERP_M33B_WRITE_MODE','off')")
+        if (!str_contains($controller,'UNAUTHENTICATED')
             || !str_contains($controller,"'UNAUTHENTICATED',401")) {
             throw new RuntimeException('M5.3 auth and write-gate must be fail-closed.');
         }

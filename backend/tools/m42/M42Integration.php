@@ -20,7 +20,6 @@ final class M42Integration
     private int $positive=0;
     private int $unauth=0;
     private int $csrf=0;
-    private int $gateOff=0;
     private string $series='';
     private bool $attested=false;
 
@@ -46,20 +45,11 @@ final class M42Integration
             M34BSafety::assertUrl($this->origin);
             $phase='prepare_isolated_session';
             $this->ensureSession();
-            $phase='child_attestation_enabled';
-            // The M3.4B CLI attestation command requires enabled mode.
-            // Verify the sandbox under enabled; the dedicated M4 router will
-            // independently guard the nonce/schema for every off-mode request.
-            $this->attestChild($this->childEnvironment('enabled'));
-            $phase='start_loopback_off';
-            $this->startServer($port,$this->childEnvironment('off'),'off');
-            try {
-                $phase='write_gate_off';
-                $this->probeGateOff(new M42Http($this->origin));
-            }
-            finally {$this->stopServer();}
-            $phase='start_loopback_enabled';
-            $this->startServer($port,$this->childEnvironment('enabled'),'enabled');
+            $phase='attest_disposable_schema';
+            $environment = $this->childEnvironment();
+            $this->attestChild($environment);
+            $phase='start_nonce_guarded_loopback';
+            $this->startServer($port, $environment, 'sandbox');
             try {
                 $phase='unauthenticated';
                 $this->probeUnauthenticated(new M42Http($this->origin));
@@ -77,12 +67,12 @@ final class M42Integration
         return [
             'milestone'=>'M4.2A', 'runner_revision'=>'M4.2A.1',
             'child_database_attested'=>$this->attested, 'verdict'=>$this->failed===[] && $this->positive===14
-                && $this->unauth===28 && $this->csrf===7 && $this->gateOff===6
+                && $this->unauth===28 && $this->csrf===7
                 && $this->attested ? 'PASS_LOCAL_M4_SANDBOX' : 'NEEDS_FIX_OR_VERIFY',
             'positive_m4_routes'=>$this->positive,
             'unauthenticated_bilingual_probes'=>$this->unauth,
             'invalid_csrf_probes'=>$this->csrf,
-            'write_gate_off_probes'=>$this->gateOff,
+            'legacy_write_gate_probes'=>'RETIRED_NOT_APPLICABLE',
             'sandbox_schema'=>$this->sandbox->name,
             'independent_baseline_live_parity'=>'NOT_TESTED',
             'two_writer_concurrency'=>'NOT_TESTED',
@@ -104,9 +94,8 @@ final class M42Integration
     }
 
     /** Fork with an explicit sandbox-only environment; never inherit credentials. */
-    private function childEnvironment(string $writeMode): array
+    private function childEnvironment(): array
     {
-        if (!in_array($writeMode,['off','enabled'],true)) throw new M34BFailure('Invalid M4 write mode');
         $safe=[];
         foreach (['PATH','Path','SYSTEMROOT','SystemRoot','WINDIR','windir','TEMP','TMP','TMPDIR',
             'HOME','USERPROFILE','HOMEDRIVE','HOMEPATH','COMSPEC','APPDATA','LOCALAPPDATA',
@@ -117,7 +106,6 @@ final class M42Integration
         return [
             ...$safe,
             'CI_ENVIRONMENT'=>'development',
-            'DINKERP_M33B_WRITE_MODE'=>$writeMode,
             'M34B_ONLY_SCHEMA'=>$this->sandbox->name,
             'M34B_ONLY_NONCE'=>$this->sandbox->nonce,
             'app.baseURL'=>$this->origin,
@@ -262,21 +250,6 @@ final class M42Integration
         }
         $this->results[]=['case'=>$name,'status'=>$reply['status'],'changed_tables'=>$changes,'pass'=>true];
         return $reply;
-    }
-
-    private function probeGateOff(M42Http $client): void
-    {
-        $client->login($this->actor['email'],$this->actor['password']);
-        $all=$this->cases();
-        foreach (['updateDisplaySettings','resetDisplaySettings','createNumberingSeries',
-            'updateNumberingSeries','setNumberingSeriesState','executeBusinessWorkflowAction'] as $name) {
-            [$method,$path,$body]=$all[$name];
-            $response=$this->assertCase('write_gate_off_'.$name,$client,$method,$path,$body,403,[]);
-            if (($response['json']['error']['code']??null)!=='ACCESS_MUTATION_NOT_ENABLED') {
-                throw new M34BFailure('M4 write gate returned unexpected error code');
-            }
-            $this->gateOff++;
-        }
     }
 
     private function probeUnauthenticated(M42Http $client): void

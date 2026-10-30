@@ -136,6 +136,8 @@ try {
         Invoke-PHPChecked -Description 'Supplier G1 profile/usage pure tests' -Arguments @('tests/sup/supplier_rules_pure.php')
         Invoke-PHPChecked -Description 'Supplier catalog/Lifecycle/permission pure tests' -Arguments @('tests/sup/supplier_catalog_pure.php')
         Invoke-PHPChecked -Description 'Supplier idempotency/rollback fixture' -Arguments @('tests/sup/supplier_catalog_provision_fixture.php')
+        Invoke-PHPChecked -Description 'Supplier DEV-only catalog Seeder opt-in' -Arguments @('tests/sup/supplier_core_seeder_pure.php')
+        Invoke-PHPChecked -Description 'Supplier setup doctor fake DB/CLI regression' -Arguments @('tests/sup/supplier_setup_doctor_fixture.php')
         Invoke-PHPChecked -Description 'Supplier numbering policy pure tests' -Arguments @('tests/sup/supplier_numbering_pure.php')
         Invoke-PHPChecked -Description 'Supplier numbering issuer fake DB fixture' -Arguments @('tests/sup/supplier_numbering_issuer_fixture.php')
         Invoke-PHPChecked -Description 'Supplier SQL-first scoped COUNT/page/detail pure tests' -Arguments @('tests/sup/supplier_sql_plan_pure.php')
@@ -146,7 +148,14 @@ try {
         Invoke-PHPChecked -Description 'Supplier T05 operational status/Company Usage policy' -Arguments @('tests/sup/supplier_usability_policy_pure.php')
         Invoke-PHPChecked -Description 'Supplier T05 locked Purchase eligibility fake DB fixture' -Arguments @('tests/sup/supplier_usability_guard_fixture.php')
         Invoke-PHPChecked -Description 'Supplier T05 purchase interface/guard source contracts' -Arguments @('tests/sup/supplier_usability_source_contract_pure.php')
-        Write-Host 'SUP-UNIT PASS: offline only (including T04/T05 fake DB); no MariaDB provisioning, Purchase adapter, HTTP or real PBAC decisions.'
+        Invoke-PHPChecked -Description 'Supplier T06 Contact four-owner SQL/PBAC plan' -Arguments @('tests/sup/supplier_contact_sql_pure.php')
+        Invoke-PHPChecked -Description 'Supplier T06 Contact parent/PBAC fake DB fixture' -Arguments @('tests/sup/supplier_contact_parent_fixture.php')
+        Invoke-PHPChecked -Description 'Supplier T06 runtime/audit/Workflow source contracts' -Arguments @('tests/sup/supplier_contact_source_contract_pure.php')
+        Invoke-PHPChecked -Description 'SUP-T07 Core API source/policy/route offline regression' -Arguments @('tests/sup/supplier_core_http_pure.php')
+        Invoke-PHPChecked -Description 'SUP master History SQL/PBAC contract' -Arguments @('tests/sup/supplier_change_history_pure.php')
+        Invoke-PHPChecked -Description 'Supplier M11 notification CAS, GROUP and lifecycle pure regression' -Arguments @('tests/sup/supplier_m11_notifications_pure.php')
+        Invoke-PHPChecked -Description 'Retired temporary environment modes and PBAC invariants' -Arguments @('tests/sup/supplier_retired_modes_pure.php')
+        Write-Host 'SUP-UNIT PASS: offline only (including T04/T05/T06 fake DB and T07 source); no MariaDB, HTTP or real PBAC decisions.'
         return
     }
 
@@ -159,7 +168,8 @@ try {
             'tests/history/history_source_contract.php',
             'tests/history/history_monitor_sql_pure.php',
             'tests/history/history_presenter_pure.php',
-            'tests/history/history_monitor_source_pure.php'
+            'tests/history/history_monitor_source_pure.php',
+            'tests/sup/supplier_change_history_pure.php'
         )) {
             Invoke-PHPChecked -Description "HIS regression $test" -Arguments @($test)
         }
@@ -183,7 +193,7 @@ try {
         Invoke-PHPChecked -Description 'M19.24 routing ownership and negative mutations' -Arguments @('tests/m1924_route_architecture_pure.php')
         Invoke-PHPChecked -Description 'M3.3/P1 frozen 150 operations and historical extension chain' -Arguments @('tests/m33_routes_pure.php')
         Invoke-PHPChecked -Description 'M3.4D pinned core route contract' -Arguments @('tests/m34d_contract_pure.php')
-        Write-Host 'ROUTES PASS: 180/180 frozen registrations; 150/150 P1; no DB/HTTP. CI4 Spark and DEV HTTP UAT remain pending.'
+        Write-Host 'ROUTES PASS: original 180 frozen registrations plus reviewed extensions; 150/150 P1; no DB/HTTP. CI4 Spark and DEV HTTP UAT remain pending.'
         return
     }
 
@@ -218,13 +228,16 @@ try {
             'tests/history/history_source_contract.php',
             'tests/history/history_monitor_sql_pure.php',
             'tests/history/history_presenter_pure.php',
-            'tests/history/history_monitor_source_pure.php'
+            'tests/history/history_monitor_source_pure.php',
+            'tests/sup/supplier_change_history_pure.php'
         )) {
             Invoke-PHPChecked -Description "HIS-01 offline regression $test" -Arguments @($test)
         }
         Invoke-PHPChecked -Description 'SUP-T01A pure rules regression' -Arguments @('tests/sup/supplier_rules_pure.php')
         Invoke-PHPChecked -Description 'SUP-T01B catalog policy regression' -Arguments @('tests/sup/supplier_catalog_pure.php')
         Invoke-PHPChecked -Description 'SUP-T01B provision fixture regression' -Arguments @('tests/sup/supplier_catalog_provision_fixture.php')
+        Invoke-PHPChecked -Description 'SUP-T07 DEV catalog Seeder opt-in' -Arguments @('tests/sup/supplier_core_seeder_pure.php')
+        Invoke-PHPChecked -Description 'Supplier setup doctor fake DB/CLI regression' -Arguments @('tests/sup/supplier_setup_doctor_fixture.php')
         Invoke-PHPChecked -Description 'SUP-T02 Numbering pure regression' -Arguments @('tests/sup/supplier_numbering_pure.php')
         Invoke-PHPChecked -Description 'SUP-T03 SQL planner regression' -Arguments @('tests/sup/supplier_sql_plan_pure.php')
         Invoke-PHPChecked -Description 'SUP-T03 read access wiring regression' -Arguments @('tests/sup/supplier_read_source_contract_pure.php')
@@ -235,7 +248,13 @@ try {
         Invoke-PHPChecked -Description 'SUP-T05 purchase usability policy' -Arguments @('tests/sup/supplier_usability_policy_pure.php')
         Invoke-PHPChecked -Description 'SUP-T05 fake Purchase Company and locked Supplier fixture' -Arguments @('tests/sup/supplier_usability_guard_fixture.php')
         Invoke-PHPChecked -Description 'SUP-T05 usability guard source contracts' -Arguments @('tests/sup/supplier_usability_source_contract_pure.php')
-        Write-Host 'UNIT-STANDARD PASS: pinned 168, HIS and SUP-T01/T02/T03/T04/T05 offline tests only; NOT HTTP/MariaDB integration.'
+        Invoke-PHPChecked -Description 'SUP-T06 fourth Contact owner SQL/PBAC' -Arguments @('tests/sup/supplier_contact_sql_pure.php')
+        Invoke-PHPChecked -Description 'SUP-T06 fake Supplier Contact parent/PBAC' -Arguments @('tests/sup/supplier_contact_parent_fixture.php')
+        Invoke-PHPChecked -Description 'SUP-T06 runtime/audit/Workflow source contracts' -Arguments @('tests/sup/supplier_contact_source_contract_pure.php')
+        Invoke-PHPChecked -Description 'SUP-T07 API source/route policy regression' -Arguments @('tests/sup/supplier_core_http_pure.php')
+        Invoke-PHPChecked -Description 'Supplier M11 notification pure regression' -Arguments @('tests/sup/supplier_m11_notifications_pure.php')
+        Invoke-PHPChecked -Description 'Retired temporary environment modes and PBAC invariants' -Arguments @('tests/sup/supplier_retired_modes_pure.php')
+        Write-Host 'UNIT-STANDARD PASS: pinned 168, HIS and SUP-T01..T07 offline tests only; NOT HTTP/MariaDB integration.'
         Invoke-PHPChecked -Description 'M3.4D static and baseline golden-master acceptance' -Arguments @('tools/m34d_accept.php', '--offline')
         Invoke-PHPChecked -Description 'M4 source/route extension acceptance (14 new APIs; no DB)' -Arguments @('tools/m4_accept.php')
         Invoke-PHPChecked -Description 'M5.1 Province/Ward source acceptance (six mutations; no DB)' -Arguments @('tools/m5_accept.php')

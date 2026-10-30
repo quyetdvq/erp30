@@ -11,7 +11,7 @@ use CodeIgniter\HTTP\Exceptions\BadRequestException;
 use CodeIgniter\HTTP\ResponseInterface;
 use CodeIgniter\Shield\Entities\User;
 
-/** The two frozen API-050 COMBO endpoints; mutation gated OFF by default. */
+/** The two frozen API-050 COMBO endpoints; mutation requires authenticated PBAC. */
 final class ProductComboController extends Controller
 {
     public function listComboItems(string $id): ResponseInterface
@@ -25,9 +25,6 @@ final class ProductComboController extends Controller
     {
         $actor=auth()->user();
         if (!$actor instanceof User) return ApiResponder::error($this->response, 'UNAUTHENTICATED', 401);
-        if (strtolower((string)env('DINKERP_M33B_WRITE_MODE','off')) !== 'enabled') {
-            return ApiResponder::error($this->response, 'ACCESS_MUTATION_NOT_ENABLED', 403);
-        }
         return ApiResponder::success($this->response,
             (new ProductComboService($actor))->replace($id,$this->replacementBody()));
     }

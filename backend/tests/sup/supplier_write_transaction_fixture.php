@@ -18,6 +18,7 @@ namespace CodeIgniter\Database {
         public bool $failSupplierDuplicate = false;
         public bool $forceCasZero = false;
         public bool $failHistoryInsert = false;
+        public bool $failOutboxInsert = false;
         public int $lastAffected = 0;
         public string $lastInsertId = '0';
         public array $logs = [];
@@ -100,6 +101,22 @@ namespace CodeIgniter\Settings\Config {
     class Services {
         public static function settings(): object {
             return new class { public function get(string $name, ?string $group = null): string { return 'Asia/Ho_Chi_Minh'; } };
+        }
+    }
+}
+namespace App\Modules\Notifications {
+    // Fake M11 event seam: prove Supplier CAS and History rollback together
+    // when a same-transaction outbox write fails. Never uses real Notification tables.
+    class NotificationOutboxProducer {
+        public static function enqueueWorkflowTransition(
+            \CodeIgniter\Database\BaseConnection $db, string $resource,
+            string $id, string $from, string $to, string $action,
+        ): void {
+            if ($db->transDepth !== 1 || $resource !== 'supplier' || $action !== 'setstate') {
+                throw new \RuntimeException('M11 fixture outbox outside Supplier CAS transaction');
+            }
+            $db->logs[] = "OUTBOX:$resource:$id:$from:$to:$action";
+            if ($db->failOutboxInsert) throw new \RuntimeException('M11_WORKFLOW_OUTBOX_WRITE_FAILED');
         }
     }
 }
@@ -317,6 +334,10 @@ namespace {
     $active = $service->setState('1',['status'=>'ACTIVE','expected_version'=>4]);
     okTx($active['status'] === 'ACTIVE' && (string)$active['row_version'] === '5', 'Workflow setstate CAS');
     okTx(count($db->tables['business_history_events']) === 2 && $db->tables['business_history_events'][1]['event_type'] === 'STATE_CHANGE', 'State change History with checkpoint');
+    okTx(in_array('OUTBOX:supplier:1:DRAFT:ACTIVE:setstate', $db->logs, true), 'M11 outbox called for successful CAS State transition');
+    $outboxPos = array_search('OUTBOX:supplier:1:DRAFT:ACTIVE:setstate', $db->logs, true);
+    okTx($outboxPos < array_search('COMMIT', array_slice($db->logs, $outboxPos), true) + $outboxPos,
+        'M11 outbox must be inserted before owning transaction COMMIT');
     $new = $service->update('1',['phone'=>'0912345678','expected_version'=>5]);
     okTx((string)$new['row_version'] === '6', 'idempotent PATCH still advances version');
     okTx(count($db->tables['business_history_events']) === 2, 'no redundant operational UPDATE');
@@ -333,6 +354,21 @@ namespace {
     $db->branching = false;
     $inact = $service->setState('1',['status'=>'INACTIVE','expected_version'=>7]);
     okTx($inact['status'] === 'INACTIVE' && (string)$inact['row_version'] === '8', 'unique configured transition works');
+
+    // Outbox and business mutation share rollback; a failed notification write
+    // cannot commit a new State or History event in a split-brain result.
+    $db = fixtureTx(); $service = serviceTx($db);
+    $service->create(profileTx() + ['supplier_code'=>'SUP-NFX']);
+    $db->failOutboxInsert = true;
+    try { $service->setState('1', ['status'=>'ACTIVE','expected_version'=>1]);
+        throw new RuntimeException('Expected outbox failure'); }
+    catch (RuntimeException $e) {
+        okTx($e->getMessage() === 'M11_WORKFLOW_OUTBOX_WRITE_FAILED', 'outbox failure propagates');
+        okTx($db->tables['suppliers'][0]['status'] === 'DRAFT'
+            && (string)$db->tables['suppliers'][0]['row_version'] === '1', 'outbox failure rolls back CAS State');
+        okTx(count($db->tables['business_history_events']) === 1, 'outbox failure rolls back History event');
+        okTx(in_array('ROLLBACK', $db->logs, true), 'outbox failure causes transaction rollback');
+    }
 
     $db = fixtureTx(); $service = serviceTx($db);
     $db->allow = false;

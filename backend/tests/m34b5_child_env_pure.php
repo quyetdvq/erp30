@@ -40,7 +40,6 @@ $values = [
     'M34B_ONLY_NONCE'=>$nonce,
     'M34B_ONLY_SCHEMA'=>$name,
     'CI_ENVIRONMENT'=>'development',
-    'DINKERP_M33B_WRITE_MODE'=>'enabled',
     'database.default.hostname'=>'127.0.0.1',
     'database.tests.hostname'=>'127.0.0.1',
     'database.default.port'=>'3306',
@@ -98,9 +97,8 @@ try {
     env34b5('CI_ENVIRONMENT', 'testing');
     check34b5('PHPUnit testing mode cannot start HTTP sandbox', blocked34b5(fn()=>M34BChildPaths::forSandbox($backend)));
     env34b5('CI_ENVIRONMENT', 'development');
-    env34b5('DINKERP_M33B_WRITE_MODE', 'off');
-    check34b5('Child cannot start without explicit sandbox write flag', blocked34b5(fn()=>M34BChildPaths::forSandbox($backend)));
-    env34b5('DINKERP_M33B_WRITE_MODE', 'enabled');
+    check34b5('Configured sandbox remains valid without a global write switch',
+        M34BChildPaths::forSandbox($backend) instanceof \Config\Paths);
     env34b5('M34B_ONLY_NONCE', bin2hex(random_bytes(16)));
     check34b5('Wrong nonce is refused', blocked34b5(fn()=>M34BChildPaths::forSandbox($backend)));
     env34b5('M34B_ONLY_NONCE', $nonce);

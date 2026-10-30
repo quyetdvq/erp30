@@ -30,6 +30,16 @@ final class SupplierService
     /** @return array<string,mixed> */
     public function show(string $id): array { return $this->reader->show($id); }
 
+    /**
+     * Read via the same scoped detail snapshot; project only the three
+     * Company Usage fields, never leak the full row to this endpoint.
+     * @return array{all_companies:bool,company_ids:list<string>,row_version:string}
+     */
+    public function companyUsages(string $id): array
+    {
+        return SupplierApiPolicy::companyUsages($this->reader->show($id));
+    }
+
     /** @param array<string,mixed> $input @return array<string,mixed> */
     public function create(array $input): array { return $this->writer->create($input); }
 

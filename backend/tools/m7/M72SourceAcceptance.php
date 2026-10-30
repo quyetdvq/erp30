@@ -76,8 +76,7 @@ final class M72SourceAcceptance
             }
             $seen[$key]=true;
         }
-        foreach (["'UNAUTHENTICATED', 401", "'ACCESS_MUTATION_NOT_ENABLED', 403",
-            "env('DINKERP_M33B_WRITE_MODE','off')", 'JsonRequest::readObject(', 'replacementBody(',
+        foreach (["'UNAUTHENTICATED', 401", 'new ProductComboService($actor)', 'JsonRequest::readObject(', 'replacementBody(',
             'BadRequestException'] as $gate) {
             if (!str_contains($controller,$gate)) throw new RuntimeException('Missing M7.2 HTTP gate: '.$gate);
         }

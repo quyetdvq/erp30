@@ -168,7 +168,7 @@ final class M42Concurrency
             if (is_string($value)) $safe[$name]=$value;
         }
         return [...$safe,
-            'CI_ENVIRONMENT'=>'development', 'DINKERP_M33B_WRITE_MODE'=>'enabled',
+            'CI_ENVIRONMENT'=>'development',
             'M34B_ONLY_SCHEMA'=>$this->sandbox->name, 'M34B_ONLY_NONCE'=>$this->sandbox->nonce,
             'M42_RACE_ROLE'=>$role, 'M42_RACE_DIR'=>$this->dir,
             'app.baseURL'=>'http://127.0.0.1:'.$this->ports[$role],

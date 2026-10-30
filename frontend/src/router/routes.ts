@@ -185,6 +185,26 @@ export const routes: RouteRecordRaw[] = [
         meta: { labelKey: 'nav.products' },
       },
       {
+        path: 'suppliers/new', name: 'suppliers-new',
+        component: () => import('@/features/supplier/pages/SuppliersView.vue'),
+        meta: { labelKey: 'supplier.create', breadcrumbTrail: breadcrumbTrails.suppliers },
+      },
+      {
+        path: 'suppliers/:id/edit', name: 'suppliers-edit',
+        component: () => import('@/features/supplier/pages/SuppliersView.vue'),
+        meta: { labelKey: 'supplier.edit', breadcrumbTrail: breadcrumbTrails.suppliers },
+      },
+      {
+        path: 'suppliers/:id', name: 'suppliers-detail',
+        component: () => import('@/features/supplier/pages/SuppliersView.vue'),
+        meta: { labelKey: 'supplier.view', breadcrumbTrail: breadcrumbTrails.suppliers },
+      },
+      {
+        path: 'suppliers', name: 'suppliers',
+        component: () => import('@/features/supplier/pages/SuppliersView.vue'),
+        meta: { labelKey: 'nav.suppliers', breadcrumbTrail: breadcrumbTrails.organization },
+      },
+      {
         path: 'customers/new', name: 'customers-new',
         component: () => import('@/features/customer/pages/CustomersView.vue'),
         meta: { labelKey: 'customer.create', breadcrumbTrail: breadcrumbTrails.customers },

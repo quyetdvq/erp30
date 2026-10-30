@@ -92,7 +92,7 @@ final class M8SourceAcceptance
                 throw new RuntimeException('Missing M8 core invariant: '.$path.' '.$token);
             }
         }
-        foreach (['DINKERP_M33B_WRITE_MODE','UNAUTHENTICATED','ImportJobService('] as $term) {
+        foreach (['UNAUTHENTICATED', 'auth()->user()', 'ImportJobService('] as $term) {
             if (!str_contains($controller,$term)) throw new RuntimeException('M8 controller safety missing: '.$term);
         }
         $json=$app.'Modules/Import/Templates/product-v1.json';

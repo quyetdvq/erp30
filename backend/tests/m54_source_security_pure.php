@@ -28,7 +28,7 @@ $check(str_contains($service,'assertVisible(') && str_contains($service,'PageNot
 $check(str_contains($service,'transRollback()') && str_contains($service,'transCommit('),'SQL atomicity and rollback');
 $check(str_contains($service,'GET_LOCK(') && str_contains($service,'RELEASE_LOCK('),'cross-worker lock');
 $check(str_contains($service,'FOR UPDATE') && str_contains($service,'WF_CONCURRENT_STATE_CHANGE'),'row locks and optimistic status predicate');
-$check(str_contains($controller,"'UNAUTHENTICATED',401") && str_contains($controller,"'ACCESS_MUTATION_NOT_ENABLED',403"),'auth and gated writes');
+$check(str_contains($controller,"'UNAUTHENTICATED',401") && !str_contains($controller,'ACCESS_MUTATION_NOT_ENABLED'),'auth and gated writes');
 $check(!str_contains($controller,'setJSON(') && str_contains($controller,'ApiResponder::error('),'bilingual API responder');
 $check(str_contains($rules,'DEPARTMENT_') && str_contains($rules,'POSITION_'),'baseline stable error codes');
 $check(str_contains($rules,'self::AUDIT') && str_contains($rules,'FIELD_UNSUPPORTED'),'no client audit or custom scope');

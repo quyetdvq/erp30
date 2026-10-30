@@ -26,7 +26,7 @@ final class M42ChildPaths
         if (! is_string($nonce) || preg_match('/\A[a-f0-9]{32}\z/D', $nonce) !== 1
             || ! is_string($schema) || $schema !== 'erp_m34b_' . substr($nonce, 0, 16) . '_sandbox'
             || getenv('CI_ENVIRONMENT') !== 'development'
-            || ! in_array(getenv('DINKERP_M33B_WRITE_MODE'), ['off', 'enabled'], true)) {
+) {
             throw new RuntimeException('M34B_CHILD_GUARD: Missing exact sandbox context.');
         }
 

@@ -7,7 +7,7 @@ import { useUnsavedChanges } from '@/composables/useUnsavedChanges'
 import SearchableSelect from '@/components/forms/SearchableSelect.vue'
 import RemoteSearchableSelect from '@/components/forms/RemoteSearchableSelect.vue'
 import { geographicOption, singleLocationId, wardMatchesSelection } from '@/features/customer/customerLocationSelect'
-import { ListPagination, TableDetailModal, TableRowActions } from '@/components/lists'
+import { ListPagination, TableDetailModal, TableRowActions, TableStatus } from '@/components/lists'
 import BusinessWorkflowAction from '@/components/lists/BusinessWorkflowAction.vue'
 import BusinessHistoryPanel from '@/features/history/components/BusinessHistoryPanel.vue'
 import { rowAllowedActions } from '@/components/lists/rowActionPolicy'
@@ -458,23 +458,20 @@ onMounted(async () => {
     <section ref="dialog" class="customer-detail-modal" :class="{ 'customer-detail-modal--workspace': !isNew }" role="dialog" aria-modal="true"
       :aria-label="isNew ? t('customer.create') : form.name || t('customer.title')" @keydown="onDialogKeydown">
       <header class="modal-card__header">
-        <h2 class="modal-card-title">
-          <NIcon :size="24" aria-hidden="true"><PeopleOutline /></NIcon>
-          {{ isNew ? t('customer.create') : form.name || t('customer.title') }}
-          <span v-if="!isNew && form.customer_code" class="customer-heading-code">· {{ form.customer_code }}</span>
-        </h2>
+        <div class="business-detail-header-main">
+          <h2 class="modal-card-title">
+            <NIcon :size="24" aria-hidden="true"><PeopleOutline /></NIcon>
+            {{ isNew ? t('customer.create') : form.name || t('customer.title') }}
+            <span v-if="!isNew && form.customer_code" class="customer-heading-code">· {{ form.customer_code }}</span>
+          </h2>
+          <span v-if="!isNew && state" class="business-detail-header-status"
+            :aria-label="`${t('customer.status')}: ${statusLabel(state)}`">
+            <TableStatus :status="state" />{{ statusLabel(state) }}
+          </span>
+        </div>
         <button ref="closeButton" type="button" class="modal-card-button-close"
           :aria-label="t('common.close')" @click="closeDetail" />
       </header>
-      <div v-if="!isNew" class="customer-detail-toolbar">
-        <span class="status-pill" :class="{ 'status-pill--off': state !== 'ACTIVE' }">
-          {{ statusLabel(state) }}
-        </span>
-        <button v-if="!editing && canEdit" type="button" class="secondary-button"
-          @click="router.push(`/customers/${id}/edit`)">{{ t('common.edit') }}</button>
-        <BusinessWorkflowAction v-if="canToggle" resource="customer" :target-id="id"
-          :busy="busy || loading" variant="button" @changed="void afterCustomerWorkflowChange()" />
-      </div>
       <div v-if="!isNew" class="customer-detail-tabs" role="tablist" :aria-label="t('customer.title')">
         <button v-for="item in (['profile', 'contacts', 'interactions', 'sales', 'payments', 'shipping', 'document', 'history'] as const)"
           :key="item" type="button" role="tab" :aria-selected="tab === item"
@@ -674,6 +671,10 @@ onMounted(async () => {
       </div>
       <footer class="modal-card__footer">
         <button type="button" class="secondary-button" @click="closeDetail">{{ t('common.close') }}</button>
+        <button v-if="!editing && !isNew && canEdit" type="button" class="secondary-button"
+          :disabled="busy || loading" @click="router.push(`/customers/${id}/edit`)">{{ t('common.edit') }}</button>
+        <BusinessWorkflowAction v-if="!editing && canToggle" resource="customer" :target-id="id"
+          :busy="busy || loading" variant="button" @changed="void afterCustomerWorkflowChange()" />
         <button v-if="tab === 'profile' && editing && canEdit" type="submit" class="primary-button"
           form="customer-profile-form" :disabled="busy || loading || (!form.all_companies && !form.company_ids.length)">
           {{ busy ? t('common.saving') : t('common.save') }}
@@ -745,7 +746,7 @@ onMounted(async () => {
   height: min(760px, calc(100dvh - 40px));
 }
 .customer-heading-code { color: #536b7b; font-size: 14px; font-weight: 400; }
-.customer-detail-toolbar { flex: 0 0 auto; display: flex; align-items: center; gap: 9px; padding: 10px 20px 0; }
+.customer-detail-modal > .modal-card__footer { align-items: center; flex-wrap: wrap; }
 .customer-detail-tabs { flex: 0 0 auto; display: flex; gap: 4px; padding: 8px 20px 0; overflow-x: auto; border-bottom: 1px solid #e1e9ee; }
 .customer-detail-tabs button {
   flex: 0 0 auto; padding: 10px 12px; border: 0; border-bottom: 2px solid transparent;

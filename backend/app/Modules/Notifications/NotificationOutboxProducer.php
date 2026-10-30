@@ -52,7 +52,9 @@ final class NotificationOutboxProducer
         if (! NotificationFlags::workflowProducerEnabled($db)) {
             return;
         }
-        BusinessWorkflowRules::table($resource);
+        if ($resource !== 'supplier') {
+            BusinessWorkflowRules::table($resource);
+        }
         BusinessWorkflowRules::id($id);
         $definition = (new ResourceStateRepository($db))->definitionFor($resource);
         $toStateId = $definition['by_code'][$to] ?? null;

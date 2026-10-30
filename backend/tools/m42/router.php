@@ -10,7 +10,6 @@ $nonce = getenv('M34B_ONLY_NONCE');
 $pdoPort = getenv('database.default.port');
 $ciSchema = getenv('database.default.database');
 $ciHost = getenv('database.default.hostname');
-$writeFlag = getenv('DINKERP_M33B_WRITE_MODE');
 // Use normal CI4 development semantics only inside this spawned child.
 // Guard BOTH connection groups, including their physical table prefix.
 $testSchema = getenv('database.tests.database');
@@ -25,7 +24,6 @@ $allowed = is_string($database) && is_string($nonce)
     && preg_match('/\A(?:[a-z][a-z0-9_]{0,30}_)?\z/D', $defaultPrefix) === 1
     && getenv('CI_ENVIRONMENT') === 'development'
     && getenv('database.tests.hostname') === '127.0.0.1'
-    && in_array($writeFlag, ['off', 'enabled'], true)
     && is_string($pdoPort) && preg_match('/\A[0-9]{1,5}\z/D', $pdoPort) === 1
     && (int) $pdoPort > 0 && (int) $pdoPort <= 65535;
 if ($allowed) {

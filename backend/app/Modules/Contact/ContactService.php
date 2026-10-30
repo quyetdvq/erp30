@@ -53,7 +53,8 @@ final class ContactService
             $readScope = new ContactScope($this->db, $date);
             $plan = ContactSql::collection($params, $organization, $employee,
                 $date, (string)$this->db->DBPrefix,
-                ...$this->customerScopes($access));
+                ...$this->customerScopes($access),
+                ...$this->supplierScopes($access), trustedGroupId: $access->trustedGroupRootId());
             $countQuery = $this->db->query($plan['count_sql'], $plan['count_binds']);
             if ($countQuery === false) throw new UnexpectedValueException('Contact scoped COUNT failed.');
             $total = self::validCount($countQuery->getRowArray()['total'] ?? null);
@@ -64,13 +65,16 @@ final class ContactService
             if (count($rows) > $params['page_size']) throw new UnexpectedValueException('Contact page exceeded requested limit.');
             // One indexed parent lookup per Contact PAGE, never per Contact row.
             $customerParents = $this->customerParentsForPage($rows);
+            $supplierParents = $this->supplierParentsForPage($rows);
             $customerView = [];
+            $supplierView = [];
             foreach ($rows as &$row) {
                 // Defense in depth. A mismatch must fail the whole response,
                 // NEVER silently post-filter and corrupt an authorized total.
-                $scope = $readScope->resolve($row);
+                $scope = $readScope->resolve($row, $supplierParents);
                 if (!$access->canView($scope['resource'], $scope['target'])
-                    || !$this->customerParentView($row,$access,$customerParents,$customerView)) {
+                    || !$this->customerParentView($row,$access,$customerParents,$customerView)
+                    || !$this->supplierParentView($row,$access,$supplierParents,$supplierView)) {
                     throw new UnexpectedValueException('AUTH_SCOPE_PBAC_MISMATCH: Contact list.');
                 }
                 $row['allowed_actions'] = EffectiveRowActionHints::forViewedRow($access, $scope['resource'], $scope['target']);
@@ -90,14 +94,16 @@ final class ContactService
             $readScope = new ContactScope($this->db, $date);
             $plan = ContactSql::detail($id, $organization, $employee,
                 $date, (string)$this->db->DBPrefix,
-                ...$this->customerScopes($access));
+                ...$this->customerScopes($access),
+                ...$this->supplierScopes($access), trustedGroupId: $access->trustedGroupRootId());
             $result = $this->db->query($plan['sql'], $plan['binds']);
             if ($result === false) throw new UnexpectedValueException('Contact scoped detail failed.');
             $row = $result->getRowArray();
             if ($row === null) throw new PageNotFoundException('Contact record not available.');
             $scope = $readScope->resolve($row);
             if (!$access->canView($scope['resource'], $scope['target'])
-                || !$this->customerParentView($row,$access)) {
+                || !$this->customerParentView($row,$access)
+                || !$this->supplierParentView($row,$access)) {
                 throw new UnexpectedValueException('AUTH_SCOPE_PBAC_MISMATCH: Contact detail.');
             }
             $row['allowed_actions'] = EffectiveRowActionHints::forViewedRow($access, $scope['resource'], $scope['target']);
@@ -125,6 +131,70 @@ final class ContactService
             \App\Modules\Access\Query\AuthorizedSqlScope::master(
                 'customer',$access->viewableMasterLifecycleStatuses('customer')),
         ];
+    }
+
+
+    /** @return array{0:\App\Modules\Access\Query\AuthorizedSqlScope,1:\App\Modules\Access\Query\AuthorizedSqlScope} */
+    private function supplierScopes(UnifiedAccessService $access): array
+    {
+        return [
+            \App\Modules\Access\Query\AuthorizedSqlScope::master(
+                'supplier_contact', $access->viewableMasterLifecycleStatuses('supplier_contact')),
+            \App\Modules\Access\Query\AuthorizedSqlScope::master(
+                'supplier', $access->viewableMasterLifecycleStatuses('supplier')),
+        ];
+    }
+
+    /**
+     * One indexed read per page, never one Supplier SELECT per Contact row.
+     * The batch is trusted only within readSnapshot()'s DB snapshot.
+     * @param list<array<string,mixed>> $rows
+     * @return array<string,array<string,mixed>>
+     */
+    private function supplierParentsForPage(array $rows): array
+    {
+        $ids = [];
+        foreach ($rows as $contact) {
+            if (strtoupper(trim((string) ($contact['contact_type'] ?? ''))) !== 'SUPPLIER') continue;
+            $id = ContactRules::id($contact['contact_ref_id'] ?? null, 'contact_ref_id');
+            $ids[$id] = true;
+        }
+        if ($ids === []) return [];
+        $query = $this->db->table('suppliers')->select('id,group_organization_id,status')
+            ->whereIn('id', array_keys($ids))->get();
+        if ($query === false) throw new UnexpectedValueException('Contact Supplier parent batch failed.');
+        $parents = [];
+        foreach ($query->getResultArray() as $parent) {
+            $parents[(string) $parent['id']] = $parent;
+        }
+        return $parents;
+    }
+
+    /**
+     * Independent Supplier parent VIEW + persisted GROUP check. Missing,
+     * out-of-GROUP or denied parent is never a Contact authorization grant.
+     * @param array<string,mixed> $contact
+     * @param array<string,array<string,mixed>>|null $parents
+     * @param array<string,bool>|null $decisions
+     */
+    private function supplierParentView(
+        array $contact, UnifiedAccessService $access,
+        ?array $parents = null, ?array &$decisions = null,
+    ): bool {
+        if (strtoupper(trim((string) ($contact['contact_type'] ?? ''))) !== 'SUPPLIER') return true;
+        $id = ContactRules::id($contact['contact_ref_id'] ?? null, 'contact_ref_id');
+        if ($decisions !== null && array_key_exists($id, $decisions)) return $decisions[$id];
+        if ($parents !== null) {
+            $parent = $parents[$id] ?? null;
+        } else {
+            $query = $this->db->table('suppliers')->select('id,group_organization_id,status')
+                ->where('id', $id)->get();
+            if ($query === false) throw new UnexpectedValueException('Contact Supplier parent lookup failed.');
+            $parent = $query->getRowArray();
+        }
+        $allowed = SupplierContactParentView::allowed($access, $parent);
+        if ($decisions !== null) $decisions[$id] = $allowed;
+        return $allowed;
     }
 
     /**
@@ -225,7 +295,8 @@ final class ContactService
         $payload['status'] = $initial;
         return $this->transaction(function () use ($payload): array {
             $scope = $this->scope->resolve($payload);
-            if (! $this->customerParentView($payload,$this->access))
+            if (! $this->customerParentView($payload,$this->access)
+                || ! $this->supplierParentView($payload,$this->access))
                 throw new DomainException('AUTH_POLICY_DENIED');
             $this->permit($scope['resource'], 'create', null, $scope['target']);
             $this->assertAddress($payload);
@@ -338,7 +409,8 @@ final class ContactService
             throw $exception;
         }
         if (! $this->access->canView($scope['resource'], $scope['target'])
-            || ! $this->customerParentView($row, $this->access)) {
+            || ! $this->customerParentView($row, $this->access)
+            || ! $this->supplierParentView($row, $this->access)) {
             throw new PageNotFoundException('Contact record not available.');
         }
         return $scope;

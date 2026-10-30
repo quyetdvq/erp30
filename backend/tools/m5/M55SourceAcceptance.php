@@ -87,7 +87,7 @@ final class M55SourceAcceptance
             || ! str_contains($service, "'CONTACT_OWNER_NOT_FOUND'")) {
             throw new RuntimeException('M5.5 canonical owner facts/scope missing.');
         }
-        if (! str_contains($controller, "env('DINKERP_M33B_WRITE_MODE', 'off')")
+        if (! str_contains($controller, 'UNAUTHENTICATED')
             || ! str_contains($controller, "'UNAUTHENTICATED', 401")) {
             throw new RuntimeException('M5.5 mutations must be auth/write gated.');
         }

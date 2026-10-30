@@ -99,7 +99,8 @@ namespace {
     assertPort(str_contains($services, 'new ProductionWorkflowTransitionPort()')
         && str_contains($service, '\\Config\\Services::workflowTransitionPort()'),
         'Composition root owns concrete adapter, not Workflow module');
-    assertPort(str_contains($controller, '->workflowWriteEnabled(db_connect())'),
-        'HTTP write gate remains controlled by the same feature flag');
+    assertPort(str_contains($controller, "'UNAUTHENTICATED'")
+        && !str_contains($controller, 'ACCESS_MUTATION_NOT_ENABLED'),
+        'Independent M11 notification configuration does not replace generic Workflow PBAC');
     echo "M19.25 WORKFLOW PORT: {$n}/{$n} PASS\n";
 }

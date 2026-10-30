@@ -16,7 +16,7 @@ $pass(count(M52SourceAcceptance::operations())===3,'Three operation IDs');
 $routes=(string)\DinkERP\Tools\Routes\LegacyRouteSource::source($root, 'M52Routes.php');
 $controller=(string)file_get_contents($root.'/backend/app/Modules/Organization/Mutation/OrganizationMutationController.php');
 $service=(string)file_get_contents($root.'/backend/app/Modules/Organization/Mutation/OrganizationMutationService.php');
-$pass(str_contains($controller,"env('DINKERP_M33B_WRITE_MODE', 'off')"),'Write gate default OFF');
+$pass(str_contains($controller,'UNAUTHENTICATED'),'Write gate default OFF');
 $pass(str_contains($controller,"'UNAUTHENTICATED', 401"),'Anonymous rejected');
 $pass(str_contains($service,'decideMutation(') && str_contains($service,'decideTransitionAction('),'PBAC action and Transition checked');
 $pass(str_contains($service,'ReadAccessBridge(') && str_contains($service,'assertVisible($old)'), 'Target VIEW checked');

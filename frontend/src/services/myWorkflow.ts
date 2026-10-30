@@ -5,7 +5,7 @@ import { apiClient } from '@/services/api'
 export const myWorkflowTypes = [
   'all', 'province', 'ward', 'organization', 'department', 'position', 'employee',
   'product_group', 'product_uom', 'product', 'price_list',
-  'organization_contact', 'employee_contact', 'customer', 'customer_contact',
+  'organization_contact', 'employee_contact', 'customer', 'customer_contact', 'supplier',
 ] as const
 export type MyWorkflowType = (typeof myWorkflowTypes)[number]
 

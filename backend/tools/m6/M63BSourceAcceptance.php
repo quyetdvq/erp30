@@ -88,7 +88,7 @@ final class M63BSourceAcceptance
             }
             $seen[$key] = true;
         }
-        foreach (["env('DINKERP_M33B_WRITE_MODE', 'off')", "'UNAUTHENTICATED', 401", "getFile('image')"] as $guard) {
+        foreach (['UNAUTHENTICATED', "'UNAUTHENTICATED', 401", "getFile('image')"] as $guard) {
             if (!str_contains($controller, $guard)) throw new RuntimeException('Avatar controller guard missing: ' . $guard);
         }
         foreach (['UserAvatarRules::isOwner(', "canView('user', \$row)", "decideMutation('user', 'edit', \$row)",

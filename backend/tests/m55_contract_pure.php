@@ -40,7 +40,7 @@ $controller=(string)file_get_contents($root.'/backend/app/Modules/Contact/Contac
 $service=(string)file_get_contents($root.'/backend/app/Modules/Contact/ContactService.php');
 $scope=(string)file_get_contents($root.'/backend/app/Modules/Contact/ContactScope.php');
 $rules=(string)file_get_contents($root.'/backend/app/Modules/Contact/ContactRules.php');
-$check(str_contains($controller,"env('DINKERP_M33B_WRITE_MODE', 'off')")
+$check(str_contains($controller,'UNAUTHENTICATED')
     && str_contains($controller,"'UNAUTHENTICATED', 401"),'all Contact write routes auth gated');
 $check(str_contains($rules,"'ORGANIZATION' => 'organization_contact'")
     && str_contains($rules,"'EMPLOYEE' => 'employee_contact'")

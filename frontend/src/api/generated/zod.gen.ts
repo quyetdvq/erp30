@@ -1142,9 +1142,196 @@ export const zOrganizationPatch = z.object({
     active_to: z.iso.date().optional()
 });
 
+export const zSupplierType = z.enum(['INDIVIDUAL', 'COMPANY']);
+
+export const zSupplierGroupCode = z.enum(['STANDARD']);
+
+export const zSupplierPaymentTerm = z.enum([
+    'IMMEDIATE',
+    'NET15',
+    'NET30',
+    'NET60'
+]);
+
+/**
+ * Persisted UINT32 CAS version from MariaDB; may be serialized as an integer or decimal string.
+ */
+export const zSupplierRowVersion = z.union([
+    z.int().gte(1).lte(4294967295),
+    z.string().regex(/^[1-9][0-9]{0,9}$/)
+]);
+
+/**
+ * Required exact CAS version; integer JSON input, not a string or optional hint.
+ */
+export const zSupplierExpectedVersion = z.int().gte(1).lte(4294967294);
+
+export const zSupplierCompanyIdList = z.array(zPositiveBigInt).max(512);
+
+/**
+ * Authorized Supplier list/detail/response DTO. Never includes Bank ciphertext, metadata, account number or History; Company Usage is not a PBAC grant.
+ */
+export const zSupplier = z.object({
+    id: zPositiveBigInt,
+    supplier_code: z.string().max(50),
+    name: z.string().max(255),
+    supplier_type: zSupplierType,
+    supplier_group_code: zSupplierGroupCode,
+    phone: z.string().max(50),
+    email: z.string().nullish(),
+    tax_code: z.string().nullish(),
+    address: z.string().optional(),
+    province_id: zPositiveBigInt.optional(),
+    ward_id: zPositiveBigInt.optional(),
+    payment_term_code: zSupplierPaymentTerm.nullish(),
+    all_companies: z.union([
+        z.boolean(),
+        z.literal(0),
+        z.literal(1),
+        z.literal('0'),
+        z.literal('1')
+    ]),
+    company_ids: zSupplierCompanyIdList.optional(),
+    status: zBusinessWorkflowStatus,
+    row_version: zSupplierRowVersion,
+    created_at: z.string().optional(),
+    updated_at: z.string().nullish(),
+    allowed_actions: z.object({
+        edit: z.boolean().optional(),
+        setstate: z.boolean().optional()
+    }).optional(),
+    setstate_targets: z.array(zBusinessWorkflowStatus).max(1).optional()
+});
+
+export const zSupplierCreate = z.object({
+    name: z.string().min(1).max(255),
+    supplier_type: zSupplierType,
+    supplier_group_code: zSupplierGroupCode.optional(),
+    phone: z.string().min(1).max(50),
+    email: z.string().nullish(),
+    tax_code: z.string().nullish(),
+    address: z.string().min(1),
+    province_id: zPositiveBigInt,
+    ward_id: zPositiveBigInt,
+    payment_term_code: zSupplierPaymentTerm.nullish(),
+    supplier_code: z.string().max(50).optional(),
+    numbering_series_code: z.string().optional(),
+    all_companies: z.boolean(),
+    company_ids: zSupplierCompanyIdList
+});
+
+/**
+ * Patch profile only. No Supplier code, owner, State, Company Usage or Bank data.
+ */
+export const zSupplierPatch = z.object({
+    expected_version: zSupplierExpectedVersion,
+    name: z.string().min(1).max(255).optional(),
+    supplier_type: zSupplierType.optional(),
+    supplier_group_code: zSupplierGroupCode.optional(),
+    phone: z.string().min(1).max(50).optional(),
+    email: z.string().nullish(),
+    tax_code: z.string().nullish(),
+    address: z.string().min(1).optional(),
+    province_id: zPositiveBigInt.optional(),
+    ward_id: zPositiveBigInt.optional(),
+    payment_term_code: zSupplierPaymentTerm.nullish()
+});
+
+export const zSupplierCompanyUsage = z.object({
+    all_companies: z.boolean(),
+    company_ids: zSupplierCompanyIdList,
+    row_version: z.string().regex(/^[1-9][0-9]{0,9}$/)
+});
+
+export const zSupplierCompanyUsagePut = z.object({
+    expected_version: zSupplierExpectedVersion,
+    all_companies: z.boolean(),
+    company_ids: zSupplierCompanyIdList
+});
+
+export const zSupplierSetState = z.object({
+    expected_version: zSupplierExpectedVersion,
+    status: zBusinessWorkflowStatus
+});
+
+export const zSupplierResponse = zSuccessResponse.and(z.object({
+    data: zSupplier.optional()
+}));
+
+export const zSupplierCollectionResponse = zCollectionResponse.and(z.object({
+    data: z.array(zSupplier).optional()
+}));
+
+export const zSupplierCompanyUsageResponse = zSuccessResponse.and(z.object({
+    data: zSupplierCompanyUsage.optional()
+}));
+
+/**
+ * HIS-POL-002 compact tuple [old,new] for safe scalar codes/counts or empty object {} for redacted change.
+ */
+export const zSupplierHistoryChangeValue = z.union([
+    z.tuple([z.union([
+            z.string(),
+            z.int(),
+            z.number(),
+            z.boolean()
+        ]).nullable(), z.union([
+            z.string(),
+            z.int(),
+            z.number(),
+            z.boolean()
+        ]).nullable()]),
+    z.record(z.string(), z.never())
+]);
+
+/**
+ * Immutable redacted event for Supplier master. No raw profile PII, bank payload, PUR/FIN document or bank credentials.
+ */
+export const zSupplierHistoryEvent = z.object({
+    id: zPositiveBigInt,
+    resource_type: z.literal('supplier'),
+    resource_id: zPositiveBigInt,
+    event_type: z.enum([
+        'CREATE',
+        'UPDATE',
+        'STATE_CHANGE',
+        'SENSITIVE_CHANGE',
+        'SUBMIT',
+        'APPROVE',
+        'REJECT',
+        'DELETE',
+        'RESTORE'
+    ]),
+    action_code: z.string().nullable(),
+    status_before: zBusinessWorkflowStatus.nullable(),
+    status_after: zBusinessWorkflowStatus.nullable(),
+    changes: z.record(z.string(), zSupplierHistoryChangeValue).nullable(),
+    checkpoint: z.record(z.string(), z.unknown()).nullable(),
+    actor_user_id: zPositiveBigInt.nullable(),
+    actor_type: z.enum(['USER', 'SYSTEM']),
+    actor_username: z.string().nullish(),
+    actor_full_name: z.string().nullish(),
+    request_id: z.string(),
+    created_at: z.iso.datetime()
+});
+
+export const zSupplierHistoryCollectionResponse = zCollectionResponse.and(z.object({
+    data: z.array(zSupplierHistoryEvent).optional()
+}));
+
+/**
+ * Persisted Shared Contact owner; never confers PBAC. CUSTOMER/SUPPLIER additionally require independent parent VIEW and trusted GROUP scope.
+ */
+export const zContactOwnerType = z.enum([
+    'EMPLOYEE',
+    'ORGANIZATION',
+    'CUSTOMER',
+    'SUPPLIER'
+]);
+
 export const zContact = z.object({
     id: zBigInt,
-    contact_type: z.enum(['EMPLOYEE', 'ORGANIZATION']),
+    contact_type: zContactOwnerType,
     contact_ref_id: zBigInt,
     description: z.string().nullish(),
     status: zBusinessWorkflowStatus,
@@ -1156,14 +1343,18 @@ export const zContact = z.object({
     province_id: zBigInt.optional(),
     ward_id: zBigInt.optional(),
     province_name: z.string().nullish(),
-    ward_name: z.string().nullish()
+    ward_name: z.string().nullish(),
+    allowed_actions: z.object({
+        edit: z.boolean().optional(),
+        setstate: z.boolean().optional()
+    }).optional()
 });
 
 /**
- * Owner type selects organization_contact or employee_contact. Backend derives initial status from the configured Lifecycle (DRAFT for BASIC); without a Lifecycle, defaults to native ACTIVE. Other owner kinds are denied.
+ * Shared Contact CREATE supports EMPLOYEE, ORGANIZATION, CUSTOMER and SUPPLIER. The backend checks canonical Contact CREATE, persisted parent VIEW and trusted GROUP scope; it derives initial State from the Contact owner Lifecycle. Missing configuration fails with WF_INITIAL_STATE_REQUIRED (never implicitly ACTIVE). Owner/status cannot be changed through PATCH.
  */
 export const zContactCreate = z.object({
-    contact_type: z.enum(['EMPLOYEE', 'ORGANIZATION']),
+    contact_type: zContactOwnerType,
     contact_ref_id: zBigInt,
     description: z.string().optional(),
     name: z.string().optional(),
@@ -1862,6 +2053,8 @@ export const zLifecycleCollection = zCollectionResponse.and(z.object({
 
 export const zNullableBigIntWritable = zBigInt.nullable();
 
+export const zSupplierCompanyIdListWritable = z.array(zPositiveBigInt).max(512);
+
 export const zUserIdentityCreateWritable = z.object({
     username: z.string().min(1).max(30),
     email: z.email(),
@@ -1906,6 +2099,28 @@ export const zBusinessWorkflowResource = z.enum([
     'price_list',
     'organization_contact',
     'employee_contact'
+]);
+
+/**
+ * M11 read/assignment targets only. The Supplier option is NOT authorized for generic business-workflow execution; Supplier SetState requires CAS.
+ */
+export const zWorkflowNotificationResource = z.enum([
+    'province',
+    'ward',
+    'organization',
+    'department',
+    'position',
+    'employee',
+    'product_group',
+    'product_uom',
+    'product',
+    'price_list',
+    'organization_contact',
+    'employee_contact',
+    'customer',
+    'customer_contact',
+    'supplier_contact',
+    'supplier'
 ]);
 
 export const zBusinessWorkflowActionCode = z.string().regex(/^[a-z][a-z0-9_:-]*$/);
@@ -2067,6 +2282,101 @@ export const zProductImportStart2 = zProductImportStart;
 export const zDisplaySettingsPatch2 = zDisplaySettingsPatch;
 
 export const zDisplaySettingsReset2 = zDisplaySettingsReset;
+
+export const zListSuppliersQuery = z.object({
+    page: z.int().gte(1).optional().default(1),
+    page_size: z.int().gte(1).lte(100).optional().default(25),
+    q: z.string().max(1024).optional(),
+    status: zBusinessWorkflowStatus.optional(),
+    supplier_type: zSupplierType.optional(),
+    supplier_group_code: zSupplierGroupCode.optional(),
+    company_id: zPositiveBigInt.optional(),
+    sort: z.enum([
+        'name',
+        '-name',
+        'supplier_code',
+        '-supplier_code',
+        'id',
+        '-id'
+    ]).optional().default('name')
+});
+
+/**
+ * Authorized Supplier page
+ */
+export const zListSuppliersResponse = zSupplierCollectionResponse;
+
+export const zCreateSupplierBody = zSupplierCreate;
+
+/**
+ * Created Supplier
+ */
+export const zCreateSupplierResponse = zSupplierResponse;
+
+export const zGetSupplierPath = z.object({
+    id: zPositiveBigInt
+});
+
+/**
+ * Supplier profile
+ */
+export const zGetSupplierResponse = zSupplierResponse;
+
+export const zUpdateSupplierBody = zSupplierPatch;
+
+export const zUpdateSupplierPath = z.object({
+    id: zPositiveBigInt
+});
+
+/**
+ * Updated Supplier
+ */
+export const zUpdateSupplierResponse = zSupplierResponse;
+
+export const zGetSupplierCompanyUsagesPath = z.object({
+    id: zPositiveBigInt
+});
+
+/**
+ * Supplier Company Usage
+ */
+export const zGetSupplierCompanyUsagesResponse = zSupplierCompanyUsageResponse;
+
+export const zReplaceSupplierCompanyUsagesBody = zSupplierCompanyUsagePut;
+
+export const zReplaceSupplierCompanyUsagesPath = z.object({
+    id: zPositiveBigInt
+});
+
+/**
+ * Updated Supplier
+ */
+export const zReplaceSupplierCompanyUsagesResponse = zSupplierResponse;
+
+export const zSetSupplierStateBody = zSupplierSetState;
+
+export const zSetSupplierStatePath = z.object({
+    id: zPositiveBigInt
+});
+
+/**
+ * Transitioned Supplier
+ */
+export const zSetSupplierStateResponse = zSupplierResponse;
+
+export const zListSupplierChangeHistoryPath = z.object({
+    id: zPositiveBigInt
+});
+
+export const zListSupplierChangeHistoryQuery = z.object({
+    page: z.int().gte(1).optional().default(1),
+    page_size: z.int().gte(1).lte(50).optional().default(25)
+});
+
+/**
+ * Authorized redacted Supplier events
+ */
+export const zListSupplierChangeHistoryResponse = zSupplierHistoryCollectionResponse;
 
 export const zGetHealthHeaders = z.object({
     'Accept-Language': z.enum(['vi', 'en']).optional().default('vi'),
@@ -3855,7 +4165,11 @@ export const zGetWorkflowNotificationAssigneesPath = z.object({
         'product',
         'price_list',
         'organization_contact',
-        'employee_contact'
+        'employee_contact',
+        'customer',
+        'customer_contact',
+        'supplier_contact',
+        'supplier'
     ]),
     id: zBigInt
 });
@@ -3880,7 +4194,11 @@ export const zReplaceWorkflowNotificationAssigneesPath = z.object({
         'product',
         'price_list',
         'organization_contact',
-        'employee_contact'
+        'employee_contact',
+        'customer',
+        'customer_contact',
+        'supplier_contact',
+        'supplier'
     ]),
     id: zBigInt
 });
@@ -3889,6 +4207,51 @@ export const zReplaceWorkflowNotificationAssigneesPath = z.object({
  * Explicit per-target assignee set and optimistic revision.
  */
 export const zReplaceWorkflowNotificationAssigneesResponse = zWorkflowNotificationAssigneesResponse;
+
+export const zListWorkflowAssigneeCandidatesPath = z.object({
+    resource: z.enum([
+        'province',
+        'ward',
+        'organization',
+        'department',
+        'position',
+        'employee',
+        'product_group',
+        'product_uom',
+        'product',
+        'price_list',
+        'organization_contact',
+        'employee_contact',
+        'customer',
+        'customer_contact',
+        'supplier_contact',
+        'supplier'
+    ]),
+    id: zBigInt
+});
+
+export const zListWorkflowAssigneeCandidatesQuery = z.object({
+    q: z.string().max(100).optional(),
+    ids: z.string().max(500).optional(),
+    page: z.int().gte(1).lte(10000).optional().default(1),
+    page_size: z.int().gte(1).lte(50).optional().default(25)
+});
+
+/**
+ * Bounded active-user candidates; not a permission grant.
+ */
+export const zListWorkflowAssigneeCandidatesResponse = z.object({
+    data: z.array(z.object({
+        id: zBigInt,
+        username: z.string(),
+        name: z.string().nullable()
+    })),
+    meta: z.object({
+        page: z.int().gte(1).optional(),
+        page_size: z.int().gte(1).lte(50).optional(),
+        total: z.int().gte(0).optional()
+    })
+});
 
 export const zGetNotificationRuntimeConfigurationHeaders = z.object({
     'Accept-Language': z.enum(['vi', 'en']).optional().default('vi'),
@@ -4041,7 +4404,11 @@ export const zListOwnActionableWorkflowsQuery = z.object({
         'product',
         'price_list',
         'organization_contact',
-        'employee_contact'
+        'employee_contact',
+        'customer',
+        'customer_contact',
+        'supplier_contact',
+        'supplier'
     ]).optional().default('all'),
     page_size: z.int().gte(1).lte(20).optional().default(10),
     cursor: z.string().max(1024).optional()

@@ -357,8 +357,10 @@ watch(() => auth.user?.id, (userId) => {
               <template #icon>
                 <NIcon><AlertCircleOutline /></NIcon>
               </template>
-              <strong>{{ t(`errors.status.${notice.status}`) }}</strong>
-              <span>{{ notice.message || t('errors.defaultMessage') }}</span>
+              <strong>{{ notice.code === 'SUPPLIER_API_NOT_ENABLED'
+                ? t('supplier.apiNotEnabledTitle') : t(`errors.status.${notice.status}`) }}</strong>
+              <span class="error-copy">{{ notice.code === 'SUPPLIER_API_NOT_ENABLED'
+                ? t('supplier.apiNotEnabledMessage') : (notice.message || t('errors.defaultMessage')) }}</span>
               <small v-if="notice.code || notice.requestId" class="error-meta">
                 {{ notice.code || t('errors.unknownCode')
                 }}<span v-if="notice.requestId"> · {{ notice.requestId }}</span>

@@ -18,8 +18,8 @@ foreach([
     'Workflow/Execution/BusinessWorkflowController.php',
 ] as $rel) {
     $code=$source('backend/app/Modules/'.$rel);
-    $check(str_contains($code,"env('DINKERP_M33B_WRITE_MODE'") && str_contains($code,"'ACCESS_MUTATION_NOT_ENABLED', 403"),
-        $rel.' write gate OFF returns 403');
+    $check(str_contains($code, 'UNAUTHENTICATED') && !str_contains($code, 'ACCESS_MUTATION_NOT_ENABLED'),
+        $rel.' requires authenticated service mutation');
     $check(strpos($code,'!$actor instanceof User') < strpos($code,'new '.(str_contains($rel,'Settings/')?'DisplaySettingsService':(str_contains($rel,'Numbering/')?'NumberingService':'BusinessWorkflowService')).'($actor)'),
         $rel.' refuses unauthenticated before service construction');
 }

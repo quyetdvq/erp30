@@ -40,26 +40,24 @@ $check(str_contains($harness,"\$this->root.'/backend/tools/m42/router.php'")
     'M4 subprocesses use isolated M4 child bootstrap');
 $check(str_contains($paths,"\$root . '/writable/m42/run_'")
     && str_contains($paths,"\$root . '/writable/m42'")
-    && str_contains($paths,"['off', 'enabled']")
     && str_contains($paths,"\$paths->envDirectory = \$directory;"),
-    'M4 child uses empty nonce-owned m42 envDirectory for both write modes');
+    'M4 child uses empty nonce-owned envDirectory');
 $check(str_contains($cliChild,'M42ChildPaths::forSandbox')
     && str_contains($webChild,'M42ChildPaths::forSandbox'),
     'both M4 CI4 bootstrap entrypoints are guarded');
-$check(str_contains($router,"in_array(\$writeFlag, ['off', 'enabled'], true)")
-    && str_contains($router,"\$marker = \$db->query")
+$check(str_contains($router,"\$marker = \$db->query")
     && str_contains($router,"hash_equals(\$nonce, \$marker)")
     && str_contains($router,"\$database === \$ciSchema && \$database === \$testSchema"),
-    'M4 HTTP router attests every request even when mutation flag is off');
-$check(str_contains($m3Router,"\$writeFlag === 'enabled'")
-    && str_contains($m3Paths,"getenv('DINKERP_M33B_WRITE_MODE') !== 'enabled'"),
-    'M3.4B production-safety test router retains enabled-only guard');
-$check(str_contains($harness,"\$this->attestChild(\$this->childEnvironment('enabled'))")
-    && str_contains($harness,"\$this->startServer(\$port,\$this->childEnvironment('off'),'off')"),
-    'enabled CLI attestation followed by explicit off-mode M4 HTTP gate test');
-$check(str_contains($harness,"'DINKERP_M33B_WRITE_MODE'=>\$writeMode")
-    && str_contains($harness,"\$this->childEnvironment('off')")
-    && str_contains($harness,"\$this->childEnvironment('enabled')"), 'sandbox write gate tested in both states');
+    'M4 HTTP router attests nonce-owned schema on every request');
+$check(str_contains($m3Router,"hash_equals(\$nonce, \$marker)")
+    && str_contains($m3Paths,"getenv('M34B_ONLY_NONCE')"),
+    'M3.4B router and CLI still require disposable schema nonce');
+$check(str_contains($harness,"\$this->attestChild(\$environment)")
+    && str_contains($harness,"\$this->startServer(\$port, \$environment, 'sandbox')"),
+    'M4 HTTP tests only start after nonce-owned schema attestation');
+$check(!str_contains($harness, 'probeGateOff(')
+    && str_contains($harness,"'legacy_write_gate_probes'=>'RETIRED_NOT_APPLICABLE'"),
+    'old write-toggle test retired rather than claiming fake denial coverage');
 $check(str_contains($harness,"'two_writer_concurrency'=>'NOT_TESTED'")
     && str_contains($harness,"'independent_baseline_live_parity'=>'NOT_TESTED'"), 'no fake parity/concurrency pass');
 $check(str_contains($runner,"'production_write'=>'BLOCKED'") && str_contains($runner,"'status'=>'BLOCKED_ENV'"), 'production remains fail-closed');
@@ -77,7 +75,7 @@ $check(str_contains($harness,"'workflow_absolute_deny'")
 $check(str_contains($harness,"\$this->positive===14")
     && str_contains($harness,"\$this->unauth===28")
     && str_contains($harness,"\$this->csrf===7")
-    && str_contains($harness,"\$this->gateOff===6"), 'M4 test verdict requires every counted probe');
+, 'M4 test verdict requires positive, anonymous and CSRF probes');
 $expected=M4SourceAcceptance::expected();
 $check(count($expected)===14,'pinned M4 contract has fourteen operations');
 foreach ($expected as [$controller,$method,$operationId,$status]) {

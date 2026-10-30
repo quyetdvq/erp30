@@ -29,10 +29,20 @@ foreach(['->created(\'customer\'','->updated(\'customer\'','->transitioned(\'cus
     $ok(str_contains($cus,$token),'CUS wired to History: '.$token);
 $ok(str_contains($cus,'$this->db->transCommit()'),'CUS owns commit');
 $routes=$get('app/Config/Routes/ApiV1/HistoryRoutes.php');
-$ok(substr_count($routes,'$routes->')===2 && str_contains($routes,'history/customers/(:num)')
-    && str_contains($routes,'history/monitor'), 'two explicit read-only history routes');
+$ok(substr_count($routes,'$routes->')===3 && str_contains($routes,'history/customers/(:num)')
+    && str_contains($routes,'history/suppliers/(:num)')
+    && str_contains($routes,'history/monitor'), 'three explicit read-only history routes');
 $approved=json_decode($get('tests/fixtures/routes_extensions_approved.json'),true,512,JSON_THROW_ON_ERROR);
-$ok($approved['modules']===['HistoryRoutes.php'] && count($approved['routes'])===2,'versioned route extension reviewed');
+$historyExtensions=array_values(array_filter($approved['routes'],static fn(array $route):bool =>
+    str_starts_with((string)($route['path']??''), 'api/v1/history/')));
+$ok(in_array('HistoryRoutes.php',$approved['modules'],true)
+    && count($historyExtensions)===3
+    && array_column($historyExtensions,'path')===[
+        'api/v1/history/customers/(:num)',
+        'api/v1/history/suppliers/(:num)',
+        'api/v1/history/monitor']
+    && array_column($historyExtensions,'method')===['GET','GET','GET'],
+    'original Customer/monitor History routes pinned; Supplier read additive');
 $ui=$get('../frontend/src/features/history/components/BusinessHistoryPanel.vue');
 $ok(str_contains($ui,'customerHistory') && str_contains($ui,'reportApiError'),'UI uses authenticated API and error boundary');
 $ok(!str_contains($ui,'v-html'),'UI never renders raw HTML history');

@@ -12,6 +12,8 @@ use InvalidArgumentException;
  * SQL-first Contact polymorphic owner authorization. An organization contact
  * uses its persisted org ID; an employee contact requires exactly ONE valid
  * current primary assignment, a real employee and a real organization.
+ * CUSTOMER/SUPPLIER Contacts use independent MASTER grants and canonical
+ * parent VIEW. Supplier owners additionally require a trusted GROUP-root match.
  * No synthetic organization_id is projected to the response.
  */
 final class ContactSql
@@ -88,8 +90,11 @@ final class ContactSql
         array $params, AuthorizedSqlScope $org, AuthorizedSqlScope $employee,
         string $utcDate, string $prefix = '',
         ?AuthorizedSqlScope $customerContact = null, ?AuthorizedSqlScope $customerMaster = null,
+        ?AuthorizedSqlScope $supplierContact = null, ?AuthorizedSqlScope $supplierMaster = null,
+        ?string $trustedGroupId = null,
     ): array {
-        $owner = self::ownerPredicate($org, $employee, $utcDate, $prefix, $customerContact, $customerMaster);
+        $owner = self::ownerPredicate($org, $employee, $utcDate, $prefix, $customerContact, $customerMaster,
+            $supplierContact, $supplierMaster, $trustedGroupId);
         $where = ['(' . $owner['sql'] . ')'];
         $binds = $owner['binds'];
         if ($params['q'] !== '') {
@@ -129,11 +134,14 @@ final class ContactSql
         string $id, AuthorizedSqlScope $org, AuthorizedSqlScope $employee,
         string $utcDate, string $prefix = '',
         ?AuthorizedSqlScope $customerContact = null, ?AuthorizedSqlScope $customerMaster = null,
+        ?AuthorizedSqlScope $supplierContact = null, ?AuthorizedSqlScope $supplierMaster = null,
+        ?string $trustedGroupId = null,
     ): array {
         if (preg_match('/\A[1-9][0-9]*\z/D', $id) !== 1) {
             throw new InvalidArgumentException('Invalid Contact detail ID.');
         }
-        $owner = self::ownerPredicate($org, $employee, $utcDate, $prefix, $customerContact, $customerMaster);
+        $owner = self::ownerPredicate($org, $employee, $utcDate, $prefix, $customerContact, $customerMaster,
+            $supplierContact, $supplierMaster, $trustedGroupId);
         return [
             'sql'=>'SELECT c.* FROM ' . self::table('contacts', $prefix)
                 . ' c WHERE (' . $owner['sql'] . ') AND c.id = ? LIMIT 1',
@@ -146,6 +154,8 @@ final class ContactSql
         AuthorizedSqlScope $orgScope, AuthorizedSqlScope $employeeScope,
         string $date, string $prefix,
         ?AuthorizedSqlScope $customerContact = null, ?AuthorizedSqlScope $customerMaster = null,
+        ?AuthorizedSqlScope $supplierContact = null, ?AuthorizedSqlScope $supplierMaster = null,
+        ?string $trustedGroupId = null,
     ): array {
         if ($orgScope->resource !== 'organization_contact' || $orgScope->domain !== 'ORGANIZATION'
             || $employeeScope->resource !== 'employee_contact' || $employeeScope->domain !== 'ORGANIZATION') {
@@ -192,12 +202,34 @@ final class ContactSql
                 . ' AND (' . $mScope['sql'] . '))';
             $customerBinds=[...$cScope['binds'],...$mScope['binds']];
         }
+        $supplier = '1=0';
+        $supplierBinds = [];
+        if ($supplierContact !== null || $supplierMaster !== null || $trustedGroupId !== null) {
+            if ($supplierContact === null || $supplierMaster === null || $trustedGroupId === null
+                || $supplierContact->resource !== 'supplier_contact' || $supplierContact->domain !== 'MASTER'
+                || $supplierMaster->resource !== 'supplier' || $supplierMaster->domain !== 'MASTER'
+                || preg_match('/\A[1-9][0-9]*\z/D', $trustedGroupId) !== 1
+                || strlen($trustedGroupId) > 20
+                || (strlen($trustedGroupId) === 20 && strcmp($trustedGroupId, '18446744073709551615') > 0)) {
+                throw new InvalidArgumentException('Invalid Supplier Contact or GROUP PBAC scope.');
+            }
+            // Contact's status is authorized against supplier_contact; parent
+            // status against supplier. Both must match canonical PBAC scope,
+            // and parent must belong to the SAME trusted server GROUP root.
+            $cScope = $supplierContact->predicate('c');
+            $mScope = $supplierMaster->predicate('su');
+            $supplier = "UPPER(TRIM(c.contact_type)) COLLATE utf8mb4_bin = 'SUPPLIER'"
+                . ' AND EXISTS (SELECT 1 FROM ' . self::table('suppliers', $prefix) . ' su'
+                . ' WHERE su.id = c.contact_ref_id AND su.group_organization_id = ?'
+                . ' AND (' . $cScope['sql'] . ') AND (' . $mScope['sql'] . '))';
+            $supplierBinds = [$trustedGroupId, ...$cScope['binds'], ...$mScope['binds']];
+        }
         return [
-            'sql'=>'((' . $organization . ') OR (' . $employee . ') OR (' . $customer . '))',
+            'sql'=>'((' . $organization . ') OR (' . $employee . ') OR (' . $customer . ') OR (' . $supplier . '))',
             'binds'=>[
                 ...$orgPredicate['binds'],
                 'ACTIVE', $date, $date, 'ACTIVE', $date, $date,
-                ...$employeePredicate['binds'],...$customerBinds,
+                ...$employeePredicate['binds'], ...$customerBinds, ...$supplierBinds,
             ],
         ];
     }

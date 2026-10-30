@@ -71,8 +71,8 @@ $assert(str_contains($verifier, "'customer_contact',\$access->viewableMasterLife
     'audit compiles canonical Customer Contact permissions');
 $assert(str_contains($verifier, "'customer',\$access->viewableMasterLifecycleStatuses('customer')"),
     'audit compiles canonical Customer parent permissions');
-$assert(substr_count($verifier, '$date,$prefix,$customerContact,$customerMaster)') === 2,
-    'audit passes both Customer scopes to list and detail');
+$assert(substr_count($verifier, '$date,$prefix,$customerContact,$customerMaster,$supplierContact,$supplierMaster,$group)') === 2,
+    'audit passes both Customer and Supplier scopes plus trusted GROUP to list and detail');
 $assert(str_contains($verifier, 'if ($target[\'resource\'] !== \'customer_contact\') return true;'),
     'audit distinguishes Customer from other Contact types');
 $assert(str_contains($verifier, "\$access->canView('customer', \$parent)"), 'audit checks Customer parent VIEW independently');
@@ -82,8 +82,9 @@ $assert(str_contains($verifier, 'SET TRANSACTION READ ONLY') && str_contains($ve
     'M8.7 is still read-only with rollback');
 
 // Deliberate local mutation: removing the fourth scope must fail this gate.
-$mutant = str_replace('$date,$prefix,$customerContact,$customerMaster)', '$date,$prefix,$customerContact)', $verifier);
-$assert(substr_count($mutant, '$date,$prefix,$customerContact,$customerMaster)') !== 2,
-    'omitted Customer parent scope is caught');
+$mutant = str_replace('$date,$prefix,$customerContact,$customerMaster,$supplierContact,$supplierMaster,$group)',
+    '$date,$prefix,$customerContact,$supplierContact,$supplierMaster,$group)', $verifier);
+$assert(substr_count($mutant, '$date,$prefix,$customerContact,$customerMaster,$supplierContact,$supplierMaster,$group)') !== 2,
+    'omitted Customer parent scope is caught while Supplier scope remains required');
 
 echo 'M19.25A CONTACT AUDIT: ' . $tests . '/' . $tests . " PASS\n";

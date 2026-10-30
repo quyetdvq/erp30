@@ -18,7 +18,7 @@ $pass(count(array_filter(M5SourceAcceptance::operations(), static fn($op) => $op
 $controller = (string) file_get_contents($root . '/backend/app/Modules/Locations/Mutation/LocationMutationController.php');
 $service = (string) file_get_contents($root . '/backend/app/Modules/Locations/Mutation/LocationMutationService.php');
 $routes = (string) \DinkERP\Tools\Routes\LegacyRouteSource::source($root, 'M5Routes.php');
-$pass(str_contains($controller, "env('DINKERP_M33B_WRITE_MODE', 'off')") && str_contains($controller, "'ACCESS_MUTATION_NOT_ENABLED', 403"), 'Existing write gate is default OFF');
+$pass(str_contains($controller, 'UNAUTHENTICATED') && !str_contains($controller, 'ACCESS_MUTATION_NOT_ENABLED'), 'Authenticate and use service PBAC rather than temporary write toggle');
 $pass(strpos($controller, '! $actor instanceof User') < strpos($controller, 'new LocationMutationService($actor)'), 'Reject anonymous before service construction');
 $pass(str_contains($service, 'decideMutation(') && str_contains($service, 'decideTransitionAction('), 'Mutation and transition permissions are independently checked');
 $pass(str_contains($service, 'ReadAccessBridge(') && str_contains($service, 'assertVisible($type, $old)'), 'Read VIEW gate reused before editing');

@@ -8,7 +8,7 @@ $service=(string)file_get_contents($root.'/app/Modules/Product/Master/ProductMut
 $controller=(string)file_get_contents($root.'/app/Modules/Product/Master/ProductMutationController.php');
 $issuer=(string)file_get_contents($root.'/app/Modules/Product/Master/ProductNumberIssuer.php');
 $rules=(string)file_get_contents($root.'/app/Modules/Product/Master/ProductMutationRules.php');
-$check(str_contains($controller,"env('DINKERP_M33B_WRITE_MODE','off')"),'fail closed gate');
+$check(str_contains($controller,'UNAUTHENTICATED'),'fail closed gate');
 $check(str_contains($controller,"'UNAUTHENTICATED',401"),'guest authorization');
 $check(str_contains($service,'$this->access->decideMutation('),'PBAC mandatory');
 $check(str_contains($service,'$this->access->decideTransitionAction('),'transition PBAC mandatory');

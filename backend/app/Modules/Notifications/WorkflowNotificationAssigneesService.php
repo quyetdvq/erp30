@@ -156,9 +156,16 @@ final class WorkflowNotificationAssigneesService
     /** @return array<string,mixed> */
     private function target(string $resource, string $id, bool $lock): array
     {
-        $table = BusinessWorkflowRules::table($resource);
+        // M11 may read/lock Supplier without granting a generic Workflow write adapter.
+        $supplier = $resource === 'supplier';
+        $table = $supplier ? SupplierNotificationTarget::TABLE : BusinessWorkflowRules::table($resource);
         $id = BusinessWorkflowRules::id($id);
         $builder = $this->db->table($table)->where('id', $id);
+        if ($supplier) {
+            // This restriction precedes even the row lock and PBAC evaluation.
+            $builder->select('id,group_organization_id,status,row_version')
+                ->where('group_organization_id', $this->access->trustedGroupRootId());
+        }
         $result = $lock ? $this->db->query($builder->getCompiledSelect() . ' FOR UPDATE') : $builder->get();
         if ($result === false) {
             throw new RuntimeException('M11_WORKFLOW_ASSIGNMENT_TARGET_READ_FAILED');
@@ -177,6 +184,14 @@ final class WorkflowNotificationAssigneesService
             }
             if (!$this->access->canView('customer', $parent)) {
                 throw new DomainException('AUTH_POLICY_DENIED');
+            }
+        }
+        if ($resource === 'supplier_contact') {
+            $parentQuery = $this->db->table('suppliers')->select('id,group_organization_id,status')
+                ->where('id', $row['contact_ref_id'])->get();
+            $parent = $parentQuery === false ? null : $parentQuery->getRowArray();
+            if (!\App\Modules\Contact\SupplierContactParentView::allowed($this->access, $parent)) {
+                throw new DomainException('WF_TARGET_NOT_FOUND');
             }
         }
         // Workflow OPTIONS and M11 assignee mutations must evaluate exactly

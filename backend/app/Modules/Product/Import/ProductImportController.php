@@ -18,9 +18,6 @@ final class ProductImportController extends Controller
     {
         $actor=$this->actor();
         if ($actor===null) return ApiResponder::error($this->response,'UNAUTHENTICATED',401);
-        if (strtolower((string)env('DINKERP_M33B_WRITE_MODE','off'))!=='enabled') {
-            return ApiResponder::error($this->response,'ACCESS_MUTATION_NOT_ENABLED',403);
-        }
         $file=$this->request->getFile('file');
         if ($file===null || !$file->isValid()) {
             throw new DomainException('IMPORT_FILE_REQUIRED');

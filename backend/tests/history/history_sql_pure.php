@@ -25,11 +25,13 @@ $ok(str_contains($plan['count_sql'], 'h.owner_domain = \'MASTER\''),'owner const
 $ok(str_ends_with($plan['rows_sql'],'ORDER BY h.id DESC LIMIT ? OFFSET ?'),'indexed page');
 $ok($plan['count_binds']===['customer','42'],'count binds');
 $ok($plan['rows_binds']===['customer','42',25,25],'page bounds');
+$supplier=Sql::forVisibleParent('supplier','43',$p,'dinktech_');
+$ok($supplier['count_binds']===['supplier','43'] && $supplier['rows_binds']===['supplier','43',25,25], 'supplier bounded independently from customer');
 $ok(substr_count($plan['count_sql'],'?')===count($plan['count_binds']),'all count values bound');
 $ok(substr_count($plan['rows_sql'],'?')===count($plan['rows_binds']),'all row values bound');
 $ok(!str_contains($plan['rows_sql'],'SELECT h.*'),'narrow projection');
 foreach([['page'=>0],['page'=>[]],['page_size'=>51],['page'=>1000000],['sort'=>'status'],['resource'=>'supplier'],['page'=>'1 OR 1=1']] as $invalid){$bad(static fn()=>Sql::params($invalid));}
-foreach([['supplier','42','dinktech_'],['customer','0','dinktech_'],['customer','42','x`evil'],['customer','42','a-b']] as [$resource,$id,$prefix]){
+foreach([['product','42','dinktech_'],['customer','0','dinktech_'],['customer','42','x`evil'],['customer','42','a-b']] as [$resource,$id,$prefix]){
   try{Sql::forVisibleParent($resource,$id,$p,$prefix);throw new RuntimeException('Unreviewed history SQL approved');}
   catch(InvalidArgumentException){$ok(true,'unreviewed parent/prefix denied');}
 }

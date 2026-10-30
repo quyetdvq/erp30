@@ -148,8 +148,10 @@ final class NotificationPushWorker
             if ((string) $event['event_type'] === 'workflow.action_required') {
                 try {
                     $payload = WorkflowNotificationRules::decode((string) $event['payload_json']);
-                    $live = (new BusinessWorkflowService(new User($user), $this->db))
-                        ->options($payload['resource_type'], (string) $event['source_id']);
+                    $live = $payload['resource_type'] === 'supplier'
+                        ? SupplierNotificationTarget::options(new User($user), $this->db, (string) $event['source_id'])
+                        : (new BusinessWorkflowService(new User($user), $this->db))
+                            ->options($payload['resource_type'], (string) $event['source_id']);
                     if ($live['current'] !== $payload['to_state'] || $live['options'] === []) {
                         return $this->terminal($id, $token, 'CANCELLED', 'M11_PUSH_WORKFLOW_STALE');
                     }

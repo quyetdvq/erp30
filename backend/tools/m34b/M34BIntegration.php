@@ -114,7 +114,7 @@ final class M34BIntegration
         // Filter child environment: do not propagate production DB credentials,
         // OAuth tokens, unrelated secrets, or a caller's production write flags.
         return [
-            ...$env, 'CI_ENVIRONMENT'=>'development', 'DINKERP_M33B_WRITE_MODE'=>'enabled',
+            ...$env, 'CI_ENVIRONMENT'=>'development',
             'M34B_ONLY_SCHEMA'=>$this->sandbox->name, 'M34B_ONLY_NONCE'=>$this->sandbox->nonce,
             'app.baseURL'=>$this->origin, 'app.forceGlobalSecureRequests'=>'false',
             'database.default.hostname'=>'127.0.0.1',

@@ -1,6 +1,5 @@
 import type { ListQuery } from '@/components/lists/listTypes'
-
-type ContactOwnerType = 'EMPLOYEE' | 'ORGANIZATION'
+import type { ContactOwnerType } from './contactOwnerPolicy'
 
 /**
  * Single authorized Contact page, always scoped to the parent owner.
