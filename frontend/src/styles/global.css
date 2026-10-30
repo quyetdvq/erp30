@@ -812,6 +812,44 @@ a {
   }
 }
 
+/* FE-STD-01: fixed-height workspace for detail dialogs with multiple tabs.
+   Attach only to the detail dialog, never to create/edit or nested forms.
+   The dialog header, tabs, and footer remain fixed; only its content scrolls.
+   Keep 40px outside the dialog to match the shared 20px backdrop padding. */
+.tabbed-detail-workspace {
+  height: min(760px, calc(100vh - 40px));
+  height: min(760px, calc(100dvh - 40px));
+  min-height: 0;
+  min-width: 0;
+  overflow: hidden;
+}
+
+.tabbed-detail-workspace > :is(
+  .modal-card__header, .detail-header, .detail-back,
+  .modal-card__footer, .detail-footer,
+  .detail-tabs, .workflow-tabs, .security-tabs
+) {
+  flex: 0 0 auto;
+  min-width: 0;
+}
+
+.tabbed-detail-workspace > :is(
+  .modal-card__body, .detail-body, .tabbed-detail-workspace__body
+) {
+  flex: 1 1 auto;
+  min-height: 0;
+  min-width: 0;
+  overflow-y: auto;
+  overflow-x: auto;
+  overscroll-behavior: contain;
+  scrollbar-gutter: stable;
+}
+
+.tabbed-detail-workspace > :is(.detail-tabs, .security-tabs, .workflow-tabs) {
+  overflow-x: auto;
+  white-space: nowrap;
+}
+
 .modal-backdrop {
   position: fixed;
   inset: 0;

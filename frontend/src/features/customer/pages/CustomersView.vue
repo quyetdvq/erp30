@@ -4,11 +4,12 @@ import { useI18n } from 'vue-i18n'
 import { useRoute, useRouter } from 'vue-router'
 
 import { rowAllowedActions } from '@/components/lists/rowActionPolicy'
-import { ListPagination, ListQueryControls, ListShell, ListTable, TableRowActions } from '@/components/lists'
+import { ListPagination, ListQueryControls, ListShell, ListTable, TableRowActions, TableStatus } from '@/components/lists'
 import type { ListColumn, ListFilterDefinition, ListQuery } from '@/components/lists/listTypes'
 import { CUSTOMER_PAGE_SIZE_OPTIONS } from '@/components/lists/listPageSizePolicy'
 import { useListState } from '@/composables/useListState'
 import { useBasePermission } from '@/composables/useBasePermission'
+import { useBusinessWorkflowStates } from '@/composables/useBusinessWorkflowStates'
 import { reportApiError } from '@/services/errorBoundary'
 import {
   CUSTOMER_GROUPS,
@@ -19,20 +20,22 @@ import {
 } from '@/services/customer'
 import CustomerDetailView from './CustomerDetailView.vue'
 
-const { t } = useI18n()
+const { t, te } = useI18n()
 const route = useRoute()
 const router = useRouter()
 const { hasBasePermission } = useBasePermission()
 const state = useListState<Customer>(listCustomerPage, { sort: 'name' })
 const error = ref<unknown | null>(null)
 const companies = ref<Company[]>([])
+const { options: statusOptions } = useBusinessWorkflowStates('customer', [])
+const statusLabel = (code: string): string => {
+  const key = `status.${code.toLowerCase()}`
+  return te(key) ? t(key) : code
+}
 const detailOpen = computed(() => ['customers-new', 'customers-edit', 'customers-detail'].includes(String(route.name)))
 
 const filters = computed<ListFilterDefinition[]>(() => [
-  { key: 'status', labelKey: 'customer.status', type: 'select', options: [
-    { value: 'ACTIVE', labelKey: 'status.active' },
-    { value: 'INACTIVE', labelKey: 'status.inactive' },
-  ] },
+  { key: 'status', labelKey: 'customer.status', type: 'select', options: statusOptions.value },
   { key: 'customer_type', labelKey: 'customer.type', type: 'select', options: [
     { value: 'ORGANIZATION', labelKey: 'customer.organizationType' },
     { value: 'INDIVIDUAL', labelKey: 'customer.individualType' },
@@ -124,6 +127,9 @@ onMounted(() => {
       <ListTable :busy="state.isBackgroundRefreshing.value" :rows="state.rows.value" :columns="columns"
         :sort="state.query.sort" @sort-change="(sort) => { state.setSort(sort); void load() }">
         <template #cell-customer_code="{ row }"><strong>{{ row.customer_code }}</strong></template>
+        <template #cell-status="{ row }">
+          <span class="customer-status-cell"><TableStatus :status="row.status" />{{ statusLabel(row.status) }}</span>
+        </template>
         <template #cell-customer_type="{ row }">{{ typeLabel(row.customer_type) }}</template>
         <template #cell-customer_group_code="{ row }">{{ groupLabel(row.customer_group_code) }}</template>
         <template #cell-actions="{ row }">
@@ -148,6 +154,7 @@ onMounted(() => {
 </template>
 
 <style scoped>
+.customer-status-cell { display: inline-flex; align-items: center; gap: 6px; }
 .customer-list-panel {
   display: grid;
   gap: 14px;

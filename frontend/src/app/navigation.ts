@@ -55,6 +55,7 @@ export const SYSTEM_NAV_PATHS = new Set([
   '/security/resources',
   '/security/policies',
   '/security/authorization-logs',
+  '/system/history',
   '/configuration/workflow-states',
   '/configuration/lifecycles',
   '/configuration/auto-numbering',
@@ -155,6 +156,12 @@ export const navItems: NavigationItem[] = [
     to: '/security/authorization-logs',
     icon: ReaderOutline,
     permission: 'authorization_log.view',
+  },
+  {
+    labelKey: 'nav.historyMonitor',
+    to: '/system/history',
+    icon: TimeOutline,
+    permission: 'business_history_monitor.view',
   },
   {
     labelKey: 'nav.workflowStates',

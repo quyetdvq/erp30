@@ -72,6 +72,11 @@ namespace App\Modules\Access {
     {
         public static array $viewed = [];
         public function __construct($actor, $db) {}
+        public function decideMutation(string $type, string $action, array $row): array
+        {
+            // Fixture-only decision, never used in production PBAC.
+            return ['allowed' => $this->canView($type, $row) && $action !== 'delete'];
+        }
         public function canView(string $type, array $row): bool
         {
             self::$viewed[] = $type . ':' . ($row['id'] ?? '');
@@ -97,6 +102,7 @@ namespace {
     require __DIR__ . '/../app/Shared/Read/PositiveId.php';
     require __DIR__ . '/../app/Shared/Media/ImageUrl.php';
     require __DIR__ . '/../app/Shared/Http/AuthorizedListPage.php';
+    require __DIR__ . '/../app/Modules/Access/Query/EffectiveRowActionHints.php';
     require __DIR__ . '/../app/Modules/Identity/Management/IdentityReadRepository.php';
     require __DIR__ . '/../app/Modules/Identity/Management/IdentityReadService.php';
     require __DIR__ . '/../app/Modules/Workflow/Management/WorkflowReadContract.php';
@@ -158,6 +164,9 @@ namespace {
     $users = $identity->securityUsers(['page'=>1,'page_size'=>10]);
     assertRead('Security User list filters persisted PBAC before total', $users['total'] === 1
         && count($users['data']) === 1 && $users['data'][0]['id'] === '1');
+    assertRead('Trusted User row actions use the fixture PBAC decision',
+        ($users['data'][0]['allowed_actions']['edit'] ?? null) === true
+        && ($users['data'][0]['allowed_actions']['setstate'] ?? null) === true);
     assertRead('User projected response omits private avatar filename',
         !array_key_exists('avatar_filename', $users['data'][0])
         && !array_key_exists('password_hash', $users['data'][0]));

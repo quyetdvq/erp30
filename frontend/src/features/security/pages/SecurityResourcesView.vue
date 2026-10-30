@@ -358,7 +358,7 @@ onMounted(() => {
 
 
   <div v-if="detailOpen && selected" class="modal-backdrop">
-    <section class="modal-card" role="dialog" aria-modal="true"
+    <section class="modal-card tabbed-detail-workspace" role="dialog" aria-modal="true"
       :aria-label="`${t('security.resource')}: ${selected.name}`">
       <header class="modal-card__header">
         <h2 class="modal-card-title">

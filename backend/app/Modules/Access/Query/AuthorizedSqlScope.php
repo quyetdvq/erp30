@@ -24,7 +24,7 @@ final class AuthorizedSqlScope
     /** @param list<string> $states canonical states decided by UnifiedAccessService */
     public static function master(string $resource, array $states): self
     {
-        if (!in_array($resource, ['product', 'product_group', 'product_uom', 'employee', 'department', 'position', 'province', 'ward', 'customer', 'customer_contact'], true)) {
+        if (!in_array($resource, ['product', 'product_group', 'product_uom', 'employee', 'department', 'position', 'province', 'ward', 'customer', 'customer_contact', 'supplier'], true)) {
             throw new InvalidArgumentException('Unreviewed MASTER scope provider.');
         }
         return new self($resource, 'MASTER', self::canonicalStates($states), []);

@@ -6,11 +6,14 @@ require_once __DIR__.'/../fixtures/m33_ci_http_exception_stub.php';
 require_once __DIR__.'/../../app/Helpers/customer_helper.php';
 require_once __DIR__.'/../../app/Exceptions/DomainException.php';
 require_once __DIR__.'/../../app/Shared/Read/PositiveId.php';
+require_once __DIR__.'/../../app/Modules/Customer/CustomerPhone.php';
 require_once __DIR__.'/../../app/Modules/Customer/CustomerRules.php';
 require_once __DIR__.'/../../app/Modules/Customer/CustomerSql.php';
 require_once __DIR__.'/../../app/Modules/Numbering/Configuration/NumberingRules.php';
 require_once __DIR__.'/../../app/Modules/Customer/CustomerNumberIssuer.php';
 require_once __DIR__.'/../../app/Modules/Contact/ContactRules.php';
+require_once __DIR__.'/../../app/Modules/Access/ResourceStateCatalog.php';
+require_once __DIR__.'/../../app/Modules/Access/ResourceStateValidator.php';
 require_once __DIR__.'/../../app/Modules/Access/Query/AuthorizedSqlScope.php';
 require_once __DIR__.'/../../app/Modules/Contact/ContactSql.php';
 
@@ -35,6 +38,36 @@ $ok(array_keys($groups)===['STANDARD','TMDT','VIP1','VIP2'],'exact Group keys');
 $ok($groups['STANDARD']==='Tiêu chuẩn'&&$groups['TMDT']==='Thương mại điện tử','exact labels');
 $ok(!isset($groups['VIP']),'obsolete VIP absent');
 $ok(count(CR::ACTIVITIES)===5&&CR::ACTIVITIES[4]==='CORRECTION','interaction types');
+// Lifecycle initial State is server-configured, not forced to ACTIVE.
+$definition=\App\Modules\Access\ResourceStateValidator::definition(
+    ['type'=>'customer','lifecycle_id'=>'7'], ['id'=>'7','status'=>'ACTIVE'], [
+        ['id'=>'51','code'=>'DRAFT','status'=>'ACTIVE','is_initial'=>1],
+        ['id'=>'52','code'=>'APPROVED','status'=>'ACTIVE','is_initial'=>0],
+    ]
+);
+$ok(\App\Modules\Access\ResourceStateValidator::initialState($definition)==='DRAFT',
+    'Customer can start in configured DRAFT State');
+$ok(\App\Modules\Access\ResourceStateValidator::persistedStateId($definition,['status'=>'DRAFT'])==='51',
+    'Customer persisted DRAFT resolves to canonical Lifecycle State ID');
+$ok(\App\Modules\Access\ResourceStateValidator::transitionTarget(
+    $definition,['status'=>'DRAFT'],[[
+        'lifecycle_id'=>'7','from_state_id'=>'51','to_state_id'=>'52',
+        'action_code'=>'setstate','status'=>'ACTIVE',
+    ]], 'setstate')==='APPROVED',
+    'non-ACTIVE Customer transitions to server-configured APPROVED State');
+$ok(CR::stateCode('DRAFT')==='DRAFT' && CR::stateCode('APPROVED')==='APPROVED'
+    && CR::stateCode('WAITING_FOR_REVIEW')==='WAITING_FOR_REVIEW',
+    'Customer State accepts bounded canonical custom codes');
+foreach (['draft','DRAFT OR 1=1','UNKNOWN STATUS',str_repeat('A',21),null,[],''] as $invalidState) {
+    $reject(static fn()=>CR::stateCode($invalidState),'CUSTOMER_STATE_INVALID');
+}
+try {
+    \App\Modules\Access\ResourceStateValidator::initialState($definition,'ACTIVE');
+    throw new RuntimeException('Client-selected initial State accepted');
+} catch (\UnexpectedValueException) {
+    $ok(true,'create cannot override the configured initial State');
+}
+
 $body=['customer_code'=>' kh-001 ','name'=>'Nguyễn An','customer_type'=>'INDIVIDUAL',
     'customer_group_code'=>'VIP1','all_companies'=>false,'company_ids'=>['2','3']];
 $p=CR::customer($body,true);
@@ -102,6 +135,21 @@ $reject(fn()=>CR::customer(['primary_contact_id'=>[]],false),'CUSTOMER_INVALID_R
 $ok(CR::id('0007')==='7','canonical big int id');
 $reject(fn()=>CR::id(null),'CUSTOMER_INVALID_REFERENCE');
 $reject(fn()=>CR::id(['5']),'CUSTOMER_INVALID_REFERENCE');
+// Customer required fields apply to create and the merged persisted state on PATCH.
+$required=['name'=>'Khách A','phone'=>'0912 345 678','address'=>'12 Phố Huế','province_id'=>'1','ward_id'=>'2'];
+$ok(CR::requiredProfile($required)==='0912345678', 'complete Customer profile derives canonical phone key');
+foreach (['name','phone','address','province_id','ward_id'] as $field) {
+    $without=$required; unset($without[$field]);
+    $reject(static fn()=>CR::requiredProfile($without),'CUSTOMER_FIELD_REQUIRED');
+}
+$reject(static fn()=>CR::requiredProfile([...$required,'phone'=>'NOT-A-PHONE']),'CUSTOMER_PHONE_INVALID');
+$reject(static fn()=>CR::requiredProfile([...$required,'address'=>'   ']),'CUSTOMER_FIELD_REQUIRED');
+foreach (['0912345678','0912 345 678','(0912) 345-678','+84 912 345 678','0084-912345678','84 912345678'] as $same) {
+    $ok(\App\Modules\Customer\CustomerPhone::key($same)==='0912345678',
+        'equivalent formatted Customer phone');
+}
+$reject(static fn()=>CR::customer(['phone_key'=>'0912345678'],false),'CUSTOMER_FIELD_UNSUPPORTED');
+
 $i=CR::interaction(['company_organization_id'=>'7','activity_type'=>'NOTE','content'=>'Follow-up']);
 $ok($i['corrects_interaction_id']===null&&$i['company_organization_id']==='7','regular interaction');
 $i=CR::interaction(['company_organization_id'=>'7','activity_type'=>'CORRECTION','content'=>'Replace','corrects_interaction_id'=>'12']);

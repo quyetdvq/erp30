@@ -446,7 +446,7 @@ onMounted(async () => {
 
 
   <div v-if="employeeDetailOpen && selected" class="modal-backdrop">
-    <section class="employee-detail-modal" role="dialog" aria-modal="true" :aria-label="selected.employee_name">
+    <section class="employee-detail-modal tabbed-detail-workspace" role="dialog" aria-modal="true" :aria-label="selected.employee_name">
       <header class="modal-card__header">
 
           <h2 class="modal-card-title">
@@ -471,6 +471,7 @@ onMounted(async () => {
         </button>
       </div>
 
+      <div :key="activeTab" class="tabbed-detail-workspace__body">
       <div v-if="activeTab === 'overview'" class="detail-grid">
         <div>
           <span>{{ t('people.gender') }}</span><strong>{{ genderLabel(selected.gender ?? null) }}</strong>
@@ -572,6 +573,7 @@ onMounted(async () => {
             }}
           </dd>
         </dl>
+      </div>
       </div>
 
       <footer class="modal-card__footer">
@@ -780,8 +782,9 @@ onMounted(async () => {
   width: min(1800px, calc(100vw - 32px));
   min-width: 0;
   max-height: calc(100vh - 40px);
-  overflow-x: hidden;
-  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
   border: 1px solid #d5e1e8;
   border-radius: 7px;
   background: #fff;

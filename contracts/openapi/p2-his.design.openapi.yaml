@@ -1,0 +1,72 @@
+openapi: 3.1.0
+info:
+  title: DinkERP HIS-01 Parent-Guarded Business History (code candidate)
+  version: 1.0.0-candidate
+  description: >-
+    Shared selective business milestones, no write HTTP API. This additive design
+    must be reviewed and merged into canonical openapi.yaml before release and
+    generated-client verification; no claim of runtime acceptance.
+servers:
+  - url: https://example.invalid
+security:
+  - sessionAuth: []
+paths:
+  /api/v1/history/customers/{id}:
+    get:
+      operationId: getCustomerBusinessHistory
+      summary: Read Customer business milestones after canonical Customer VIEW
+      description: >-
+        SQL-scoped parent VIEW and History COUNT/ROWS are evaluated in one DB snapshot.
+        No global history endpoint. Only redacted, approved fields are returned.
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string, pattern: '^[1-9][0-9]*$' }
+        - name: page
+          in: query
+          schema: { type: integer, minimum: 1, default: 1 }
+        - name: page_size
+          in: query
+          schema: { type: integer, minimum: 1, maximum: 50, default: 25 }
+      responses:
+        '200':
+          description: Parent-guarded history page
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/HistoryPage' }
+        '400': { description: Invalid query }
+        '401': { description: Shield authentication required }
+        '404': { description: Customer absent or not viewable; indistinguishable }
+        '500': { description: Database error, safe JSON error envelope }
+components:
+  securitySchemes:
+    sessionAuth: { type: apiKey, in: cookie, name: ci_session }
+  schemas:
+    HistoryEvent:
+      type: object
+      required: [id, event_type, status_before, status_after, changes, checkpoint, actor_user_id, actor_type, created_at]
+      properties:
+        id: { type: string, pattern: '^[1-9][0-9]*$' }
+        event_type: { type: string, enum: [CREATE, UPDATE, STATE_CHANGE, SENSITIVE_CHANGE, SUBMIT, APPROVE, REJECT, DELETE, RESTORE] }
+        action_code: { type: [string, 'null'] }
+        status_before: { type: [string, 'null'] }
+        status_after: { type: [string, 'null'] }
+        changes: { type: [object, 'null'], additionalProperties: true, description: Redacted field-level diff only }
+        checkpoint: { type: [object, 'null'], additionalProperties: true, description: Redacted operational checkpoint }
+        actor_user_id: { type: [string, 'null'] }
+        actor_type: { type: string, enum: [USER, SYSTEM, JOB] }
+        created_at: { type: string, description: UTC DATETIME yyyy-mm-dd HH:mm:ss }
+    HistoryPage:
+      type: object
+      required: [data, meta]
+      properties:
+        data: { type: array, items: { $ref: '#/components/schemas/HistoryEvent' } }
+        meta:
+          type: object
+          required: [page, page_size, total, request_id]
+          properties:
+            page: { type: integer, minimum: 1 }
+            page_size: { type: integer, minimum: 1, maximum: 50 }
+            total: { type: integer, minimum: 0 }
+            request_id: { type: string }

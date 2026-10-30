@@ -9,7 +9,8 @@ if (! is_string($script) || ! is_string($check)) {
     throw new RuntimeException('Missing simple test launcher.');
 }
 $assertions = [
-    'Baseline-style CHECK/RUN modes' => str_contains($script, "@('CHECK', 'RUN')"),
+    'CHECK/RUN plus explicit M11 PREPARE modes' => str_contains($script, "@('CHECK', 'RUN', 'PREPARE')"),
+    'PREPARE restricted to M11' => str_contains($script, "if (\$action -eq 'PREPARE' -and \$suite -ne 'M11')"),
     'Default mode is offline' => str_contains($script, "\$suite = 'UNIT-STANDARD'"),
     'Offline uses existing fixture runner' => str_contains($script, "@('tools/m34b_run.php', '--offline')"),
     'Integration is explicit' => str_contains($script, "\$suite -eq 'INTEGRATION'"),

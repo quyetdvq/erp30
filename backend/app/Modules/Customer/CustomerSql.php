@@ -57,8 +57,16 @@ final class CustomerSql
             throw new BadRequestException('Invalid Customer sort.');
         }
         $filter = [];
+        // A canonical, bounded State code is accepted syntactically here;
+        // CustomerService verifies membership in the persisted Lifecycle.
+        if (array_key_exists('status', $query)) {
+            $raw = $query['status'];
+            if (!is_string($raw) || preg_match('/\A[A-Z][A-Z0-9_:-]{0,19}\z/D', $raw)!==1) {
+                throw new BadRequestException('Invalid Customer status filter.');
+            }
+            $filter['status'] = $raw;
+        }
         $codes = [
-            'status'=>['ACTIVE', 'INACTIVE'],
             'customer_type'=>CustomerRules::TYPES,
             'customer_group_code'=>array_keys(CUSTOMER_GROUP()),
         ];

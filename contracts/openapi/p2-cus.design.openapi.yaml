@@ -53,9 +53,9 @@ paths:
         in: query
         schema:
           type: string
-          enum:
-          - ACTIVE
-          - INACTIVE
+          maxLength: 20
+          pattern: '^[A-Z][A-Z0-9_:-]{0,19}$'
+          description: Canonical status code in the currently configured Customer Lifecycle.
       - name: customer_type
         in: query
         schema:
@@ -421,9 +421,10 @@ components:
         customer_group_code:
           $ref: '#/components/schemas/CustomerGroupCode'
         phone: &id008
-          anyOf:
-          - type: string
-          - type: 'null'
+          type: string
+          minLength: 7
+          maxLength: 50
+          description: Required on create. 7–15 digits, optionally formatted with separators; duplicate numbers across all Customers are rejected (409 CUSTOMER_PHONE_DUPLICATE). +84/0084/84 and domestic 0 are treated as equivalent for nine-digit Vietnamese subscriber numbers.
         email: &id009
           anyOf:
           - type: string
@@ -433,17 +434,17 @@ components:
           - type: string
           - type: 'null'
         address: &id011
-          anyOf:
-          - type: string
-          - type: 'null'
+          type: string
+          minLength: 1
+          description: Required nonblank main address.
         province_id: &id012
-          anyOf:
-          - type: integer
-          - type: 'null'
+          type: integer
+          minimum: 1
+          description: Required on Customer create; must be a valid Province/Ward pair.
         ward_id: &id013
-          anyOf:
-          - type: integer
-          - type: 'null'
+          type: integer
+          minimum: 1
+          description: Required on Customer create; must be a valid Province/Ward pair.
         primary_contact_id: &id014
           anyOf:
           - type: integer
@@ -458,6 +459,10 @@ components:
           uniqueItems: true
       required:
       - name
+      - phone
+      - address
+      - province_id
+      - ward_id
       - all_companies
       additionalProperties: false
       x-create-defaults:
@@ -478,7 +483,11 @@ components:
         links primary_contact_id atomically; Contact name, phone/mobile, email,
         address and Province/Ward are copied from the normalized Customer POST.
         Contact creation requires effective customer_contact.create PBAC and uses
-        the existing Contact Lifecycle initial state. Failure rolls back Customer,
+        the existing Contact Lifecycle initial state. Phone, main address,
+        Province and Ward are mandatory for any new Customer. A normalized,
+        Customer-wide unique phone key prevents duplicate Customers, including
+        concurrent requests, without revealing another Customer's identity.
+        Failure rolls back Customer,
         Contact and Numbering counter. Organization creation does not create a
         Contact automatically. Omitting customer_code (or sending blank) requests
         the ACTIVE default Numbering series; with no series, a manual code is required.
@@ -513,20 +522,32 @@ components:
         customer_type: *id007
         customer_group_code:
           $ref: '#/components/schemas/CustomerGroupCode'
-        phone: *id008
+        phone:
+          anyOf:
+          - type: string
+          - type: 'null'
         email: *id009
         tax_code: *id010
-        address: *id011
-        province_id: *id012
-        ward_id: *id013
+        address:
+          anyOf:
+          - type: string
+          - type: 'null'
+        province_id:
+          anyOf:
+          - type: integer
+          - type: 'null'
+        ward_id:
+          anyOf:
+          - type: integer
+          - type: 'null'
         primary_contact_id: *id014
         all_companies: *id015
         company_ids: *id016
         status:
           type: string
-          enum:
-          - ACTIVE
-          - INACTIVE
+          maxLength: 20
+          pattern: '^[A-Z][A-Z0-9_:-]{0,19}$'
+          description: Canonical status code in the currently configured Customer Lifecycle.
           readOnly: true
         allowed_actions:
           $ref: '#/components/schemas/CustomerRowActionHints'
@@ -592,9 +613,9 @@ components:
       properties:
         status:
           type: string
-          enum:
-          - ACTIVE
-          - INACTIVE
+          maxLength: 20
+          pattern: '^[A-Z][A-Z0-9_:-]{0,19}$'
+          description: Canonical status code in the currently configured Customer Lifecycle.
       additionalProperties: false
     CustomerInteractionCreate:
       type: object

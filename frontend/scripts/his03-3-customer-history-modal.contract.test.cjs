@@ -1,0 +1,40 @@
+'use strict'
+const test = require('node:test')
+const assert = require('node:assert/strict')
+const fs = require('node:fs')
+const path = require('node:path')
+const root = path.resolve(__dirname, '../src')
+const customer = fs.readFileSync(path.join(root, 'features/customer/pages/CustomerDetailView.vue'), 'utf8')
+const history = fs.readFileSync(path.join(root, 'features/history/components/BusinessHistoryPanel.vue'), 'utf8')
+const monitor = fs.readFileSync(path.join(root, 'features/history/pages/HistoryMonitorView.vue'), 'utf8')
+const global = fs.readFileSync(path.join(root, 'styles/global.css'), 'utf8')
+
+test('HIS-03.3: Customer detail keeps the same viewport-bounded height across tabs', () => {
+  assert.match(customer, /\.customer-detail-modal--workspace \{[^}]*height: min\(760px, calc\(100dvh - 40px\)\)/s)
+  assert.match(customer, /max-height: calc\(100dvh - 40px\)/)
+  assert.match(customer, /\.customer-detail-tabs \{ flex: 0 0 auto;/)
+  assert.match(customer, /\.customer-detail-toolbar \{ flex: 0 0 auto;/)
+  assert.match(global, /\.modal-card__footer \{[\s\S]*?flex: 0 0 auto;/)
+  assert.match(customer, /\.customer-detail-modal--workspace \{ height: calc\(100vh - 16px\); height: calc\(100dvh - 16px\); \}/)
+  assert.match(customer, /\.customer-detail-backdrop \{ padding: 8px; \}/)
+  assert.match(customer, /:class="\{ 'customer-detail-modal--workspace': !isNew \}"/)
+})
+
+test('HIS-03.3: long History scrolls in the single canonical Customer modal body', () => {
+  assert.match(customer, /ref="detailBody" class="customer-detail-modal__body"/)
+  assert.match(customer, /\.customer-detail-modal__body \{[^}]*?flex: 1 1 auto; min-height: 0;[^}]*?overflow-y: auto;/s)
+  assert.match(customer, /if \(detailBody\.value\) detailBody\.value\.scrollTop = 0/)
+  assert.match(customer, /<section v-else-if="tab === 'history' && !isNew" class="customer-tab-panel">\s*<BusinessHistoryPanel :customer-id="id"\s*\/>/)
+  assert.ok(customer.indexOf('<div ref="detailBody"') < customer.indexOf('<BusinessHistoryPanel'))
+  assert.ok(customer.indexOf('<BusinessHistoryPanel') < customer.indexOf('<footer class="modal-card__footer">'))
+  assert.doesNotMatch(history, /overflow-y: auto|height: calc\(100vh/)
+})
+
+test('HIS-03.3: both Customer entrypoints keep one canonical modal and History PBAC path', () => {
+  assert.match(monitor, /<Teleport to="body">\s*<!-- Exact Customer modal used by \/customers/)
+  assert.match(monitor, /<CustomerDetailView v-if="allowed && selectedObject\?\.type === 'customer'"/)
+  assert.match(history, /customerHistory\(props\.customerId, page\.value, pageSize\.value\)/)
+  assert.match(history, /<ListPagination v-if="total > 0"/)
+  assert.equal((customer.match(/<BusinessHistoryPanel/g) || []).length, 1)
+  assert.doesNotMatch(history, /modal-backdrop/)
+})

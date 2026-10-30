@@ -33,7 +33,7 @@ final class BusinessWorkflowController extends Controller
         $actor = auth()->user();
         if (!$actor instanceof User) return ApiResponder::error($this->response, 'UNAUTHENTICATED', 401);
         if (strtolower((string) env('DINKERP_M33B_WRITE_MODE','off')) !== 'enabled'
-            && ! \App\Modules\Notifications\NotificationFlags::workflowWriteEnabled(db_connect())) {
+            && ! \Config\Services::workflowTransitionPort()->workflowWriteEnabled(db_connect())) {
             return ApiResponder::error($this->response, 'ACCESS_MUTATION_NOT_ENABLED', 403);
         }
         return ApiResponder::success($this->response, $callback(new BusinessWorkflowService($actor)));

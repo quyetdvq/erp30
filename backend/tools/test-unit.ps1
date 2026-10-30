@@ -10,6 +10,8 @@
 #   .\tools\test-unit.ps1 RUN M4-INTEGRATION  # opt-in M4 14-route HTTP/SQL sandbox
 #   .\tools\test-unit.ps1 RUN M4-CONCURRENCY  # opt-in two-writer Numbering config race
 #   .\tools\test-unit.ps1 RUN CUS-UNIT       # offline CUS rules + source contract
+#   .\tools\test-unit.ps1 RUN HIS-UNIT       # offline HIS policy/recorder/SQL/source
+#   .\tools\test-unit.ps1 RUN SUP-UNIT       # offline Supplier rules/catalog/Numbering/SQL-PBAC
 #   .\tools\test-unit.ps1 RUN P1-STANDARDS   # offline P1 SQL-first/PBAC improvement regression
 #   .\tools\test-unit.ps1 RUN ROUTES         # pinned 180-route registry, P1 150 and negative guards
 #   .\tools\test-unit.ps1 RUN M11-UNIT         # M11 PHPUnit unit, no DB
@@ -24,7 +26,7 @@ Set-StrictMode -Version Latest
 $ErrorActionPreference = 'Stop'
 
 $tokens = @($args)
-$usage = 'Usage: .\tools\test-unit.ps1 CHECK|RUN [UNIT-STANDARD|DB-READ|ALL|INTEGRATION|ACCEPTANCE|M4-INTEGRATION|M4-CONCURRENCY|M11|M11-UNIT|M11-INTEGRATION|M11-RELIABILITY|CUS-UNIT|P1-STANDARDS|ROUTES] OR PREPARE M11'
+$usage = 'Usage: .\tools\test-unit.ps1 CHECK|RUN [UNIT-STANDARD|DB-READ|ALL|INTEGRATION|ACCEPTANCE|M4-INTEGRATION|M4-CONCURRENCY|M11|M11-UNIT|M11-INTEGRATION|M11-RELIABILITY|CUS-UNIT|HIS-UNIT|SUP-UNIT|P1-STANDARDS|ROUTES] OR PREPARE M11'
 if ($tokens.Count -lt 1 -or $tokens.Count -gt 3) { throw $usage }
 $action = ([string]$tokens[0]).ToUpperInvariant()
 if ($action -notin @('CHECK', 'RUN', 'PREPARE')) { throw $usage }
@@ -37,7 +39,7 @@ if ($tokens.Count -eq 2) {
 }
 $suite = $suite.TrimStart('-').ToUpperInvariant()
 if ($action -eq 'PREPARE' -and $suite -ne 'M11') { throw $usage }
-if ($suite -notin @('UNIT-STANDARD', 'DB-READ', 'ALL', 'INTEGRATION', 'ACCEPTANCE', 'M4-INTEGRATION', 'M4-CONCURRENCY', 'M11', 'M11-UNIT', 'M11-INTEGRATION', 'M11-RELIABILITY', 'CUS-UNIT', 'P1-STANDARDS', 'ROUTES')) { throw $usage }
+if ($suite -notin @('UNIT-STANDARD', 'DB-READ', 'ALL', 'INTEGRATION', 'ACCEPTANCE', 'M4-INTEGRATION', 'M4-CONCURRENCY', 'M11', 'M11-UNIT', 'M11-INTEGRATION', 'M11-RELIABILITY', 'CUS-UNIT', 'HIS-UNIT', 'SUP-UNIT', 'P1-STANDARDS', 'ROUTES')) { throw $usage }
 
 function Invoke-PHPChecked {
     param([string[]]$Arguments, [string]$Description)
@@ -130,6 +132,41 @@ try {
         return
     }
 
+    if ($suite -eq 'SUP-UNIT') {
+        Invoke-PHPChecked -Description 'Supplier G1 profile/usage pure tests' -Arguments @('tests/sup/supplier_rules_pure.php')
+        Invoke-PHPChecked -Description 'Supplier catalog/Lifecycle/permission pure tests' -Arguments @('tests/sup/supplier_catalog_pure.php')
+        Invoke-PHPChecked -Description 'Supplier idempotency/rollback fixture' -Arguments @('tests/sup/supplier_catalog_provision_fixture.php')
+        Invoke-PHPChecked -Description 'Supplier numbering policy pure tests' -Arguments @('tests/sup/supplier_numbering_pure.php')
+        Invoke-PHPChecked -Description 'Supplier numbering issuer fake DB fixture' -Arguments @('tests/sup/supplier_numbering_issuer_fixture.php')
+        Invoke-PHPChecked -Description 'Supplier SQL-first scoped COUNT/page/detail pure tests' -Arguments @('tests/sup/supplier_sql_plan_pure.php')
+        Invoke-PHPChecked -Description 'Supplier canonical PBAC read source contracts' -Arguments @('tests/sup/supplier_read_source_contract_pure.php')
+        Invoke-PHPChecked -Description 'Supplier T04 write payload pure regression' -Arguments @('tests/sup/supplier_write_payload_pure.php')
+        Invoke-PHPChecked -Description 'Supplier T04 transaction rollback fixture' -Arguments @('tests/sup/supplier_write_transaction_fixture.php')
+        Invoke-PHPChecked -Description 'Supplier T04 write service source contracts' -Arguments @('tests/sup/supplier_write_source_contract_pure.php')
+        Invoke-PHPChecked -Description 'Supplier T05 operational status/Company Usage policy' -Arguments @('tests/sup/supplier_usability_policy_pure.php')
+        Invoke-PHPChecked -Description 'Supplier T05 locked Purchase eligibility fake DB fixture' -Arguments @('tests/sup/supplier_usability_guard_fixture.php')
+        Invoke-PHPChecked -Description 'Supplier T05 purchase interface/guard source contracts' -Arguments @('tests/sup/supplier_usability_source_contract_pure.php')
+        Write-Host 'SUP-UNIT PASS: offline only (including T04/T05 fake DB); no MariaDB provisioning, Purchase adapter, HTTP or real PBAC decisions.'
+        return
+    }
+
+    if ($suite -eq 'HIS-UNIT') {
+        Write-Host '===== HIS-01: selective business history offline tests (NO DB) ====='
+        foreach ($test in @(
+            'tests/history/history_policy_pure.php',
+            'tests/history/history_sql_pure.php',
+            'tests/history/history_recorder_fixture.php',
+            'tests/history/history_source_contract.php',
+            'tests/history/history_monitor_sql_pure.php',
+            'tests/history/history_presenter_pure.php',
+            'tests/history/history_monitor_source_pure.php'
+        )) {
+            Invoke-PHPChecked -Description "HIS regression $test" -Arguments @($test)
+        }
+        Write-Host 'HIS-UNIT PASS: offline only; NOT MariaDB/HTTP/browser.'
+        return
+    }
+
     if ($suite -eq 'CUS-UNIT') {
         Invoke-PHPChecked -Description 'CUS G1 pure rules tests' -Arguments @('tests/cus/customer_core_pure.php')
         Invoke-PHPChecked -Description 'CUS G1 source contract tests' -Arguments @('tests/cus/customer_source_contract_pure.php')
@@ -161,6 +198,7 @@ try {
             'tests/m86b_org_scope_pure.php',
             'tests/m86c_scope_pure.php',
             'tests/m86e_contact_sql_pure.php',
+            'tests/m1925a_contact_audit_pure.php',
             'tests/m102_effective_row_actions_pure.php',
             'tests/m1920_contact_workflow_scope_pure.php'
         )) {
@@ -173,7 +211,31 @@ try {
     if ($suite -in @('UNIT-STANDARD', 'ALL')) {
         Write-Host '===== UNIT-STANDARD: pure/fixture regressions (NO DATABASE) ====='
         Invoke-PHPChecked -Description 'Offline regression suite' -Arguments @('tools/m34b_run.php', '--offline')
-        Write-Host 'UNIT-STANDARD PASS: offline only; NOT HTTP/MariaDB integration.'
+        foreach ($test in @(
+            'tests/history/history_policy_pure.php',
+            'tests/history/history_sql_pure.php',
+            'tests/history/history_recorder_fixture.php',
+            'tests/history/history_source_contract.php',
+            'tests/history/history_monitor_sql_pure.php',
+            'tests/history/history_presenter_pure.php',
+            'tests/history/history_monitor_source_pure.php'
+        )) {
+            Invoke-PHPChecked -Description "HIS-01 offline regression $test" -Arguments @($test)
+        }
+        Invoke-PHPChecked -Description 'SUP-T01A pure rules regression' -Arguments @('tests/sup/supplier_rules_pure.php')
+        Invoke-PHPChecked -Description 'SUP-T01B catalog policy regression' -Arguments @('tests/sup/supplier_catalog_pure.php')
+        Invoke-PHPChecked -Description 'SUP-T01B provision fixture regression' -Arguments @('tests/sup/supplier_catalog_provision_fixture.php')
+        Invoke-PHPChecked -Description 'SUP-T02 Numbering pure regression' -Arguments @('tests/sup/supplier_numbering_pure.php')
+        Invoke-PHPChecked -Description 'SUP-T03 SQL planner regression' -Arguments @('tests/sup/supplier_sql_plan_pure.php')
+        Invoke-PHPChecked -Description 'SUP-T03 read access wiring regression' -Arguments @('tests/sup/supplier_read_source_contract_pure.php')
+        Invoke-PHPChecked -Description 'SUP-T02 Numbering fake connection regression' -Arguments @('tests/sup/supplier_numbering_issuer_fixture.php')
+        Invoke-PHPChecked -Description 'SUP-T04 write payload regression' -Arguments @('tests/sup/supplier_write_payload_pure.php')
+        Invoke-PHPChecked -Description 'SUP-T04 fake transactional write regression' -Arguments @('tests/sup/supplier_write_transaction_fixture.php')
+        Invoke-PHPChecked -Description 'SUP-T04 write service contracts' -Arguments @('tests/sup/supplier_write_source_contract_pure.php')
+        Invoke-PHPChecked -Description 'SUP-T05 purchase usability policy' -Arguments @('tests/sup/supplier_usability_policy_pure.php')
+        Invoke-PHPChecked -Description 'SUP-T05 fake Purchase Company and locked Supplier fixture' -Arguments @('tests/sup/supplier_usability_guard_fixture.php')
+        Invoke-PHPChecked -Description 'SUP-T05 usability guard source contracts' -Arguments @('tests/sup/supplier_usability_source_contract_pure.php')
+        Write-Host 'UNIT-STANDARD PASS: pinned 168, HIS and SUP-T01/T02/T03/T04/T05 offline tests only; NOT HTTP/MariaDB integration.'
         Invoke-PHPChecked -Description 'M3.4D static and baseline golden-master acceptance' -Arguments @('tools/m34d_accept.php', '--offline')
         Invoke-PHPChecked -Description 'M4 source/route extension acceptance (14 new APIs; no DB)' -Arguments @('tools/m4_accept.php')
         Invoke-PHPChecked -Description 'M5.1 Province/Ward source acceptance (six mutations; no DB)' -Arguments @('tools/m5_accept.php')

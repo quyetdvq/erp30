@@ -63,8 +63,10 @@ foreach ([
     $ok(str_contains($source($file), 'BusinessWorkflowRules::matchesTargetOwner'), 'Owner checked: ' . $file);
 }
 $ok(str_contains($source('Modules/Workflow/Execution/BusinessWorkflowService.php'), "canView('customer'"), 'Workflow checks parent Customer VIEW');
-$ok(str_contains($source('Modules/Workflow/Execution/BusinessWorkflowService.php'), 'CustomerService($this->actor, $this->db)'),
-    'Customer Workflow uses canonical CustomerService state mutation');
+$ok(str_contains($source('Modules/Workflow/Execution/BusinessWorkflowService.php'), '->changeCustomerState(')
+    && str_contains($source('Shared/Workflow/ProductionWorkflowTransitionPort.php'), 'new CustomerService($actor, $db)')
+    && str_contains($source('Shared/Workflow/ProductionWorkflowTransitionPort.php'), '->setState($id,'),
+    'Customer Workflow delegates to canonical CustomerService state mutation via application port');
 $ok(str_contains($source('Modules/Customer/CustomerService.php'), 'NotificationOutboxProducer::enqueueWorkflowTransition'),
     'Canonical Customer state mutation optionally enqueues M11 event atomically');
 $ok(str_contains($source('Modules/Notifications/WorkflowNotificationAssigneesService.php'), "canView('customer'"), 'Assignee API checks parent Customer VIEW');

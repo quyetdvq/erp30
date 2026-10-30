@@ -246,7 +246,11 @@ export function replaceProductConversions(
       client,
       headers: headers(),
       path: { id },
-      body,
+      // An explicit items object is required even when the list is empty.
+      // Use the same JSON serializer as COMBO and Price List replacements;
+      // a missing HTTP body must never be interpreted as delete-all.
+      body: { items: Array.isArray(body) ? body : body.items },
+      bodySerializer: jsonBodySerializer.bodySerializer,
       throwOnError: true,
     }).then((response) => response.data.data ?? []),
   )

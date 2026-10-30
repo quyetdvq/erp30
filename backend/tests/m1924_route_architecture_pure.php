@@ -68,9 +68,29 @@ $fixtureFiles = [
     'routes_v1923_legacy_groups.json' => '212c36ea7c8d83aa837d24e778d6455c4c157140f4481fa05ec2a2c6ce9f29b5',
     'routes_v1923_core70.json' => '513286331478015bdd36980b7c4ca67eb6583ba278f484cb1f973d74e9d75860',
 ];
+$frozenFixtureMatches = static function (string $contents, string $expectedSha256): bool {
+    // Git on Windows may check out a reviewed LF fixture with CRLF. Normalize
+    // only line endings, never JSON contents, so frozen evidence stays pinned.
+    // Reject stray CR (and consequently CRCRLF) rather than hiding damage.
+    $canonical = str_replace("\r\n", "\n", $contents);
+    return ! str_contains($canonical, "\r")
+        && hash_equals($expectedSha256, hash('sha256', $canonical));
+};
 foreach ($fixtureFiles as $file => $checksum) {
-    $ok(hash_file('sha256', $root . '/backend/tests/fixtures/' . $file) === $checksum,
+    $contents = file_get_contents($root . '/backend/tests/fixtures/' . $file);
+    $ok(is_string($contents) && $frozenFixtureMatches($contents, $checksum),
         'frozen route baseline evidence ' . $file);
+    // Explicit platform parity and negative guards; a real fixture edit must
+    // still fail on both Linux and Windows.
+    if (is_string($contents)) {
+        $canonical = str_replace("\r\n", "\n", $contents);
+        $ok($frozenFixtureMatches(str_replace("\n", "\r\n", $canonical), $checksum),
+            'CRLF route baseline evidence ' . $file);
+        $ok(! $frozenFixtureMatches($contents . ' ', $checksum),
+            'reject altered frozen route baseline ' . $file);
+        $ok(! $frozenFixtureMatches($contents . "\r", $checksum),
+            'reject stray CR in frozen route baseline ' . $file);
+    }
 }
 
 $records = RouteInventory::read($root);

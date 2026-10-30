@@ -28,6 +28,18 @@ final class CustomerRules
         }
     }
 
+    /**
+     * One canonical Lifecycle State code, within the current customers.status
+     * VARCHAR(20) storage limit. The trusted Lifecycle still determines whether
+     * this State belongs to the Customer Resource and a transition is allowed.
+     */
+    public static function stateCode(mixed $value): string
+    {
+        if (!is_string($value) || preg_match('/\A[A-Z][A-Z0-9_:-]{0,19}\z/D', $value)!==1)
+            throw new DomainException('CUSTOMER_STATE_INVALID', ['field'=>'status']);
+        return $value;
+    }
+
     public static function text(mixed $value, string $field, int $limit, bool $nullable=false): ?string
     {
         if ($nullable && $value===null) return null;
@@ -37,6 +49,26 @@ final class CustomerRules
         $value=trim($value);
         if ($value==='' && !$nullable) throw new DomainException('CUSTOMER_FIELD_REQUIRED',['field'=>$field]);
         return $value==='' && $nullable ? null : $value;
+    }
+
+    /**
+     * Mandatory Customer profile. Validates the merged persisted state on PATCH,
+     * so a partial edit cannot remove required fields or reuse another phone.
+     * @param array<string,mixed> $fields
+     */
+    public static function requiredProfile(array $fields): string
+    {
+        foreach (['name', 'phone', 'address', 'province_id', 'ward_id'] as $field) {
+            $value = $fields[$field] ?? null;
+            if ($value === null || (is_string($value) && trim($value) === '')) {
+                throw new DomainException('CUSTOMER_FIELD_REQUIRED', ['field' => $field]);
+            }
+        }
+        try {
+            return CustomerPhone::key((string) $fields['phone']);
+        } catch (InvalidArgumentException $cause) {
+            throw new DomainException('CUSTOMER_PHONE_INVALID', ['field' => 'phone'], $cause);
+        }
     }
 
     /** @param array<string,mixed> $body @return array{fields:array<string,mixed>,companies:?array<int,string>,series:?string} */

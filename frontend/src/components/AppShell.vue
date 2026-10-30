@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref } from 'vue'
+import { ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import {
   NAlert,
@@ -42,6 +42,7 @@ import { useShellSidebarResize } from '@/components/app-shell/useShellSidebarRes
 import { useShellWorkspaceTabs } from '@/components/app-shell/useShellWorkspaceTabs'
 import { dismissApiError, errorNotices } from '@/services/errorBoundary'
 import { useWorkspaceStore } from '@/stores/workspace'
+import { useDisplaySettingsStore } from '@/stores/displaySettings'
 
 const workspace = useWorkspaceStore()
 const route = useRoute()
@@ -93,6 +94,16 @@ const {
   openInbox,
   handleUserAction,
 } = useShellHeader(currentTabKey)
+
+// The common formatter reads Display Settings from the store. Load persisted
+// SYSTEM runtime on authentication so all pages (including History) inherit it;
+// user-local overrides remain higher precedence. An ORGANIZATION override is
+// only applied when an explicit trusted Organization context is selected.
+const displaySettings = useDisplaySettingsStore()
+watch(() => auth.user?.id, (userId) => {
+  if (userId === undefined || userId === null || displaySettings.loaded) return
+  void displaySettings.load(userId).catch(() => undefined)
+}, { immediate: true })
 </script>
 
 <template>

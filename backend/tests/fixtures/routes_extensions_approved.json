@@ -1,6 +1,31 @@
 {
   "schema_version": 1,
   "baseline": "v1.9.23",
-  "modules": [],
-  "routes": []
+  "modules": [
+    "HistoryRoutes.php"
+  ],
+  "routes": [
+    {
+      "method": "GET",
+      "path": "api/v1/history/customers/(:num)",
+      "handler": [
+        "App\\Controllers\\Api\\BusinessHistoryController",
+        "customer/$1"
+      ],
+      "options": {
+        "filter": "cors"
+      }
+    },
+    {
+      "method": "GET",
+      "path": "api/v1/history/monitor",
+      "handler": [
+        "App\\Controllers\\Api\\BusinessHistoryController",
+        "monitor"
+      ],
+      "options": {
+        "filter": "cors"
+      }
+    }
+  ]
 }

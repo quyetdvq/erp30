@@ -398,7 +398,7 @@ onMounted(() => void load())
   </section>
 
   <div v-if="detailOpen && selected" class="modal-backdrop">
-    <section class="modal-card" role="dialog" aria-modal="true" aria-labelledby="lifecycle-detail-title"
+    <section class="modal-card tabbed-detail-workspace" role="dialog" aria-modal="true" aria-labelledby="lifecycle-detail-title"
       :aria-hidden="stateModalOpen || transitionModalOpen" :inert="stateModalOpen || transitionModalOpen">
       <header class="modal-card__header">
         
@@ -429,7 +429,7 @@ onMounted(() => void load())
           {{ t('workflow.tabs.transitions') }}
         </button>
       </nav>
-      <div class="modal-card__body">
+      <div :key="tab" class="modal-card__body">
         <p v-if="detailError && !stateModalOpen && !transitionModalOpen" class="inline-error" role="alert">{{ errorMessage(detailError) }}</p>
         <div v-if="detailBusy" class="workflow-detail-state" role="status">
           {{ t('list.loading') }}

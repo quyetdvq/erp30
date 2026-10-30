@@ -10,9 +10,12 @@ use App\Modules\Access\Query\EffectiveRowActionHints;
 use App\Modules\Access\ResourceStateRepository;
 use App\Modules\Access\UnifiedAccessService;
 use App\Modules\Contact\ContactService;
+use App\Modules\History\HistoryRecorder;
+use App\Modules\History\HistoryPolicy;
 use App\Modules\Notifications\NotificationOutboxProducer;
 use CodeIgniter\Database\BaseConnection;
 use CodeIgniter\Exceptions\PageNotFoundException;
+use CodeIgniter\HTTP\Exceptions\BadRequestException;
 use CodeIgniter\Shield\Entities\User;
 use DateTimeImmutable;
 use DateTimeZone;
@@ -46,6 +49,12 @@ final class CustomerService
             $size = $params['page_size'];
             if (!$access->hasBaseViewPermission('customer')) {
                 return ['data'=>[], 'page'=>$page, 'page_size'=>$size, 'total'=>0];
+            }
+            // Canonical Lifecycle membership is distinct from the client-side
+            // syntax whitelist. Reject stale/unconfigured State filters before SQL.
+            $status = $params['filter']['status'] ?? null;
+            if ($status !== null && !isset($this->states->definitionFor('customer')['by_code'][$status])) {
+                throw new BadRequestException('Unknown Customer Lifecycle status.');
             }
             $scope = (new AuthorizationSqlScopeCompiler($access))
                 ->compile(new CustomerScopeProvider());
@@ -99,6 +108,7 @@ final class CustomerService
             $row['company_ids'] = array_map('strval', array_column($this->db->table('customer_company_usages')
                 ->select('company_organization_id')->where('customer_id', $row['id'])
                 ->orderBy('company_organization_id', 'ASC')->get()->getResultArray(), 'company_organization_id'));
+            unset($row['phone_key']);
             $row['allowed_actions'] = $this->actionHints($access, $row);
             return $row;
         });
@@ -110,23 +120,28 @@ final class CustomerService
         $parsed=CustomerRules::customer($input,true);
         $fields=$parsed['fields'];
         if (($fields['primary_contact_id']??null)!==null) throw new DomainException('CUSTOMER_PRIMARY_CONTACT_MISMATCH');
+        $fields['phone_key']=CustomerRules::requiredProfile($fields);
         return $this->transaction(function() use ($fields,$parsed): array {
             $this->permit('customer','create',null,[]);
             $this->validateScope((int)$fields['all_companies'],$parsed['companies'],true);
             $this->validateAddress($fields);
+            $this->assertPhoneAvailable((string)$fields['phone_key']);
             $manual=$fields['customer_code']??null;
             unset($fields['customer_code']);
             $initial=$this->states->initialState('customer');
-            if ($initial!=='ACTIVE') throw new DomainException('CUSTOMER_INITIAL_STATE_INVALID');
+            // The Lifecycle, not CustomerService, chooses the initial State.
+            // Fail before numbering/INSERT if its code cannot fit VARCHAR(20).
+            if ($initial===null || strlen($initial)>20)
+                throw new DomainException('CUSTOMER_INITIAL_STATE_INVALID');
             $now=gmdate('Y-m-d H:i:s');
             $issuer=new CustomerNumberIssuer($this->db);
-            $id=$issuer->issue($parsed['series'],$manual,function(string $code) use ($fields,$now,$parsed): string {
+            $id=$issuer->issue($parsed['series'],$manual,function(string $code) use ($fields,$now,$parsed,$initial): string {
                 $code=CustomerRules::text(strtoupper(trim($code)),'customer_code',50);
                 if (!is_string($code)||preg_match('/\A[A-Z0-9][A-Z0-9_.-]{0,49}\z/D',$code)!==1)
                     throw new DomainException('CUSTOMER_CODE_INVALID');
                 try {
                     $saved=$this->db->table('customers')->insert([
-                        ...$fields,'customer_code'=>$code,'status'=>'ACTIVE',
+                        ...$fields,'customer_code'=>$code,'status'=>$initial,
                         'created_by'=>$this->actorId,'created_at'=>$now,
                     ]);
                 } catch (Throwable $cause) {
@@ -151,7 +166,11 @@ final class CustomerService
                     throw new DomainException('CUSTOMER_PRIMARY_CONTACT_PERSISTENCE_FAILED');
                 }
             }
-            return $this->visible($this->target($id));
+            $result = $this->visible($this->target($id));
+            // HIS-01: one CREATE for the Customer master, after Contact/Numbering
+            // have succeeded but before the owning transaction commits.
+            (new HistoryRecorder($this->db))->created('customer', $id, $this->actorId, $initial);
+            return $result;
         });
     }
 
@@ -167,25 +186,40 @@ final class CustomerService
             $this->permit('customer','edit',$old);
             $fields=$parsed['fields'];
             $all=(int)($fields['all_companies']??$old['all_companies']);
-            $companies=$parsed['companies'];
-            if ($companies===null) $companies=array_map('strval',array_column($this->db->table('customer_company_usages')
+            $oldCompanyIds=array_map('strval',array_column($this->db->table('customer_company_usages')
                 ->select('company_organization_id')->where('customer_id',$id)->get()->getResultArray(),'company_organization_id'));
+            $companies=$parsed['companies'];
+            if ($companies===null) $companies=$oldCompanyIds;
             if (array_key_exists('all_companies',$fields)&&$all===1&&$parsed['companies']===null) $companies=[];
             if (array_key_exists('all_companies',$fields)&&$all===0&&$parsed['companies']===null&&((int)$old['all_companies'])===1)
                 throw new DomainException('CUSTOMER_COMPANY_SCOPE_INVALID');
             $this->validateScope($all,$companies,(string)$old['status']==='ACTIVE');
             $next=array_replace($old,$fields);
+            $phoneKey=CustomerRules::requiredProfile($next);
+            if (array_key_exists('phone',$fields)) $fields['phone_key']=$phoneKey;
+            $this->assertPhoneAvailable($phoneKey,$id);
             $this->validateAddress($next);
             $this->validatePrimaryContact($id,$next['primary_contact_id']??null);
             if ($fields!==[]||$parsed['companies']!==null) {
-                if (!$this->db->table('customers')->where('id',$id)->update([
-                    ...$fields,'updated_by'=>$this->actorId,'updated_at'=>gmdate('Y-m-d H:i:s'),
-                ])) throw new DomainException('CUSTOMER_PERSISTENCE_FAILED');
+                try {
+                    $saved=$this->db->table('customers')->where('id',$id)->update([
+                        ...$fields,'updated_by'=>$this->actorId,'updated_at'=>gmdate('Y-m-d H:i:s'),
+                    ]);
+                } catch (Throwable $cause) {
+                    $this->insertFailure($cause);
+                }
+                if (!$saved) $this->insertFailure();
             }
             if ($parsed['companies']!==null||array_key_exists('all_companies',$fields)) {
                 $this->replaceCompanyList($id,$all,$companies);
             }
-            return $this->visible($this->target($id));
+            $result = $this->visible($this->target($id));
+            // Selective audit: DRAFT edits and idempotent field submissions
+            // generate no History. The policy also redacts all profile PII.
+            (new HistoryRecorder($this->db))->updated('customer', $id, $this->actorId,
+                [...$old, 'company_ids'=>$oldCompanyIds],
+                [...$result, 'company_ids'=>$companies]);
+            return $result;
         });
     }
 
@@ -193,15 +227,21 @@ final class CustomerService
     public function setState(string $id,array $input): array
     {
         $id=CustomerRules::id($id);
-        if (array_keys($input)!==['status']||!is_string($input['status'])
-            ||!in_array($input['status'],['ACTIVE','INACTIVE'],true)) throw new DomainException('CUSTOMER_STATE_INVALID');
-        return $this->transaction(function() use ($id,$input): array {
+        if (array_keys($input)!==['status']) throw new DomainException('CUSTOMER_STATE_INVALID');
+        $state=CustomerRules::stateCode($input['status']);
+        return $this->transaction(function() use ($id,$state): array {
             $old=$this->target($id,true);
             $this->assertVisible($old);
             $this->permit('customer','setstate',$old);
-            $state=$input['status'];
             if ($state===(string)$old['status']) throw new DomainException('CUSTOMER_STATE_TRANSITION_INVALID');
-            $next=$this->states->transitionTarget('customer',$old,'setstate');
+            try {
+                $next=$this->states->transitionTarget('customer',$old,'setstate');
+            } catch (UnexpectedValueException $cause) {
+                // A valid configured Lifecycle may have no setstate edge from
+                // this State. Report a domain rejection, not an HTTP 500.
+                if ($cause->getMessage()!=='Transition not allowed or ambiguous for current State.') throw $cause;
+                throw new DomainException('CUSTOMER_STATE_TRANSITION_INVALID',[], $cause);
+            }
             if ($next!==$state) throw new DomainException('CUSTOMER_STATE_TRANSITION_INVALID');
             if ($state==='ACTIVE') {
                 $companies=array_map('strval',array_column($this->db->table('customer_company_usages')
@@ -217,7 +257,19 @@ final class CustomerService
             NotificationOutboxProducer::enqueueWorkflowTransition(
                 $this->db, 'customer', $id, (string) $old['status'], $state, 'setstate'
             );
-            return $this->visible($this->target($id));
+            $result = $this->visible($this->target($id));
+            $checkpointRow = $result;
+            if (HistoryPolicy::isOperational('customer', $state)
+                && !HistoryPolicy::isOperational('customer', (string)$old['status'])) {
+                $checkpointRow['company_ids'] = array_map('strval', array_column(
+                    $this->db->table('customer_company_usages')->select('company_organization_id')
+                        ->where('customer_id', $id)->get()->getResultArray(),
+                    'company_organization_id'
+                ));
+            }
+            (new HistoryRecorder($this->db))->transitioned('customer', $id, $this->actorId,
+                (string)$old['status'], $state, 'setstate', $checkpointRow);
+            return $result;
         });
     }
 
@@ -286,6 +338,7 @@ final class CustomerService
     private function visible(array $row): array
     {
         $this->assertVisible($row);
+        unset($row['phone_key']); // Internal unique index key, never part of public API.
         $row['allowed_actions'] = $this->actionHints($this->access, $row);
         return $row;
     }
@@ -373,6 +426,15 @@ final class CustomerService
                 throw new DomainException('CUSTOMER_WARD_PROVINCE_MISMATCH');
         }
     }
+    /** Never scope the uniqueness check to an actor's VIEW privileges. */
+    private function assertPhoneAvailable(string $phoneKey, ?string $selfId=null): void
+    {
+        $builder=$this->db->table('customers')->select('id')->where('phone_key',$phoneKey);
+        if ($selfId!==null) $builder->where('id !=',$selfId);
+        if ($builder->limit(1)->get()->getRowArray()!==null)
+            throw new DomainException('CUSTOMER_PHONE_DUPLICATE',['field'=>'phone']);
+    }
+
     private function validatePrimaryContact(string $customerId,?string $contactId): void
     {
         if ($contactId===null) return;
@@ -399,8 +461,14 @@ final class CustomerService
     private function insertFailure(?Throwable $cause=null): never
     {
         $error=$this->db->error();
-        if ((int)($error['code']??0)===1062 || (int)($cause?->getCode()??0)===1062)
+        if ((int)($error['code']??0)===1062 || (int)($cause?->getCode()??0)===1062) {
+            // Database UNIQUE is authoritative even if an independent writer
+            // bypasses the advisory Customer mutation lock.
+            $diagnostic=(string)($error['message']??'').' '.($cause?->getMessage()??'');
+            if (str_contains($diagnostic,'uq_customers_phone_key'))
+                throw new DomainException('CUSTOMER_PHONE_DUPLICATE',['field'=>'phone'],$cause);
             throw new DomainException('CUSTOMER_CODE_DUPLICATE',['field'=>'customer_code'],$cause);
+        }
         throw new DomainException('CUSTOMER_PERSISTENCE_FAILED',[],$cause);
     }
 

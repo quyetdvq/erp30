@@ -9,12 +9,14 @@ import RemoteSearchableSelect from '@/components/forms/RemoteSearchableSelect.vu
 import { geographicOption, singleLocationId, wardMatchesSelection } from '@/features/customer/customerLocationSelect'
 import { ListPagination, TableDetailModal, TableRowActions } from '@/components/lists'
 import BusinessWorkflowAction from '@/components/lists/BusinessWorkflowAction.vue'
+import BusinessHistoryPanel from '@/features/history/components/BusinessHistoryPanel.vue'
 import { rowAllowedActions } from '@/components/lists/rowActionPolicy'
 import type { TableDetailField } from '@/components/lists/TableDetailModal.vue'
 import { NIcon } from 'naive-ui'
 import { CheckmarkCircleOutline, EllipseOutline, PeopleOutline } from '@vicons/ionicons5'
 import { normalizeApiError, reportApiError } from '@/services/errorBoundary'
 import { buildCustomerPayload } from '@/features/customer/customerPayload'
+import { validateCustomerProfile, type CustomerProfileErrors } from '@/features/customer/customerProfileValidation'
 import { contactProvinceLabel, contactWardLabel } from '@/features/customer/contactGeography'
 import { getProvinceById, getWardById } from '@/services/foundation'
 import { newCustomerForm } from '@/features/customer/customerDefaults'
@@ -25,14 +27,22 @@ import {
   type Company, type CustomerContact, type CustomerForm, type Interaction, type Location,
 } from '@/services/customer'
 
+// Reuse the canonical Customer modal in authorized cross-module read views.
+// The route remains authoritative for all existing /customers/* pages.
+const props = defineProps<{ customerId?: string }>()
 const emit = defineEmits<{ close: []; saved: [] }>()
-const { t, locale } = useI18n()
+const { t, te, locale } = useI18n()
+const statusLabel = (code: string): string => {
+  const key = `status.${code.toLowerCase()}`
+  return te(key) ? t(key) : code
+}
 const route = useRoute()
 const router = useRouter()
 const { hasBasePermission } = useBasePermission()
-const id = computed(() => String(route.params.id ?? ''))
-const isNew = computed(() => route.path.endsWith('/new'))
-const editing = computed(() => isNew.value || route.path.endsWith('/edit'))
+const embedded = computed(() => props.customerId !== undefined)
+const id = computed(() => props.customerId ?? String(route.params.id ?? ''))
+const isNew = computed(() => !embedded.value && route.path.endsWith('/new'))
+const editing = computed(() => !embedded.value && (isNew.value || route.path.endsWith('/edit')))
 const busy = ref(false)
 const loading = ref(false)
 const error = ref('')
@@ -75,15 +85,19 @@ const companyId = ref('')
 const activity = ref<'NOTE' | 'CALL' | 'EMAIL' | 'MEETING' | 'CORRECTION'>('NOTE')
 const activityContent = ref('')
 const correctsId = ref('')
-const tab = ref<'profile' | 'contacts' | 'interactions' | 'sales' | 'payments' | 'shipping' | 'document'>('profile')
-const state = ref<'ACTIVE' | 'INACTIVE'>('ACTIVE')
+const tab = ref<'profile' | 'contacts' | 'interactions' | 'sales' | 'payments' | 'shipping' | 'document' | 'history'>('profile')
+const state = ref<string>('')
 const allowedActions = ref<{ edit?: boolean; setstate?: boolean } | null>(null)
 const dialog = ref<HTMLElement | null>(null)
+const detailBody = ref<HTMLElement | null>(null)
 const closeButton = ref<HTMLButtonElement | null>(null)
 const contactDialog = ref<HTMLElement | null>(null)
 const closeContactButton = ref<HTMLButtonElement | null>(null)
 let returnFocusTo: HTMLElement | null = null
 const form = ref<CustomerForm>(newCustomerForm())
+const profileAttempted = ref(false)
+const serverPhoneDuplicate = ref(false)
+const profileErrors = computed<CustomerProfileErrors>(() => profileAttempted.value ? validateCustomerProfile(form.value) : {})
 const contact = ref({ description: '', name: '', phone: '', mobile: '', email: '', address: '', province_id: '', ward_id: '' })
 const canEdit = computed(() => hasBasePermission('customer', isNew.value ? 'create' : 'edit') &&
   (isNew.value || allowedActions.value?.edit === true))
@@ -259,6 +273,8 @@ async function refreshCustomer(): Promise<void> {
     const row = await customerById(id.value)
     state.value = row.status
     allowedActions.value = row.allowed_actions ?? null
+    profileAttempted.value = false
+    serverPhoneDuplicate.value = false
     form.value = {
       customer_code: row.customer_code, name: row.name, customer_type: row.customer_type,
       customer_group_code: row.customer_group_code, phone: row.phone, email: row.email,
@@ -295,6 +311,11 @@ async function refreshActivities(): Promise<void> {
 }
 async function save(): Promise<void> {
   if (!canEdit.value || busy.value) return
+  profileAttempted.value = true
+  if (Object.keys(validateCustomerProfile(form.value)).length > 0) {
+    error.value = t('customer.requiredFields')
+    return
+  }
   busy.value = true; error.value = ''
   try {
     const body = buildCustomerPayload(form.value, isNew.value)
@@ -304,7 +325,12 @@ async function save(): Promise<void> {
     await router.replace(`/customers/${saved.id}`)
   } catch (caught) {
     const code = normalizeApiError(caught)?.code
-    error.value = code === 'CUSTOMER_CODE_REQUIRED'
+    serverPhoneDuplicate.value = code === 'CUSTOMER_PHONE_DUPLICATE'
+    error.value = code === 'CUSTOMER_PHONE_DUPLICATE'
+      ? t('customer.phoneDuplicate')
+      : code === 'CUSTOMER_PHONE_INVALID'
+        ? t('customer.phoneInvalid')
+        : code === 'CUSTOMER_CODE_REQUIRED'
       ? t('customer.numberingNotConfigured')
       : code === 'NUM_IDENTIFIER_MANUAL_NOT_ALLOWED'
         ? t('customer.manualCodeNotAllowed')
@@ -407,10 +433,14 @@ async function addActivity(): Promise<void> {
 }
 function switchTab(next: typeof tab.value): void {
   tab.value = next
+  // The same scrollport hosts all tabs. Never inherit the scroll position of
+  // a long History/Contacts tab when switching to another workspace tab.
+  if (detailBody.value) detailBody.value.scrollTop = 0
   if (next === 'contacts') void refreshContacts()
   if (next === 'interactions') void refreshActivities()
 }
 watch(companyId, () => { interactionsPage.value = 1; void refreshActivities() })
+watch(() => form.value.phone, () => { serverPhoneDuplicate.value = false })
 watch(id, () => { tab.value = 'profile'; void refreshCustomer() })
 onMounted(async () => {
   returnFocusTo = document.activeElement instanceof HTMLElement ? document.activeElement : null
@@ -424,8 +454,8 @@ onMounted(async () => {
 </script>
 
 <template>
-  <div class="modal-backdrop" @click.self="closeDetail">
-    <section ref="dialog" class="customer-detail-modal" role="dialog" aria-modal="true"
+  <div class="modal-backdrop customer-detail-backdrop" @click.self="closeDetail">
+    <section ref="dialog" class="customer-detail-modal" :class="{ 'customer-detail-modal--workspace': !isNew }" role="dialog" aria-modal="true"
       :aria-label="isNew ? t('customer.create') : form.name || t('customer.title')" @keydown="onDialogKeydown">
       <header class="modal-card__header">
         <h2 class="modal-card-title">
@@ -438,7 +468,7 @@ onMounted(async () => {
       </header>
       <div v-if="!isNew" class="customer-detail-toolbar">
         <span class="status-pill" :class="{ 'status-pill--off': state !== 'ACTIVE' }">
-          {{ t(`status.${state.toLowerCase()}`) }}
+          {{ statusLabel(state) }}
         </span>
         <button v-if="!editing && canEdit" type="button" class="secondary-button"
           @click="router.push(`/customers/${id}/edit`)">{{ t('common.edit') }}</button>
@@ -446,11 +476,11 @@ onMounted(async () => {
           :busy="busy || loading" variant="button" @changed="void afterCustomerWorkflowChange()" />
       </div>
       <div v-if="!isNew" class="customer-detail-tabs" role="tablist" :aria-label="t('customer.title')">
-        <button v-for="item in (['profile', 'contacts', 'interactions', 'sales', 'payments', 'shipping', 'document'] as const)"
+        <button v-for="item in (['profile', 'contacts', 'interactions', 'sales', 'payments', 'shipping', 'document', 'history'] as const)"
           :key="item" type="button" role="tab" :aria-selected="tab === item"
           @click="switchTab(item)">{{ t(`customer.${item}`) }}</button>
       </div>
-      <div class="customer-detail-modal__body">
+      <div ref="detailBody" class="customer-detail-modal__body">
         <p v-if="error" class="inline-error" role="alert">{{ error }}</p>
         <p v-if="loading" role="status">{{ t('customer.loading') }}</p>
         <form v-if="tab === 'profile' && !loading" id="customer-profile-form" class="customer-profile-form"
@@ -461,8 +491,11 @@ onMounted(async () => {
                 :placeholder="isNew ? t('customer.autoCodePlaceholder') : undefined" />
               <small v-if="isNew" class="customer-help">{{ t('customer.autoCodeHint') }}</small>
             </label>
-            <label><span>{{ t('customer.name') }} *</span>
-              <input v-model="form.name" :readonly="!editing" required maxlength="255" /></label>
+            <label><span>{{ t('customer.name') }} <span class="customer-required-star" aria-hidden="true">*</span></span>
+              <input v-model="form.name" :readonly="!editing" required maxlength="255"
+                :aria-invalid="!!profileErrors.name" />
+              <small v-if="profileErrors.name" class="customer-field-error">{{ t('customer.fieldRequired') }}</small>
+            </label>
             <label><span>{{ t('customer.type') }}</span>
               <select v-model="form.customer_type" :disabled="!editing">
                 <option value="ORGANIZATION">{{ t('customer.organizationType') }}</option>
@@ -480,20 +513,37 @@ onMounted(async () => {
                 </option>
               </select></label>
             <label><span>{{ t('customer.tax') }}</span><input v-model="form.tax_code" :readonly="!editing" /></label>
-            <label><span>{{ t('customer.phone') }}</span><input v-model="form.phone" :readonly="!editing" /></label>
+            <label><span>{{ t('customer.phone') }} <span class="customer-required-star" aria-hidden="true">*</span></span>
+              <input v-model="form.phone" type="tel" autocomplete="tel" :readonly="!editing"
+                :required="editing" maxlength="50"
+                :aria-invalid="!!profileErrors.phone || serverPhoneDuplicate" />
+              <small v-if="serverPhoneDuplicate" class="customer-field-error">{{ t('customer.phoneDuplicate') }}</small>
+              <small v-else-if="profileErrors.phone" class="customer-field-error">
+                {{ t(profileErrors.phone === 'invalid' ? 'customer.phoneInvalid' : 'customer.fieldRequired') }}
+              </small>
+            </label>
             <label><span>{{ t('customer.email') }}</span><input v-model="form.email" :readonly="!editing" type="email" /></label>
-            <label class="customer-form-wide"><span>{{ t('customer.address') }}</span>
-              <textarea v-model="form.address" :readonly="!editing" rows="2" /></label>
-            <label><span>{{ t('customer.province') }}</span>
+            <label class="customer-form-wide"><span>{{ t('customer.address') }} <span class="customer-required-star" aria-hidden="true">*</span></span>
+              <textarea v-model="form.address" :readonly="!editing" :required="editing" rows="2"
+                :aria-invalid="!!profileErrors.address" />
+              <small v-if="profileErrors.address" class="customer-field-error">{{ t('customer.fieldRequired') }}</small>
+            </label>
+            <label><span>{{ t('customer.province') }} <span class="customer-required-star" aria-hidden="true">*</span></span>
               <SearchableSelect :model-value="String(form.province_id ?? '')" :options="provinceOptions"
                 :placeholder="t('contact.selectProvince')" :aria-label="t('customer.province')"
-                :disabled="!editing" @update:model-value="updateProfileProvince" /></label>
-            <label><span>{{ t('customer.ward') }}</span>
+                :aria-required="editing" :aria-invalid="!!profileErrors.province_id"
+                :disabled="!editing" @update:model-value="updateProfileProvince" />
+              <small v-if="profileErrors.province_id" class="customer-field-error">{{ t('customer.fieldRequired') }}</small>
+            </label>
+            <label><span>{{ t('customer.ward') }} <span class="customer-required-star" aria-hidden="true">*</span></span>
               <RemoteSearchableSelect :key="`customer-ward-${form.province_id ?? 'none'}`"
                 :model-value="String(form.ward_id ?? '')" :selected-options="profileSelectedWardOptions"
                 :search="searchProfileWards" :placeholder="t('contact.selectWard')"
-                :aria-label="t('customer.ward')" :disabled="!editing || !form.province_id"
-                @update:model-value="updateProfileWard" /></label>
+                :aria-label="t('customer.ward')" :aria-required="editing"
+                :aria-invalid="!!profileErrors.ward_id" :disabled="!editing || !form.province_id"
+                @update:model-value="updateProfileWard" />
+              <small v-if="profileErrors.ward_id" class="customer-field-error">{{ t('customer.fieldRequired') }}</small>
+            </label>
             <label class="customer-form-wide customer-checkbox">
               <input v-model="form.all_companies" type="checkbox" :disabled="!editing" />
               <span>{{ t('customer.allCompanies') }}</span>
@@ -581,6 +631,9 @@ onMounted(async () => {
           <p v-if="!contactList.length" class="customer-empty">{{ t('customer.empty') }}</p>
           <p v-if="contactTotal > contactList.length" class="customer-help">{{ contactList.length }} / {{ contactTotal }}</p>
         </section>
+        <section v-else-if="tab === 'history' && !isNew" class="customer-tab-panel">
+          <BusinessHistoryPanel :customer-id="id" />
+        </section>
         <section v-else-if="tab === 'interactions'" class="customer-tab-panel">
           <header class="customer-tab-heading"><h3>{{ t('customer.interactions') }}</h3></header>
           <label class="customer-company-picker"><span>{{ t('customer.company') }}</span>
@@ -622,7 +675,7 @@ onMounted(async () => {
       <footer class="modal-card__footer">
         <button type="button" class="secondary-button" @click="closeDetail">{{ t('common.close') }}</button>
         <button v-if="tab === 'profile' && editing && canEdit" type="submit" class="primary-button"
-          form="customer-profile-form" :disabled="busy || loading || !form.name.trim() || (!form.all_companies && !form.company_ids.length)">
+          form="customer-profile-form" :disabled="busy || loading || (!form.all_companies && !form.company_ids.length)">
           {{ busy ? t('common.saving') : t('common.save') }}
         </button>
       </footer>
@@ -675,6 +728,8 @@ onMounted(async () => {
 .customer-detail-modal {
   width: min(1120px, calc(100vw - 32px));
   max-height: calc(100vh - 40px);
+  max-height: calc(100dvh - 40px);
+  min-height: 0;
   display: flex;
   flex-direction: column;
   overflow: hidden;
@@ -683,15 +738,26 @@ onMounted(async () => {
   background: #fff;
   box-shadow: 0 22px 70px rgb(18 42 62 / 25%);
 }
+/* Detail workspace height stays stable across all tabs; the new-record form
+   retains its existing natural height. Only the shared body scrolls. */
+.customer-detail-modal--workspace {
+  height: min(760px, calc(100vh - 40px));
+  height: min(760px, calc(100dvh - 40px));
+}
 .customer-heading-code { color: #536b7b; font-size: 14px; font-weight: 400; }
-.customer-detail-toolbar { display: flex; align-items: center; gap: 9px; padding: 10px 20px 0; }
-.customer-detail-tabs { display: flex; gap: 4px; padding: 8px 20px 0; overflow-x: auto; border-bottom: 1px solid #e1e9ee; }
+.customer-detail-toolbar { flex: 0 0 auto; display: flex; align-items: center; gap: 9px; padding: 10px 20px 0; }
+.customer-detail-tabs { flex: 0 0 auto; display: flex; gap: 4px; padding: 8px 20px 0; overflow-x: auto; border-bottom: 1px solid #e1e9ee; }
 .customer-detail-tabs button {
   flex: 0 0 auto; padding: 10px 12px; border: 0; border-bottom: 2px solid transparent;
   background: transparent; color: #61768a; cursor: pointer; font: inherit; font-size: 13px;
 }
 .customer-detail-tabs button[aria-selected='true'] { border-bottom-color: #1674a6; color: #1674a6; font-weight: 700; }
-.customer-detail-modal__body { flex: 1; min-height: 0; overflow-y: auto; padding: 18px 20px 24px; }
+.customer-detail-modal__body {
+  flex: 1 1 auto; min-height: 0; min-width: 0;
+  overflow-y: auto; overflow-x: hidden; overscroll-behavior: contain;
+  scrollbar-gutter: stable;
+  padding: 18px 20px 24px;
+}
 .customer-profile-form, .customer-contact-form { margin: 0; }
 .customer-form-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; }
 .customer-form-grid > label, .customer-company-picker { display: grid; gap: 6px; min-width: 0; color: #536b7b; font-size: 12px; font-weight: 600; }
@@ -734,8 +800,17 @@ onMounted(async () => {
 }
 .customer-contact-form { padding: 18px 20px 24px; overflow-y: auto; }
 .inline-error { color: #b64444; font-size: 12px; }
+.customer-required-star { color: #b64444; font-weight: 700; }
+.customer-field-error { color: #b64444; font-size: 12px; font-weight: 500; }
+.customer-form-grid :is(input, textarea)[aria-invalid='true'] { border-color: #b64444; }
 @media (max-width: 640px) {
-  .customer-detail-modal { width: calc(100vw - 16px); max-height: calc(100vh - 16px); }
+  .customer-detail-backdrop { padding: 8px; }
+  .customer-detail-modal {
+    width: calc(100vw - 16px);
+    max-height: calc(100vh - 16px);
+    max-height: calc(100dvh - 16px);
+  }
+  .customer-detail-modal--workspace { height: calc(100vh - 16px); height: calc(100dvh - 16px); }
   .customer-form-grid { grid-template-columns: 1fr; }
   .customer-form-wide { grid-column: auto; }
   .customer-detail-tabs { padding-inline: 8px; }

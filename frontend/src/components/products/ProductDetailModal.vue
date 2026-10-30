@@ -1,6 +1,8 @@
 <script setup lang="ts">
 import { rowAllowedActions } from '@/components/lists/rowActionPolicy'
 import { computed, ref, watch } from 'vue'
+import { NIcon } from 'naive-ui'
+import { CubeOutline } from '@vicons/ionicons5'
 import { useI18n } from 'vue-i18n'
 import type {
   ComboItem,
@@ -58,6 +60,9 @@ type ConversionForm = {
   status: ProductUomConversion['status']
 }
 type ComboForm = { id: string; component_product_id: string; quantity: string }
+
+// Removing a conversion is an unsaved edit to the Product's conversion list.
+const conversionActionCodes = { delete: 'edit' } as const
 
 const props = defineProps<{
   open: boolean
@@ -168,7 +173,9 @@ function toCombo(row: ComboItem): ComboForm {
 const role = computed(() => currentProduct.value?.role)
 const isCombo = computed(() => role.value === 'COMBO')
 const isParent = computed(() => role.value === 'PARENT')
-const canEditCurrent = computed(() => currentProduct.value?.allowed_actions?.edit === true)
+const canEditCurrent = computed(
+  () => currentProduct.value?.allowed_actions?.edit === true && hasBasePermission('product', 'edit'),
+)
 const baseUomName = computed(
   () => productUomName(props.uoms, currentProduct.value?.base_uom_id) ?? t('list.noValue'),
 )
@@ -305,7 +312,7 @@ function backToParent(): void {
   activeTab.value = 'children'
 }
 function editCurrent(): void {
-  if (currentProduct.value?.allowed_actions?.edit === true) emit('edit', currentProduct.value)
+  if (canEditCurrent.value && currentProduct.value) emit('edit', currentProduct.value)
 }
 function resetChildForm(): void {
   childForm.value = {
@@ -500,37 +507,39 @@ watch(
 </script>
 
 <template>
-  <div v-if="props.open" class="detail-backdrop">
+  <div v-if="props.open" class="modal-backdrop detail-backdrop">
     <section
-      class="detail-modal"
+      class="detail-modal tabbed-detail-workspace"
       role="dialog"
       aria-modal="true"
       :aria-label="t('product.productDetails')"
     >
-      <header class="detail-header">
-        <div>
-          <p class="eyebrow">
-            {{
-              currentProduct?.role ? productRoleLabel(currentProduct.role, t) : t('list.noValue')
-            }}
-          </p>
-          <h2>{{ currentProduct?.full_name }}</h2>
+      <header class="modal-card__header detail-header">
+        <div class="product-detail-heading">
+          <h2 class="modal-card-title product-detail-title">
+            <NIcon :size="24" aria-hidden="true"><CubeOutline /></NIcon>
+            <span class="product-detail-name">{{ currentProduct?.full_name || t('product.productDetails') }}</span>
+            <span v-if="currentProduct?.product_code" class="product-detail-code">· {{ currentProduct.product_code }}</span>
+            <span v-if="currentProduct?.role" class="product-detail-role">{{ productRoleLabel(currentProduct.role, t) }}</span>
+          </h2>
+          <span v-if="currentProduct?.status" class="product-header-status">
+            <TableStatus :status="currentProduct.status" />
+            <span>{{ businessStateLabel(currentProduct.status) }}</span>
+          </span>
         </div>
         <button
           type="button"
-          class="icon-button"
+          class="modal-card-button-close"
           :aria-label="t('common.close')"
           @click="emit('close')"
-        >
-          ×
-        </button>
+        ></button>
       </header>
       <div v-if="parentProduct" class="detail-back">
         <button type="button" class="secondary-button" @click="backToParent">
           {{ t('product.backToParent') }}
         </button>
       </div>
-      <nav class="detail-tabs" :aria-label="t('product.detailTabs')">
+      <nav class="detail-tabs" role="tablist" :aria-label="t('product.detailTabs')">
         <button
           v-for="tab in tabItems"
           :key="tab.key"
@@ -543,7 +552,7 @@ watch(
           {{ tab.label }}
         </button>
       </nav>
-      <div class="detail-body">
+      <div :key="activeTab" class="detail-body">
         <p v-if="error && !childImagePartialError" class="inline-error" role="alert">
           {{ t('product.requestError') }}
         </p>
@@ -583,7 +592,11 @@ watch(
             <dd>{{ baseUomName }}</dd>
             <dt>{{ t('product.status') }}</dt>
             <dd>
-              {{ businessStateLabel(currentProduct?.status) }}
+              <span v-if="currentProduct?.status" class="child-status-label">
+                <TableStatus :status="currentProduct.status" />
+                <span>{{ businessStateLabel(currentProduct.status) }}</span>
+              </span>
+              <span v-else>{{ t('list.noValue') }}</span>
             </dd>
           </dl>
         </section>
@@ -736,6 +749,7 @@ watch(
               v-if="canEditCurrent"
               type="button"
               class="secondary-button"
+              :disabled="busy"
               @click="openConversion()"
             >
               {{ t('product.addConversion') }}
@@ -769,24 +783,29 @@ watch(
                   <td>{{ productUsageLabel(row.usage_type, t) }}</td>
                   <td>{{ displayMoney(row.price) }}</td>
                   <td>{{ displayPackage(row) }}</td>
-                  <td>{{ row.status === 'ACTIVE' ? t('status.active') : t('status.inactive') }}</td>
-                  <td>
-                    <button
-                      v-if="canEditCurrent"
-                      type="button"
-                      class="icon-button"
-                      @click="openConversion(index)"
-                    >
-                      {{ t('common.edit') }}</button
-                    ><button
-                      v-if="canEditCurrent"
-                      type="button"
-                      class="icon-button danger"
-                      :aria-label="t('common.delete')"
-                      @click="removeConversion(index)"
-                    >
-                      {{ t('common.delete') }}
-                    </button>
+                  <td class="conversion-state">
+                    <span class="child-status-label">
+                      <TableStatus :status="row.status" />
+                      <span>{{ businessStateLabel(row.status) }}</span>
+                    </span>
+                  </td>
+                  <td class="conversion-actions">
+                    <!-- UOM conversions are replaced through product.edit, not an independent
+                         conversion.delete action. Require the parent row's effective hint. -->
+                    <TableRowActions
+                      authorization-mode="effective"
+                      :allowed-actions="rowAllowedActions(currentProduct)"
+                      :action-codes="conversionActionCodes"
+                      :show-edit="canEditCurrent"
+                      :show-delete="canEditCurrent"
+                      edit-permission="product.edit"
+                      delete-permission="product.edit"
+                      :busy="busy"
+                      :edit-label="`${t('common.edit')} ${productUomName(props.uoms, row.uom_id) ?? ''}`"
+                      :delete-label="`${t('common.delete')} ${productUomName(props.uoms, row.uom_id) ?? ''}`"
+                      @edit="openConversion(index)"
+                      @delete="removeConversion(index)"
+                    />
                   </td>
                 </tr>
                 <tr v-if="conversions.length === 0">
@@ -822,15 +841,17 @@ watch(
           </dl>
         </section>
       </div>
-      <footer class="detail-footer">
+      <footer class="modal-card__footer">
         <button
           v-if="canEditCurrent"
           type="button"
           class="secondary-button"
+          :disabled="busy"
           @click="editCurrent"
         >
-          {{ t('common.edit') }}</button
-        ><button type="button" class="primary-button" @click="emit('close')">
+          {{ t('common.edit') }}
+        </button>
+        <button type="button" class="secondary-button" @click="emit('close')">
           {{ t('common.close') }}
         </button>
       </footer>
@@ -994,28 +1015,74 @@ watch(
 </template>
 
 <style scoped>
-.detail-backdrop,
+/* Product detail shares the canonical ERP modal header, footer and backdrop.
+   Its fixed height is provided by global .tabbed-detail-workspace. */
+.detail-backdrop {
+  z-index: 50;
+}
 .nested-backdrop {
   position: fixed;
   inset: 0;
-  z-index: 50;
+  z-index: 60;
   display: grid;
   place-items: center;
   padding: 18px;
   background: rgb(18 38 54 / 48%);
 }
 .detail-modal {
-  width: min(1100px, 100%);
-  max-height: calc(100vh - 36px);
+  width: min(1120px, calc(100vw - 32px));
+  max-height: calc(100dvh - 40px);
   overflow: hidden;
-  display: grid;
-  grid-template-rows: auto auto auto 1fr auto;
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  border: 1px solid #d5e1e8;
   border-radius: 7px;
   background: #fff;
-  box-shadow: 0 20px 60px rgb(18 42 62 / 24%);
+  box-shadow: 0 22px 70px rgb(18 42 62 / 25%);
 }
-.detail-header,
-.detail-footer,
+.product-detail-heading {
+  display: flex;
+  flex: 1 1 auto;
+  min-width: 0;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 6px 14px;
+}
+.product-detail-title {
+  flex: 0 1 auto;
+  min-width: 0;
+  max-width: 100%;
+  flex-wrap: wrap;
+  gap: 6px;
+  font-size: 19px;
+}
+.product-header-status {
+  display: inline-flex;
+  flex: 0 0 auto;
+  align-items: center;
+  gap: 6px;
+  max-width: 100%;
+  color: #536b7b;
+  font-size: 12px;
+  white-space: nowrap;
+}
+.product-detail-title > .n-icon { flex: 0 0 auto; }
+.product-detail-name {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+.product-detail-code,
+.product-detail-role {
+  font-size: 13px;
+  font-weight: 400;
+  color: #536b7b;
+}
+.product-detail-role {
+  padding-left: 6px;
+  border-left: 1px solid #b9c9d3;
+}
+.modal-card-button-close { flex: 0 0 auto; }
 .section-header,
 .child-modal header,
 .child-modal footer {
@@ -1024,20 +1091,9 @@ watch(
   justify-content: space-between;
   gap: 12px;
 }
-.detail-header {
-  padding: 16px 20px;
-  border-bottom: 1px solid #e4ebef;
-}
-.detail-header h2,
 .child-modal h3 {
   margin: 0;
   color: #173c59;
-}
-.eyebrow {
-  margin: 0 0 4px;
-  color: #1876a8;
-  font-size: 11px;
-  font-weight: 700;
 }
 .detail-back {
   padding: 10px 20px 0;
@@ -1046,12 +1102,12 @@ watch(
   display: flex;
   gap: 4px;
   overflow-x: auto;
-  padding: 12px 20px 0;
-  border-bottom: 1px solid #dbe5ea;
+  padding: 8px 20px 0;
+  border-bottom: 1px solid #e1e9ee;
 }
 .detail-tabs button {
   border: 0;
-  border-bottom: 3px solid transparent;
+  border-bottom: 2px solid transparent;
   padding: 10px 12px;
   background: transparent;
   color: #536b7b;
@@ -1059,13 +1115,19 @@ watch(
   white-space: nowrap;
 }
 .detail-tabs button.active {
-  border-bottom-color: #1876a8;
-  color: #173c59;
+  border-bottom-color: #1674a6;
+  color: #1674a6;
   font-weight: 700;
 }
 .detail-body {
-  overflow: auto;
-  padding: 18px 20px;
+  flex: 1 1 auto;
+  min-height: 0;
+  min-width: 0;
+  overflow-y: auto;
+  overflow-x: hidden;
+  overscroll-behavior: contain;
+  scrollbar-gutter: stable;
+  padding: 18px 20px 24px;
 }
 .tab-panel {
   display: grid;
@@ -1121,7 +1183,9 @@ watch(
   white-space: nowrap;
 }
 .child-state,
-.child-actions {
+.child-actions,
+.conversion-state,
+.conversion-actions {
   text-align: center !important;
   white-space: nowrap;
 }
@@ -1142,11 +1206,14 @@ watch(
   display: block;
   color: #536b7b;
 }
-.detail-footer {
-  justify-content: flex-end;
-  padding: 14px 20px 18px;
-  border-top: 1px solid #e4ebef;
+@media (max-width: 600px) {
+  .product-detail-title { font-size: 16px; }
+  .product-detail-role { display: none; }
+  .detail-tabs { padding-inline: 10px; }
+  .detail-body { padding: 14px 12px 20px; }
+  .section-header { flex-wrap: wrap; }
 }
+
 .icon-button,
 .link-button {
   border: 0;

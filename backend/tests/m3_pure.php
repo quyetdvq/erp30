@@ -56,15 +56,17 @@ function policy3(string $id, string $participant, string $ref, string $effect): 
 
 $exceptions = [
     'authorization_group','authorization_log','display_setting',
-    'notification_setting','notification_operations','employee_assignment','import_job',
+    'notification_setting','notification_operations','business_history_monitor','customer_interaction','employee_assignment','import_job',
     'lifecycle','policy','user','workflow_state','resource',
 ];
-ok3('ten original plus two Notification independent types', Cat::independentTypes() === $exceptions);
-ok3('eight native + four All States', count(array_filter($exceptions, static fn ($t) => Cat::mode($t) === Cat::NATIVE)) === 8);
+ok3('ten original, two Notification and Customer Interaction independent types', Cat::independentTypes() === $exceptions);
+ok3('eight native + five pinned All States + HIS monitor', count(array_filter($exceptions, static fn ($t) => Cat::mode($t) === Cat::NATIVE)) === 8
+    && count(array_filter($exceptions, static fn ($t) => Cat::mode($t) === Cat::ALL_STATES)) === 6);
 ok3('authorization_log is All States only', Cat::mode('authorization_log') === Cat::ALL_STATES);
 ok3('display_setting is All States only', Cat::mode('display_setting') === Cat::ALL_STATES);
 ok3('notification_setting remains All States only', Cat::mode('notification_setting') === Cat::ALL_STATES);
 ok3('notification_operations is independently All States', Cat::mode('notification_operations') === Cat::ALL_STATES);
+ok3('customer_interaction is independently All States', Cat::mode('customer_interaction') === Cat::ALL_STATES);
 ok3('employee_assignment is native', Cat::mode('employee_assignment') === Cat::NATIVE);
 ok3('new future resource uses Lifecycle', Cat::mode('future_resource') === Cat::LIFECYCLE);
 ok3('province uses Lifecycle not fallback', Cat::mode('province') === Cat::LIFECYCLE);

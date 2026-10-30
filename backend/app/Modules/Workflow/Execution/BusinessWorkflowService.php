@@ -8,8 +8,7 @@ use App\Exceptions\DomainException;
 use App\Modules\Access\BasePermissionReader;
 use App\Modules\Access\ResourceStateRepository;
 use App\Modules\Access\UnifiedAccessService;
-use App\Modules\Customer\CustomerService;
-use App\Modules\Notifications\NotificationOutboxProducer;
+use App\Shared\Workflow\WorkflowTransitionPort;
 use CodeIgniter\Database\BaseConnection;
 use CodeIgniter\Shield\Entities\User;
 use RuntimeException;
@@ -22,13 +21,16 @@ final class BusinessWorkflowService
     private readonly UnifiedAccessService $access;
     private readonly ResourceStateRepository $states;
     private readonly User $actor;
+    private readonly WorkflowTransitionPort $transitionPort;
 
-    public function __construct(User $actor, ?BaseConnection $db = null)
+    public function __construct(User $actor, ?BaseConnection $db = null, ?WorkflowTransitionPort $transitionPort = null)
     {
         $this->db = $db ?? db_connect();
         $this->actor = $actor;
         $this->access = new UnifiedAccessService($actor,$this->db);
         $this->states = new ResourceStateRepository($this->db);
+        // Resolve the outer-layer composition root; owner module depends only on the port.
+        $this->transitionPort = $transitionPort ?? \Config\Services::workflowTransitionPort();
     }
 
     /** @return array{mode:string,initial:?string,states:list<string>} */
@@ -88,8 +90,9 @@ final class BusinessWorkflowService
             if ($action !== 'setstate') {
                 throw new DomainException('WF_INVALID_TRANSITION', ['action_code' => $action]);
             }
-            $saved = (new CustomerService($this->actor, $this->db))
-                ->setState($id, ['status' => $chosen['status']]);
+            $saved = $this->transitionPort->changeCustomerState(
+                $this->actor, $this->db, $id, $chosen['status']
+            );
             return ['status' => (string) $saved['status'], 'action_code' => $action];
         }
         if (!$this->db->transBegin()) throw new RuntimeException('Workflow transition transaction failed');
@@ -114,7 +117,7 @@ final class BusinessWorkflowService
             if (!$ok || $this->db->affectedRows()!==1) throw new DomainException('WF_CONCURRENT_STATE_CHANGE');
             // The transition and its immutable recipient snapshot share one transaction.
             // No notification is emitted without explicit record-level assignments.
-            NotificationOutboxProducer::enqueueWorkflowTransition($this->db, $type, $id, $old, $new, $action);
+            $this->transitionPort->enqueueTransition($this->db, $type, $id, $old, $new, $action);
             if (!$this->db->transStatus() || !$this->db->transCommit()) {
                 throw new RuntimeException('Workflow transaction commit failed');
             }

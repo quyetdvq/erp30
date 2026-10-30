@@ -322,18 +322,21 @@ onMounted(async () => {
         "
       />
     </ListShell>
-    <ContactFormModal
-      :open="modalOpen"
-      :owner-id="props.ownerId"
-      :owner-type="props.ownerType"
-      :contact="editing"
-      :provinces="provinces"
-      :wards="wards"
-      :busy="mutationBusy"
-      @close="modalOpen = false"
-      @save="save"
-      @province-change="loadWards"
-    />
+    <!-- Nested Contact dialogs must escape the scrolling detail workspace. -->
+    <Teleport to="body">
+      <ContactFormModal
+        :open="modalOpen"
+        :owner-id="props.ownerId"
+        :owner-type="props.ownerType"
+        :contact="editing"
+        :provinces="provinces"
+        :wards="wards"
+        :busy="mutationBusy"
+        @close="modalOpen = false"
+        @save="save"
+        @province-change="loadWards"
+      />
+    </Teleport>
     <TableDetailModal
       :open="detailOpen"
       :title="t('common.view') + ' - ' + t('contact.title')"

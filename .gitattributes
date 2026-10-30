@@ -1,0 +1,2 @@
+# Keep frozen route fixtures byte-identical on Windows/Linux Git checkouts.
+backend/tests/fixtures/routes_v1923*.json text eol=lf

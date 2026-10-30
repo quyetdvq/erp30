@@ -7,6 +7,7 @@ const sdkMocks = vi.hoisted(() => ({
   updateProductUom: vi.fn<(...args: unknown[]) => unknown>(),
   createProduct: vi.fn<(...args: unknown[]) => unknown>(),
   updateProduct: vi.fn<(...args: unknown[]) => unknown>(),
+  replaceProductUomConversions: vi.fn<(...args: unknown[]) => unknown>(),
   replaceComboItems: vi.fn<(...args: unknown[]) => unknown>(),
   listComboItems: vi.fn<(...args: unknown[]) => unknown>(),
 }))
@@ -16,8 +17,11 @@ vi.mock('@/api/generated/sdk.gen', async (importOriginal) => ({
   ...sdkMocks,
 }))
 
+import { jsonBodySerializer } from '@/api/generated/client'
+
 import {
   replaceProductComboItems,
+  replaceProductConversions,
   saveProduct,
   saveProductGroup,
   saveProductUom,
@@ -67,6 +71,53 @@ describe('product catalog patch payloads', () => {
     expect(bodyOf(sdkMocks.updateProduct)).toEqual({
       product_name: 'Sample',
     })
+  })
+
+  it('sends UOM conversions as a JSON items object, never as an implicit bare array', async () => {
+    sdkMocks.replaceProductUomConversions.mockResolvedValue({ data: { data: [] } })
+    const rows = [{
+      uom_id: '2',
+      conversion_factor: '12.500000',
+      usage_type: 'PURCHASE' as const,
+      status: 'ACTIVE' as const,
+    }]
+    await replaceProductConversions('1479', rows)
+    expect(sdkMocks.replaceProductUomConversions).toHaveBeenCalledTimes(1)
+    const request = sdkMocks.replaceProductUomConversions.mock.calls[0]![0] as {
+      path: { id: string }
+      body: unknown
+      bodySerializer: (body: unknown) => unknown
+      throwOnError: boolean
+    }
+    expect(request.path.id).toBe('1479')
+    expect(request.body).toEqual({ items: rows })
+    expect(request.bodySerializer).toBe(jsonBodySerializer.bodySerializer)
+    expect(request.bodySerializer(request.body)).toBe(JSON.stringify({ items: rows }))
+    expect(request.throwOnError).toBe(true)
+  })
+
+  it('sends explicit {items:[]} when the user deliberately removes all conversions', async () => {
+    sdkMocks.replaceProductUomConversions.mockResolvedValue({ data: { data: [] } })
+    await replaceProductConversions('1479', [])
+    const request = sdkMocks.replaceProductUomConversions.mock.calls[0]![0] as {
+      body: unknown
+      bodySerializer: (body: unknown) => unknown
+    }
+    expect(request.body).toEqual({ items: [] })
+    expect(request.bodySerializer(request.body)).toBe('{"items":[]}')
+  })
+
+  it('normalizes the generated SDK object variant without nesting items twice', async () => {
+    sdkMocks.replaceProductUomConversions.mockResolvedValue({ data: { data: [] } })
+    await replaceProductConversions('1479', { items: [{ uom_id: '2', conversion_factor: '1' }] })
+    expect(bodyOf(sdkMocks.replaceProductUomConversions)).toEqual({
+      items: [{ uom_id: '2', conversion_factor: '1' }],
+    })
+  })
+
+  it('does not report success when the UOM replace API rejects the write', async () => {
+    sdkMocks.replaceProductUomConversions.mockRejectedValue(new Error('400 MALFORMED_REQUEST'))
+    await expect(replaceProductConversions('1479', [])).rejects.toThrow('MALFORMED_REQUEST')
   })
 
   it('re-reads combo items when replacement acknowledges with an empty collection', async () => {

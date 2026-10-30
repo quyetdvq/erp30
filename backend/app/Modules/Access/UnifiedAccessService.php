@@ -25,10 +25,11 @@ final class UnifiedAccessService
         'department' => 'MASTER', 'position' => 'MASTER', 'employee' => 'MASTER',
         'employee_assignment' => 'ORGANIZATION',
         'organization_contact' => 'ORGANIZATION', 'employee_contact' => 'ORGANIZATION',
-        'customer' => 'MASTER', 'customer_contact' => 'MASTER', 'customer_interaction' => 'ORGANIZATION',
+        'customer' => 'MASTER', 'customer_contact' => 'MASTER', 'supplier' => 'MASTER', 'customer_interaction' => 'ORGANIZATION',
         // Pinned M3.3 API-030 domains from baseline ResourceActionSeeder.
         'user' => 'SYSTEM', 'authorization_group' => 'SYSTEM',
         'notification_setting' => 'SYSTEM', 'notification_operations' => 'SYSTEM',
+        'business_history_monitor' => 'SYSTEM',
         'resource' => 'SYSTEM', 'workflow_state' => 'SYSTEM',
         'lifecycle' => 'SYSTEM', 'policy' => 'ORGANIZATION',
         'authorization_log' => 'ORGANIZATION',
@@ -86,7 +87,8 @@ final class UnifiedAccessService
     public function viewableMasterLifecycleStatuses(string $type): array
     {
         $type = ResourceStateCatalog::normalizedType($type);
-        if (! in_array($type, ['product', 'product_group', 'product_uom', 'employee', 'department', 'position', 'province', 'ward', 'customer', 'customer_contact'], true)) {
+        if (! in_array($type, ['product', 'product_group', 'product_uom', 'employee', 'department', 'position', 'province', 'ward', 'customer', 'customer_contact'], true)
+            && $type !== 'supplier') {
             throw new UnexpectedValueException('SQL VIEW scope is not approved for resource: ' . $type);
         }
         $resource = $this->policies->resourceAction($type, 'view');
@@ -403,6 +405,15 @@ final class UnifiedAccessService
             throw new UnexpectedValueException('Persisted record lacks authoritative organization scope: ' . $type);
         }
         return PositiveId::value((string) $value);
+    }
+
+    /**
+     * Server-owned GROUP root for reviewed Supplier read plans. Never use a
+     * query-string/JSON organization ID as a substitute for this authority.
+     */
+    public function trustedGroupRootId(): string
+    {
+        return $this->groupRoot();
     }
 
     private function groupRoot(): string

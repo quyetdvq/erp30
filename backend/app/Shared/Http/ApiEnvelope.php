@@ -50,6 +50,12 @@ final class ApiEnvelope
             }
             return array_is_list($value) ? array_values($result) : $result;
         }
+        if ($value instanceof \stdClass && get_object_vars($value) === []) {
+            // Preserve an intentional empty JSON object as {}. In particular,
+            // HIS-POL-002 uses {} to mean a redacted field change. Casting it
+            // to [] would change the wire contract and break strict readers.
+            return $value;
+        }
         if (is_object($value)) {
             return self::normalize(get_object_vars($value), $key);
         }

@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 use App\Exceptions\DomainException as ErpDomainException;
 use App\Modules\Access\Query\AuthorizationSqlScopeCompiler;
+use App\Modules\Access\Query\AuthorizedSqlScope;
 use App\Modules\Access\UnifiedAccessService;
 use App\Modules\Contact\ContactScope;
 use App\Modules\Contact\ContactScopeProvider;
@@ -262,7 +263,12 @@ final class M87SqlVerifier
             }
             throw $error;
         }
-        return $access->canView($target['resource'],$target['target']);
+        if (!$access->canView($target['resource'],$target['target'])) return false;
+        if ($target['resource'] !== 'customer_contact') return true;
+        // The canonical Contact API also checks VIEW of the owning Customer.
+        // ContactScope::resolve() validates parent existence, not parent PBAC.
+        $parent = $this->db->table('customers')->where('id', $row['contact_ref_id'])->get()->getRowArray();
+        return $parent !== null && $access->canView('customer', $parent);
     }
 
     /** @return array{normalize:callable,collection:callable,detail:callable} */
@@ -310,12 +316,21 @@ final class M87SqlVerifier
         if ($resource==='contact') {
             $org=$compiler->compile(new ContactScopeProvider('organization_contact',$this->db));
             $emp=$compiler->compile(new ContactScopeProvider('employee_contact',$this->db));
+            // M19.25A: mirror all four scopes used by the production ContactService.
+            // Omitting these two MASTER scopes silently excludes CUSTOMER contacts
+            // from the audit SQL while the PBAC oracle can still see them.
+            $customerContact=AuthorizedSqlScope::master(
+                'customer_contact',$access->viewableMasterLifecycleStatuses('customer_contact'));
+            $customerMaster=AuthorizedSqlScope::master(
+                'customer',$access->viewableMasterLifecycleStatuses('customer'));
             $date=$this->instant->format('Y-m-d');
             return [
                 'normalize'=>static fn(int $p,int $s):array=>ContactSql::normalize(['page'=>$p,'page_size'=>$s,'sort'=>'id']),
                 'query'=>static fn(array $q):array=>ContactSql::normalize($q),
-                'collection'=>static fn(array $n):array=>ContactSql::collection($n,$org,$emp,$date,$prefix),
-                'detail'=>static fn(string $id):array=>ContactSql::detail($id,$org,$emp,$date,$prefix),
+                'collection'=>static fn(array $n):array=>ContactSql::collection(
+                    $n,$org,$emp,$date,$prefix,$customerContact,$customerMaster),
+                'detail'=>static fn(string $id):array=>ContactSql::detail(
+                    $id,$org,$emp,$date,$prefix,$customerContact,$customerMaster),
             ];
         }
         throw new InvalidArgumentException('Unreviewed source in M8.7.');

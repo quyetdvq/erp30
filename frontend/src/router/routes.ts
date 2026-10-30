@@ -95,6 +95,12 @@ export const routes: RouteRecordRaw[] = [
         meta: { labelKey: 'nav.policies', breadcrumbTrail: breadcrumbTrails.security },
       },
       {
+        path: 'system/history',
+        name: 'history-monitor',
+        component: () => import('@/features/history/pages/HistoryMonitorView.vue'),
+        meta: { labelKey: 'nav.historyMonitor', breadcrumbTrail: breadcrumbTrails.security },
+      },
+      {
         path: 'security/authorization-logs',
         name: 'security-authorization-logs',
         component: () => import('@/features/security/pages/SecurityAuthorizationLogsView.vue'),

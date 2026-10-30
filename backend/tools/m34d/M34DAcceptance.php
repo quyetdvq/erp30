@@ -265,7 +265,8 @@ final class M34DAcceptance
     {
         require_once $root.'/backend/app/Modules/Access/ResourceStateCatalog.php';
         $types = \App\Modules\Access\ResourceStateCatalog::independentTypes();
-        self::must(count($types) === 10 && count(array_unique($types)) === 10, 'Expected exactly 10 independent state types');
+        self::must(count($types) === 14 && count(array_unique($types)) === 14,
+            'Expected 13 pinned plus one reviewed HIS-02 independent state types');
         $native = $all = [];
         foreach ($types as $type) {
             $mode = \App\Modules\Access\ResourceStateCatalog::mode($type);
@@ -274,8 +275,10 @@ final class M34DAcceptance
             else throw new M34DViolation('Independent resource cannot be Lifecycle managed');
         }
         sort($native); sort($all);
-        self::must(count($native) === 8 && $all === ['authorization_log','display_setting'],
-            '8 Native/2 All States classification changed');
+        self::must(count($native) === 8 && $all === [
+            'authorization_log', 'business_history_monitor', 'customer_interaction', 'display_setting',
+            'notification_operations', 'notification_setting',
+        ], '8 Native/5 pinned All States + one approved monitor classification changed');
         self::must(\App\Modules\Access\ResourceStateCatalog::mode('product') === 'LIFECYCLE',
             'Unknown business Resource cannot fallback to Native State');
         $read = static fn (string $path): string => self::read($root.'/backend/app/Modules/'.$path);
@@ -289,7 +292,8 @@ final class M34DAcceptance
             self::must(str_contains($read($path), 'new UnifiedAccessService('),
                 'Owner module bypasses central authorization: '.$path);
         }
-        return ['native'=>count($native), 'all_states'=>count($all), 'lifecycle_other_types'=>true,
+        return ['native'=>count($native), 'all_states'=>count($all), 'baseline_all_states'=>5,
+            'history_monitor_extension'=>1, 'lifecycle_other_types'=>true,
             'pbac'=>'Centralized persisted-State Action decisions; runtime samples are a separate DB-READ gate'];
     }
 

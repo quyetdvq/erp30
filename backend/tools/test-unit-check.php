@@ -166,6 +166,7 @@ try {
         'm86e_contact_contract_pure.php',
         'm87_plan_pure.php',
         'm87_sql_contract_pure.php',
+        'm1925a_contact_audit_pure.php',
         'm87_http_safety_pure.php',
         'm87a_preflight_pure.php',
         'm87a_launcher_pure.php',

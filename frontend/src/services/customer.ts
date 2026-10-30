@@ -16,7 +16,8 @@ export type Customer = {
   primary_contact_id: string | null
   all_companies: 0 | 1 | boolean
   company_ids?: string[]
-  status: 'ACTIVE' | 'INACTIVE'
+  /** Canonical State of the Customer Resource's currently configured Lifecycle. */
+  status: string
   allowed_actions?: { edit?: boolean; setstate?: boolean }
   created_at: string
 }

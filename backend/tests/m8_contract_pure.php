@@ -28,10 +28,13 @@ foreach (['ProductMutationService(', 'ProductConversionService(', 'ProductComboS
     'canStartProductImport()', 'mergeLocked('] as $term) {
     $ok(str_contains($adapter,$term),'business services, locks and PBAC '.$term);
 }
-foreach (['assertInnoDb($adapter)', 'processRow(', "'status'=>'PROCESSING'", "'status'=>'FAILED'",
+foreach (['assertInnoDb($adapter)', 'processRow(', "'status'=>'PROCESSING'", "finalizeTerminal(\$id,'FAILED'",
     "'row_number'=>\$number", 'projectJob(', 'projectRow(', 'canViewJob(', 'viewableJobStatuses('] as $term) {
     $ok(str_contains($service,$term),'shared pipeline security/journal '.$term);
 }
+$ok(str_contains($service, 'FOR UPDATE') && str_contains($service, 'transBegin()')
+    && str_contains($service, 'NotificationOutboxProducer::enqueueImportTerminal')
+    && str_contains($service, 'transRollback()'), 'locked atomic terminal/outbox transaction');
 $ok(str_contains($access,"'import_job' => 'ORGANIZATION'"),'organization job domain');
 $ok(str_contains($access,'viewableProductImportStatuses()'),'native job state scope');
 $ok(str_contains($access,'canStartProductImport()'),'import action distinct from create');

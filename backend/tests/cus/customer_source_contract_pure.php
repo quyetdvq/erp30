@@ -39,6 +39,38 @@ $ok(str_contains($service,"->where('company_organization_id'"),'Company interact
 $ok(str_contains($service,"'happened_at >='"),'event time lower bound');
 $ok(str_contains($service,"'happened_at <'"),'event time exclusive upper bound');
 $ok(str_contains($service,'GET_LOCK('),'serialized master mutation');
+$phoneMigration=$read('app/Database/Migrations/2026-10-29-000025_AddCustomerPhoneUniqueness.php');
+$ok(str_contains($phoneMigration,"ADD UNIQUE KEY `") && str_contains($phoneMigration,"uq_customers_phone_key")
+    && str_contains($phoneMigration,'CUS_PHONE_LEGACY_DUPLICATE_IDS_'),
+    'migration enforces physical unique key and rejects existing duplicate phones');
+$ok(str_contains($phoneMigration,'CustomerPhone::key('),
+    'migration backfills exact same Customer phone canonicalization');
+$ok(str_contains($service,'CustomerRules::requiredProfile($fields)')
+    && str_contains($service,'CustomerRules::requiredProfile($next)'),
+    'POST and PATCH validate mandatory fields on trusted merged row');
+$ok(str_contains($service,'assertPhoneAvailable(')
+    && str_contains($service,"'CUSTOMER_PHONE_DUPLICATE'"),
+    'write mutations validate Customer-wide uniqueness with DB conflict mapping');
+$ok(str_contains($service,"unset($"."row['phone_key'])"),
+    'internal phone uniqueness key not leaked in API response');
+
+$ok(str_contains($service, "->initialState('customer')")
+    && str_contains($service, "'status'=>".'$initial')
+    && str_contains($service, '$parsed,$initial')
+    && !str_contains($service,"if ($"."initial!=='ACTIVE')"),
+    'create stores trusted Lifecycle initial code inside same numbered transaction');
+$ok(str_contains($service,'CustomerRules::stateCode($input[')
+    && str_contains($service, "->transitionTarget('customer'")
+    && str_contains($service, "if ($"."state==='ACTIVE')"),
+    'custom setstate code still enforces Lifecycle transition and ACTIVE company revalidation');
+$ok(str_contains($service,"->definitionFor('customer')['by_code']"),
+    'list status filter checks configured Lifecycle before scoped SQL query');
+$ok(str_contains($service, 'Transition not allowed or ambiguous for current State.')
+    && str_contains($service, "throw new DomainException('CUSTOMER_STATE_TRANSITION_INVALID'"),
+    'missing setstate transition returns domain rejection, never bypasses PBAC');
+$ok(str_contains($read('app/Modules/Customer/CustomerSql.php'), 'Customer status filter.'),
+    'SQL list validates canonical State code before adding bound filter');
+
 $seeder=$read('app/Database/Seeds/CustomerCoreSeeder.php');
 $ok(!str_contains($seeder,"->table('permissions'") && !str_contains($seeder,"->table('auth_groups_users'"),'seeder grants no permissions');
 $ok(str_contains($seeder,"'customer_interaction'=>['ORGANIZATION'"),'Company interaction security');
@@ -105,4 +137,27 @@ $ok(str_contains($openapi,'CustomerRowActionHints:'), 'OpenAPI boolean row hint 
 $ok(str_contains($openapi,'CustomerListResponse:'), 'OpenAPI typed Customer list');
 $ok(str_contains($openapi,'CustomerItemResponse:'), 'OpenAPI typed Customer detail');
 $ok(str_contains($openapi,"[edit, setstate]"), 'OpenAPI edit/setstate both required');
+$ok(substr_count($openapi, "pattern: '^[A-Z][A-Z0-9_:-]{0,19}$'")===3,
+    'OpenAPI list/read/setstate support the current VARCHAR(20) Lifecycle code');
+$customerFrontend=$read('../frontend/src/features/customer/pages/CustomersView.vue');
+$ok(str_contains($customerFrontend,"useBusinessWorkflowStates('customer', [])")
+    && !str_contains($customerFrontend,"{ value: 'ACTIVE', labelKey: 'status.active' }"),
+    'Customer FE status filter options come from the canonical Workflow endpoint');
+$customerEditor=$read('../frontend/src/features/customer/pages/CustomerDetailView.vue');
+foreach (['name','phone','address','province','ward'] as $field) {
+    $ok(str_contains($customerEditor, "t('customer.$field')"), 'Customer profile displays '.$field);
+}
+$ok(str_contains($customerEditor, 'validateCustomerProfile(form.value)')
+    && str_contains($customerEditor, "code === 'CUSTOMER_PHONE_DUPLICATE'"),
+    'Customer frontend validates required profile and maps duplicate conflict');
+$ok(str_contains($customerEditor,'customer-required-star')
+    && str_contains($customerEditor, 'customer-field-error'),
+    'Customer frontend identifies mandatory fields and renders field errors');
+$openapiSchema=$read('../contracts/openapi/p2-cus.design.openapi.yaml');
+foreach (['- phone', '- address', '- province_id', '- ward_id'] as $required) {
+    $ok(str_contains($openapiSchema,$required), 'Customer OpenAPI documents '.$required);
+}
+$ok(str_contains($read('../frontend/src/services/customer.ts'),'status: string'),
+    'Customer client represents custom Lifecycle codes without ACTIVE/INACTIVE union');
+
 echo 'P2-CUS-G1 SOURCE CONTRACT: '.$n.'/'.$n." PASS\n";

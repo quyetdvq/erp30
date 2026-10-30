@@ -24,11 +24,24 @@ checkDArch('Identity and Workflow only call central Access PBAC',
     in_array('Access',$graph['Identity'],true) && in_array('Access',$graph['Workflow'],true));
 checkDArch('Identity does not depend on Workflow',!in_array('Workflow',$graph['Identity'],true));
 checkDArch('Workflow does not depend on Identity',!in_array('Identity',$graph['Workflow'],true));
-checkDArch('Access contains 26 prior files + 4 reviewed Query compiler files', $gates['MODULE_GRAPH']['details']['module_files']['Access']===30);
+checkDArch('Access includes 30 reviewed files and M10.2 hint additions', $gates['MODULE_GRAPH']['details']['module_files']['Access']===33);
 checkDArch('Identity owns 13 prior + 3 M6.3B Avatar PHP files', $gates['MODULE_GRAPH']['details']['module_files']['Identity']===16);
-checkDArch('Workflow owns its 8 master/management files plus 3 M4 execution files', $gates['MODULE_GRAPH']['details']['module_files']['Workflow']===11);
+checkDArch('Workflow retains 13 owner files including Contact and display helpers', $gates['MODULE_GRAPH']['details']['module_files']['Workflow']===13);
 checkDArch('No cycle in real module dependency graph',
     (M34DAcceptance::assertAcyclic($graph)===null));
+checkDArch('Workflow imports neither Customer nor Notifications implementations',
+    !in_array('Customer',$graph['Workflow'],true)
+    && !in_array('Notifications',$graph['Workflow'],true));
+$regressed = $graph;
+$regressed['Workflow'][] = 'Notifications';
+checkDArch('Reintroducing direct Workflow-to-Notifications edge is rejected',
+    rejectsDArch(fn()=>M34DAcceptance::assertAcyclic($regressed)));
+$composition = (string)file_get_contents($root.'/backend/app/Config/Services.php');
+checkDArch('Application composition root owns the concrete notification/customer adapter',
+    str_contains($composition, 'new ProductionWorkflowTransitionPort()')
+    && str_contains((string)file_get_contents($root.'/backend/app/Shared/Workflow/ProductionWorkflowTransitionPort.php'),
+        'NotificationOutboxProducer::enqueueWorkflowTransition('));
+
 checkDArch('Synthetic mutual cycle rejected', rejectsDArch(fn()=>M34DAcceptance::assertAcyclic(['Access'=>['Identity'],'Identity'=>['Access']])));
 checkDArch('Synthetic longer cycle rejected', rejectsDArch(fn()=>M34DAcceptance::assertAcyclic(['Access'=>['Organization'],'Organization'=>['Workflow'],'Workflow'=>['Access']])));
 checkDArch('Unknown imported module rejected', rejectsDArch(fn()=>M34DAcceptance::assertAcyclic(['Access'=>['NotInstalled']])));
@@ -44,7 +57,10 @@ checkDArch('Real FQCN import detected', in_array('Organization',$ref,true));
 checkDArch('Commented/quoted module reference ignored',
     !in_array('Identity',$ref,true) && !in_array('Workflow',$ref,true));
 checkDArch('Eight native Resource types remain independent', $gates['PBAC_STATE']['details']['native']===8);
-checkDArch('Exactly two All States resource types remain independent', $gates['PBAC_STATE']['details']['all_states']===2);
+checkDArch('Five pinned All States remain + one explicitly reviewed History monitor extension',
+    $gates['PBAC_STATE']['details']['all_states']===6
+    && $gates['PBAC_STATE']['details']['baseline_all_states']===5
+    && $gates['PBAC_STATE']['details']['history_monitor_extension']===1);
 checkDArch('All 74 baseline locale files match SHA-256 pins', $gates['BASELINE_LOCALES']['details']['baseline_catalogs']===74);
 checkDArch('Default write mode stays OFF on all three mutation controllers',
     $gates['HTTP_SECURITY']['status']==='PASS');

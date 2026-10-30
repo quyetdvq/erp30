@@ -1,0 +1,628 @@
+diff --git a/backend/app/Modules/Supplier/AuthorizedPurchaseCompanyPort.php b/backend/app/Modules/Supplier/AuthorizedPurchaseCompanyPort.php
+new file mode 100644
+index 0000000..e8ff847
+--- /dev/null
++++ b/backend/app/Modules/Supplier/AuthorizedPurchaseCompanyPort.php
+@@ -0,0 +1,30 @@
++<?php
++
++declare(strict_types=1);
++
++namespace App\Modules\Supplier;
++
++use CodeIgniter\Database\BaseConnection;
++use CodeIgniter\Shield\Entities\User;
++
++/**
++ * SUP-T05 integration port, implemented ONLY by the future Purchase module.
++ *
++ * A successful return certifies that the Purchase document was loaded from
++ * persistent storage and locked in the caller-owned transaction, and the
++ * actor passed the Purchase-specific mutation PBAC and mutable/new-document
++ * checks for that document (never a historical POSTED document).
++ * Return the document's PERSISTED company_organization_id; never a value from
++ * the request body, a user-selected Company, or a Supplier usage list.
++ *
++ * The Purchase module is not implemented in SUP-G1, so no concrete adapter or
++ * permissive fallback is provided. This interface grants NO Purchase rights.
++ */
++interface AuthorizedPurchaseCompanyPort
++{
++    public function resolveAuthorizedLockedCompanyId(
++        string $persistedPurchaseId,
++        User $actor,
++        BaseConnection $db,
++    ): string;
++}
+diff --git a/backend/app/Modules/Supplier/MODULE.md b/backend/app/Modules/Supplier/MODULE.md
+index bb59f91..b0ebb15 100644
+--- a/backend/app/Modules/Supplier/MODULE.md
++++ b/backend/app/Modules/Supplier/MODULE.md
+@@ -2,7 +2,7 @@
+ 
+ **Owner:** `App\Modules\Supplier` — Group MASTER Supplier identity; Shared Contact parent via `supplier_contact` resource.
+ 
+-**Stage:** SUP-T01A schema/rules, SUP-T01B/B.1 catalog/hardening, SUP-T02 Numbering and SUP-T03 SQL-first PBAC read participant (source only). **Not a deployed Supplier API.**
++**Stage:** SUP-T01A through SUP-T05 source/offline components (including T04 atomic writes and T05 Purchase eligibility guard). **Not a deployed Supplier API or Purchase integration.**
+ 
+ ## Ownership and boundaries
+ 
+@@ -45,3 +45,12 @@ Do not apply migration `000028` or run provisioning on a real database before DB
+ - All mutations require the canonical Group, target row VIEW plus action authorization (except CREATE), and version match (except CREATE). State is resolved via Lifecycle and cannot be directly edited; no SQL SELECT * or bank fields in returned rows.
+ - T06 Contact creation must join the same T04 transaction before one History CREATE. Workflow notifications and bank operations remain blocked until their own review.
+ - No migrations/provisioning are executed by these services or offline tests. Run `SUP-UNIT` for deterministic pure/fake DB coverage; MariaDB/HTTP/PBAC deployment UAT is still required.
++
++## SUP-T05 — New Purchase Usability Guard (source only)
++
++- `SupplierUsabilityGuard::assertUsableForNewPurchase` runs **only within a Purchase-owned open database transaction**. It never begins/commits/rolls back a transaction, does not create Purchase rows, and has no API route.
++- The mandatory `AuthorizedPurchaseCompanyPort` must be implemented by the future Purchase module: it must load/lock the **persisted Purchase document**, authorize the acting user for the relevant Purchase mutation on that document, and return the stored Company ID. There is deliberately **no fallback adapter** from HTTP/company selection, and no Purchase permission is granted by Supplier.
++- Within the same transaction, T05 locks the Supplier, Company and at most one usage row; enforces server-owned Group, canonical `supplier.view`, ACTIVE Supplier, ACTIVE Company directly under the Group, and valid All/list Company Usage. It never reads bank columns.
++- Only an explicit Supplier `ACTIVE` is operational for **new** Purchase work. Custom Workflow initial/approval states are *not* auto-operational. A future product decision that changes eligible codes requires an explicit review/test update.
++- Existing PO/GR/Return/Payment history remains available according to its own document PBAC; do not use T05 to filter historical reads. Effective-dated historical eligibility is not implemented (the database usage relation has no validity window).
++- T05 cannot be called end-to-end until Purchase supplies the persisted document/authorization adapter. Fake DB/port tests do not prove MariaDB locks, concurrent Purchase vs Supplier updates, or Purchase PBAC integration.
+diff --git a/backend/app/Modules/Supplier/SupplierUsabilityGuard.php b/backend/app/Modules/Supplier/SupplierUsabilityGuard.php
+new file mode 100644
+index 0000000..d8d2262
+--- /dev/null
++++ b/backend/app/Modules/Supplier/SupplierUsabilityGuard.php
+@@ -0,0 +1,110 @@
++<?php
++
++declare(strict_types=1);
++
++namespace App\Modules\Supplier;
++
++use App\Exceptions\DomainException;
++use App\Modules\Access\UnifiedAccessService;
++use CodeIgniter\Database\BaseConnection;
++use CodeIgniter\Shield\Entities\User;
++use DateTimeImmutable;
++use DateTimeZone;
++use Throwable;
++
++/**
++ * SUP-T05 new-Purchase guard. A participant in the Purchase-owned write
++ * transaction, NOT a transaction owner and NOT a read/list selector.
++ *
++ * The Purchase adapter must lock and authorize the PERSISTED Purchase before
++ * returning its Company. This guard locks Supplier -> Company -> Usage facts
++ * and validates Supplier VIEW PBAC using the same connection and transaction.
++ * It never grants Purchase CREATE/EDIT, never uses client Company hints, and
++ * never reads bank columns. No Purchase adapter exists in SUP-G1 yet.
++ */
++final class SupplierUsabilityGuard
++{
++    private readonly BaseConnection $db;
++
++    public function __construct(private readonly User $actor, ?BaseConnection $connection = null)
++    {
++        $this->db = $connection ?? db_connect();
++    }
++
++    /**
++     * @throws DomainException on denial, corruption, missing transaction or DB failure
++     */
++    public function assertUsableForNewPurchase(
++        string $supplierId,
++        string $persistedPurchaseId,
++        AuthorizedPurchaseCompanyPort $purchase,
++    ): void {
++        // Row locks must survive until the Purchase mutation COMMIT. Opening a
++        // second transaction/snapshot here would create a TOCTOU permission gap.
++        if ($this->db->transDepth < 1) {
++            throw new DomainException('SUPPLIER_PURCHASE_TRANSACTION_REQUIRED');
++        }
++        $supplierId = $this->trustedId($supplierId);
++        $persistedPurchaseId = $this->trustedId($persistedPurchaseId);
++        $companyId = $this->trustedId(
++            $purchase->resolveAuthorizedLockedCompanyId($persistedPurchaseId, $this->actor, $this->db)
++        );
++
++        $access = new UnifiedAccessService(
++            $this->actor,
++            $this->db,
++            new DateTimeImmutable('now', new DateTimeZone('UTC')),
++        );
++        $groupId = $access->trustedGroupRootId();
++
++        $supplier = $this->lockedOne('suppliers', 'id, group_organization_id, status, all_companies', [
++            'id'=>$supplierId, 'group_organization_id'=>$groupId,
++        ]);
++        if ($supplier === null || !$access->canView('supplier', $supplier)) {
++            // Do not disclose even existence/state to an actor without VIEW.
++            throw new DomainException('SUPPLIER_PURCHASE_NOT_AVAILABLE');
++        }
++        $company = $this->lockedOne('organizations', 'id, type, status, parent_id', [
++            'id'=>$companyId,
++        ]);
++        if ($company === null) {
++            throw new DomainException('SUPPLIER_PURCHASE_COMPANY_INELIGIBLE');
++        }
++        // On ALL mode, any persisted usage row is inconsistent; in list mode
++        // seek only the exact authorized Purchase Company. Both queries are
++        // indexed, bounded, and locked inside the Purchase write transaction.
++        $all = (string)($supplier['all_companies'] ?? '');
++        $where = ['supplier_id'=>$supplierId];
++        if ($all === '0') $where['company_organization_id'] = $companyId;
++        $usage = $this->lockedOne('supplier_company_usages', 'company_organization_id', $where);
++        SupplierUsabilityPolicy::assertEligible(
++            $supplier, $company, $groupId, $companyId, $usage !== null,
++        );
++    }
++
++    /** @param array<string,string> $where @return array<string,mixed>|null */
++    private function lockedOne(string $table, string $columns, array $where): ?array
++    {
++        $builder = $this->db->table($table)->select($columns);
++        foreach ($where as $column => $value) $builder->where($column, $value);
++        // Table/column names are hardcoded; query builder handles DBPrefix
++        // and the values. Locking reads are mandatory for purchase correctness.
++        $sql = $builder->limit(1)->getCompiledSelect() . ' FOR UPDATE';
++        try { $result = $this->db->query($sql); }
++        catch (Throwable $e) { throw new DomainException('SUPPLIER_PURCHASE_LOOKUP_FAILED', [], $e); }
++        if ($result === false) {
++            throw new DomainException('SUPPLIER_PURCHASE_LOOKUP_FAILED');
++        }
++        return $result->getRowArray();
++    }
++
++    private function trustedId(mixed $id): string
++    {
++        if (!is_string($id) || preg_match('/\A[1-9][0-9]*\z/D', $id) !== 1
++            || strlen($id) > 20
++            || (strlen($id) === 20 && strcmp($id, '18446744073709551615') > 0)) {
++            throw new DomainException('SUPPLIER_PURCHASE_TRUSTED_ID_INVALID');
++        }
++        return $id;
++    }
++}
+diff --git a/backend/app/Modules/Supplier/SupplierUsabilityPolicy.php b/backend/app/Modules/Supplier/SupplierUsabilityPolicy.php
+new file mode 100644
+index 0000000..125607e
+--- /dev/null
++++ b/backend/app/Modules/Supplier/SupplierUsabilityPolicy.php
+@@ -0,0 +1,60 @@
++<?php
++
++declare(strict_types=1);
++
++namespace App\Modules\Supplier;
++
++use App\Exceptions\DomainException;
++
++/**
++ * SUP-T05 purchase-eligibility policy for trusted, locked DB facts only.
++ *
++ * Business meaning is intentionally narrower than the configurable Supplier
++ * Lifecycle: only the explicit ACTIVE code permits a NEW Purchase document.
++ * DRAFT, INACTIVE and arbitrary custom initial/approval codes do not silently
++ * become operational. Historical Purchase/GR/return reads must NOT call this.
++ *
++ * This policy does not authorize Purchase commands, and usage NEVER grants
++ * supplier.view or access to the Purchase Company.
++ */
++final class SupplierUsabilityPolicy
++{
++    /** @param array<string,mixed> $supplier @param array<string,mixed> $company */
++    public static function assertEligible(
++        array $supplier,
++        array $company,
++        string $trustedGroupId,
++        string $trustedCompanyId,
++        bool $hasUsageRow,
++    ): void {
++        if (!self::sameId($supplier['group_organization_id'] ?? null, $trustedGroupId)) {
++            throw new DomainException('SUPPLIER_PURCHASE_GROUP_MISMATCH');
++        }
++        if (($supplier['status'] ?? null) !== 'ACTIVE') {
++            throw new DomainException('SUPPLIER_NOT_OPERATIONAL');
++        }
++        if (!self::sameId($company['id'] ?? null, $trustedCompanyId)
++            || ($company['type'] ?? null) !== 'COMPANY'
++            || ($company['status'] ?? null) !== 'ACTIVE'
++            || !self::sameId($company['parent_id'] ?? null, $trustedGroupId)) {
++            throw new DomainException('SUPPLIER_PURCHASE_COMPANY_INELIGIBLE');
++        }
++        $all = $supplier['all_companies'] ?? null;
++        if (!in_array($all, [0, 1, '0', '1'], true)) {
++            throw new DomainException('SUPPLIER_USAGE_MODE_CORRUPT');
++        }
++        if ((string)$all === '1' && $hasUsageRow) {
++            throw new DomainException('SUPPLIER_USAGE_MODE_CORRUPT');
++        }
++        if ((string)$all === '0' && !$hasUsageRow) {
++            throw new DomainException('SUPPLIER_PURCHASE_COMPANY_NOT_ALLOWED');
++        }
++    }
++
++    private static function sameId(mixed $raw, string $expected): bool
++    {
++        return (is_int($raw) || is_string($raw))
++            && preg_match('/\A[1-9][0-9]*\z/D', (string)$raw) === 1
++            && (string)$raw === $expected;
++    }
++}
+diff --git a/backend/tests/sup/supplier_usability_guard_fixture.php b/backend/tests/sup/supplier_usability_guard_fixture.php
+new file mode 100644
+index 0000000..e462912
+--- /dev/null
++++ b/backend/tests/sup/supplier_usability_guard_fixture.php
+@@ -0,0 +1,164 @@
++<?php
++
++declare(strict_types=1);
++
++// Isolated in-memory fake SQL + PBAC; NO MariaDB, HTTP, actual Purchase module.
++namespace CodeIgniter\Database {
++    final class BaseConnection
++    {
++        public int $transDepth = 1;
++        public array $tables = [];
++        public array $queries = [];
++        public bool $queryFails = false;
++        public bool $queryThrows = false;
++        public bool $viewAllowed = true;
++        public string $group = '1';
++        public function table(string $table): \SupT05Builder { return new \SupT05Builder($this, $table); }
++        public function query(string $sql): \SupT05Result|false {
++            if ($this->transDepth < 1) throw new \RuntimeException('FOR UPDATE without transaction');
++            if (!str_starts_with($sql, 'T05_SELECT:') || !str_ends_with($sql, ' FOR UPDATE')) {
++                throw new \RuntimeException('Query missing lock or unreviewed SQL');
++            }
++            $this->queries[] = $sql;
++            if ($this->queryThrows) throw new \RuntimeException('Fake SQL exception');
++            if ($this->queryFails) return false;
++            $payload = json_decode(base64_decode(substr($sql, 11, -11), true), true, 512, JSON_THROW_ON_ERROR);
++            $rows = array_values(array_filter($this->tables[$payload['table']] ?? [], static function (array $row) use ($payload): bool {
++                foreach ($payload['where'] as $key => $value) {
++                    if ((string)($row[$key] ?? '') !== (string)$value) return false;
++                }
++                return true;
++            }));
++            $rows = array_slice($rows, 0, $payload['limit']);
++            $cols = array_map('trim', explode(',', $payload['select']));
++            return new \SupT05Result(array_map(static fn (array $r): array => array_intersect_key($r, array_fill_keys($cols, true)), $rows));
++        }
++    }
++}
++namespace CodeIgniter\Shield\Entities { class User { public int $id = 7; } }
++namespace App\Modules\Access {
++    final class UnifiedAccessService
++    {
++        public function __construct(private readonly \CodeIgniter\Shield\Entities\User $actor, private readonly \CodeIgniter\Database\BaseConnection $db, ?\DateTimeImmutable $time = null) {}
++        public function trustedGroupRootId(): string { return $this->db->group; }
++        public function canView(string $type, array $row): bool { return $type === 'supplier' && $this->db->viewAllowed; }
++    }
++}
++namespace {
++    require_once dirname(__DIR__, 2) . '/app/Exceptions/DomainException.php';
++    require_once dirname(__DIR__, 2) . '/app/Modules/Supplier/AuthorizedPurchaseCompanyPort.php';
++    require_once dirname(__DIR__, 2) . '/app/Modules/Supplier/SupplierUsabilityPolicy.php';
++    require_once dirname(__DIR__, 2) . '/app/Modules/Supplier/SupplierUsabilityGuard.php';
++
++    use App\Exceptions\DomainException;
++    use App\Modules\Supplier\AuthorizedPurchaseCompanyPort;
++    use App\Modules\Supplier\SupplierUsabilityGuard;
++    use CodeIgniter\Database\BaseConnection;
++    use CodeIgniter\Shield\Entities\User;
++
++    final class SupT05Result {
++        public function __construct(private array $rows) {}
++        public function getRowArray(): ?array { return $this->rows[0] ?? null; }
++    }
++    final class SupT05Builder {
++        private array $where = [];
++        private string $columns = '';
++        private int $max = 1;
++        public function __construct(private readonly BaseConnection $db, private readonly string $table) {}
++        public function select(string $columns): self { $this->columns = $columns; return $this; }
++        public function where(string $key, string $value): self { $this->where[$key] = $value; return $this; }
++        public function limit(int $max): self { $this->max = $max; return $this; }
++        public function getCompiledSelect(): string {
++            return 'T05_SELECT:' . base64_encode(json_encode([
++                'table'=>$this->table,'where'=>$this->where, 'select'=>$this->columns, 'limit'=>$this->max,
++            ], JSON_THROW_ON_ERROR));
++        }
++    }
++    final class SupT05PurchasePort implements AuthorizedPurchaseCompanyPort {
++        public bool $authorized = true;
++        public bool $invoked = false;
++        public string $persistedCompany = '2';
++        public function resolveAuthorizedLockedCompanyId(string $persistedPurchaseId, User $actor, BaseConnection $db): string {
++            $this->invoked = true;
++            if ($db->transDepth < 1 || $persistedPurchaseId !== '70' || $actor->id !== 7 || !$this->authorized) {
++                throw new DomainException('PURCHASE_PBAC_DENIED');
++            }
++            return $this->persistedCompany;
++        }
++    }
++    $n = 0;
++    $ok = static function (bool $v, string $name) use (&$n): void {
++        if (!$v) throw new RuntimeException('SUP-T05 GUARD FIXTURE FAIL: ' . $name);
++        ++$n;
++    };
++    $db = new BaseConnection();
++    $db->tables = [
++        'suppliers'=>[['id'=>'19','group_organization_id'=>'1','status'=>'ACTIVE','all_companies'=>'1']],
++        'organizations'=>[['id'=>'2','type'=>'COMPANY','status'=>'ACTIVE','parent_id'=>'1']],
++        'supplier_company_usages'=>[],
++    ];
++    $actor = new User();
++    $port = new SupT05PurchasePort();
++    $guard = new SupplierUsabilityGuard($actor, $db);
++    $allow = static function () use ($guard, $port, &$db, &$ok): void {
++        $db->queries = [];
++        $guard->assertUsableForNewPurchase('19','70',$port);
++        $ok(count($db->queries) === 3, 'exactly three bounded locked lookups');
++        $ok(count(array_filter($db->queries, static fn (string $q): bool => str_ends_with($q,' FOR UPDATE'))) === 3, 'all rows locked');
++        $ok($db->transDepth === 1, 'guard did not commit/rollback Purchase transaction');
++    };
++    $deny = static function (string $code) use ($guard, $port, &$ok): void {
++        try { $guard->assertUsableForNewPurchase('19','70',$port); throw new RuntimeException('Expected ' . $code); }
++        catch (DomainException $e) { $ok($e->getErrorCode() === $code, $code . ' vs ' . $e->getErrorCode()); }
++    };
++    $allow();
++    $ok($port->invoked, 'Purchase resolver was used');
++    $ok(!str_contains(implode(' ', $db->queries), 'bank_'), 'no bank SQL');
++    $db->tables['suppliers'][0]['all_companies'] = '0';
++    $db->tables['supplier_company_usages'][] = ['supplier_id'=>'19','company_organization_id'=>'2'];
++    $allow();
++    $db->tables['supplier_company_usages'][0]['company_organization_id'] = '3';
++    $deny('SUPPLIER_PURCHASE_COMPANY_NOT_ALLOWED');
++    $db->tables['suppliers'][0]['all_companies'] = '1';
++    $deny('SUPPLIER_USAGE_MODE_CORRUPT');
++    $db->tables['supplier_company_usages'] = [];
++    $allow();
++    $db->tables['suppliers'][0]['status'] = 'DRAFT'; $deny('SUPPLIER_NOT_OPERATIONAL');
++    $db->tables['suppliers'][0]['status'] = 'INACTIVE'; $deny('SUPPLIER_NOT_OPERATIONAL');
++    $db->tables['suppliers'][0]['status'] = 'APPROVED'; $deny('SUPPLIER_NOT_OPERATIONAL');
++    $db->tables['suppliers'][0]['status'] = 'ACTIVE';
++    $db->tables['organizations'][0]['status'] = 'INACTIVE'; $deny('SUPPLIER_PURCHASE_COMPANY_INELIGIBLE');
++    $db->tables['organizations'][0]['status'] = 'ACTIVE';
++    $db->tables['organizations'][0]['parent_id'] = '99'; $deny('SUPPLIER_PURCHASE_COMPANY_INELIGIBLE');
++    $db->tables['organizations'][0]['parent_id'] = '1';
++    $db->tables['organizations'][0]['type'] = 'BRANCH'; $deny('SUPPLIER_PURCHASE_COMPANY_INELIGIBLE');
++    $db->tables['organizations'][0]['type'] = 'COMPANY';
++    $db->tables['suppliers'][0]['group_organization_id'] = '99'; $deny('SUPPLIER_PURCHASE_NOT_AVAILABLE');
++    $db->tables['suppliers'][0]['group_organization_id'] = '1';
++    $db->viewAllowed = false; $deny('SUPPLIER_PURCHASE_NOT_AVAILABLE');
++    $db->viewAllowed = true;
++    $port->authorized = false; $deny('PURCHASE_PBAC_DENIED');
++    $port->authorized = true;
++    $port->persistedCompany = '3'; $deny('SUPPLIER_PURCHASE_COMPANY_INELIGIBLE');
++    $port->persistedCompany = 'invalid'; $deny('SUPPLIER_PURCHASE_TRUSTED_ID_INVALID');
++    $port->persistedCompany = '2';
++    $db->queryFails = true; $deny('SUPPLIER_PURCHASE_LOOKUP_FAILED');
++    $db->queryFails = false;
++    $db->queryThrows = true; $deny('SUPPLIER_PURCHASE_LOOKUP_FAILED');
++    $db->queryThrows = false;
++    $db->transDepth = 0; $deny('SUPPLIER_PURCHASE_TRANSACTION_REQUIRED');
++    $db->transDepth = 1;
++    foreach (['0','-1','1 OR 1','00019','18446744073709551616'] as $id) {
++        try { $guard->assertUsableForNewPurchase($id,'70',$port); throw new RuntimeException('Expected invalid id'); }
++        catch (DomainException $e) { $ok($e->getErrorCode() === 'SUPPLIER_PURCHASE_TRUSTED_ID_INVALID','bad Supplier id ' . $id); }
++    }
++    foreach (['0','00070','1;DROP'] as $id) {
++        try { $guard->assertUsableForNewPurchase('19',$id,$port); throw new RuntimeException('Expected invalid id'); }
++        catch (DomainException $e) { $ok($e->getErrorCode() === 'SUPPLIER_PURCHASE_TRUSTED_ID_INVALID','bad Purchase id ' . $id); }
++    }
++    $db->tables['suppliers'] = [];
++    $deny('SUPPLIER_PURCHASE_NOT_AVAILABLE');
++    $ok($db->transDepth === 1, 'denials did not end caller transaction');
++
++    echo "SUP-T05 USABILITY GUARD FIXTURE: {$n}/{$n} PASS (fake DB/Purchase port, NOT MariaDB)\n";
++}
+diff --git a/backend/tests/sup/supplier_usability_policy_pure.php b/backend/tests/sup/supplier_usability_policy_pure.php
+new file mode 100644
+index 0000000..3965f37
+--- /dev/null
++++ b/backend/tests/sup/supplier_usability_policy_pure.php
+@@ -0,0 +1,58 @@
++<?php
++
++declare(strict_types=1);
++
++require_once dirname(__DIR__, 2) . '/app/Exceptions/DomainException.php';
++require_once dirname(__DIR__, 2) . '/app/Modules/Supplier/SupplierUsabilityPolicy.php';
++
++use App\Exceptions\DomainException;
++use App\Modules\Supplier\SupplierUsabilityPolicy;
++
++$n = 0;
++$ok = static function (bool $test, string $name) use (&$n): void {
++    if (!$test) throw new RuntimeException('SUP-T05 POLICY FAIL: ' . $name);
++    ++$n;
++};
++$supplier = ['id'=>'19', 'group_organization_id'=>'1', 'status'=>'ACTIVE', 'all_companies'=>'1'];
++$company = ['id'=>'2', 'type'=>'COMPANY', 'status'=>'ACTIVE', 'parent_id'=>'1'];
++$accept = static function (array $s, array $c, bool $usage) use (&$ok): void {
++    SupplierUsabilityPolicy::assertEligible($s, $c, '1', '2', $usage);
++    $ok(true, 'eligible');
++};
++$reject = static function (string $code, array $s, array $c, bool $usage) use (&$ok): void {
++    try {
++        SupplierUsabilityPolicy::assertEligible($s, $c, '1', '2', $usage);
++        throw new RuntimeException('Expected ' . $code);
++    } catch (DomainException $error) {
++        $ok($error->getErrorCode() === $code, $code . ' vs ' . $error->getErrorCode());
++    }
++};
++$accept($supplier, $company, false);
++$accept([...$supplier, 'all_companies'=>1], $company, false);
++$accept([...$supplier, 'all_companies'=>'0'], $company, true);
++$accept([...$supplier, 'all_companies'=>0], $company, true);
++foreach (['INACTIVE','DRAFT','PENDING','APPROVED','','active',null] as $status) {
++    $reject('SUPPLIER_NOT_OPERATIONAL', [...$supplier, 'status'=>$status], $company, false);
++}
++$reject('SUPPLIER_PURCHASE_GROUP_MISMATCH', [...$supplier, 'group_organization_id'=>'3'], $company, false);
++$reject('SUPPLIER_PURCHASE_GROUP_MISMATCH', [...$supplier, 'group_organization_id'=>null], $company, false);
++foreach (['INACTIVE', 'DRAFT', null] as $state) {
++    $reject('SUPPLIER_PURCHASE_COMPANY_INELIGIBLE', $supplier, [...$company, 'status'=>$state], false);
++}
++$reject('SUPPLIER_PURCHASE_COMPANY_INELIGIBLE', $supplier, [...$company, 'parent_id'=>'3'], false);
++$reject('SUPPLIER_PURCHASE_COMPANY_INELIGIBLE', $supplier, [...$company, 'parent_id'=>null], false);
++$reject('SUPPLIER_PURCHASE_COMPANY_INELIGIBLE', $supplier, [...$company, 'type'=>'BRANCH'], false);
++$reject('SUPPLIER_PURCHASE_COMPANY_INELIGIBLE', $supplier, [...$company, 'type'=>'GROUP'], false);
++$reject('SUPPLIER_PURCHASE_COMPANY_INELIGIBLE', $supplier, [...$company, 'id'=>'20'], false);
++$reject('SUPPLIER_PURCHASE_COMPANY_INELIGIBLE', $supplier, [...$company, 'id'=>null], false);
++$reject('SUPPLIER_USAGE_MODE_CORRUPT', [...$supplier, 'all_companies'=>'2'], $company, false);
++$reject('SUPPLIER_USAGE_MODE_CORRUPT', [...$supplier, 'all_companies'=>null], $company, false);
++$reject('SUPPLIER_USAGE_MODE_CORRUPT', [...$supplier, 'all_companies'=>true], $company, false);
++$reject('SUPPLIER_USAGE_MODE_CORRUPT', $supplier, $company, true);
++$reject('SUPPLIER_PURCHASE_COMPANY_NOT_ALLOWED', [...$supplier, 'all_companies'=>'0'], $company, false);
++$reject('SUPPLIER_PURCHASE_COMPANY_NOT_ALLOWED', [...$supplier, 'all_companies'=>0], $company, false);
++// A previous draft/closed Purchase must stay readable through its own
++// module; this policy is called solely when creating a NEW Purchase mutation.
++$ok(!method_exists(SupplierUsabilityPolicy::class, 'canReadHistoricalPurchase'), 'not a history filter');
++
++echo "SUP-T05 USABILITY POLICY: {$n}/{$n} PASS\n";
+diff --git a/backend/tests/sup/supplier_usability_source_contract_pure.php b/backend/tests/sup/supplier_usability_source_contract_pure.php
+new file mode 100644
+index 0000000..6f22585
+--- /dev/null
++++ b/backend/tests/sup/supplier_usability_source_contract_pure.php
+@@ -0,0 +1,50 @@
++<?php
++
++declare(strict_types=1);
++
++$root = dirname(__DIR__, 2);
++$src = static function (string $path) use ($root): string {
++    $text = file_get_contents($root . '/app/Modules/Supplier/' . $path);
++    if (!is_string($text) || $text === '') throw new RuntimeException('Missing T05 source: ' . $path);
++    return $text;
++};
++$guard = $src('SupplierUsabilityGuard.php');
++$policy = $src('SupplierUsabilityPolicy.php');
++$port = $src('AuthorizedPurchaseCompanyPort.php');
++$n = 0;
++$ok = static function (bool $v, string $name) use (&$n): void {
++    if (!$v) throw new RuntimeException('SUP-T05 CONTRACT FAIL: ' . $name);
++    ++$n;
++};
++$ok(str_contains($guard, 'class SupplierUsabilityGuard'), 'standalone guard');
++$ok(str_contains($guard, 'function assertUsableForNewPurchase('), 'narrow new Purchase command');
++$ok(str_contains($port, 'function resolveAuthorizedLockedCompanyId('), 'mandatory authorized persisted Purchase adapter');
++$ok(str_contains($port, 'User $actor') && str_contains($port, 'BaseConnection $db'), 'port reuses actor and transaction');
++$ok(!str_contains($guard, "table('purchase_orders')"), 'no invented Purchase tables');
++$ok(str_contains($guard, 'transDepth < 1'), 'requires caller transaction');
++$ok(!str_contains($guard, 'transCommit(') && !str_contains($guard, 'transBegin('), 'does not own commit or begin');
++$ok(str_contains($guard, ' FOR UPDATE'), 'locking reads');
++$ok(str_contains($guard, "'suppliers'"), 'Supplier locking read');
++$ok(str_contains($guard, "'organizations'"), 'persisted Company locking read');
++$ok(str_contains($guard, "'supplier_company_usages'"), 'usage locking read');
++$ok(str_contains($guard, "'group_organization_id'=>"), 'GROUP boundary in Supplier lookup');
++$ok(str_contains($guard, "canView('supplier'"), 'canonical supplier.view required');
++$ok(str_contains($guard, 'trustedGroupRootId()'), 'server Group root');
++$ok(str_contains($policy, "'ACTIVE'"), 'explicit operational State');
++$ok(!str_contains($policy, 'initialState('), 'initial Lifecycle does not imply operational');
++$ok(str_contains($policy, "'COMPANY'") && str_contains($policy, "'ACTIVE'"), 'Company must be ACTIVE leaf');
++$ok(str_contains($policy, "'parent_id'"), 'Company belongs to Group');
++$ok(str_contains($policy, 'SUPPLIER_PURCHASE_COMPANY_NOT_ALLOWED'), 'usage deny');
++$ok(str_contains($policy, 'SUPPLIER_USAGE_MODE_CORRUPT'), 'mode corruption deny');
++$ok(str_contains($guard, 'SUPPLIER_PURCHASE_NOT_AVAILABLE'), 'no-leak Supplier PBAC denial');
++$ok(!str_contains($guard, 'bank_ciphertext') && !str_contains($guard, 'bank_last4'), 'never query bank');
++$ok(!str_contains($guard, 'SELECT *'), 'explicit projection only');
++$ok(!str_contains($guard, 'SupplierReadService'), 'does not borrow separate read transaction');
++$ok(!str_contains($guard, 'SupplierWriteService'), 'does not call write facade in Purchase transaction');
++$ok(!str_contains($guard, 'HistoryRecorder'), 'no history mutation');
++$ok(!str_contains($guard, 'current_organization_id'), 'no session selected Company guess');
++$ok(str_contains($guard, 'lockedOne(') && str_contains($guard, "->limit(1)"), 'bounded queries');
++$ok(!str_contains($port, 'function getRequest'), 'no client Company path');
++$ok(!str_contains($guard, 'date('), 'does not impersonate historical as-of query');
++
++echo "SUP-T05 USABILITY SOURCE: {$n}/{$n} PASS\n";
+diff --git a/backend/tools/test-unit.ps1 b/backend/tools/test-unit.ps1
+index 51f2072..6e3d769 100644
+--- a/backend/tools/test-unit.ps1
++++ b/backend/tools/test-unit.ps1
+@@ -143,7 +143,10 @@ try {
+         Invoke-PHPChecked -Description 'Supplier T04 write payload pure regression' -Arguments @('tests/sup/supplier_write_payload_pure.php')
+         Invoke-PHPChecked -Description 'Supplier T04 transaction rollback fixture' -Arguments @('tests/sup/supplier_write_transaction_fixture.php')
+         Invoke-PHPChecked -Description 'Supplier T04 write service source contracts' -Arguments @('tests/sup/supplier_write_source_contract_pure.php')
+-        Write-Host 'SUP-UNIT PASS: offline only (including T04 fake DB); no MariaDB provisioning, HTTP or real PBAC decisions.'
++        Invoke-PHPChecked -Description 'Supplier T05 operational status/Company Usage policy' -Arguments @('tests/sup/supplier_usability_policy_pure.php')
++        Invoke-PHPChecked -Description 'Supplier T05 locked Purchase eligibility fake DB fixture' -Arguments @('tests/sup/supplier_usability_guard_fixture.php')
++        Invoke-PHPChecked -Description 'Supplier T05 purchase interface/guard source contracts' -Arguments @('tests/sup/supplier_usability_source_contract_pure.php')
++        Write-Host 'SUP-UNIT PASS: offline only (including T04/T05 fake DB); no MariaDB provisioning, Purchase adapter, HTTP or real PBAC decisions.'
+         return
+     }
+ 
+@@ -229,7 +232,10 @@ try {
+         Invoke-PHPChecked -Description 'SUP-T04 write payload regression' -Arguments @('tests/sup/supplier_write_payload_pure.php')
+         Invoke-PHPChecked -Description 'SUP-T04 fake transactional write regression' -Arguments @('tests/sup/supplier_write_transaction_fixture.php')
+         Invoke-PHPChecked -Description 'SUP-T04 write service contracts' -Arguments @('tests/sup/supplier_write_source_contract_pure.php')
+-        Write-Host 'UNIT-STANDARD PASS: pinned 168, HIS and SUP-T01/T02/T03/T04 offline tests only; NOT HTTP/MariaDB integration.'
++        Invoke-PHPChecked -Description 'SUP-T05 purchase usability policy' -Arguments @('tests/sup/supplier_usability_policy_pure.php')
++        Invoke-PHPChecked -Description 'SUP-T05 fake Purchase Company and locked Supplier fixture' -Arguments @('tests/sup/supplier_usability_guard_fixture.php')
++        Invoke-PHPChecked -Description 'SUP-T05 usability guard source contracts' -Arguments @('tests/sup/supplier_usability_source_contract_pure.php')
++        Write-Host 'UNIT-STANDARD PASS: pinned 168, HIS and SUP-T01/T02/T03/T04/T05 offline tests only; NOT HTTP/MariaDB integration.'
+         Invoke-PHPChecked -Description 'M3.4D static and baseline golden-master acceptance' -Arguments @('tools/m34d_accept.php', '--offline')
+         Invoke-PHPChecked -Description 'M4 source/route extension acceptance (14 new APIs; no DB)' -Arguments @('tools/m4_accept.php')
+         Invoke-PHPChecked -Description 'M5.1 Province/Ward source acceptance (six mutations; no DB)' -Arguments @('tools/m5_accept.php')
+diff --git a/docs/p2-sup/SUP_T05_PURCHASE_USABILITY_GUARD_SOURCE_QA_2026-10-30.md b/docs/p2-sup/SUP_T05_PURCHASE_USABILITY_GUARD_SOURCE_QA_2026-10-30.md
+new file mode 100644
+index 0000000..228e49d
+--- /dev/null
++++ b/docs/p2-sup/SUP_T05_PURCHASE_USABILITY_GUARD_SOURCE_QA_2026-10-30.md
+@@ -0,0 +1,60 @@
++# P2-SUP / SUP-T05 — Purchase Usability Guard: Source QA
++
++**Date:** 2026-10-30
++**Baseline:** `erp_v2.0.0_sup_t04_core_transaction_cas_source.zip` (SUP-T01A through T04).
++**Status:** SOURCE / OFFLINE TESTED. The Purchase module/provider is **not implemented**. NOT database, HTTP, or authorization UAT.
++
++## Contract frozen for implementation
++
++T05 is a **transaction participant for a new Purchase mutation**, not an automatic Supplier selector and not Supplier Master `setstate`.
++
++1. The **Purchase service** owns transaction start/commit and performs Purchase-specific actor PBAC. It must load/lock an **already-persisted Purchase document**; the `AuthorizedPurchaseCompanyPort` returns the Company's stored ID. Never accept a body/query/session `company_id` as authority. The code intentionally ships **no permissive Purchase port implementation** because PUR is deferred.
++2. T05 refuses to run without an active caller transaction. Its three bounded `FOR UPDATE` queries read the Supplier (restricted to the trusted Group), the Company and the Supplier/Company Usage row. Supplier-row lock is acquired before Company-row lock, matching the T04 Supplier→Company write lock order. It does not begin, commit or roll back the Purchase transaction.
++3. Canonical `UnifiedAccessService::canView('supplier', persistedRow)` is required. A denied/invisible Supplier returns a generic unavailable error. The Purchase adapter owns authorization to mutate the Purchase document; **Supplier Usage is never a PBAC grant**.
++4. Only `status=ACTIVE` is Purchase-eligible; dynamic `DRAFT`, `PENDING`, `APPROVED`, `INACTIVE` are not considered operational. A custom Lifecycle does not become Purchase-eligible merely because its state is initial. Only an approved business change may widen this list.
++5. Company must exist, be `COMPANY`/`ACTIVE`, and have the trusted GROUP root as parent. `all_companies=1` requires no usage rows; `all_companies=0` requires an explicit row for the persisted Purchase Company. Corrupt mode or incorrect scope fails closed.
++6. Existing PO/GR/Return/Finance history is **not** blocked by Supplier becoming INACTIVE; T05 only guards *new* Purchase work. This does not implement the deferred UR-SUP-002 transaction history. There is no effective-dated eligibility or historical/as-of grant.
++7. Projections do not read any `bank_*` data, no new migration, Resource Action, PBAC grant, API route, or frontend component.
++
++## Offline acceptance
++
++- `php tests/sup/supplier_usability_policy_pure.php` — pure eligibility/status/usage rules.
++- `php tests/sup/supplier_usability_guard_fixture.php` — fake Purchase context, fake DB and fake PBAC, negative status/company/scope/transaction/query failure cases.
++- `php tests/sup/supplier_usability_source_contract_pure.php` — source isolation and future Purchase port interface.
++- `tools/test-unit.ps1 RUN SUP-UNIT` and `RUN UNIT-STANDARD` include the above tests on Windows.
++- Existing P1 frozen Routes and SQL/PBAC standards remain unchanged.
++
++## Integration/UAT blockers
++
++- T00 bank metadata encryption/key/audit signoff + migration `000028` DEV review are still pending; **do not run migrations or Supplier catalog provisioning** on live data from this source patch.
++- Purchase document schema, its Company owner contract and `purchase_order.create/edit` policy do not exist. A real Purchase adapter must be reviewed separately for persisted authority, document locks, no client-scope trust and concurrent mutation.
++- On an isolated, approved DEV clone: test ACTIVE vs DRAFT/INACTIVE; Company allowed vs out of scope; Supplier denied for one of two actors; Company disabled after selection; actual InnoDB lock/race between Supplier usage edit and PO write; rollback of PO on Supplier denial; no leakage of bank fields; historical PO remains readable after Supplier deactivation.
++- T05 is **not** a replacement for Purchase authorization and cannot be considered a complete runnable G1 Purchase integration.
++
++## Next module dependencies
++
++T06 Shared Contact polymorphic owner resolution and PBAC integration; T07 Supplier HTTP/OpenAPI/History and separately reviewed Bank Security; T08 frontend. Runtime acceptance remains blocked until T00 and MariaDB/HTTP evidence exist.
++
++## Verified in this isolated environment
++
++| Check | Result | Boundary |
++|---|---|---|
++| SUP-T05 pure policy | **29/29 PASS** | No DB |
++| SUP-T05 guard fake DB/port | **37/37 PASS** | No MariaDB/Purchase/PBAC runtime |
++| SUP-T05 source contracts | **30/30 PASS** | Source wiring only |
++| Existing SUP-T01..T04 scripts | PASS | Offline/fake DB |
++| Pinned M3.4B offline | **168/168 PASS** | No DB |
++| M19.24 Route Architecture | **476/476 PASS** | No HTTP |
++| Customer Core/Source/SQL | **94/94, 94/94, 48/48 PASS** | Offline |
++| P1 SQL/PBAC standards | **11 suites PASS** | No MariaDB/HTTP |
++| Windows PowerShell SUP-UNIT / real SQL locks | **NOT RUN** | Needs operator / approved DEV clone |
++
++**Windows commands:**
++
++```powershell
++cd D:\XAMPP\htdocs\erp\backend
++.\tools\test-unit.ps1 RUN SUP-UNIT
++.\tools\test-unit.ps1 RUN UNIT-STANDARD
++.\tools\test-unit.ps1 RUN ROUTES
++.\tools\test-unit.ps1 RUN P1-STANDARDS
++```

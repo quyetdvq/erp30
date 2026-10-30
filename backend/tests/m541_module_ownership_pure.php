@@ -28,12 +28,21 @@ $actual = array_values(array_filter(scandir($modules) ?: [], static fn (string $
     $v !== '.' && $v !== '..' && is_dir($modules . '/' . $v)
 ));
 sort($actual);
-$expected = ['Access', 'Contact', 'Customer', 'Identity', 'Import', 'Location', 'Locations', 'Notifications', 'Numbering', 'Organization', 'People', 'Pricing', 'Product', 'Settings', 'Workflow'];
-$check($actual === $expected, 'runtime modules equal the current Backend Rewrite owner list');
+// Preserve the complete original Backend Rewrite owner set and authorize only
+// the approved P2-SUP module addition. Unreviewed module roots still fail.
+$baseline = ['Access', 'Contact', 'Customer', 'History', 'Identity', 'Import', 'Location', 'Locations', 'Notifications', 'Numbering', 'Organization', 'People', 'Pricing', 'Product', 'Settings', 'Workflow'];
+$check(array_values(array_intersect($actual, $baseline)) === $baseline,
+    'all 16 pinned backend owner modules remain present');
+$check(array_values(array_diff($actual, $baseline)) === ['Supplier'],
+    'only P2 Supplier is approved as an additional backend owner');
+$history = file_get_contents($modules . '/History/HistoryReadService.php');
+$check($history !== false && ! str_contains($history, 'App\\Modules\\Customer\\')
+    && str_contains($history, 'HistoryParentViewPort'),
+    'History depends on visibility port, not Customer implementation');
 foreach (['OrganizationManagement', 'PeopleManagement', 'EmployeeStructureManagement', 'ReadApi', 'ContactsManagement', 'ProductManagement'] as $obsolete) {
     $check(! file_exists($modules . '/' . $obsolete), 'obsolete root removed: ' . $obsolete);
 }
-foreach (['Access', 'Organization', 'People', 'Locations', 'Contact', 'Pricing', 'Product', 'Import'] as $owner) {
+foreach (['Access', 'Organization', 'People', 'Locations', 'Contact', 'Pricing', 'Product', 'Import', 'History', 'Supplier'] as $owner) {
     $check(is_file($modules . '/' . $owner . '/MODULE.md'), $owner . ' owner MDR exists');
 }
 foreach ([

@@ -43,6 +43,25 @@ test('decimal price is not encoded as JSON number', $response['data']['price'] =
 test('decimal quantity is encoded as string', $response['data']['quantity'] === '5');
 test('non-ID numeric field stays numeric', $response['data']['version'] === 2);
 
+// Normalize must retain JSON types: empty stdClass -> {}, list [] -> [].
+// Silent {} -> [] coercion invalidates strict resource audit payloads.
+$shapes = ApiEnvelope::normalize([
+    'redacted' => ['name' => new stdClass(), 'phone' => new stdClass()],
+    'empty_list' => [],
+    'tuple' => ['DRAFT', 'ACTIVE'],
+    'nested_object' => (object) ['camelCase' => new stdClass()],
+]);
+$shapesJson = json_encode($shapes, JSON_THROW_ON_ERROR);
+$shapesDecoded = json_decode($shapesJson, false, 64, JSON_THROW_ON_ERROR);
+test('redacted marker retains empty JSON object', $shapesDecoded->redacted->name instanceof stdClass
+    && $shapesDecoded->redacted->phone instanceof stdClass
+    && get_object_vars($shapesDecoded->redacted->name) === []);
+test('true empty list stays JSON array', is_array($shapesDecoded->empty_list)
+    && $shapesDecoded->empty_list === []);
+test('two-element tuple remains ordered array', $shapesDecoded->tuple === ['DRAFT','ACTIVE']);
+test('nested object normalizes keys but retains empty marker', $shapesDecoded->nested_object->camel_case instanceof stdClass);
+
+
 $failure = ApiEnvelope::failure('INVALID_CREDENTIALS', 'Invalid username or password', []);
 test('error envelope has code/message/details/request_id', array_keys($failure) === ['error', 'meta']
     && $failure['error']['code'] === 'INVALID_CREDENTIALS'

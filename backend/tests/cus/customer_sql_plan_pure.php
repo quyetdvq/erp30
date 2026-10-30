@@ -71,7 +71,14 @@ $assert($hints === ['edit'=>true, 'setstate'=>false], 'row hints are actual bool
 $bad(static fn () => CustomerSql::params(['page_size'=>'101']));
 $bad(static fn () => CustomerSql::params(['page'=>'0']));
 $bad(static fn () => CustomerSql::params(['sort'=>'name;DELETE FROM customers']));
-$bad(static fn () => CustomerSql::params(['status'=>'INVALID']));
+$draft = CustomerSql::params(['status'=>'DRAFT']);
+$assert($draft['filter']['status']==='DRAFT', 'custom Lifecycle State filter accepted');
+$draftPlan = CustomerSql::collection($draft, AuthorizedSqlScope::master('customer', ['DRAFT']));
+$assert(in_array('DRAFT', $draftPlan['count_binds'], true), 'custom State SQL filter bound');
+$assert(!str_contains($draftPlan['count_sql'], "c.status = 'DRAFT'"), 'no interpolated State in SQL');
+$bad(static fn () => CustomerSql::params(['status'=>'draft']));
+$bad(static fn () => CustomerSql::params(['status'=>'DRAFT OR 1=1']));
+$bad(static fn () => CustomerSql::params(['status'=>str_repeat('A',21)]));
 $bad(static fn () => CustomerSql::params(['customer_group_code'=>'VIP']));
 $bad(static fn () => CustomerSql::params(['customer_type'=>'FOREIGN']));
 $bad(static fn () => CustomerSql::params(['unexpected'=>'x']));
