@@ -242,23 +242,23 @@ function onLocaleChange(event: Event): void {
 }
 .preference-language label,
 .preference-field label {
-  color: #294b65;
+  color: var(--ds-text-secondary);
   font-size: 12px;
   font-weight: 700;
 }
 .preference-note {
   margin: -10px 0 0;
-  color: #728495;
+  color: var(--ds-text-muted);
   font-size: 12px;
 }
 .display-group {
-  border-top: 1px solid #e4ebef;
+  border-top: 1px solid var(--ds-border-subtle);
   padding-top: 16px;
 }
 .display-group h2,
 .preview-box h2 {
   margin: 0 0 12px;
-  color: #183b57;
+  color: var(--ds-text-primary);
   font-size: 16px;
 }
 .preference-fields {
@@ -286,24 +286,24 @@ function onLocaleChange(event: Event): void {
   border: 0;
   padding: 0;
   background: none;
-  color: #0878b6;
+  color: var(--ds-primary);
   font-size: 11px;
   cursor: pointer;
 }
 .inherited-hint {
   grid-column: 1;
-  color: #8193a1;
+  color: var(--ds-text-muted);
   font-size: 11px;
 }
 .preview-box {
-  border-top: 1px solid #e4ebef;
+  border-top: 1px solid var(--ds-border-subtle);
   padding-top: 16px;
 }
 .preview-values {
   display: flex;
   flex-wrap: wrap;
   gap: 8px 18px;
-  color: #294b65;
+  color: var(--ds-text-secondary);
   font-size: 12px;
 }
 @media (max-width: 700px) {

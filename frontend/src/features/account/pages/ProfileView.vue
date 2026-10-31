@@ -117,7 +117,7 @@ async function save(): Promise<void> {
         <p v-if="saved" class="form-success">Đã cập nhật profile.</p>
         <p v-if="error" class="form-error">{{ error }}</p>
         <div class="form-actions">
-          <button class="primary-button" type="submit" :disabled="busy">{{ busy ? 'Đang lưu...' : 'Lưu thay đổi' }}</button>
+          <button data-ds-icon="save" class="primary-button" type="submit" :disabled="busy">{{ busy ? 'Đang lưu...' : 'Lưu thay đổi' }}</button>
         </div>
       </form>
     </section>
@@ -129,11 +129,11 @@ async function save(): Promise<void> {
   margin-top: 16px;
 }
 .form-panel small {
-  color: #8091a0;
+  color: var(--ds-text-muted);
   font-weight: 400;
 }
 .form-success {
-  color: #1c8a62;
+  color: var(--ds-success);
   font-size: 12px;
 }
 </style>

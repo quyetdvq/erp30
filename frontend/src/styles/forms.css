@@ -1,0 +1,61 @@
+/* Opt-in form primitives. Existing markup/validation remains unchanged. */
+.ds-field, .form-row { display: grid; gap: var(--ds-space-2); min-width: 0; }
+.form-row { margin-bottom: 15px; }
+.ds-field__label, .form-row label { color: var(--ds-text-secondary); font-size: var(--ds-font-sm); font-weight: 600; }
+.ds-input, .ds-select, .ds-textarea, .field-input, .field-select {
+  display: block;
+  width: 100%;
+  min-width: 0;
+  min-height: var(--ds-button-height-md);
+  padding: 7px 10px;
+  border: 1px solid var(--ds-border);
+  border-radius: var(--ds-radius-sm);
+  background: var(--ds-bg-surface);
+  color: var(--ds-text-primary);
+  font-size: var(--ds-font-md);
+  line-height: var(--ds-line-height);
+}
+.ds-input, .ds-select, .field-input, .field-select { height: var(--ds-button-height-md); }
+.ds-input::placeholder, .ds-textarea::placeholder, .field-input::placeholder { color: var(--ds-text-muted); opacity: 1; }
+.ds-input:hover:not(:disabled), .ds-select:hover:not(:disabled), .ds-textarea:hover:not(:disabled),
+.field-input:hover:not(:disabled), .field-select:hover:not(:disabled) { border-color: var(--ds-border-strong); }
+.ds-input:focus-visible, .ds-select:focus-visible, .ds-textarea:focus-visible,
+.field-input:focus-visible, .field-select:focus-visible, .command-input:focus-visible {
+  border-color: var(--ds-focus-ring);
+  outline: 2px solid var(--ds-focus-ring);
+  outline-offset: 1px;
+}
+.ds-input[aria-invalid='true'], .ds-select[aria-invalid='true'], .ds-textarea[aria-invalid='true'] { border-color: var(--ds-danger); }
+.ds-field-error, .form-error { color: var(--ds-danger); font-size: var(--ds-font-sm); line-height: var(--ds-line-height); }
+.form-error { margin: -3px 0 13px; }
+.ds-field__help { color: var(--ds-text-muted); font-size: var(--ds-font-sm); }
+.ds-form-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--ds-space-4); }
+.ds-form-section { display: grid; gap: var(--ds-space-4); padding: var(--ds-space-5); border: 1px solid var(--ds-border-subtle); border-radius: var(--ds-radius-md); background: var(--ds-bg-surface); }
+.ds-toolbar { display: flex; flex-wrap: wrap; align-items: center; gap: var(--ds-space-2); padding: var(--ds-space-3) var(--ds-space-4); border-bottom: 1px solid var(--ds-border-subtle); }
+.form-actions { display: flex; justify-content: flex-end; gap: var(--ds-space-2); margin-top: var(--ds-space-2); }
+@media (max-width: 700px) { .ds-form-grid { grid-template-columns: minmax(0, 1fr); } }
+
+/* DS3 opt-in primitives for recurring entity pages and modal editors. */
+.ds-page-panel {
+  display: grid; min-width: 0; gap: 14px;
+  padding: 18px 20px 20px;
+}
+.ds-page-panel--relaxed { gap: var(--ds-space-4); }
+.ds-page-toolbar {
+  display: flex; align-items: end; justify-content: space-between;
+  gap: 10px; flex-wrap: wrap; min-width: 0;
+}
+/* The caller controls layout margin; severity and typography have one owner. */
+.inline-error, .ds-inline-error {
+  color: var(--ds-danger); font-size: var(--ds-font-xs);
+}
+.ds-dialog-form-fields {
+  display: grid; align-content: start; gap: var(--ds-space-3);
+  min-width: 0;
+}
+.ds-dialog-host .ds-dialog-surface .ds-dialog-form-fields label:not(.checkbox-field, .check-row, .customer-checkbox, .supplier-checkbox) {
+  display: grid; gap: 5px; min-width: 0;
+  color: var(--ds-text-secondary); font-size: var(--ds-font-xs); font-weight: 600;
+}
+/* Controls are already styled in modal.css, excluding NSelect/NInput internals.
+ * Do not introduce a second universal input border here. */

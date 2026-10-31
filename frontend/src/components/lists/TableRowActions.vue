@@ -1,14 +1,7 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 import { useI18n } from 'vue-i18n'
-import { NIcon } from 'naive-ui'
-import {
-  BanOutline,
-  CreateOutline,
-  EyeOutline,
-  PowerOutline,
-  TrashOutline,
-} from '@vicons/ionicons5'
+
 import { useBasePermission } from '@/composables/useBasePermission'
 import BusinessWorkflowAction from './BusinessWorkflowAction.vue'
 import { canMutateRow, canViewRow, type AllowedRowActions, type RowActionCode, type RowAuthorizationMode, type RowMutationIntent } from './rowActionPolicy'
@@ -104,7 +97,9 @@ const toggleLabel = computed(() =>
     ? (props.activateLabel ?? t('common.activate'))
     : (props.deactivateLabel ?? t('common.deactivate')),
 )
-const toggleIcon = computed(() => (props.active === false ? PowerOutline : BanOutline))
+// Match the original ERP toggle behavior: the icon describes the NEXT action.
+// Inactive -> PowerOutline (Activate); Active -> BanOutline (Deactivate).
+const toggleIcon = computed(() => props.active === false ? 'activate' : 'deactivate')
 </script>
 
 <template>
@@ -112,24 +107,24 @@ const toggleIcon = computed(() => (props.active === false ? PowerOutline : BanOu
     <button
       v-if="canView"
       type="button"
-      class="table-row-action"
+      class="table-row-action ds-icon-control"
       :title="props.viewLabel ?? t('common.view')"
       :aria-label="props.viewLabel ?? t('common.view')"
       :disabled="props.busy"
       @click="emitIfReady('view')"
-    >
-      <NIcon :component="EyeOutline" aria-hidden="true" />
+     data-ds-icon="view">
+
     </button>
     <button
       v-if="canMutation('edit')"
       type="button"
-      class="table-row-action"
+      class="table-row-action ds-icon-control"
       :title="props.editLabel ?? t('common.edit')"
       :aria-label="props.editLabel ?? t('common.edit')"
       :disabled="props.busy"
       @click="emitIfReady('edit')"
-    >
-      <NIcon :component="CreateOutline" aria-hidden="true" />
+     data-ds-icon="edit">
+
     </button>
     <BusinessWorkflowAction
       v-if="
@@ -149,71 +144,25 @@ const toggleIcon = computed(() => (props.active === false ? PowerOutline : BanOu
         canMutation('toggle')
       "
       type="button"
-      class="table-row-action table-row-action--state"
+      class="table-row-action ds-icon-control table-row-action--state ds-state-toggle"
+      :data-ds-state="props.active ? 'active' : 'inactive'"
       :disabled="props.busy"
       :title="toggleLabel"
       :aria-label="toggleLabel"
       @click="emitIfReady('toggle')"
-    >
-      <NIcon :component="toggleIcon" aria-hidden="true" />
+     :data-ds-icon="toggleIcon">
+
     </button>
     <button
       v-if="canMutation('delete')"
       type="button"
-      class="table-row-action table-row-action--delete"
+      class="table-row-action ds-icon-control ds-icon-control--danger table-row-action--delete"
       :disabled="props.busy"
       :title="props.deleteLabel ?? t('common.delete')"
       :aria-label="props.deleteLabel ?? t('common.delete')"
       @click="emitIfReady('delete')"
-    >
-      <NIcon :component="TrashOutline" aria-hidden="true" />
+     data-ds-icon="delete">
+
     </button>
   </span>
 </template>
-
-<style scoped>
-.table-row-actions {
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-}
-.table-row-action {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 30px;
-  height: 30px;
-  padding: 0;
-  border: 1px solid #dbe5ea;
-  border-radius: 4px;
-  background: #fff;
-  color: #536b7b;
-  cursor: pointer;
-  font-size: 17px;
-}
-.table-row-action:hover:not(:disabled),
-.table-row-action:focus-visible {
-  border-color: #1876a8;
-  color: #1876a8;
-}
-.table-row-action--state {
-  color: #b45309;
-}
-.table-row-action--state:hover:not(:disabled),
-.table-row-action--state:focus-visible {
-  border-color: #b45309;
-  color: #b45309;
-}
-.table-row-action--delete {
-  color: #a23a32;
-}
-.table-row-action--delete:hover:not(:disabled),
-.table-row-action--delete:focus-visible {
-  border-color: #a23a32;
-  color: #a23a32;
-}
-.table-row-action:disabled {
-  cursor: not-allowed;
-  opacity: 0.5;
-}
-</style>

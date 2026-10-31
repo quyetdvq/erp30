@@ -97,7 +97,7 @@ onMounted(() => void load())
         <h1>{{ t('notificationSettings.personalTitle') }}</h1>
         <p>{{ t('notificationSettings.personalHelp') }}</p>
       </div>
-      <button type="button" :disabled="loading || saving !== null" @click="load">{{ t('notificationSettings.reload') }}</button>
+      <button type="button" class="ds-button ds-button--secondary" data-ds-icon="refresh" :disabled="loading || saving !== null" @click="load">{{ t('notificationSettings.reload') }}</button>
     </header>
     <p v-if="pendingCount > 0" role="status" class="m11-notice">{{ t('notificationSettings.pendingCount', { count: pendingCount }) }}</p>
     <p v-if="error" role="alert" class="inline-error">{{ error }}</p>
@@ -130,7 +130,7 @@ onMounted(() => void load())
           <span>{{ t('notificationSettings.effective') }}: <strong>{{ row.effective_value ? t('notificationSettings.on') : t('notificationSettings.off') }}</strong></span>
           <small>{{ t(`notificationSettings.${preferenceSourceLabel(row.effective_source)}`) }}</small>
         </div>
-        <button type="button" :disabled="!canSave(row)" @click="save(row)">
+        <button type="button" class="ds-button ds-button--primary" data-ds-icon="save" :disabled="!canSave(row)" @click="save(row)">
           {{ saving === row.key ? t('notificationSettings.saving') : t('notificationSettings.save') }}
         </button>
       </div>
@@ -145,12 +145,12 @@ onMounted(() => void load())
 .m11-heading h1, .m11-group h2 { margin: 0; }
 .m11-heading p, .m11-group p { margin: 6px 0 0; opacity: .78; }
 .m11-heading button { white-space: nowrap; }
-.m11-group { border: 1px solid #8297a955; border-radius: 10px; padding: 16px; display: grid; gap: 12px; min-width: 0; }
+.m11-group { border: 1px solid var(--ds-border-subtle); border-radius: 10px; padding: 16px; display: grid; gap: 12px; min-width: 0; }
 .m11-group h2 { font-size: 1.1rem; }
-.m11-row { display: grid; grid-template-columns: minmax(170px,2fr) minmax(125px,1fr) minmax(140px,1fr) auto; gap: 14px; align-items: center; border-top: 1px solid #8297a955; padding-top: 12px; min-width: 0; }
+.m11-row { display: grid; grid-template-columns: minmax(170px,2fr) minmax(125px,1fr) minmax(140px,1fr) auto; gap: 14px; align-items: center; border-top: 1px solid var(--ds-border-subtle); padding-top: 12px; min-width: 0; }
 .m11-detail, .m11-effective { display: grid; gap: 3px; min-width: 0; }
 .m11-row small { overflow-wrap: anywhere; opacity: .76; }
-.m11-row .m11-unsaved { color: #b66a18; font-weight: 600; opacity: 1; }
+.m11-row .m11-unsaved { color: var(--ds-warning); font-weight: 600; opacity: 1; }
 .m11-field { display: grid; gap: 5px; }
 .m11-field select { width: 100%; max-width: 250px; min-height: 34px; }
 .m11-row button { min-height: 34px; padding: 6px 12px; }

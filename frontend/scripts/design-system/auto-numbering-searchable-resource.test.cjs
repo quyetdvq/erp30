@@ -1,0 +1,66 @@
+// DS5 HF11: Auto Numbering must use the shared searchable selector without
+// changing All resource semantics, backend authorization or edit form scope.
+const { test } = require('node:test')
+const assert = require('node:assert/strict')
+const fs = require('node:fs')
+const path = require('node:path')
+const read = (relative) => fs.readFileSync(path.join(__dirname, '../..', relative), 'utf8')
+const view = read('src/features/workflow/pages/AutoNumberingView.vue')
+const select = read('src/components/forms/SearchableSelect.vue')
+
+test('Auto Numbering filter is a shared searchable select, not an unstyled native control', () => {
+  assert.match(view, /import SearchableSelect from '@\/components\/forms\/SearchableSelect\.vue'/)
+  assert.match(view, /<label class="numbering-resource-filter">[\s\S]*?<SearchableSelect[\s\S]*?:options="resourceFilterOptions"/)
+  assert.match(view, /:placeholder="t\('numbering\.allResources'\)"/)
+  assert.match(view, /:clearable="true"/)
+  assert.match(select, /:filterable="true"/)
+  assert.match(select, /:filter="searchableSelectFilter"/)
+  assert.doesNotMatch(view, /<select v-model="selectedResourceId"/)
+  assert.match(view, /\.numbering-resource-filter \{ max-width: 480px; \}/)
+  assert.match(view, /\.numbering-query-controls \.numbering-resource-filter :deep\(\.n-base-selection\) \{ min-height: var\(--ds-button-height-md\); \}/)
+})
+
+test('All resource remains empty filter and searching only exposes backend authorized resources', () => {
+  assert.match(view, /const selectedResourceId = ref\(''\)/)
+  assert.match(view, /configurableResources\.value\.map\(\(item\) => \(\{[\s\S]*?value: String\(item\.id\)/)
+  assert.match(view, /selectedResourceId\.value = typeof value === 'string' \? value : ''/)
+  assert.match(view, /@update:model-value="setResourceFilter"/)
+  assert.match(view, /listResourcePage\(query, true\)/)
+  assert.match(view, /listAllNumberingSeries\(ids\)/)
+  assert.match(view, /const formResourceId = ref\(''\)/)
+  assert.match(view, /<select v-model="formResourceId" required :disabled="Boolean\(editingId\)"/)
+  assert.doesNotMatch(view, /selectedResourceId\.value = String\(row\.resource_id\)/)
+})
+
+test('Integration tests verify searchable selection and effective Resource filtering', () => {
+  const browser = read('e2e/ds5-hf10-auto-numbering-all.spec.ts')
+  const unit = read('src/services/__tests__/autoNumberingAll.spec.ts')
+  assert.match(browser, /\.numbering-resource-filter \.searchable-select/)
+  assert.match(browser, /\.n-base-select-option/)
+  assert.match(browser, /\.n-base-clear/)
+  assert.match(browser, /Order number/)
+  assert.match(unit, /sdkList } = vi\.hoisted/)
+  assert.match(unit, /vi\.mock\('@\/api\/generated\/sdk\.gen'/)
+  assert.match(unit, /resourceIdFrom\(sdkList\.mock\.calls/)
+  assert.match(unit, /listNumberingSeriesPage\('2'\)/)
+  assert.doesNotMatch(unit, /clientGet\.mockImplementation/)
+})
+
+test('Direct route entry waits for PBAC readiness and invalidates stale loads on revocation', () => {
+  assert.doesNotMatch(view, /onMounted\(\(\) => \{\s*if \(canConfigure\.value\)/)
+  assert.match(view, /watch\(canConfigure, \(authorized\) => \{/)
+  assert.match(view, /\{ immediate: true \}\)/)
+  assert.match(view, /if \(authorized\) \{\s*if \(!deniedReadUntilRefresh\.value\) void loadResources\(\)/)
+  assert.match(view, /if \(generation !== resourceLoadGeneration \|\| !canConfigure\.value\) return/)
+  assert.match(view, /\+\+seriesLoadGeneration/)
+  assert.match(view, /if \(!canConfigure\.value \|\| deniedReadUntilRefresh\.value\) \{\s*if \(!canConfigure\.value\) seriesSnapshots\.value = new Map\(\)/)
+})
+
+test('Naive UI clear returns to the All resource placeholder after leaving search focus', () => {
+  const browser = read('e2e/ds5-hf10-auto-numbering-all.spec.ts')
+  const selectUnit = read('src/components/forms/__tests__/SearchableSelect.spec.ts')
+  assert.match(browser, /listFilter\.locator\('\.n-base-clear'\)\.click\(\)[\s\S]*?page\.locator\('\.page-heading h1'\)\.click\(\)[\s\S]*?expect\(listFilter\)\.toContainText/)
+  assert.match(selectUnit, /uses the placeholder for an empty resource filter and restores it after clearing/)
+  assert.match(selectUnit, /expect\(select\.props\('value'\)\)\.toBe\(null\)/)
+  assert.match(selectUnit, /expect\(select\.props\('placeholder'\)\)\.toBe\('All resource'\)/)
+})

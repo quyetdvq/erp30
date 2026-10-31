@@ -1,9 +1,10 @@
 <script setup lang="ts">
+import AppDialogHost from '@/components/ui/AppDialogHost.vue'
 import { rowAllowedActions } from '@/components/lists/rowActionPolicy'
 import { computed, onMounted, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { NIcon, NSelect } from 'naive-ui'
-import { TrashOutline, ShieldCheckmarkOutline, RefreshOutline, SaveOutline, Refresh } from '@vicons/ionicons5'
+import { ShieldCheckmarkOutline } from '@vicons/ionicons5'
 import type { Policy } from '@/api/generated/types.gen'
 import OrganizationTreeSelect from '@/components/organizations/OrganizationTreeSelect.vue'
 import {
@@ -261,24 +262,24 @@ onMounted(() => {
       <p>{{ t('security.policiesDescription') }}</p>
     </div>
     <button v-if="hasBasePermission('policy', 'create')" type="button" class="btn-add primary-button"
-      :disabled="preparingForm" @click="openCreate">
-      <NIcon :size="16">
-        <ShieldCheckmarkOutline />
-      </NIcon>
+      :disabled="preparingForm" @click="openCreate" data-ds-icon="add">
+
       {{ preparingForm ? t('common.loading') : t('common.create') }}
     </button>
   </div>
   <p v-if="error && !duplicateScopeConflict" class="inline-error" role="alert">
     {{ t('security.requestError') }}
   </p>
-  <section class="content-panel security-list-panel">
-    <div class="security-toolbar">
-      <ListQueryControls :model-value="state.query" @apply="applyQuery" @reset="resetQuery" />
+  <section class="content-panel security-list-panel ds-page-panel">
+    <div class="security-toolbar ds-page-toolbar">
+      <ListQueryControls :show-page-size="false" :model-value="state.query" @apply="applyQuery" @reset="resetQuery" >
+        <template #actions>
+          <button data-ds-icon="refresh" type="button" class="secondary-button" @click="void load">
 
-      <button type="button" class="secondary-button" @click="void load">
-
-        {{ t('common.refresh') }}
-      </button>
+            {{ t('common.refresh') }}
+          </button>
+        </template>
+      </ListQueryControls>
     </div>
     <ListShell :initial-loading="state.isInitialLoading.value" :refreshing="state.isBackgroundRefreshing.value"
       :has-data="state.queryState.hasData.value" :empty-dataset="state.isEmptyDataset.value"
@@ -327,13 +328,13 @@ onMounted(() => {
   </section>
 
   <!-- View is never an editor: render plain values and no mutation controls. -->
-  <div v-if="viewingPolicy" class="modal-backdrop">
-    <section class="modal-card policy-view-modal" role="dialog" aria-modal="true"
+  <AppDialogHost :open="viewingPolicy !== null" size="lg" @close="closeView">
+    <section v-if="viewingPolicy" class="ds-dialog-surface modal-card policy-view-modal" role="dialog" aria-modal="true"
       :aria-label="t('security.policyView')">
       <header class="modal-card__header">
         <h2 class="modal-card-title">{{ t('security.policyView') }} #{{ viewingPolicy.id }}</h2>
         <button type="button" class="modal-card-button-close" :aria-label="t('common.close')"
-          @click="closeView"></button>
+          @click="closeView" data-ds-icon="close"></button>
       </header>
       <div class="modal-card__body policy-view-body">
         <dl class="policy-view-fields">
@@ -355,13 +356,13 @@ onMounted(() => {
         </div>
       </div>
       <footer class="modal-card__footer">
-        <button type="button" class="secondary-button" @click="closeView">{{ t('common.close') }}</button>
+        <button data-ds-icon="close" type="button" class="secondary-button" @click="closeView">{{ t('common.close') }}</button>
       </footer>
     </section>
-  </div>
+  </AppDialogHost>
 
-  <div v-if="modalOpen" class="modal-backdrop">
-    <section class="modal-card policy-form-modal" role="dialog" aria-modal="true"
+  <AppDialogHost :open="modalOpen" size="lg" @close="closeForm">
+    <section v-if="modalOpen" class="ds-dialog-surface modal-card policy-form-modal" role="dialog" aria-modal="true"
       :aria-label="t('security.policyForm')">
       <header class="modal-card__header">
         <h2 class="modal-card-title">
@@ -373,10 +374,10 @@ onMounted(() => {
         </h2>
 
         <button type="button" class="modal-card-button-close" :aria-label="t('common.close')"
-          @click="closeForm"></button>
+          @click="closeForm" data-ds-icon="close"></button>
       </header>
 
-      <form id="policy-form-input" class="modal-card__body" @submit.prevent="
+      <form id="policy-form-input" class="modal-card__body ds-dialog-form-fields" @submit.prevent="
         !busy && canWriteForm &&
         form.actions.length > 0 &&
         form.actions.every(row => row.resource_action_id && row.effect) &&
@@ -388,8 +389,8 @@ onMounted(() => {
             <code>{{ duplicateScopeSummary }}</code>
           </p>
 
-          <button type="button" class="secondary-button" @click="reloadAfterDuplicate">
-            <NIcon :size="20"> <RefreshOutline /> </NIcon>
+          <button type="button" class="secondary-button" @click="reloadAfterDuplicate" data-ds-icon="refresh">
+
             {{ t('security.reloadPolicyScope') }}
           </button>
         </div>
@@ -452,8 +453,8 @@ onMounted(() => {
           <div class="detail-actions">
             <strong>{{ t('security.actionEffects') }}</strong>
 
-            <button v-if="canWriteForm" type="button" class="secondary-button" @click="addAction">
-              ＋ {{ t('security.addAction') }}
+            <button data-ds-icon="add" v-if="canWriteForm" type="button" class="secondary-button" @click="addAction">
+              {{ t('security.addAction') }}
             </button>
           </div>
 
@@ -472,8 +473,8 @@ onMounted(() => {
             </select>
 
             <button v-if="canWriteForm" type="button" class="icon-button action-delete-button" :aria-label="t('common.delete')"
-              :title="t('common.delete')" @click="removeAction(index)">
-              <NIcon :component="TrashOutline" aria-hidden="true" />
+              :title="t('common.delete')" @click="removeAction(index)" data-ds-icon="delete">
+
             </button>
           </div>
 
@@ -498,8 +499,8 @@ onMounted(() => {
       </form>
 
       <footer class="modal-card__footer">
-        <button type="button" class="secondary-button" @click="closeForm">
-          <NIcon :size="20" aria-hidden="true"> <Refresh /> </NIcon>
+        <button type="button" class="secondary-button" @click="closeForm" data-ds-icon="cancel">
+
           {{ t('common.cancel') }}
         </button>
 
@@ -512,52 +513,39 @@ onMounted(() => {
           ) ||
           !form.participant_ref_id ||
           !canWriteForm
-          ">
-          <NIcon :size="20" aria-hidden="true"> <SaveOutline /> </NIcon>
+          " data-ds-icon="save">
+
           {{ busy ? t('common.saving') : t('common.save') }}
         </button>
       </footer>
     </section>
-  </div>
+  </AppDialogHost>
 
 </template>
 
 <style scoped>
-.security-list-panel {
-  display: grid;
-  gap: 14px;
-  padding: 18px 20px 20px;
-}
-
-.security-toolbar {
-  display: flex;
-  align-items: end;
-  justify-content: space-between;
-  gap: 10px;
-  flex-wrap: wrap;
-}
 
 .effect-summary {
   font-family: ui-monospace, monospace;
-  color: #345f77;
+  color: var(--ds-text-primary);
   font-size: 11px;
 }
 
 .policy-view-body { overflow-y: auto; min-height: 0; }
 .policy-view-fields { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; margin: 0; }
-.policy-view-fields dt { color: #536b7b; font-size: 12px; font-weight: 600; }
+.policy-view-fields dt { color: var(--ds-text-secondary); font-size: 12px; font-weight: 600; }
 .policy-view-fields dd { margin: 4px 0 0; overflow-wrap: anywhere; }
 .policy-view-action { display: flex; gap: 12px; padding: 6px 0; }
 .security-note {
   margin: 0;
-  color: #536b7b;
+  color: var(--ds-text-secondary);
   font-size: 12px;
   line-height: 1.6;
 }
 
 .inline-error {
   margin: 0 0 12px;
-  color: #b64444;
+  color: var(--ds-danger);
   font-size: 12px;
 }
 
@@ -567,38 +555,16 @@ onMounted(() => {
   justify-content: space-between;
   gap: 12px;
   padding: 10px 12px;
-  border: 1px solid #e7b6b6;
+  border: 1px solid var(--ds-danger);
   border-radius: 5px;
-  background: #fff5f5;
-  color: #8f3030;
+  background: var(--ds-danger-soft);
+  color: var(--ds-danger);
   font-size: 12px;
 }
 
 .duplicate-scope-notice p {
   margin: 0;
 }
-
-.modal-card {
-
-    width: min(100%, 760px);
-    max-height: calc(100vh - 40px);
-    display: flex;
-    flex-direction: column;
-    overflow: hidden;
-    border-radius: 7px;
-    background: #fff;
-    box-shadow: 0 20px 60px rgb(18 42 62 / 24%);
-}
-
-
-.modal-card__body label {
-  display: grid;
-  gap: 5px;
-  color: #536b7b;
-  font-size: 12px;
-  font-weight: 600;
-}
-
 
 .form-grid {
   display: grid;
@@ -610,7 +576,7 @@ onMounted(() => {
   display: grid;
   gap: 9px;
   padding: 12px;
-  border: 1px solid #dce6ec;
+  border: 1px solid var(--ds-border-subtle);
   border-radius: 6px;
 }
 
@@ -633,15 +599,15 @@ onMounted(() => {
   width: 34px;
   height: 34px;
   place-items: center;
-  border: 1px solid #dce6ec;
+  border: 1px solid var(--ds-border-subtle);
   border-radius: 5px;
-  color: #b64444;
+  color: var(--ds-danger);
   font-size: 18px;
 }
 
 code {
   font-family: ui-monospace, SFMono-Regular, Consolas, monospace;
-  color: #0d5b83;
+  color: var(--ds-primary);
 }
 
 @media (max-width: 700px) {

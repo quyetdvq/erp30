@@ -171,8 +171,8 @@ defineExpose({ commit })
 .product-image-preview {
   width: 160px;
   height: 140px;
-  border: 1px solid #d9e3ea;
-  background: #f6f9fb;
+  border: 1px solid var(--ds-border-subtle);
+  background: var(--ds-bg-subtle);
   border-radius: 8px;
   display: grid;
   place-items: center;
@@ -185,7 +185,7 @@ defineExpose({ commit })
   object-fit: contain;
 }
 .product-image-placeholder {
-  color: #62798b;
+  color: var(--ds-text-secondary);
   font-size: 12px;
   padding: 12px;
   text-align: center;
@@ -195,11 +195,11 @@ defineExpose({ commit })
   flex: 1;
 }
 .product-image-controls strong {
-  color: #173c59;
+  color: var(--ds-text-primary);
 }
 .product-image-hint {
   margin: 6px 0;
-  color: #536b7b;
+  color: var(--ds-text-secondary);
   font-size: 12px;
 }
 .product-image-actions {
@@ -214,14 +214,14 @@ defineExpose({ commit })
   position: relative;
   display: inline-flex;
   align-items: center;
-  min-height: 34px;
+  min-height: var(--ds-button-height-md);
   padding: 6px 10px;
-  background: #fff;
-  border: 1px solid #c7d6df;
-  border-radius: 5px;
+  background: var(--ds-bg-surface);
+  border: 1px solid var(--ds-border);
+  border-radius: var(--ds-radius-sm);
   font: inherit;
   font-size: 13px;
-  color: #1876a8;
+  color: var(--ds-primary);
   cursor: pointer;
 }
 .image-upload-button input {
@@ -233,7 +233,7 @@ defineExpose({ commit })
   cursor: pointer;
 }
 .image-upload-button:focus-within {
-  outline: 2px solid #1876a8;
+  outline: 2px solid var(--ds-primary);
   outline-offset: 2px;
 }
 .image-upload-button.disabled,
@@ -242,10 +242,10 @@ defineExpose({ commit })
   cursor: not-allowed;
 }
 .image-remove-button {
-  color: #b64444;
+  color: var(--ds-danger);
 }
 .product-image-error {
-  color: #b64444;
+  color: var(--ds-danger);
   font-size: 12px;
 }
 </style>

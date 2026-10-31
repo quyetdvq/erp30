@@ -76,10 +76,10 @@ onBeforeUnmount(() => { observer?.disconnect() })
   width: 52px;
   height: 52px;
   overflow: hidden;
-  border: 1px solid #dbe5ea;
+  border: 1px solid var(--ds-border-subtle);
   border-radius: 6px;
-  background: #f5f8fa;
-  color: #a8bbc7;
+  background: var(--ds-bg-subtle);
+  color: var(--ds-text-muted);
 }
 .product-list-thumbnail img {
   display: block;

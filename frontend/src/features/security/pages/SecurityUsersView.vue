@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import AppDialogHost from '@/components/ui/AppDialogHost.vue'
 import { rowAllowedActions } from '@/components/lists/rowActionPolicy'
 import { computed, onBeforeUnmount, onMounted, reactive, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
@@ -515,15 +516,15 @@ onMounted(() => void load())
       <h1>{{ t('security.usersTitle') }}</h1>
       <p>{{ t('security.usersDescription') }}</p>
     </div>
-    <button v-if="hasBasePermission('user', 'create')" type="button" class="primary-button" :disabled="busy"
+    <button data-ds-icon="add" v-if="hasBasePermission('user', 'create')" type="button" class="primary-button" :disabled="busy"
       @click="openCreate">
-      ＋ {{ t('common.create') }}
+      {{ t('common.create') }}
     </button>
   </div>
   <p v-if="error" class="inline-error" role="alert">{{ t('security.requestError') }}</p>
-  <section class="content-panel security-list-panel">
-    <div class="security-toolbar">
-      <ListQueryControls :model-value="state.query" :filters="filters" :sort-options="sortOptions" :disabled="busy"
+  <section class="content-panel security-list-panel ds-page-panel">
+    <div class="security-toolbar ds-page-toolbar">
+      <ListQueryControls :show-page-size="false" :model-value="state.query" :filters="filters" :sort-options="sortOptions" :disabled="busy"
         @apply="applyQuery" @reset="resetQuery" />
     </div>
     <ListShell :initial-loading="state.isInitialLoading.value" :refreshing="state.isBackgroundRefreshing.value"
@@ -563,8 +564,8 @@ onMounted(() => void load())
   </section>
 
 
-  <div v-if="detailOpen && selected" class="modal-backdrop">
-    <section class="modal-card tabbed-detail-workspace" role="dialog" aria-modal="true"
+  <AppDialogHost :open="Boolean(detailOpen && selected)" size="xl" @close="closeDetails">
+    <section v-if="detailOpen && selected" class="ds-dialog-surface modal-card tabbed-detail-workspace" role="dialog" aria-modal="true"
       :aria-label="`${t('users.detailTitle')}: ${selected.username}`">
       <header class="modal-card__header">
         <h2 class="modal-card-title">
@@ -577,11 +578,11 @@ onMounted(() => void load())
         </h2>
         <small>{{ selected.email }}</small>
 
-        <button type="button" class="modal-card-button-close" :aria-label="t('common.close')" @click="closeDetails">
+        <button type="button" class="modal-card-button-close" :aria-label="t('common.close')" @click="closeDetails" data-ds-icon="close">
         </button>
       </header>
 
-      <nav class="security-tabs" :aria-label="t('security.userDetailTabs')">
+      <nav class="security-tabs ds-detail-tabs ds-detail-tabs--spaced" :aria-label="t('security.userDetailTabs')">
         <button v-for="item in ['overview', 'groups', 'permissions'] as const" :key="item" type="button"
           :class="{ active: tab === item }" @click="selectTab(item)">
           {{ t(`security.userTabs.${item}`) }}
@@ -611,7 +612,7 @@ onMounted(() => void load())
           {{ t('security.userMembershipConflict') }}
         </p>
         <p v-if="groupDetailState === 'loading'" role="status">{{ t('common.loading') }}</p>
-        <button v-else-if="groupDetailState === 'error'" type="button" class="secondary-button"
+        <button data-ds-icon="retry" v-else-if="groupDetailState === 'error'" type="button" class="secondary-button"
           @click="void loadDetailGroups()">{{ t('security.retryGroupLookup') }}</button>
         <label v-for="group in groups" :key="group.id" class="check-row"><input type="checkbox"
             :checked="groupDraftIds.includes(String(group.id))"
@@ -623,9 +624,9 @@ onMounted(() => void load())
       <div v-else class="modal-card__body security-editor">
         <p class="security-note">{{ t('security.permissionSourceNote') }}</p>
         <p v-if="directPermissionState === 'loading'" role="status">{{ t('common.loading') }}</p>
-        <button v-else-if="directPermissionState === 'error'" type="button" class="secondary-button"
+        <button data-ds-icon="retry" v-else-if="directPermissionState === 'error'" type="button" class="secondary-button"
           @click="void loadDirectPermissions()">{{ t('security.retryGroupLookup') }}</button>
-        <button v-if="directPermissionState === 'ready' && !permissionCatalogLoaded && !permissionCatalogLoading"
+        <button data-ds-icon="retry" v-if="directPermissionState === 'ready' && !permissionCatalogLoaded && !permissionCatalogLoading"
           type="button" class="secondary-button" @click="void loadPermissionCatalog()">
           {{ t('security.retryGroupLookup') }}
         </button>
@@ -659,55 +660,46 @@ onMounted(() => void load())
       <footer class="modal-card__footer">
         <template v-if="tab === 'overview'">
           <button v-if="hasBasePermission('user', 'edit') && selected.allowed_actions?.edit === true" type="button" class="secondary-button" :disabled="busy"
-            @click="openEdit()">
-            <NIcon :size="16" aria-hidden="true">
-              <CreateOutline />
-            </NIcon>
+            @click="openEdit()" data-ds-icon="edit">
+
             {{ t('common.edit') }}
           </button>
-          <button v-if="hasBasePermission('user', 'setstate') && selected.allowed_actions?.setstate === true" type="button" class="secondary-button" :disabled="busy"
-            @click="void setState()">
-            <NIcon :size="16" aria-hidden="true">
-              <BanOutline />
-            </NIcon>
+          <button v-if="hasBasePermission('user', 'setstate') && selected.allowed_actions?.setstate === true" type="button" class="secondary-button ds-state-toggle" :disabled="busy"
+            :data-ds-state="selected.active ? 'active' : 'inactive'"
+            @click="void setState()" :data-ds-icon="selected.active ? 'deactivate' : 'activate'">
+
             {{ selected.active ? t('security.inactivate') : t('security.activate') }}
           </button>
 
           <button v-if="hasBasePermission('user', 'reset_password')" type="button" class="secondary-button"
-            :disabled="busy" @click="passwordOpen = true">
-            <NIcon :size="16" aria-hidden="true">
-              <Refresh />
-            </NIcon>
+            :disabled="busy" @click="passwordOpen = true" data-ds-icon="reset">
+
             {{ t('security.resetPassword') }}
           </button>
         </template>
 
 
         <button v-else-if="tab === 'groups'" type="button" class="primary-button"
-          :disabled="busy || groupMembershipConflict || groupDetailState !== 'ready' || changedGroupIds.length === 0 || !hasBasePermission('authorization_group', 'assign_member')" @click="void saveMembership()">
-          <NIcon :size="16" aria-hidden="true">
-            <SaveOutline />
-          </NIcon>
+          :disabled="busy || groupMembershipConflict || groupDetailState !== 'ready' || changedGroupIds.length === 0 || !hasBasePermission('authorization_group', 'assign_member')" @click="void saveMembership()" data-ds-icon="save">
+
           {{ busy ? t('common.saving') : t('security.saveMembers') }}
         </button>
 
 
         <button v-else type="button" class="primary-button"
-          :disabled="busy || directPermissionState !== 'ready' || !permissionCatalogLoaded || !hasBasePermission('user', 'assign_permission')" @click="void savePermissions()">
-          <NIcon :size="16" aria-hidden="true">
-            <SaveOutline />
-          </NIcon>
+          :disabled="busy || directPermissionState !== 'ready' || !permissionCatalogLoaded || !hasBasePermission('user', 'assign_permission')" @click="void savePermissions()" data-ds-icon="save">
+
           {{ busy ? t('common.saving') : t('security.savePermissions') }}
         </button>
       </footer>
 
 
     </section>
-  </div>
+  </AppDialogHost>
 
 
-  <div v-if="formOpen" class="modal-backdrop">
-    <section class="modal-card" role="dialog" aria-modal="true" :aria-label="t('security.userForm')">
+  <AppDialogHost :open="formOpen" size="lg" @close="closeForm()">
+    <section v-if="formOpen" class="ds-dialog-surface modal-card" role="dialog" aria-modal="true" :aria-label="t('security.userForm')">
       <header class="modal-card__header">
         <h2 class="modal-card-title">
           <NIcon :size="24" aria-hidden="true">
@@ -715,7 +707,7 @@ onMounted(() => void load())
           </NIcon>
           {{ editingId ? t('common.edit') : t('common.create') }} {{ t('users.user') }}
         </h2>
-        <button type="button" class="modal-card-button-close" :aria-label="t('common.close')" @click="closeForm()">
+        <button type="button" class="modal-card-button-close" :aria-label="t('common.close')" @click="closeForm()" data-ds-icon="close">
         </button>
       </header>
       <form class="modal-card__body" id="form-user" @submit.prevent="void saveIdentity()">
@@ -749,7 +741,7 @@ onMounted(() => void load())
             <p v-if="groupLookupState === 'loading'" role="status" class="security-note">{{ t('common.loading') }}</p>
             <p v-if="groupLookupState === 'error'" class="inline-error" role="alert">{{ t('security.groupLookupFailed')
               }}</p>
-            <button v-if="groupLookupState === 'error'" type="button" class="secondary-button" :disabled="busy"
+            <button data-ds-icon="retry" v-if="groupLookupState === 'error'" type="button" class="secondary-button" :disabled="busy"
               @click="void loadCreateGroups()">{{ t('security.retryGroupLookup') }}</button>
           </template>
           <p v-else class="security-note">{{ t('security.groupAssignmentPermissionHint') }}</p>
@@ -769,7 +761,7 @@ onMounted(() => void load())
           <p class="security-note">{{ t('security.avatarLimit') }}</p>
           <p v-if="!hasBasePermission('user', 'edit')" class="security-note">{{ t('security.avatarPermissionNote') }}
           </p>
-          <button v-if="createAvatarFile" type="button" class="secondary-button" :disabled="busy"
+          <button data-ds-icon="reset" v-if="createAvatarFile" type="button" class="secondary-button" :disabled="busy"
             @click="clearCreateAvatar">{{ t('security.avatarClearSelection') }}</button>
         </div>
         <p v-if="createdFlow.createdUserId && avatarPartialError" role="alert" class="inline-error">
@@ -778,34 +770,30 @@ onMounted(() => void load())
       </form>
 
       <footer class="modal-card__footer">
-        <button type="button" class="secondary-button" :disabled="busy" @click="closeForm()">
-          <NIcon :size="16" aria-hidden="true">
-            <Refresh />
-          </NIcon>
+        <button type="button" class="secondary-button" :disabled="busy" @click="closeForm()" data-ds-icon="cancel">
+
           {{ t('common.cancel') }}
         </button>
-        <button type="submit" class="primary-button" form="form-user" :disabled="busy">
-          <NIcon :size="16" aria-hidden="true">
-            <SaveOutline />
-          </NIcon>
+        <button type="submit" class="primary-button" form="form-user" :disabled="busy" data-ds-icon="save">
+
           {{ busy ? t('common.saving') : createdFlow.createdUserId && createAvatarFile ? t('security.retryAvatarUpload')
             :
             t('common.save') }}
         </button>
       </footer>
     </section>
-  </div>
+  </AppDialogHost>
 
 
 
-  <div v-if="passwordOpen" class="modal-backdrop">
-    <section class="modal-card" role="dialog" aria-modal="true" :aria-label="t('security.resetPassword')">
+  <AppDialogHost :open="passwordOpen" size="sm" @close="passwordOpen = false">
+    <section v-if="passwordOpen" class="ds-dialog-surface modal-card" role="dialog" aria-modal="true" :aria-label="t('security.resetPassword')">
       <header class="modal-card__header">
         <h2 class="modal-card-title">
 
           {{ t('security.resetPassword') }}</h2>
         <button type="button" class="modal-card-button-close" :aria-label="t('common.close')"
-          @click="passwordOpen = false">
+          @click="passwordOpen = false" data-ds-icon="close">
         </button>
       </header>
       <form class="modal-card__body" id="form-reset-password" @submit.prevent="savePassword">
@@ -815,21 +803,17 @@ onMounted(() => void load())
 
       </form>
       <footer class="modal-card__footer">
-        <button type="button" class="secondary-button" :disabled="busy" @click="passwordOpen = false">
-          <NIcon :size="16" aria-hidden="true">
-            <Refresh />
-          </NIcon>
+        <button type="button" class="secondary-button" :disabled="busy" @click="passwordOpen = false" data-ds-icon="cancel">
+
           {{ t('common.cancel') }}
         </button>
-        <button type="submit" class="primary-button" form="form-reset-password" :disabled="busy">
-          <NIcon :size="16" aria-hidden="true">
-            <SaveOutline />
-          </NIcon>
+        <button type="submit" class="primary-button" form="form-reset-password" :disabled="busy" data-ds-icon="reset">
+
           {{ busy ? t('common.saving') : t('security.resetPassword') }}
         </button>
       </footer>
     </section>
-  </div>
+  </AppDialogHost>
 </template>
 
 <style scoped>
@@ -840,54 +824,17 @@ onMounted(() => void load())
   border-radius: 50%;
 }
 
-.security-list-panel {
-  display: grid;
-  gap: 14px;
-  padding: 18px 20px 20px;
-}
-
-.security-toolbar {
-  display: flex;
-  align-items: end;
-  justify-content: space-between;
-  gap: 10px;
-  flex-wrap: wrap;
-}
-
 .group-summary {
-  color: #345f77;
+  color: var(--ds-text-primary);
   font-size: 12px;
 }
 
 .inline-error {
   margin: 0 0 12px;
-  color: #b64444;
+  color: var(--ds-danger);
   font-size: 12px;
 }
 
-
-.security-tabs {
-  display: flex;
-  gap: 6px;
-  border-bottom: 1px solid #e3ebef;
-}
-
-.security-tabs button {
-  padding: 9px 12px;
-  border: 0;
-  border-bottom: 2px solid transparent;
-  background: transparent;
-  color: #60798d;
-  font-size: 12px;
-  cursor: pointer;
-}
-
-.security-tabs button.active,
-.security-tabs button:focus-visible {
-  border-bottom-color: #0873b8;
-  color: #075f9b;
-  font-weight: 700;
-}
 
 .security-editor {
   display: grid;
@@ -895,7 +842,7 @@ onMounted(() => void load())
 }
 
 .security-note {
-  color: #587080;
+  color: var(--ds-text-secondary);
   font-size: 13px;
 }
 
@@ -920,9 +867,9 @@ onMounted(() => void load())
 }
 
 .permission-resource {
-  border: 1px solid #dbe5ea;
+  border: 1px solid var(--ds-border-subtle);
   border-radius: 5px;
-  background: #fbfdfe;
+  background: var(--ds-bg-subtle);
 }
 
 .permission-resource__summary {
@@ -931,20 +878,20 @@ onMounted(() => void load())
   justify-content: space-between;
   gap: 12px;
   padding: 10px 12px;
-  color: #183b57;
+  color: var(--ds-text-primary);
   cursor: pointer;
   font-size: 12px;
   font-weight: 700;
 }
 
 .permission-resource__summary code {
-  color: #587080;
+  color: var(--ds-text-secondary);
   font-size: 11px;
   font-weight: 500;
 }
 
 .permission-resource[open] .permission-resource__summary {
-  border-bottom: 1px solid #dbe5ea;
+  border-bottom: 1px solid var(--ds-border-subtle);
 }
 
 .permission-resource .permission-grid,
@@ -961,28 +908,17 @@ onMounted(() => void load())
 
 .identity-summary dt {
   font-weight: 600;
-  color: #587080;
+  color: var(--ds-text-secondary);
 }
 
 .identity-summary dd {
   margin: 0;
 }
 
-.modal-card {
-
-  width: min(100%, 620px);
-  max-height: calc(100vh - 40px);
-  display: flex;
-  flex-direction: column;
-  overflow: hidden;
-  border-radius: 7px;
-  background: #fff;
-  box-shadow: 0 20px 60px rgb(18 42 62 / 24%);
-}
 
 .modal-card__body label {
   gap: 5px;
-  color: #536b7b;
+  color: var(--ds-text-secondary);
   font-size: 12px;
   font-weight: 600;
 }
@@ -990,18 +926,14 @@ onMounted(() => void load())
 .modal-card__body input,
 .modal-card__body select {
   min-height: 24px;
-  border: 1px solid #c7d6df;
+  border: 1px solid var(--ds-border);
   border-radius: 4px;
   padding: 7px 9px;
-  color: #183b57;
+  color: var(--ds-text-primary);
   font: inherit;
 }
 
 @media (max-width: 700px) {
-  .security-list-panel {
-    padding: 15px 12px;
-  }
-
   .identity-summary {
     grid-template-columns: 1fr;
     gap: 2px;

@@ -172,7 +172,9 @@ onBeforeUnmount(() => { ++generation })
     <template v-else>
       <p class="history-monitor-note">{{ t('history.monitorScope') }}</p>
       <p class="history-monitor-note">{{ t('history.monitorDates') }}</p>
-      <form class="history-monitor-filters" role="search" @submit.prevent="apply">
+      <div class="ds-filter-container">
+      <form class="history-monitor-filters ds-filter-form" role="search" @submit.prevent="apply">
+        <div class="ds-filter-fields">
         <label>{{ t('history.monitorFrom') }}
           <input v-model="from" type="date" required /></label>
         <label>{{ t('history.monitorTo') }}
@@ -192,11 +194,13 @@ onBeforeUnmount(() => { ++generation })
           <input v-model="actorId" inputmode="numeric" pattern="[1-9][0-9]*" /></label>
         <label>{{ t('history.monitorResourceId') }}
           <input v-model="resourceId" inputmode="numeric" pattern="[1-9][0-9]*" :disabled="!resourceType" /></label>
-        <div class="history-monitor-controls">
-          <button type="submit" class="primary-button" :disabled="loading">{{ t('history.monitorApply') }}</button>
-          <button type="button" class="secondary-button" :disabled="loading" @click="reset">{{ t('history.monitorReset') }}</button>
+        </div>
+        <div class="history-monitor-controls ds-filter-actions">
+          <button data-ds-icon="apply" type="submit" class="primary-button" :disabled="loading">{{ t('history.monitorApply') }}</button>
+          <button data-ds-icon="reset" type="button" class="secondary-button" :disabled="loading" @click="reset">{{ t('history.monitorReset') }}</button>
         </div>
       </form>
+      </div>
       <p v-if="invalidRange" role="alert" class="history-monitor-error">{{ t('history.monitorInvalidRange') }}</p>
       <p v-else-if="error" role="alert" class="history-monitor-error">{{ t('history.loadError') }}</p>
       <p v-if="loading" role="status">{{ t('history.loading') }}</p>
@@ -232,34 +236,31 @@ onBeforeUnmount(() => { ++generation })
           :disabled="loading" @update:page="(value) => { page = value; void load() }"
           @update:page-size="(value) => { pageSize = value; page = 1; void load() }" />
       </section>
-      <Teleport to="body">
-        <TableDetailModal :open="allowed && selected !== null"
+      <!-- All detail dialogs now provide their own Naive portal. -->
+      <TableDetailModal :open="allowed && selected !== null"
           :title="`${t('history.monitorDetails')} #${selected?.id ?? ''}`"
           :fields="detailFields" @close="selected = null" />
-      </Teleport>
-      <Teleport to="body">
-        <!-- Exact Customer modal used by /customers; source fetch is PBAC guarded. -->
+      <!-- Exact Customer modal used by /customers; source fetch is PBAC guarded. -->
         <CustomerDetailView v-if="allowed && selectedObject?.type === 'customer'"
           :key="`customer-${selectedObject.id}`" :customer-id="selectedObject.id"
           @close="selectedObject = null" @saved="void load()" />
         <SupplierDetailView v-if="allowed && selectedObject?.type === 'supplier'"
           :key="`supplier-${selectedObject.id}`" :supplier-id="selectedObject.id"
           @close="selectedObject = null" @saved="void load()" />
-      </Teleport>
     </template>
   </section>
 </template>
 
 <style scoped>
 .history-monitor-page { display: grid; gap: 12px; }
-.history-monitor-note { margin: 0; color: #536b7b; font-size: 12px; }
-.history-monitor-filters { display: flex; flex-wrap: wrap; align-items: end; gap: 12px; padding: 16px; background: var(--n-color, #fff); border: 1px solid #dbe5ea; border-radius: 6px; }
-.history-monitor-filters label { display: grid; gap: 5px; color: #526b7b; font-size: 12px; }
-.history-monitor-filters input, .history-monitor-filters select { min-height: 36px; min-width: 125px; border: 1px solid #c7d6df; border-radius: 4px; padding: 5px 8px; font-size: 13px; }
-.history-monitor-controls { display: flex; gap: 8px; align-items: end; }
-.history-monitor-error { color: #b64444; font-size: 13px; }
+.history-monitor-note { margin: 0; color: var(--ds-text-secondary); font-size: 12px; }
+.history-monitor-filters { padding: 16px; background: var(--ds-bg-surface); border: 1px solid var(--ds-border-subtle); border-radius: var(--ds-radius-sm); }
+.history-monitor-filters label { display: grid; gap: 5px; color: var(--ds-text-secondary); font-size: 12px; }
+.history-monitor-filters input, .history-monitor-filters select { min-height: var(--ds-button-height-md); min-width: 0; width: 100%; border: 1px solid var(--ds-border); border-radius: var(--ds-radius-sm); padding: 5px 8px; background: var(--ds-bg-surface); color: var(--ds-text-primary); font-size: var(--ds-font-sm); }
+.history-monitor-controls { align-items: center; }
+.history-monitor-error { color: var(--ds-danger); font-size: 13px; }
 .history-monitor-results { display: grid; gap: 14px; padding: 16px; }
 .history-monitor-object-identity { display: grid; gap: 3px; min-width: 0; }
 .history-monitor-object-identity strong { font-weight: 600; overflow-wrap: anywhere; }
-.history-monitor-object-identity small { color: #526b7b; overflow-wrap: anywhere; }
+.history-monitor-object-identity small { color: var(--ds-text-secondary); overflow-wrap: anywhere; }
 </style>

@@ -1698,6 +1698,13 @@ export type NumberingSeriesCreate = {
     status: 'ACTIVE' | 'INACTIVE';
 };
 
+export type NumberingSeriesValidationRequest = NumberingSeriesCreate & {
+    /**
+     * Optional persisted series ID when previewing an edit; omitted for create.
+     */
+    series_id?: BigInt;
+};
+
 export type NumberingSeriesPatch = {
     resource_id?: BigInt;
     series_code?: string;
@@ -2045,6 +2052,8 @@ export type ResourceActionCreate2 = ResourceActionCreate;
 export type ResourceActionPatch2 = ResourceActionPatch;
 
 export type NumberingSeriesCreate2 = NumberingSeriesCreate;
+
+export type NumberingSeriesValidationRequest2 = NumberingSeriesValidationRequest;
 
 export type NumberingSeriesPatch2 = NumberingSeriesPatch;
 
@@ -5898,7 +5907,7 @@ export type SetNumberingSeriesStateResponses = {
 export type SetNumberingSeriesStateResponse = SetNumberingSeriesStateResponses[keyof SetNumberingSeriesStateResponses];
 
 export type ValidateNumberingSeriesConfigData = {
-    body: NumberingSeriesCreate2;
+    body: NumberingSeriesValidationRequest2;
     path: {
         resource_id: BigInt;
     };
@@ -5919,6 +5928,10 @@ export type ValidateNumberingSeriesConfigErrors = {
      * Target not found or not visible.
      */
     404: ErrorResponse;
+    /**
+     * Conflict, concurrency, uniqueness, or current-state failure.
+     */
+    409: ErrorResponse;
     /**
      * Semantically invalid request.
      */

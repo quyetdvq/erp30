@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import AppDialogHost from '@/components/ui/AppDialogHost.vue'
 import { rowAllowedActions } from '@/components/lists/rowActionPolicy'
 import { computed, onMounted, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
@@ -392,16 +393,20 @@ onMounted(async () => {
       <h1>{{ t('people.employeesTitle') }}</h1>
       <p>{{ t('people.employeesDescription') }}</p>
     </div>
-    <button v-if="hasBasePermission('employee', 'create')" type="button" class="primary-button" @click="openCreate">
-      ＋ {{ t('common.create') }}
+    <button data-ds-icon="add" v-if="hasBasePermission('employee', 'create')" type="button" class="primary-button" @click="openCreate">
+      {{ t('common.create') }}
     </button>
   </div>
-  <section class="content-panel location-panel">
-    <div class="location-toolbar">
-      <ListQueryControls :model-value="state.query" :filters="filters" @apply="applyQuery" @reset="resetQuery" /><button
-        type="button" class="secondary-button" @click="void load()">
-        ↻ {{ t('common.refresh') }}
-      </button>
+  <section class="content-panel location-panel ds-page-panel">
+    <div class="location-toolbar ds-page-toolbar">
+      <ListQueryControls :show-page-size="false" :model-value="state.query" :filters="filters" @apply="applyQuery" @reset="resetQuery" >
+        <template #actions>
+          <button data-ds-icon="refresh"
+            type="button" class="secondary-button" @click="void load()">
+            {{ t('common.refresh') }}
+          </button>
+        </template>
+      </ListQueryControls>
     </div>
     <p v-if="error" class="inline-error" role="alert">
       {{ t('people.requestError') }} <span v-if="error instanceof Error">{{ error.message }}</span>
@@ -445,8 +450,8 @@ onMounted(async () => {
   </section>
 
 
-  <div v-if="employeeDetailOpen && selected" class="modal-backdrop">
-    <section class="employee-detail-modal tabbed-detail-workspace" role="dialog" aria-modal="true" :aria-label="selected.employee_name">
+  <AppDialogHost :open="Boolean(employeeDetailOpen && selected)" size="wide" @close="employeeDetailOpen = false">
+    <section v-if="employeeDetailOpen && selected" class="ds-dialog-surface employee-detail-modal tabbed-detail-workspace" role="dialog" aria-modal="true" :aria-label="selected.employee_name">
       <header class="modal-card__header">
 
           <h2 class="modal-card-title">
@@ -459,7 +464,7 @@ onMounted(async () => {
           </h2>
 
         <button type="button" class="modal-card-button-close" :aria-label="t('common.close')"
-          @click="employeeDetailOpen = false">
+          @click="employeeDetailOpen = false" data-ds-icon="close">
         </button>
       </header>
 
@@ -504,9 +509,9 @@ onMounted(async () => {
               {{ t('people.assignmentHistory') }}
             </button>
           </div>
-          <button v-if="hasBasePermission('employee_assignment', 'create')" type="button" class="primary-button"
+          <button data-ds-icon="add" v-if="hasBasePermission('employee_assignment', 'create')" type="button" class="primary-button"
             @click="openAssignmentCreate">
-            ＋ {{ t('people.addAssignment') }}
+            {{ t('people.addAssignment') }}
           </button>
         </header>
         <p v-if="assignmentOverlap" class="hint">{{ t('people.primaryOverlap') }}</p>
@@ -577,25 +582,23 @@ onMounted(async () => {
       </div>
 
       <footer class="modal-card__footer">
-        <button type="button" class="secondary-button" @click="employeeDetailOpen = false">
-          <NIcon :size="20" aria-hidden="true">
-            <Refresh />
-          </NIcon>
+        <button type="button" class="secondary-button" @click="employeeDetailOpen = false" data-ds-icon="close">
+
           {{ t('common.close') }}
         </button>
       </footer>
     </section>
-  </div>
+  </AppDialogHost>
 
-  <div v-if="employeeModal" class="modal-backdrop">
-    <section class="modal-card" role="dialog" aria-modal="true" :aria-label="t('people.employeeForm')">
+  <AppDialogHost :open="employeeModal" size="lg" @close="closeEmployeeForm">
+    <section v-if="employeeModal" class="ds-dialog-surface modal-card" role="dialog" aria-modal="true" :aria-label="t('people.employeeForm')">
       <header class="modal-card__header">
         <h2 class="modal-card-title">
           <NIcon :size="24" aria-hidden="true"> <PeopleOutline /> </NIcon>
           {{ editingEmployeeId ? t('common.edit') : t('common.create') }} {{ t('people.employee') }}
         </h2>
         <button type="button" class="modal-card-button-close" :aria-label="t('common.close')"
-          @click="closeEmployeeForm">
+          @click="closeEmployeeForm" data-ds-icon="close">
         </button>
       </header>
       <form class="modal-card__body" id="employee-form" @submit.prevent="saveEmployeeForm">
@@ -658,27 +661,23 @@ onMounted(async () => {
       </form>
 
       <footer class="modal-card__footer">
-        <button type="button" class="secondary-button" @click="closeEmployeeForm">
-          <NIcon :size="20" aria-hidden="true">
-            <Refresh />
-          </NIcon>
+        <button type="button" class="secondary-button" @click="closeEmployeeForm" data-ds-icon="cancel">
+
           {{ t('common.cancel') }}
         </button><button type="submit" class="primary-button" form="employee-form" :disabled="busy ||
           !managerDirectoryReady || managerDirectoryError ||
           !!managerError() ||
           !hasBasePermission('employee', editingEmployeeId ? 'edit' : 'create')
-          ">
-          <NIcon :size="20" aria-hidden="true">
-            <SaveOutline />
-          </NIcon>
+          " data-ds-icon="save">
+
           {{ busy ? t('common.saving') : t('common.save') }}
         </button>
       </footer>
     </section>
-  </div>
+  </AppDialogHost>
 
-  <div v-if="assignmentModal" class="modal-backdrop modal-backdrop-2">
-    <section class="modal-card" role="dialog" aria-modal="true" :aria-label="t('people.assignmentForm')">
+  <AppDialogHost :open="assignmentModal" size="md" @close="closeAssignmentForm">
+    <section v-if="assignmentModal" class="ds-dialog-surface modal-card" role="dialog" aria-modal="true" :aria-label="t('people.assignmentForm')">
       <header class="modal-card__header">
         <h2 class="modal-card-title">
           <NIcon :size="24"> <PeopleOutline /> </NIcon>
@@ -686,7 +685,7 @@ onMounted(async () => {
           {{ t('people.assignment') }}
         </h2>
         <button type="button" class="modal-card-button-close" :aria-label="t('common.close')"
-          @click="closeAssignmentForm">
+          @click="closeAssignmentForm" data-ds-icon="close">
         </button>
       </header>
       <form class="modal-card__body" id="assignment-form" @submit.prevent="saveAssignmentForm">
@@ -734,22 +733,20 @@ onMounted(async () => {
       </form>
 
       <footer class="modal-card__footer">
-        <button type="button" class="secondary-button" @click="closeAssignmentForm">
+        <button type="button" class="secondary-button" @click="closeAssignmentForm" data-ds-icon="cancel">
 
-          <NIcon :size="20"> <Refresh /> </NIcon>
+
           {{ t('common.cancel') }}</button>
         <button type="submit" class="primary-button" form="assignment-form" :disabled="busy ||
           assignmentOverlap ||
           !hasBasePermission('employee_assignment', editingAssignmentId ? 'edit' : 'create')
-          ">
-          <NIcon :size="20">
-            <SaveOutline />
-          </NIcon>
+          " data-ds-icon="save">
+
           {{ busy ? t('common.saving') : t('common.save') }}
         </button>
       </footer>
     </section>
-  </div>
+  </AppDialogHost>
 </template>
 
 <style scoped>
@@ -758,37 +755,7 @@ onMounted(async () => {
 }
 
 .row-selected td {
-  background: #f0f8fb;
-}
-
-.location-panel {
-  display: grid;
-  gap: 14px;
-  min-width: 0;
-  padding: 18px 20px 20px;
-}
-
-.location-toolbar {
-  display: flex;
-  align-items: end;
-  justify-content: space-between;
-  gap: 10px;
-  min-width: 0;
-  flex-wrap: wrap;
-}
-
-
-.employee-detail-modal {
-  width: min(1800px, calc(100vw - 32px));
-  min-width: 0;
-  max-height: calc(100vh - 40px);
-  display: flex;
-  flex-direction: column;
-  overflow: hidden;
-  border: 1px solid #d5e1e8;
-  border-radius: 7px;
-  background: #fff;
-  box-shadow: 0 22px 70px rgb(18 42 62 / 25%);
+  background: var(--ds-primary-soft);
 }
 
 .detail-header,
@@ -802,14 +769,14 @@ onMounted(async () => {
 
 .detail-header h2 {
   margin: 8px 0;
-  color: #123653;
+  color: var(--ds-text-primary);
   font-size: 25px;
 }
 
 .detail-header p,
 .eyebrow {
   margin: 0;
-  color: #536b7b;
+  color: var(--ds-text-secondary);
   font-size: 12px;
 }
 
@@ -818,7 +785,7 @@ onMounted(async () => {
   gap: 4px;
   margin: 22px 0 0;
   padding: 0 22px;
-  border-bottom: 1px solid #e1e9ee;
+  border-bottom: 1px solid var(--ds-border-subtle);
   min-width: 0;
   overflow-x: auto;
 }
@@ -829,14 +796,14 @@ onMounted(async () => {
   border-bottom: 2px solid transparent;
   padding: 10px 12px;
   background: transparent;
-  color: #61768a;
+  color: var(--ds-text-secondary);
   cursor: pointer;
 }
 
 .detail-tabs button[aria-selected='true'],
 .detail-tabs__sub button[aria-selected='true'] {
-  border-bottom-color: #1674a6;
-  color: #1674a6;
+  border-bottom-color: var(--ds-primary);
+  color: var(--ds-primary);
   font-weight: 700;
 }
 
@@ -854,12 +821,12 @@ onMounted(async () => {
 }
 
 .detail-grid span {
-  color: #536b7b;
+  color: var(--ds-text-secondary);
   font-size: 11px;
 }
 
 .detail-grid strong {
-  color: #2c4a62;
+  color: var(--ds-text-primary);
   font-size: 13px;
   overflow-wrap: anywhere;
 }
@@ -913,7 +880,7 @@ onMounted(async () => {
 .hint,
 .field-error,
 .inline-error {
-  color: #b64444;
+  color: var(--ds-danger);
   font-size: 12px;
 }
 
@@ -936,13 +903,13 @@ onMounted(async () => {
 
 .audit-panel__header h3 {
   margin: 8px 0 0;
-  color: #183b57;
+  color: var(--ds-text-primary);
   font-size: 18px;
 }
 
 .audit-panel>p {
   margin: 0;
-  color: #536b7b;
+  color: var(--ds-text-secondary);
 }
 
 .audit-panel__summary {
@@ -956,18 +923,18 @@ onMounted(async () => {
 .audit-panel__summary dd {
   margin: 0;
   padding: 10px 0;
-  border-bottom: 1px solid #edf2f4;
+  border-bottom: 1px solid var(--ds-border-subtle);
 }
 
 .audit-panel__summary dt {
-  color: #536b7b;
+  color: var(--ds-text-secondary);
   font-size: 12px;
   font-weight: 700;
 }
 
 .audit-panel__summary dd {
   min-width: 0;
-  color: #183b57;
+  color: var(--ds-text-primary);
   overflow-wrap: anywhere;
 }
 
@@ -977,26 +944,10 @@ onMounted(async () => {
   align-items: center;
 }
 
-.modal-card {
-  width: min(100%, 760px);
-  max-height: calc(100vh - 40px);
-  display: flex;
-  flex-direction: column;
-  overflow: hidden;
-  border-radius: 7px;
-  background: #fff;
-  box-shadow: 0 20px 60px rgb(18 42 62 / 24%);
-}
-
-.modal-backdrop-2 {
-  z-index: 60;
-}
-
-
 .modal-card__body label {
   display: grid;
   gap: 5px;
-  color: #536b7b;
+  color: var(--ds-text-secondary);
   font-size: 12px;
   font-weight: 600;
 }
@@ -1005,14 +956,12 @@ onMounted(async () => {
 .modal-card__body select,
 .modal-card__body textarea {
   min-height: 34px;
-  border: 1px solid #c7d6df;
+  border: 1px solid var(--ds-border);
   border-radius: 4px;
   padding: 7px 9px;
-  color: #183b57;
+  color: var(--ds-text-primary);
   font: inherit;
 }
-
-
 
 @media (max-width: 900px) {
   .detail-grid {

@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import AppDialogHost from '@/components/ui/AppDialogHost.vue'
 import { computed, nextTick, onBeforeUnmount, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { NIcon } from 'naive-ui'
@@ -153,27 +154,6 @@ onBeforeUnmount(() => {
   ++loadSequence
   if (previousFocus?.isConnected) previousFocus.focus()
 })
-function onDialogKeydown(event: KeyboardEvent): void {
-  if (event.key === 'Escape') {
-    event.preventDefault()
-    closeDialog()
-    return
-  }
-  if (event.key !== 'Tab' || !dialogElement.value) return
-  const elements = [...dialogElement.value.querySelectorAll<HTMLElement>(
-    'button:not(:disabled), select:not(:disabled), input:not(:disabled), [tabindex]:not([tabindex="-1"])',
-  )]
-  const first = elements[0]
-  const last = elements[elements.length - 1]
-  if (!first || !last) return
-  if (event.shiftKey && (document.activeElement === first || !dialogElement.value.contains(document.activeElement))) {
-    event.preventDefault()
-    last.focus()
-  } else if (!event.shiftKey && (document.activeElement === last || !dialogElement.value.contains(document.activeElement))) {
-    event.preventDefault()
-    first.focus()
-  }
-}
 
 async function saveAssignees(): Promise<void> {
   if (disabled.value || !assignees.value || !assigneeChanged.value) return
@@ -229,21 +209,21 @@ async function apply(): Promise<void> {
     :title="t('workflow.changeState')"
     :aria-label="t('workflow.changeState')"
     @click="void open()"
-  >
-    <NIcon v-if="variant === 'icon'" :component="GitCompareOutline" aria-hidden="true" />
-    <span v-else>{{ t('workflow.changeState') }}</span>
+   data-ds-icon="changestate">
+
+    <span v-if="variant !== 'icon'">{{ t('workflow.changeState') }}</span>
   </button>
-  <Teleport to="body">
-    <div v-if="dialog" class="workflow-dialog-backdrop" @click.self="closeDialog">
-    <section ref="dialogElement" class="workflow-dialog" role="dialog" aria-modal="true"
-      :aria-label="t('workflow.changeState')" @keydown.stop="onDialogKeydown">
+
+    <AppDialogHost :open="dialog" size="md" :mask-closable="true" @close="closeDialog">
+    <section v-if="dialog" ref="dialogElement" class="ds-dialog-surface workflow-dialog" role="dialog" aria-modal="true"
+      :aria-label="t('workflow.changeState')">
       <header class="modal-card__header workflow-dialog__header">
         <h2 class="modal-card-title workflow-dialog__title">
           <NIcon :component="GitCompareOutline" aria-hidden="true" />
           {{ t('workflow.changeState') }}
         </h2>
         <button ref="closeButton" type="button" class="modal-card-button-close"
-          :aria-label="t('common.close')" :disabled="disabled" @click="closeDialog" />
+          :aria-label="t('common.close')" :disabled="disabled" @click="closeDialog" data-ds-icon="close" />
       </header>
       <div class="workflow-dialog__body">
         <p v-if="working && !metadata" role="status">{{ t('common.loading') }}</p>
@@ -272,7 +252,7 @@ async function apply(): Promise<void> {
                 <h3>{{ t('workflow.notificationSection') }}</h3>
                 <p>{{ t('workflow.notificationAssignmentOptional') }}</p>
               </div>
-              <button type="button" class="secondary-button workflow-notify-toggle"
+              <button data-ds-icon="settings" type="button" class="secondary-button workflow-notify-toggle"
                 :aria-expanded="showAssigneeEditor" :disabled="disabled"
                 @click="showAssigneeEditor = !showAssigneeEditor">
                 {{ showAssigneeEditor ? t('workflow.notificationSectionHide') : t('workflow.notificationSectionShow') }}
@@ -298,7 +278,7 @@ async function apply(): Promise<void> {
                 />
                 <div class="workflow-notify-controls">
                   <span>{{ assigneeDraft.length }} / 25</span>
-                  <button type="button" class="secondary-button"
+                  <button data-ds-icon="save" type="button" class="secondary-button"
                     :disabled="disabled || !assigneeChanged" @click="void saveAssignees()">
                     {{ t('workflow.saveNotificationAssignees') }}
                   </button>
@@ -309,7 +289,7 @@ async function apply(): Promise<void> {
               </template>
               <div v-else-if="assigneeFailed" class="workflow-notify-retry" role="alert">
                 <p class="workflow-error">{{ t('workflow.notificationAssigneesError') }}</p>
-                <button type="button" class="secondary-button" :disabled="disabled" @click="void loadAssignees()">
+                <button data-ds-icon="retry" type="button" class="secondary-button" :disabled="disabled" @click="void loadAssignees()">
                   {{ t('workflow.notificationRetry') }}
                 </button>
               </div>
@@ -331,16 +311,16 @@ async function apply(): Promise<void> {
         </p>
       </div>
       <footer class="modal-card__footer workflow-dialog__footer">
-        <button type="button" class="secondary-button" :disabled="disabled" @click="closeDialog">
+        <button data-ds-icon="close" type="button" class="secondary-button" :disabled="disabled" @click="closeDialog">
           {{ t('common.close') }}
         </button>
-        <button type="button" class="primary-button" :disabled="!canApply" @click="void apply()">
+        <button data-ds-icon="changestate" type="button" class="primary-button" :disabled="!canApply" @click="void apply()">
           {{ t('workflow.transitionSubmit') }}
         </button>
       </footer>
     </section>
-    </div>
-  </Teleport>
+    </AppDialogHost>
+
 </template>
 
 <style scoped>
@@ -351,43 +331,16 @@ async function apply(): Promise<void> {
   width: 30px;
   height: 30px;
   padding: 0;
-  border: 1px solid #dbe5ea;
+  border: 1px solid var(--ds-border-subtle);
   border-radius: 4px;
-  background: #fff;
-  color: #b45309;
+  background: var(--ds-bg-surface);
+  color: var(--ds-warning);
   cursor: pointer;
   font-size: 17px;
 }
 .workflow-action-icon:hover:not(:disabled),
-.workflow-action-icon:focus-visible { border-color: #b45309; }
+.workflow-action-icon:focus-visible { border-color: var(--ds-warning); }
 .workflow-action-icon:disabled { opacity: 0.5; cursor: not-allowed; }
-.workflow-dialog-backdrop {
-  position: fixed;
-  inset: 0;
-  z-index: 3000;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: 12px;
-  background: rgba(10, 25, 38, 0.52);
-}
-.workflow-dialog {
-  width: min(600px, 100%);
-  max-width: calc(100vw - 24px);
-  max-height: calc(100dvh - 24px);
-  min-width: 0;
-  display: flex;
-  flex-direction: column;
-  position: relative;
-  overflow: visible;
-  border-radius: 8px;
-  background: #fff;
-  color: #1d2934;
-  white-space: normal;
-  text-align: start;
-  box-shadow: 0 18px 48px rgba(0, 0, 0, 0.22);
-}
-.workflow-dialog, .workflow-dialog * { box-sizing: border-box; }
 .workflow-dialog__header {
   display: flex;
   align-items: center;
@@ -415,9 +368,9 @@ async function apply(): Promise<void> {
 }
 .workflow-dialog__body > *, .workflow-notify-heading > * { min-width: 0; }
 .workflow-dialog__footer { flex: 0 0 auto; display: flex; gap: 8px; justify-content: flex-end; }
-.workflow-dialog h3 { margin: 0; font-size: 15px; color: #183b57; }
+.workflow-dialog h3 { margin: 0; font-size: 15px; color: var(--ds-text-primary); }
 .workflow-transition-section { display: grid; gap: 10px; min-width: 0; }
-.workflow-current-state { margin: 0; font-size: 13px; color: #536b7b; }
+.workflow-current-state { margin: 0; font-size: 13px; color: var(--ds-text-secondary); }
 .workflow-select-label { display: grid; gap: 8px; min-width: 0; font-size: 13px; }
 .workflow-select-label select {
   display: block;
@@ -425,22 +378,22 @@ async function apply(): Promise<void> {
   min-width: 0;
   min-height: 38px;
   padding: 8px;
-  border: 1px solid #a9b9c7;
+  border: 1px solid var(--ds-border-subtle);
   border-radius: 4px;
-  background: #fff;
-  color: #183b57;
+  background: var(--ds-bg-surface);
+  color: var(--ds-text-primary);
 }
-.workflow-notify-section { min-width: 0; display: grid; gap: 12px; padding-top: 16px; border-top: 1px solid #dbe5ea; }
+.workflow-notify-section { min-width: 0; display: grid; gap: 12px; padding-top: 16px; border-top: 1px solid var(--ds-border-subtle); }
 .workflow-notify-heading { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 10px; min-width: 0; }
 .workflow-notify-title { flex: 1 1 230px; }
-.workflow-notify-title p, .workflow-notify-hint { margin: 6px 0 0; font-size: 12px; line-height: 1.6; color: #536b7b; overflow-wrap: anywhere; }
+.workflow-notify-title p, .workflow-notify-hint { margin: 6px 0 0; font-size: 12px; line-height: 1.6; color: var(--ds-text-secondary); overflow-wrap: anywhere; }
 .workflow-notify-toggle { flex: 0 0 auto; }
-.workflow-notify-editor { display: grid; gap: 12px; min-width: 0; padding: 12px; border: 1px solid #dbe5ea; border-radius: 6px; background: #f8fbfd; }
-.workflow-assignee-label { font-size: 12px; font-weight: 700; color: #536b7b; }
+.workflow-notify-editor { display: grid; gap: 12px; min-width: 0; padding: 12px; border: 1px solid var(--ds-border-subtle); border-radius: 6px; background: var(--ds-bg-subtle); }
+.workflow-assignee-label { font-size: 12px; font-weight: 700; color: var(--ds-text-secondary); }
 .workflow-notify-controls { display: flex; align-items: center; flex-wrap: wrap; gap: 10px; justify-content: space-between; }
-.workflow-notify-controls > span { font-size: 12px; color: #536b7b; }
-.workflow-error, .workflow-unsaved-notice { color: #ad3434; font-size: 12px; margin: 0; overflow-wrap: anywhere; }
-.workflow-success { font-size: 12px; color: #16803a; margin: 0; }
+.workflow-notify-controls > span { font-size: 12px; color: var(--ds-text-secondary); }
+.workflow-error, .workflow-unsaved-notice { color: var(--ds-danger); font-size: 12px; margin: 0; overflow-wrap: anywhere; }
+.workflow-success { font-size: 12px; color: var(--ds-success); margin: 0; }
 .workflow-notify-retry { display: grid; justify-items: start; gap: 8px; }
 @media (max-width: 560px) {
   .workflow-dialog__body { padding: 14px 16px 18px; }

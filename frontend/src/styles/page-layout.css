@@ -1,0 +1,118 @@
+/* DS5: active page, dashboard, login and profile layout only.
+ * The retired AppFrame/sidebar/command palette must not style AppShell.
+ * Form, table, modal and action presentation is owned by its shared stylesheet. */
+.page-heading {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 18px;
+  margin: 0 0 17px;
+}
+.page-heading h1 {
+  margin: 0;
+  color: var(--ds-text-primary);
+  font-size: 26px;
+  letter-spacing: -0.02em;
+}
+.page-heading p {
+  margin: 4px 0 0;
+  color: var(--ds-text-muted);
+  font-size: 13px;
+}
+.content-panel {
+  border: 1px solid var(--ds-border-subtle);
+  border-radius: 6px;
+  background: var(--ds-bg-surface);
+  box-shadow: var(--ds-shadow-popover);
+}
+.empty-state {
+  padding: 50px 20px;
+  color: var(--ds-text-muted);
+  text-align: center;
+}
+.metric-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 14px;
+  margin-bottom: 18px;
+}
+.metric-card {
+  padding: 17px;
+  border: 1px solid var(--ds-border-subtle);
+  border-radius: 6px;
+  background: var(--ds-bg-surface);
+}
+.metric-card small {
+  color: var(--ds-text-muted);
+  font-size: 11px;
+}
+.metric-card strong {
+  display: block;
+  margin-top: 7px;
+  color: var(--ds-text-primary);
+  font-size: 25px;
+}
+.dashboard-blank {
+  min-height: 340px;
+  display: grid;
+  place-items: center;
+  border: 1px solid var(--ds-border-subtle);
+  background: var(--ds-bg-surface);
+  color: var(--ds-text-secondary);
+  text-align: center;
+}
+.dashboard-blank strong {
+  display: block;
+  margin: 15px 0 6px;
+  color: var(--ds-text-primary);
+  font-size: 25px;
+}
+.dashboard-blank p {
+  max-width: 420px;
+  margin: 0;
+  color: var(--ds-text-muted);
+  font-size: 13px;
+  line-height: 1.6;
+}
+.auth-screen {
+  min-height: 100vh;
+  display: grid;
+  place-items: center;
+  padding: 24px;
+  background: var(--ds-bg-canvas);
+}
+.profile-layout {
+  display: grid;
+  grid-template-columns: 240px 1fr;
+  gap: 18px;
+}
+.profile-summary {
+  padding: 22px;
+  text-align: center;
+}
+.profile-summary strong {
+  display: block;
+  color: var(--ds-text-primary);
+}
+.profile-summary small {
+  display: block;
+  margin-top: 5px;
+  color: var(--ds-text-muted);
+}
+.form-panel {
+  padding: 22px;
+}
+.form-panel h2 {
+  margin: 0 0 20px;
+  color: var(--ds-text-primary);
+  font-size: 17px;
+}
+@media (max-width: 900px) {
+  .metric-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+@media (max-width: 700px) {
+  .page-heading { display: block; }
+  .page-heading .primary-button { margin-top: 14px; }
+  .metric-grid, .profile-layout { grid-template-columns: minmax(0, 1fr); }
+  .content-panel { overflow-x: auto; }
+}

@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import AppDialogHost from '@/components/ui/AppDialogHost.vue'
 import { rowAllowedActions } from '@/components/lists/rowActionPolicy'
 import { computed, nextTick, onMounted, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
@@ -353,17 +354,20 @@ onMounted(() => void load())
       <h1>{{ t('workflow.lifecyclesTitle') }}</h1>
       <p>{{ t('workflow.lifecyclesDescription') }}</p>
     </div>
-    <button v-if="hasBasePermission('lifecycle', 'create')" type="button" class="primary-button" @click="openCreate">
-      ＋ {{ t('common.create') }}
+    <button data-ds-icon="add" v-if="hasBasePermission('lifecycle', 'create')" type="button" class="primary-button" @click="openCreate">
+      {{ t('common.create') }}
     </button>
   </div>
   <p v-if="error" class="inline-error" role="alert">{{ errorMessage(error) }}</p>
-  <section class="content-panel workflow-panel">
+  <section class="content-panel workflow-panel ds-page-panel">
     <div class="workflow-toolbar">
-      <ListQueryControls :model-value="state.query" @apply="applyQuery" @reset="resetQuery" />
-      <button type="button" class="secondary-button" @click="void load()">
-        ↻ {{ t('common.refresh') }}
-      </button>
+      <ListQueryControls :show-page-size="false" :model-value="state.query" @apply="applyQuery" @reset="resetQuery" >
+        <template #actions>
+          <button data-ds-icon="refresh" type="button" class="secondary-button" @click="void load()">
+            {{ t('common.refresh') }}
+          </button>
+        </template>
+      </ListQueryControls>
     </div>
     <ListShell :initial-loading="state.isInitialLoading.value" :refreshing="state.isBackgroundRefreshing.value"
       :has-data="state.queryState.hasData.value" :empty-dataset="state.isEmptyDataset.value"
@@ -397,11 +401,11 @@ onMounted(() => void load())
     </ListShell>
   </section>
 
-  <div v-if="detailOpen && selected" class="modal-backdrop">
-    <section class="modal-card tabbed-detail-workspace" role="dialog" aria-modal="true" aria-labelledby="lifecycle-detail-title"
+  <AppDialogHost :open="Boolean(detailOpen && selected)" size="xl" @close="detailOpen = false">
+    <section v-if="detailOpen && selected" class="ds-dialog-surface modal-card tabbed-detail-workspace" role="dialog" aria-modal="true" aria-labelledby="lifecycle-detail-title"
       :aria-hidden="stateModalOpen || transitionModalOpen" :inert="stateModalOpen || transitionModalOpen">
       <header class="modal-card__header">
-        
+
         <h2 id="lifecycle-detail-title" class="modal-card-title">
           <NIcon :size="24" aria-hidden="true"> <RepeatOutline /> </NIcon>
           {{ selected.name }}
@@ -410,12 +414,12 @@ onMounted(() => void load())
           {{ t(`status.${selected.status.toLowerCase()}`) }}</small>
 
         <button type="button" class="modal-card-button-close" :aria-label="t('common.close')"
-          @click="detailOpen = false">
+          @click="detailOpen = false" data-ds-icon="close">
         </button>
       </header>
 
 
-      <nav class="workflow-tabs" :aria-label="t('workflow.tabsLabel')" role="tablist">
+      <nav class="workflow-tabs ds-detail-tabs ds-detail-tabs--spaced" :aria-label="t('workflow.tabsLabel')" role="tablist">
         <button type="button" role="tab" :aria-selected="tab === 'overview'" :class="{ active: tab === 'overview' }"
           @click="tab = 'overview'">
           {{ t('workflow.tabs.overview') }}
@@ -463,12 +467,12 @@ onMounted(() => void load())
         <div v-else-if="tab === 'states'" class="workflow-tab-content">
           <div class="workflow-tab-toolbar">
             <p>{{ t('workflow.statesMembershipNote') }}</p>
-            <button v-if="hasBasePermission('lifecycle', 'edit')" ref="stateAddButton" type="button" class="primary-button"
+            <button data-ds-icon="add" v-if="hasBasePermission('lifecycle', 'edit')" ref="stateAddButton" type="button" class="primary-button"
               :disabled="availableStates.length === 0" @click="openStateCreate">
-              ＋ {{ t('workflow.addState') }}
+              {{ t('workflow.addState') }}
             </button>
           </div>
-          <table class="workflow-table">
+          <table class="workflow-table ds-data-grid">
             <caption class="sr-only">
               {{
                 t('workflow.statesTable')
@@ -512,12 +516,12 @@ onMounted(() => void load())
         <div v-else class="workflow-tab-content">
           <div class="workflow-tab-toolbar">
             <p>{{ t('workflow.transitionsNote') }}</p>
-            <button v-if="hasBasePermission('lifecycle', 'edit')" ref="transitionAddButton" type="button" class="primary-button"
+            <button data-ds-icon="add" v-if="hasBasePermission('lifecycle', 'edit')" ref="transitionAddButton" type="button" class="primary-button"
               :disabled="memberStateOptions.length < 1" @click="openTransitionCreate">
-              ＋ {{ t('workflow.addTransition') }}
+              {{ t('workflow.addTransition') }}
             </button>
           </div>
-          <table class="workflow-table">
+          <table class="workflow-table ds-data-grid">
             <caption class="sr-only">
               {{
                 t('workflow.transitionsTable')
@@ -550,18 +554,16 @@ onMounted(() => void load())
         </div>
       </div>
       <footer class="modal-card__footer">
-        <button type="button" class="secondary-button" @click="detailOpen = false">
-          <NIcon :size="20" aria-hidden="true">
-            <Refresh />
-          </NIcon>
+        <button type="button" class="secondary-button" @click="detailOpen = false" data-ds-icon="close">
+
           {{ t('common.close') }}
         </button>
       </footer>
     </section>
-  </div>
+  </AppDialogHost>
 
-  <div v-if="modalOpen" class="modal-backdrop">
-    <section class="modal-card" role="dialog" aria-modal="true" :aria-label="t('workflow.lifecycleForm')">
+  <AppDialogHost :open="modalOpen" size="md" @close="closeForm">
+    <section v-if="modalOpen" class="ds-dialog-surface modal-card" role="dialog" aria-modal="true" :aria-label="t('workflow.lifecycleForm')">
       <header class="modal-card__header">
         <h2 class="modal-card-title">
           <NIcon :size="24" aria-hidden="true">
@@ -569,7 +571,7 @@ onMounted(() => void load())
           </NIcon>
           {{ editingId ? t('common.edit') : t('common.create') }} {{ t('workflow.lifecycle') }}
         </h2>
-        <button type="button" class="modal-card-button-close" :aria-label="t('common.close')" @click="closeForm">
+        <button type="button" class="modal-card-button-close" :aria-label="t('common.close')" @click="closeForm" data-ds-icon="close">
         </button>
       </header>
       <form class="modal-card__body" id="lifecycle-form" @submit.prevent="save">
@@ -584,24 +586,20 @@ onMounted(() => void load())
       </form>
 
       <footer class="modal-card__footer">
-        <button type="button" class="secondary-button" @click="closeForm">
-          <NIcon :size="20" aria-hidden="true">
-            <Refresh />
-          </NIcon>
+        <button type="button" class="secondary-button" @click="closeForm" data-ds-icon="cancel">
+
           {{ t('common.cancel') }}
         </button><button type="submit" class="primary-button" form="lifecycle-form"
-          :disabled="busy || !hasBasePermission('lifecycle', editingId ? 'edit' : 'create')">
-          <NIcon :size="20" aria-hidden="true">
-            <SaveOutline />
-          </NIcon>
+          :disabled="busy || !hasBasePermission('lifecycle', editingId ? 'edit' : 'create')" data-ds-icon="save">
+
           {{ busy ? t('common.saving') : t('common.save') }}
         </button>
       </footer>
     </section>
-  </div>
+  </AppDialogHost>
 
-  <div v-if="stateModalOpen" class="modal-backdrop">
-    <section ref="stateDialog" class="modal-card" role="dialog" aria-modal="true"
+  <AppDialogHost :open="stateModalOpen" size="md" @close="closeStateForm">
+    <section v-if="stateModalOpen" ref="stateDialog" class="ds-dialog-surface modal-card" role="dialog" aria-modal="true"
       :aria-label="t('workflow.stateMembershipForm')" tabindex="-1">
       <header class="modal-card__header">
         <h2 class="modal-card-title">
@@ -609,7 +607,7 @@ onMounted(() => void load())
           {{ t('workflow.addState') }}
         </h2>
         <button type="button" class="modal-card-button-close" :aria-label="t('common.close')"
-          @click="closeStateForm"></button>
+          @click="closeStateForm" data-ds-icon="close"></button>
       </header>
       <form id="lifecycle-state-form" class="modal-card__body" @submit.prevent="saveState">
         <label>
@@ -639,21 +637,21 @@ onMounted(() => void load())
         <p v-if="detailError" class="inline-error" role="alert">{{ errorMessage(detailError) }}</p>
       </form>
       <footer class="modal-card__footer">
-        <button type="button" class="secondary-button" @click="closeStateForm">
-          <NIcon :size="20" aria-hidden="true"><Refresh /></NIcon>
+        <button type="button" class="secondary-button" @click="closeStateForm" data-ds-icon="cancel">
+
           {{ t('common.cancel') }}
         </button>
         <button type="submit" form="lifecycle-state-form" class="primary-button"
-          :disabled="busy || !canSaveState || !hasBasePermission('lifecycle', 'edit')">
-          <NIcon :size="20" aria-hidden="true"><SaveOutline /></NIcon>
+          :disabled="busy || !canSaveState || !hasBasePermission('lifecycle', 'edit')" data-ds-icon="save">
+
           {{ busy ? t('common.saving') : t('common.save') }}
         </button>
       </footer>
     </section>
-  </div>
+  </AppDialogHost>
 
-  <div v-if="transitionModalOpen" class="modal-backdrop">
-    <section ref="transitionDialog" class="modal-card" role="dialog" aria-modal="true"
+  <AppDialogHost :open="transitionModalOpen" size="md" @close="closeTransitionForm">
+    <section v-if="transitionModalOpen" ref="transitionDialog" class="ds-dialog-surface modal-card" role="dialog" aria-modal="true"
       :aria-label="t('workflow.transitionForm')" tabindex="-1">
       <header class="modal-card__header">
         <h2 class="modal-card-title">
@@ -661,7 +659,7 @@ onMounted(() => void load())
           {{ t('workflow.addTransition') }}
         </h2>
         <button type="button" class="modal-card-button-close" :aria-label="t('common.close')"
-          @click="closeTransitionForm"></button>
+          @click="closeTransitionForm" data-ds-icon="close"></button>
       </header>
       <form id="lifecycle-transition-form" class="modal-card__body" @submit.prevent="saveTransition">
         <label>
@@ -699,62 +697,33 @@ onMounted(() => void load())
         <p v-if="detailError" class="inline-error" role="alert">{{ errorMessage(detailError) }}</p>
       </form>
       <footer class="modal-card__footer">
-        <button type="button" class="secondary-button" @click="closeTransitionForm">
-          <NIcon :size="20" aria-hidden="true"><Refresh /></NIcon>
+        <button type="button" class="secondary-button" @click="closeTransitionForm" data-ds-icon="cancel">
+
           {{ t('common.cancel') }}
         </button>
         <button type="submit" form="lifecycle-transition-form" class="primary-button"
-          :disabled="busy || !canSaveTransition || !hasBasePermission('lifecycle', 'edit')">
-          <NIcon :size="20" aria-hidden="true"><SaveOutline /></NIcon>
+          :disabled="busy || !canSaveTransition || !hasBasePermission('lifecycle', 'edit')" data-ds-icon="save">
+
           {{ busy ? t('common.saving') : t('common.save') }}
         </button>
       </footer>
     </section>
-  </div>
+  </AppDialogHost>
 
 </template>
 
 <style scoped>
-.workflow-panel {
-  display: grid;
-  gap: 14px;
-  padding: 18px 20px 20px;
-}
-
 .workflow-tab-toolbar p {
   margin: 0;
-  color: #536b7b;
+  color: var(--ds-text-secondary);
   font-size: 13px;
 }
 
 .inline-error,
 .field-error {
   margin: 0;
-  color: #b64444;
+  color: var(--ds-danger);
   font-size: 12px;
-}
-
-.workflow-tabs {
-  display: flex;
-  gap: 24px;
-  padding: 0 24px;
-  border-bottom: 1px solid #dbe5ea;
-}
-
-.workflow-tabs button {
-  border: 0;
-  border-bottom: 2px solid transparent;
-  padding: 13px 2px 11px;
-  background: transparent;
-  color: #536b7b;
-  cursor: pointer;
-  font: inherit;
-}
-
-.workflow-tabs button.active,
-.workflow-tabs button:focus-visible {
-  border-bottom-color: #1876a8;
-  color: #1876a8;
 }
 
 .workflow-overview dl {
@@ -766,12 +735,12 @@ onMounted(() => void load())
 
 .workflow-overview dl div {
   padding: 12px;
-  border: 1px solid #e2eaee;
+  border: 1px solid var(--ds-border-subtle);
   border-radius: 5px;
 }
 
 .workflow-overview dt {
-  color: #536b7b;
+  color: var(--ds-text-secondary);
   font-size: 11px;
   font-weight: 700;
   text-transform: uppercase;
@@ -779,31 +748,11 @@ onMounted(() => void load())
 
 .workflow-overview dd {
   margin: 5px 0 0;
-  color: #183b57;
-}
-
-.workflow-table {
-  width: 100%;
-  border-collapse: collapse;
-  color: #183b57;
-  font-size: 13px;
-}
-
-.workflow-table th,
-.workflow-table td {
-  padding: 10px 12px;
-  border-bottom: 1px solid #e8eef1;
-  text-align: left;
-  vertical-align: middle;
-}
-
-.workflow-table th {
-  color: #536b7b;
-  font-size: 12px;
+  color: var(--ds-text-primary);
 }
 
 .state-note--inactive {
-  color: #a23a32;
+  color: var(--ds-danger);
 }
 
 .checkbox-field {
@@ -824,22 +773,10 @@ onMounted(() => void load())
   font-weight: 400;
 }
 
-.modal-card {
-  width: min(100%, 680px);
-  max-height: calc(100vh - 40px);
-  display: flex;
-  flex-direction: column;
-  overflow: hidden;
-  border-radius: 7px;
-  background: #fff;
-  box-shadow: 0 20px 60px rgb(18 42 62 / 24%);
-}
-
-
 .modal-card__body label {
   display: grid;
   gap: 5px;
-  color: #536b7b;
+  color: var(--ds-text-secondary);
   font-size: 12px;
   font-weight: 600;
 }
@@ -848,14 +785,12 @@ onMounted(() => void load())
 .modal-card__body select,
 .modal-card__body textarea {
   min-height: 34px;
-  border: 1px solid #c7d6df;
+  border: 1px solid var(--ds-border);
   border-radius: 4px;
   padding: 7px 9px;
-  color: #183b57;
+  color: var(--ds-text-primary);
   font: inherit;
 }
-
-
 
 .sr-only {
   position: absolute;
@@ -869,9 +804,5 @@ onMounted(() => void load())
 }
 
 @media (max-width: 700px) {
-  .workflow-tabs {
-    gap: 14px;
-    padding: 0 18px;
   }
-}
 </style>

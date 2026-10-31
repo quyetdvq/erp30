@@ -26,6 +26,18 @@ describe('CUS shared ListQueryControls adapter', () => {
     expect(Object.keys(http.get.mock.lastCall?.[1]?.params ?? {})).not.toContain('filter')
   })
 
+  it('sends only CustomerSql-whitelisted single-field sorts and never causes a compound-sort 400', async () => {
+    http.get.mockResolvedValue({ data: { data: [], meta: { page: 1, page_size: 15, total: 0 } } })
+    for (const sort of ['customer_code', '-customer_code', 'name', '-name', 'id', '-id']) {
+      await listCustomerPage(createListQuery({ sort }))
+      expect(http.get.mock.lastCall?.[1]?.params.sort).toBe(sort)
+    }
+    for (const sort of ['name,customer_code', 'status', '-unknown', '']) {
+      await listCustomerPage(createListQuery({ sort }))
+      expect(http.get.mock.lastCall?.[1]?.params.sort).toBe('name')
+    }
+  })
+
   it('ignores unapproved filter keys rather than sending unexpected backend params', async () => {
     http.get.mockResolvedValue({ data: { data: [], meta: { page: 1, page_size: 15, total: 0 } } })
     await listCustomerPage(createListQuery({ filter: { random_client_key: 'bypass' } }))

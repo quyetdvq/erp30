@@ -86,7 +86,7 @@ onBeforeUnmount(() => { ++generation; controller?.abort() })
         <h1>{{ t('notificationOperations.title') }}</h1>
         <p>{{ t('notificationOperations.description') }}</p>
       </div>
-      <button data-testid="ops-refresh" type="button" :disabled="loading || !allowed" @click="load">
+      <button data-testid="ops-refresh" type="button" class="ds-button ds-button--secondary" data-ds-icon="refresh" :disabled="loading || !allowed" @click="load">
         {{ t('notificationOperations.refresh') }}
       </button>
     </header>
@@ -94,7 +94,7 @@ onBeforeUnmount(() => { ++generation; controller?.abort() })
     <p v-else-if="loading" role="status" aria-busy="true">{{ t('notificationOperations.loading') }}</p>
     <template v-else-if="error">
       <p role="alert">{{ t('notificationOperations.loadError') }}</p>
-      <button type="button" @click="load">{{ t('notificationOperations.retry') }}</button>
+      <button type="button" class="ds-button ds-button--secondary" data-ds-icon="retry" @click="load">{{ t('notificationOperations.retry') }}</button>
     </template>
     <template v-else-if="overview">
       <p class="m11-operations-asof">
@@ -156,13 +156,11 @@ onBeforeUnmount(() => { ++generation; controller?.abort() })
 .m11-operations h2 { font-size: 1.1rem; margin: 0 0 12px; }
 .m11-operations p { line-height: 1.5; }
 .m11-operations-header p, .m11-operations-asof, .m11-operations-footer { opacity: .82; }
-.m11-operations button { padding: 9px 14px; border-radius: 7px; border: 1px solid currentColor; background: transparent; color: inherit; cursor: pointer; }
-.m11-operations button:disabled { opacity: .5; cursor: default; }
 .m11-operations-queues { display: grid; grid-template-columns: repeat(3, minmax(0,1fr)); gap: 14px; margin: 20px 0 14px; }
 .m11-operations-bottom { display: grid; grid-template-columns: repeat(2, minmax(0,1fr)); gap: 14px; }
-.m11-operations-card { border: 1px solid var(--n-border-color,#a0a0a040); border-radius: 10px; padding: 18px; min-width: 0; }
+.m11-operations-card { border: 1px solid var(--ds-border-subtle); border-radius: 10px; padding: 18px; min-width: 0; }
 .m11-operations-counts { display: grid; grid-template-columns: 1fr; gap: 6px; }
-.m11-operations-counts > div { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; border-bottom: 1px solid var(--n-divider-color,#a0a0a029); padding-bottom: 5px; }
+.m11-operations-counts > div { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; border-bottom: 1px solid var(--ds-border-subtle); padding-bottom: 5px; }
 .m11-operations-counts dt { overflow-wrap: anywhere; }
 .m11-operations-counts dd { font-weight: 650; font-variant-numeric: tabular-nums; white-space: nowrap; margin: 0; }
 .m11-operations-warning { font-weight: 600; }

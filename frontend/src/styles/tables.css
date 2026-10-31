@@ -1,0 +1,211 @@
+/* DS3: one visual contract for list tables, search, pagination, row actions
+ * and statuses. Behavior, row authorization and query state stay in Vue. */
+.data-table,
+.list-table {
+  width: 100%;
+  border-collapse: collapse;
+  color: var(--ds-text-primary);
+  font-size: var(--ds-font-sm);
+}
+/* Opt-in grid for hierarchy and non-standard action columns (e.g. Products). */
+.ds-data-grid { width: 100%; border-collapse: collapse; color: var(--ds-text-primary); font-size: var(--ds-font-sm); }
+.ds-data-grid th, .ds-data-grid td { padding: 10px 12px; border-bottom: 1px solid var(--ds-border-subtle); vertical-align: middle; text-align: start; }
+.ds-data-grid th { background: var(--ds-bg-subtle); color: var(--ds-text-secondary); font-size: var(--ds-font-xs); font-weight: 700; }
+.ds-data-grid tbody tr:last-child td { border-bottom: 0; }
+.data-table th,
+.list-table th {
+  background: var(--ds-bg-subtle);
+  color: var(--ds-text-secondary);
+  font-size: var(--ds-font-xs);
+  font-weight: 700;
+  text-align: start;
+}
+.data-table th, .data-table td { padding: 11px 13px; }
+.data-table td { border-top: 1px solid var(--ds-border-subtle); vertical-align: middle; }
+.data-table tbody tr:hover td { background: var(--ds-bg-hover); }
+.list-table-wrap,
+.ds-table-scroll {
+  overflow-x: auto;
+  border: 1px solid var(--ds-border-subtle);
+  border-radius: var(--ds-radius-sm);
+}
+/* Wide list pages opt in by setting a minimum through their table wrapper.
+ * The default remains unchanged for compact catalogs. */
+.list-table { min-width: var(--ds-list-table-min-width); }
+.list-table th,
+.list-table td { padding: 10px 12px; border-bottom: 1px solid var(--ds-border-subtle); vertical-align: middle; }
+.list-table tbody tr:hover td { background: var(--ds-bg-hover); }
+.list-table tbody tr:last-child td { border-bottom: 0; }
+
+/* Customer-like wide tables: keep row actions visible while the table scrolls.
+ * This is opt-in; Price Lists and other feature tables keep their own contracts.
+ * The cell always reserves its border, so hover/focus cannot shift columns. */
+.list-table-wrap--sticky-actions { --ds-list-table-min-width: 1040px; }
+.list-table-wrap--sticky-actions .list-table :is(th, td):last-child {
+  position: sticky;
+  right: 0;
+  z-index: 1;
+  min-width: 148px;
+  white-space: nowrap;
+  background: var(--ds-bg-surface);
+  box-shadow: -1px 0 0 var(--ds-border-subtle);
+}
+.list-table-wrap--sticky-actions .list-table th:last-child {
+  z-index: 2;
+  background: var(--ds-bg-subtle);
+}
+.list-table-wrap--sticky-actions .list-table tbody tr:focus-within td,
+.list-table-wrap--sticky-actions .list-table tbody tr:hover td:last-child {
+  background: var(--ds-bg-hover);
+}
+
+.list-table__sort {
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  cursor: pointer;
+}
+.list-table__sort:hover:not(:disabled) { color: var(--ds-primary); }
+.list-table__sort:disabled { cursor: wait; opacity: .65; }
+.list-table__sort:focus-visible { outline: 2px solid var(--ds-focus-ring); outline-offset: 2px; }
+.table-actions { text-align: end !important; }
+
+/* One owner for responsive LIST search/filter/action layout (DS5 HF9).
+ * Form is the inline-size container; all fields precede the actions row.
+ * Feature slots are INSIDE the fields grid, never beside the form. */
+.list-query-controls {
+  container: ds-list-query / inline-size;
+  display: grid;
+  width: 100%; min-width: 0;
+  gap: var(--ds-space-3);
+}
+.list-query-controls__grid {
+  display: grid; width: 100%; min-width: 0;
+  grid-template-columns: var(--ds-query-columns, minmax(0, 1fr));
+  gap: 12px 14px; align-items: end;
+}
+.list-query-controls__field {
+  display: grid; gap: var(--ds-space-1);
+  min-width: 0; width: 100%;
+  color: var(--ds-text-secondary); font-size: var(--ds-font-xs); font-weight: 600;
+}
+.list-query-controls__field > * { min-width: 0; max-width: 100%; }
+.list-query-controls__search { min-width: 0; }
+.list-query-controls__field--wide { min-width: 0; }
+.list-query-controls__field > :is(input, select),
+.list-pagination__size select {
+  min-height: var(--ds-button-height-md);
+  padding: 6px 10px;
+  border: 1px solid var(--ds-border);
+  border-radius: var(--ds-radius-sm);
+  background: var(--ds-bg-surface);
+  color: var(--ds-text-primary);
+  font: inherit;
+  font-size: var(--ds-font-md);
+}
+.list-query-controls__field > :is(input, select):hover:not(:disabled),
+.list-pagination__size select:hover:not(:disabled) { border-color: var(--ds-border-strong); }
+.list-query-controls__field > :is(input, select):focus-visible,
+.list-pagination__size select:focus-visible {
+  border-color: var(--ds-focus-ring);
+  outline: 2px solid var(--ds-focus-ring);
+  outline-offset: 1px;
+}
+.list-query-controls__actions {
+  display: flex; flex-wrap: wrap; align-items: center;
+  width: 100%; min-width: 0; gap: var(--ds-space-2);
+}
+.list-query-controls__actions :is(.ds-button, .primary-button, .secondary-button) { flex: 0 0 auto; }
+/* The first feature-supplied action (Refresh, Export, etc.) is right-aligned. */
+.list-query-controls__actions > :nth-child(3) { margin-inline-start: auto; }
+/* Exception for future pages with six or more fields: wrap before the
+ * desktop minimum column widths could force horizontal overflow. */
+@container ds-list-query (max-width: 1280px) {
+  .list-query-controls--dense .list-query-controls__grid { grid-template-columns: repeat(6, minmax(0, 1fr)); }
+  .list-query-controls--dense .list-query-controls__field { grid-column: span 1; }
+  .list-query-controls--dense .list-query-controls__search { grid-column: span 3; }
+  .list-query-controls--dense .list-query-controls__field--wide { grid-column: span 3; }
+}
+@container ds-list-query (max-width: 1060px) {
+  .list-query-controls__grid { grid-template-columns: repeat(6, minmax(0, 1fr)); }
+  .list-query-controls__field { grid-column: span 1; }
+  .list-query-controls__search { grid-column: span 3; }
+  .list-query-controls__field--wide { grid-column: span 3; }
+}
+@container ds-list-query (max-width: 860px) {
+  .list-query-controls__field,
+  .list-query-controls--dense .list-query-controls__field { grid-column: span 2; }
+  .list-query-controls__search, .list-query-controls__field--wide,
+  .list-query-controls--dense .list-query-controls__search,
+  .list-query-controls--dense .list-query-controls__field--wide { grid-column: span 6; }
+}
+@container ds-list-query (max-width: 490px) {
+  .list-query-controls__field,
+  .list-query-controls--dense .list-query-controls__field { grid-column: span 6; }
+  .list-query-controls__actions > :nth-child(3) { margin-inline-start: 0; }
+}
+.list-query-controls__field > :is(input, select):disabled { cursor: not-allowed; opacity: .58; }
+
+.list-pagination { display: flex; align-items: center; justify-content: space-between; gap: var(--ds-space-3); flex-wrap: wrap; color: var(--ds-text-secondary); font-size: var(--ds-font-sm); }
+.list-pagination__size { display: inline-flex; align-items: center; gap: var(--ds-space-2); }
+.list-pagination__size span { font-size: var(--ds-font-xs); }
+.list-pagination__size select { min-height: var(--ds-button-height-sm); padding: 4px 8px; }
+.list-pagination__actions { display: inline-flex; align-items: center; gap: var(--ds-space-1); }
+.list-pagination__actions span { min-width: var(--ds-button-height-sm); text-align: center; font-weight: 700; }
+
+.list-shell { display: grid; gap: var(--ds-space-4); min-width: 0; }
+.list-shell__header { display: flex; align-items: center; justify-content: space-between; gap: var(--ds-space-4); flex-wrap: wrap; }
+.list-shell__title { margin: 0; color: var(--ds-text-primary); font-size: var(--ds-font-xl); }
+.list-shell__toolbar { display: flex; align-items: center; gap: var(--ds-space-2); flex-wrap: wrap; }
+.list-shell__state, .list-shell__notice, .list-shell__refreshing { padding: var(--ds-space-4); border: 1px solid var(--ds-border-subtle); border-radius: var(--ds-radius-sm); }
+.list-shell__notice { color: var(--ds-danger); background: var(--ds-danger-soft); }
+.list-shell__refreshing { color: var(--ds-text-secondary); font-size: var(--ds-font-sm); }
+.list-shell__retry { display: block; margin-top: var(--ds-space-2); padding: 4px 0; border: 0; background: transparent; color: var(--ds-primary); text-decoration: underline; cursor: pointer; }
+.list-shell__retry:focus-visible { outline: 2px solid var(--ds-focus-ring); outline-offset: 2px; }
+
+.table-row-actions { display: inline-flex; align-items: center; gap: var(--ds-space-1); }
+/* TableRowActions keeps its geometry here. The shared .ds-state-toggle
+ * in buttons.css owns binary Active/Inactive colors (not the workflow warning). */
+.table-row-action { font-size: var(--ds-icon-size); }
+.table-row-action--delete { color: var(--ds-danger); }
+.table-row-action--delete:hover:not(:disabled),
+.table-row-action--delete:focus-visible { border-color: var(--ds-danger); background: var(--ds-danger-soft); color: var(--ds-danger); }
+
+.table-status { display: inline-flex; align-items: center; justify-content: center; width: 28px; height: 28px; border-radius: 50%; font-size: 19px; line-height: 1; }
+.table-status--active { color: var(--ds-success); background: var(--ds-success-soft); }
+.table-status--inactive, .table-status--draft { color: var(--ds-warning); background: var(--ds-warning-soft); }
+.table-status--closed { color: var(--ds-text-secondary); background: var(--ds-bg-subtle); }
+.table-status--other { color: var(--ds-info); background: var(--ds-info-soft); }
+.status-pill { display: inline-flex; min-width: 56px; justify-content: center; padding: 4px 7px; border: 1px solid var(--ds-success); border-radius: var(--ds-radius-sm); background: var(--ds-success-soft); color: var(--ds-success); font-size: var(--ds-font-xs); font-weight: 600; }
+.status-pill--off { border-color: var(--ds-danger); background: var(--ds-danger-soft); color: var(--ds-danger); }
+.tag { display: inline-block; margin: 2px 4px 2px 0; padding: 3px 6px; border: 1px solid var(--ds-info); border-radius: var(--ds-radius-sm); background: var(--ds-info-soft); color: var(--ds-info); font-size: var(--ds-font-xs); }
+@container ds-list-query (max-width: 490px) {
+  .list-query-controls__actions button { flex: 1 1 auto; }
+}
+
+@media (prefers-reduced-motion: reduce) { .table-row-action { transition: none; } }
+
+/* Preserve the legacy compact-screen width in the table system owner. */
+@media (max-width: 700px) { .data-table { min-width: 680px; } }
+
+/* Bespoke query bars use the same field-first, action-second contract. */
+.ds-filter-container { container: ds-filter / inline-size; min-width: 0; width: 100%; }
+.ds-filter-form { display: grid; gap: 12px; min-width: 0; width: 100%; }
+.ds-filter-fields {
+  display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 175px), 1fr));
+  align-items: end; gap: 12px 14px; min-width: 0;
+}
+.ds-filter-fields > label { display: grid; gap: 6px; min-width: 0; width: 100%; }
+.ds-filter-fields > label > :is(input, select),
+.ds-filter-fields > label > :is(.n-select, .n-input) { min-width: 0; width: 100%; max-width: 100%; }
+.ds-filter-field--wide { grid-column: span 2; }
+.ds-filter-actions { display: flex; flex-wrap: wrap; align-items: center; gap: var(--ds-space-2); min-width: 0; }
+@container ds-filter (max-width: 860px) {
+  .ds-filter-field--wide { grid-column: 1 / -1; }
+}
+@container ds-filter (max-width: 490px) {
+  .ds-filter-fields { grid-template-columns: minmax(0, 1fr); }
+  .ds-filter-field--wide { grid-column: auto; }
+}

@@ -1839,6 +1839,10 @@ export const zNumberingSeriesCreate = z.object({
     status: z.enum(['ACTIVE', 'INACTIVE'])
 });
 
+export const zNumberingSeriesValidationRequest = zNumberingSeriesCreate.and(z.object({
+    series_id: zBigInt.optional()
+}));
+
 export const zNumberingSeriesPatch = z.object({
     resource_id: zBigInt.optional(),
     series_code: z.string().optional(),
@@ -2236,6 +2240,8 @@ export const zResourceActionCreate2 = zResourceActionCreate;
 export const zResourceActionPatch2 = zResourceActionPatch;
 
 export const zNumberingSeriesCreate2 = zNumberingSeriesCreate;
+
+export const zNumberingSeriesValidationRequest2 = zNumberingSeriesValidationRequest;
 
 export const zNumberingSeriesPatch2 = zNumberingSeriesPatch;
 
@@ -3368,7 +3374,7 @@ export const zSetNumberingSeriesStatePath = z.object({
  */
 export const zSetNumberingSeriesStateResponse = zNumberingSeriesResponse;
 
-export const zValidateNumberingSeriesConfigBody = zNumberingSeriesCreate2;
+export const zValidateNumberingSeriesConfigBody = zNumberingSeriesValidationRequest2;
 
 export const zValidateNumberingSeriesConfigPath = z.object({
     resource_id: zBigInt

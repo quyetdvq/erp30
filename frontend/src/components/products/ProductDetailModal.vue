@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import AppDialogHost from '@/components/ui/AppDialogHost.vue'
 import { rowAllowedActions } from '@/components/lists/rowActionPolicy'
 import { computed, ref, watch } from 'vue'
 import { NIcon } from 'naive-ui'
@@ -507,9 +508,9 @@ watch(
 </script>
 
 <template>
-  <div v-if="props.open" class="modal-backdrop detail-backdrop">
-    <section
-      class="detail-modal tabbed-detail-workspace"
+  <AppDialogHost :open="props.open" size="xl" :close-on-esc="!childFormOpen && !conversionEditorOpen" @close="emit('close')">
+    <section v-if="props.open"
+      class="ds-dialog-surface detail-modal tabbed-detail-workspace"
       role="dialog"
       aria-modal="true"
       :aria-label="t('product.productDetails')"
@@ -532,10 +533,10 @@ watch(
           class="modal-card-button-close"
           :aria-label="t('common.close')"
           @click="emit('close')"
-        ></button>
+         data-ds-icon="close"></button>
       </header>
       <div v-if="parentProduct" class="detail-back">
-        <button type="button" class="secondary-button" @click="backToParent">
+        <button data-ds-icon="back" type="button" class="secondary-button" @click="backToParent">
           {{ t('product.backToParent') }}
         </button>
       </div>
@@ -603,7 +604,7 @@ watch(
         <section v-else-if="activeTab === 'components'" class="tab-panel">
           <header class="section-header">
             <h3>{{ t('product.comboComponents') }}</h3>
-            <button
+            <button data-ds-icon="add"
               v-if="canEditCurrent"
               type="button"
               class="secondary-button"
@@ -654,9 +655,7 @@ watch(
                       class="icon-button danger"
                       :aria-label="t('common.delete')"
                       @click="removeComboItem(index)"
-                    >
-                      {{ t('common.delete') }}
-                    </button>
+                     data-ds-icon="delete"></button>
                   </td>
                 </tr>
                 <tr v-if="comboItems.length === 0">
@@ -665,7 +664,7 @@ watch(
               </tbody>
             </table>
           </div>
-          <button
+          <button data-ds-icon="save"
             v-if="canEditCurrent"
             type="button"
             class="primary-button"
@@ -678,7 +677,7 @@ watch(
         <section v-else-if="activeTab === 'children'" class="tab-panel">
           <header class="section-header">
             <h3>{{ t('product.tabChildren') }}</h3>
-            <button
+            <button data-ds-icon="add"
               v-if="(isParent || role === 'SIMPLE') && hasBasePermission('product', 'create')"
               type="button"
               class="secondary-button"
@@ -745,7 +744,7 @@ watch(
               <h3>{{ t('product.conversions') }}</h3>
               <p class="field-note">1 {{ t('product.alternateUom') }} = factor {{ baseUomName }}</p>
             </div>
-            <button
+            <button data-ds-icon="add"
               v-if="canEditCurrent"
               type="button"
               class="secondary-button"
@@ -814,7 +813,7 @@ watch(
               </tbody>
             </table>
           </div>
-          <button
+          <button data-ds-icon="save"
             v-if="canEditCurrent"
             type="button"
             class="primary-button"
@@ -842,7 +841,7 @@ watch(
         </section>
       </div>
       <footer class="modal-card__footer">
-        <button
+        <button data-ds-icon="edit"
           v-if="canEditCurrent"
           type="button"
           class="secondary-button"
@@ -851,196 +850,172 @@ watch(
         >
           {{ t('common.edit') }}
         </button>
-        <button type="button" class="secondary-button" @click="emit('close')">
+        <button data-ds-icon="close" type="button" class="secondary-button" @click="emit('close')">
           {{ t('common.close') }}
         </button>
       </footer>
     </section>
-  </div>
-  <div v-if="childFormOpen" class="nested-backdrop">
-    <section
-      class="child-modal"
+  </AppDialogHost>
+  <AppDialogHost :open="childFormOpen" size="sm" @close="childFormOpen = false">
+    <section v-if="childFormOpen"
+      class="ds-dialog-surface child-modal"
       role="dialog"
       aria-modal="true"
       :aria-label="t('product.childForm')"
     >
-      <header>
+      <header class="modal-card__header">
         <h3>{{ t('product.addChild') }}</h3>
         <button
           type="button"
-          class="icon-button"
+          class="modal-card-button-close"
           :aria-label="t('common.close')"
           @click="childFormOpen = false"
-        >
-          ×
-        </button>
+         data-ds-icon="close"></button>
       </header>
-      <label
-        ><span>{{ t('product.productCode') }}</span
-        ><input v-model="childForm.product_code" /></label
-      ><label
-        ><span>{{ t('product.sku') }}</span
-        ><input v-model="childForm.sku" required /></label
-      ><label
-        ><span>{{ t('product.barcode') }}</span
-        ><input v-model="childForm.barcode" /></label
-      ><label
-        ><span>{{ t('product.childName') }}</span
-        ><input v-model="childForm.product_child_name" required /></label
-      ><label
-        ><span>{{ t('product.baseUom') }}</span
-        ><SearchableSelect
-          :model-value="childForm.base_uom_id"
-          :options="uomOptions"
-          :aria-label="t('product.baseUom')"
-          @update:model-value="
-            (value) => (childForm.base_uom_id = typeof value === 'string' ? value : '')
-          " /></label
-      ><label
-        ><span>{{ t('product.defaultPrice') }}</span
-        ><DecimalInput
-          v-model="childForm.price"
-          kind="money"
-          :max-decimals="2"
-          :aria-label="t('product.defaultPrice')"
-          required
-      /></label>
-      <ProductImageField
-        ref="childImageField"
-        :editable="hasBasePermission('product', 'create')"
-        :disabled="busy"
-      />
-      <p v-if="childError" class="inline-error" role="alert">
-        {{ t('product.childFieldsRequired') }}
-      </p>
-      <footer>
-        <button type="button" class="secondary-button" @click="childFormOpen = false">
+      <div class="ds-dialog-stack-body">
+        <label
+          ><span>{{ t('product.productCode') }}</span
+          ><input v-model="childForm.product_code" /></label
+        ><label
+          ><span>{{ t('product.sku') }}</span
+          ><input v-model="childForm.sku" required /></label
+        ><label
+          ><span>{{ t('product.barcode') }}</span
+          ><input v-model="childForm.barcode" /></label
+        ><label
+          ><span>{{ t('product.childName') }}</span
+          ><input v-model="childForm.product_child_name" required /></label
+        ><label
+          ><span>{{ t('product.baseUom') }}</span
+          ><SearchableSelect
+            :model-value="childForm.base_uom_id"
+            :options="uomOptions"
+            :aria-label="t('product.baseUom')"
+            @update:model-value="
+              (value) => (childForm.base_uom_id = typeof value === 'string' ? value : '')
+            " /></label
+        ><label
+          ><span>{{ t('product.defaultPrice') }}</span
+          ><DecimalInput
+            v-model="childForm.price"
+            kind="money"
+            :max-decimals="2"
+            :aria-label="t('product.defaultPrice')"
+            required
+        /></label>
+        <ProductImageField
+          ref="childImageField"
+          :editable="hasBasePermission('product', 'create')"
+          :disabled="busy"
+        />
+        <p v-if="childError" class="inline-error" role="alert">
+          {{ t('product.childFieldsRequired') }}
+        </p>
+      </div>
+      <footer class="modal-card__footer">
+        <button data-ds-icon="cancel" type="button" class="secondary-button" @click="childFormOpen = false">
           {{ t('common.cancel') }}</button
-        ><button type="button" class="primary-button" :disabled="busy" @click="createChild">
+        ><button data-ds-icon="save" type="button" class="primary-button" :disabled="busy" @click="createChild">
           {{ t('common.save') }}
         </button>
       </footer>
     </section>
-  </div>
-  <div v-if="conversionEditorOpen" class="nested-backdrop">
-    <section
-      class="child-modal"
+  </AppDialogHost>
+  <AppDialogHost :open="conversionEditorOpen" size="sm" @close="conversionEditorOpen = false">
+    <section v-if="conversionEditorOpen"
+      class="ds-dialog-surface child-modal"
       role="dialog"
       aria-modal="true"
       :aria-label="t('product.conversionForm')"
     >
-      <header>
+      <header class="modal-card__header">
         <h3>{{ t('product.conversionForm') }}</h3>
         <button
           type="button"
-          class="icon-button"
+          class="modal-card-button-close"
           :aria-label="t('common.close')"
           @click="conversionEditorOpen = false"
-        >
-          ×
-        </button>
+         data-ds-icon="close"></button>
       </header>
-      <label
-        ><span>{{ t('product.alternateUom') }}</span
-        ><SearchableSelect
-          :model-value="conversionDraft.uom_id"
-          :options="
-            uomOptions.filter((option) => option.value !== String(currentProduct?.base_uom_id))
-          "
-          :aria-label="t('product.alternateUom')"
-          @update:model-value="
-            (value) => (conversionDraft.uom_id = typeof value === 'string' ? value : '')
-          " /></label
-      ><label
-        ><span>{{ t('product.conversionFactor') }}</span
-        ><DecimalInput
-          v-model="conversionDraft.conversion_factor"
-          :max-decimals="6"
-          :aria-label="t('product.conversionFactor')" /></label
-      ><label
-        ><span>{{ t('product.usage') }}</span
-        ><select v-model="conversionDraft.usage_type">
-          <option value="PURCHASE">{{ t('product.usagePurchase') }}</option>
-          <option value="SALES">{{ t('product.usageSales') }}</option>
-          <option value="BOTH">{{ t('product.usageBoth') }}</option>
-        </select></label
-      ><label
-        ><span>{{ t('product.sellingPrice') }}</span
-        ><DecimalInput
-          v-model="conversionDraft.price"
-          kind="money"
-          :max-decimals="2"
-          :aria-label="t('product.sellingPrice')" /></label
-      ><label
-        ><span>{{ t('product.packageGrossWeight') }}</span
-        ><DecimalInput
-          v-model="conversionDraft.package_gross_weight_g"
-          :max-decimals="3"
-          :aria-label="t('product.packageGrossWeight')" /></label
-      ><label
-        ><span>{{ t('product.packageLength') }}</span
-        ><DecimalInput
-          v-model="conversionDraft.package_length_mm"
-          :max-decimals="3"
-          :aria-label="t('product.packageLength')" /></label
-      ><label
-        ><span>{{ t('product.packageWidth') }}</span
-        ><DecimalInput
-          v-model="conversionDraft.package_width_mm"
-          :max-decimals="3"
-          :aria-label="t('product.packageWidth')" /></label
-      ><label
-        ><span>{{ t('product.packageHeight') }}</span
-        ><DecimalInput
-          v-model="conversionDraft.package_height_mm"
-          :max-decimals="3"
-          :aria-label="t('product.packageHeight')" /></label
-      ><label
-        ><span>{{ t('product.status') }}</span
-        ><select v-model="conversionDraft.status">
-          <option value="ACTIVE">{{ t('status.active') }}</option>
-          <option value="INACTIVE">{{ t('status.inactive') }}</option>
-        </select></label
-      >
-      <p v-if="validationError" class="inline-error" role="alert">{{ validationError }}</p>
-      <footer>
-        <button type="button" class="secondary-button" @click="conversionEditorOpen = false">
+      <div class="ds-dialog-stack-body">
+        <label
+          ><span>{{ t('product.alternateUom') }}</span
+          ><SearchableSelect
+            :model-value="conversionDraft.uom_id"
+            :options="
+              uomOptions.filter((option) => option.value !== String(currentProduct?.base_uom_id))
+            "
+            :aria-label="t('product.alternateUom')"
+            @update:model-value="
+              (value) => (conversionDraft.uom_id = typeof value === 'string' ? value : '')
+            " /></label
+        ><label
+          ><span>{{ t('product.conversionFactor') }}</span
+          ><DecimalInput
+            v-model="conversionDraft.conversion_factor"
+            :max-decimals="6"
+            :aria-label="t('product.conversionFactor')" /></label
+        ><label
+          ><span>{{ t('product.usage') }}</span
+          ><select v-model="conversionDraft.usage_type">
+            <option value="PURCHASE">{{ t('product.usagePurchase') }}</option>
+            <option value="SALES">{{ t('product.usageSales') }}</option>
+            <option value="BOTH">{{ t('product.usageBoth') }}</option>
+          </select></label
+        ><label
+          ><span>{{ t('product.sellingPrice') }}</span
+          ><DecimalInput
+            v-model="conversionDraft.price"
+            kind="money"
+            :max-decimals="2"
+            :aria-label="t('product.sellingPrice')" /></label
+        ><label
+          ><span>{{ t('product.packageGrossWeight') }}</span
+          ><DecimalInput
+            v-model="conversionDraft.package_gross_weight_g"
+            :max-decimals="3"
+            :aria-label="t('product.packageGrossWeight')" /></label
+        ><label
+          ><span>{{ t('product.packageLength') }}</span
+          ><DecimalInput
+            v-model="conversionDraft.package_length_mm"
+            :max-decimals="3"
+            :aria-label="t('product.packageLength')" /></label
+        ><label
+          ><span>{{ t('product.packageWidth') }}</span
+          ><DecimalInput
+            v-model="conversionDraft.package_width_mm"
+            :max-decimals="3"
+            :aria-label="t('product.packageWidth')" /></label
+        ><label
+          ><span>{{ t('product.packageHeight') }}</span
+          ><DecimalInput
+            v-model="conversionDraft.package_height_mm"
+            :max-decimals="3"
+            :aria-label="t('product.packageHeight')" /></label
+        ><label
+          ><span>{{ t('product.status') }}</span
+          ><select v-model="conversionDraft.status">
+            <option value="ACTIVE">{{ t('status.active') }}</option>
+            <option value="INACTIVE">{{ t('status.inactive') }}</option>
+          </select></label
+        >
+        <p v-if="validationError" class="inline-error" role="alert">{{ validationError }}</p>
+      </div>
+      <footer class="modal-card__footer">
+        <button data-ds-icon="cancel" type="button" class="secondary-button" @click="conversionEditorOpen = false">
           {{ t('common.cancel') }}</button
-        ><button type="button" class="primary-button" @click="saveConversionDraft">
+        ><button data-ds-icon="save" type="button" class="primary-button" @click="saveConversionDraft">
           {{ t('common.save') }}
         </button>
       </footer>
     </section>
-  </div>
+  </AppDialogHost>
 </template>
 
 <style scoped>
 /* Product detail shares the canonical ERP modal header, footer and backdrop.
    Its fixed height is provided by global .tabbed-detail-workspace. */
-.detail-backdrop {
-  z-index: 50;
-}
-.nested-backdrop {
-  position: fixed;
-  inset: 0;
-  z-index: 60;
-  display: grid;
-  place-items: center;
-  padding: 18px;
-  background: rgb(18 38 54 / 48%);
-}
-.detail-modal {
-  width: min(1120px, calc(100vw - 32px));
-  max-height: calc(100dvh - 40px);
-  overflow: hidden;
-  display: flex;
-  flex-direction: column;
-  min-width: 0;
-  border: 1px solid #d5e1e8;
-  border-radius: 7px;
-  background: #fff;
-  box-shadow: 0 22px 70px rgb(18 42 62 / 25%);
-}
 .product-detail-heading {
   display: flex;
   flex: 1 1 auto;
@@ -1063,7 +1038,7 @@ watch(
   align-items: center;
   gap: 6px;
   max-width: 100%;
-  color: #536b7b;
+  color: var(--ds-text-secondary);
   font-size: 12px;
   white-space: nowrap;
 }
@@ -1076,24 +1051,18 @@ watch(
 .product-detail-role {
   font-size: 13px;
   font-weight: 400;
-  color: #536b7b;
+  color: var(--ds-text-secondary);
 }
 .product-detail-role {
   padding-left: 6px;
-  border-left: 1px solid #b9c9d3;
+  border-left: 1px solid var(--ds-border-subtle);
 }
 .modal-card-button-close { flex: 0 0 auto; }
-.section-header,
-.child-modal header,
-.child-modal footer {
+.section-header {
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 12px;
-}
-.child-modal h3 {
-  margin: 0;
-  color: #173c59;
 }
 .detail-back {
   padding: 10px 20px 0;
@@ -1103,20 +1072,20 @@ watch(
   gap: 4px;
   overflow-x: auto;
   padding: 8px 20px 0;
-  border-bottom: 1px solid #e1e9ee;
+  border-bottom: 1px solid var(--ds-border-subtle);
 }
 .detail-tabs button {
   border: 0;
   border-bottom: 2px solid transparent;
   padding: 10px 12px;
   background: transparent;
-  color: #536b7b;
+  color: var(--ds-text-secondary);
   cursor: pointer;
   white-space: nowrap;
 }
 .detail-tabs button.active {
-  border-bottom-color: #1674a6;
-  color: #1674a6;
+  border-bottom-color: var(--ds-primary);
+  color: var(--ds-primary);
   font-weight: 700;
 }
 .detail-body {
@@ -1142,39 +1111,39 @@ watch(
 .detail-grid dd {
   margin: 0;
   padding: 10px 0;
-  border-bottom: 1px solid #edf2f4;
+  border-bottom: 1px solid var(--ds-border-subtle);
   overflow-wrap: anywhere;
 }
 .detail-grid dt {
-  color: #536b7b;
+  color: var(--ds-text-secondary);
   font-size: 12px;
   font-weight: 700;
 }
 .detail-grid dd {
-  color: #183b57;
+  color: var(--ds-text-primary);
 }
 .table-wrap {
   overflow-x: auto;
-  border: 1px solid #dbe5ea;
+  border: 1px solid var(--ds-border-subtle);
   border-radius: 6px;
 }
 .detail-table {
   width: 100%;
   min-width: 760px;
   border-collapse: collapse;
-  color: #183b57;
+  color: var(--ds-text-primary);
   font-size: 13px;
 }
 .detail-table th,
 .detail-table td {
   padding: 9px 10px;
-  border-bottom: 1px solid #e8eef1;
+  border-bottom: 1px solid var(--ds-border-subtle);
   text-align: start;
   vertical-align: middle;
 }
 .detail-table th {
-  background: #f7fafb;
-  color: #536b7b;
+  background: var(--ds-bg-subtle);
+  color: var(--ds-text-secondary);
   font-size: 12px;
 }
 .child-price {
@@ -1197,14 +1166,14 @@ watch(
   font-size: 12px;
 }
 .detail-table tbody tr:hover {
-  background: #f8fbfd;
+  background: var(--ds-bg-subtle);
 }
 .detail-table tbody tr:last-child td {
   border-bottom: 0;
 }
 .detail-table small {
   display: block;
-  color: #536b7b;
+  color: var(--ds-text-secondary);
 }
 @media (max-width: 600px) {
   .product-detail-title { font-size: 16px; }
@@ -1214,54 +1183,41 @@ watch(
   .section-header { flex-wrap: wrap; }
 }
 
-.icon-button,
+/* Icon buttons inherit their reserved 1px border, padding and 36px box
+ * from buttons.css; only the semantic text color is feature-specific. */
+.icon-button { color: var(--ds-primary); }
 .link-button {
   border: 0;
   background: transparent;
-  color: #1876a8;
+  color: var(--ds-primary);
   cursor: pointer;
 }
 .danger {
-  color: #b64444;
+  color: var(--ds-danger);
 }
 .inline-error {
   margin: 0;
-  color: #b64444;
+  color: var(--ds-danger);
   font-size: 12px;
 }
 .field-note {
   margin: 0;
-  color: #536b7b;
+  color: var(--ds-text-secondary);
   font-size: 12px;
-}
-.child-modal {
-  width: min(460px, 100%);
-  max-height: calc(100vh - 36px);
-  overflow: auto;
-  display: grid;
-  gap: 12px;
-  border-radius: 7px;
-  background: #fff;
-  padding: 20px;
-  box-shadow: 0 20px 60px rgb(18 42 62 / 24%);
 }
 .child-modal label {
   display: grid;
   gap: 5px;
-  color: #536b7b;
+  color: var(--ds-text-secondary);
   font-size: 12px;
   font-weight: 600;
 }
 .child-modal input,
 .child-modal select {
   min-height: 34px;
-  border: 1px solid #c7d6df;
+  border: 1px solid var(--ds-border);
   border-radius: 4px;
   padding: 7px 9px;
   font: inherit;
-}
-.child-modal footer {
-  justify-content: flex-end;
-  margin-top: 4px;
 }
 </style>

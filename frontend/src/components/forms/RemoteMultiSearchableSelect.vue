@@ -136,7 +136,7 @@ onUnmounted(() => { ++serial; if (debounce) clearTimeout(debounce) })
     />
     <div v-if="searchFailed" class="remote-select-feedback" role="alert">
       <span>{{ props.errorLabel }}</span>
-      <button type="button" class="secondary-button" :disabled="loading || props.disabled" @click="retry">
+      <button data-ds-icon="retry" type="button" class="secondary-button" :disabled="loading || props.disabled" @click="retry">
         {{ props.retryLabel }}
       </button>
     </div>
@@ -152,6 +152,6 @@ onUnmounted(() => { ++serial; if (debounce) clearTimeout(debounce) })
 .remote-multi-searchable-select :deep(.n-base-selection) { min-height: 36px; min-width: 0; }
 .remote-multi-select-field :deep(.n-base-selection-tags) { min-width: 0; }
 .remote-select-feedback { margin: 0; display: flex; align-items: center; flex-wrap: wrap; gap: 8px;
-  font-size: 12px; color: #64748b; overflow-wrap: anywhere; }
-.remote-select-feedback[role='alert'] { color: #a12727; }
+  font-size: 12px; color: var(--ds-text-secondary); overflow-wrap: anywhere; }
+.remote-select-feedback[role='alert'] { color: var(--ds-danger); }
 </style>

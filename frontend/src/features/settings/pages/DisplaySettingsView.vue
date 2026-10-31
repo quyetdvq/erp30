@@ -24,7 +24,7 @@ function selectTab(tab: 'display' | 'notifications') {
 </script>
 
 <template>
-  <div class="m11-tabs" role="tablist" :aria-label="t('notificationSettings.tabs')">
+  <div class="m11-tabs ds-settings-tabs" role="tablist" :aria-label="t('notificationSettings.tabs')">
     <button v-if="canDisplay" type="button" role="tab" :aria-selected="activeTab === 'display'" @click="selectTab('display')">
       {{ t('notificationSettings.displayTab') }}
     </button>
@@ -36,9 +36,3 @@ function selectTab(tab: 'display' | 'notifications') {
   <NotificationsTab v-else-if="activeTab === 'notifications' && canNotifications" />
   <p v-else role="alert" class="inline-error">{{ t('notificationSettings.forbidden') }}</p>
 </template>
-
-<style scoped>
-.m11-tabs { display: flex; gap: 8px; margin-bottom: 16px; flex-wrap: wrap; }
-.m11-tabs button { background: transparent; border: 1px solid #8297a9; border-radius: 7px; padding: 9px 15px; color: inherit; cursor: pointer; }
-.m11-tabs button[aria-selected="true"] { background: #215d86; color: #fff; border-color: #215d86; }
-</style>

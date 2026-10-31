@@ -36,7 +36,7 @@ watch(
 </template>
 
 <style scoped>
-.user-avatar { display: inline-flex; flex-shrink: 0; align-items: center; justify-content: center; border-radius: 50%; width: 32px; height: 32px; overflow: hidden; background: #e7f1f6; color: #24536b; font-weight: 700; }
+.user-avatar { display: inline-flex; flex-shrink: 0; align-items: center; justify-content: center; border-radius: 50%; width: 32px; height: 32px; overflow: hidden; background: var(--ds-primary-soft); color: var(--ds-primary); font-weight: 700; }
 .user-avatar--large { width: 82px; height: 82px; font-size: 28px; }
 .user-avatar__image { width: 100%; height: 100%; object-fit: cover; display: block; }
 </style>

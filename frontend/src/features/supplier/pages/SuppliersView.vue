@@ -97,20 +97,27 @@ onMounted(() => { void load() })
       <h1>{{ t('supplier.title') }}</h1>
       <p>{{ t('supplier.desc') }}</p>
     </div>
-    <button v-if="hasBasePermission('supplier', 'create')" type="button" class="primary-button"
-      @click="router.push('/suppliers/new')">＋ {{ t('common.create') }}</button>
+    <button data-ds-icon="add" v-if="hasBasePermission('supplier', 'create')" type="button" class="primary-button"
+      @click="router.push('/suppliers/new')">{{ t('common.create') }}</button>
   </div>
   <section class="content-panel supplier-list-panel">
     <div class="supplier-list-toolbar">
-      <ListQueryControls :model-value="state.query" :filters="filters" :page-size-options="CUSTOMER_PAGE_SIZE_OPTIONS"
-        @apply="applyQuery" @reset="reset" />
-      <label v-if="hasBasePermission('organization', 'view')" class="supplier-company-filter">
-        <span>{{ t('supplier.companyFilter') }}</span>
-        <RemoteSearchableSelect :model-value="companyFilter" :search="companySearch"
-          :aria-label="t('supplier.companyFilter')" :placeholder="t('supplier.allCompaniesFilter')"
-          @update:model-value="changeCompanyFilter" />
-      </label>
-      <button type="button" class="secondary-button" @click="void load()">↻ {{ t('common.refresh') }}</button>
+      <ListQueryControls :show-page-size="false" :model-value="state.query" :filters="filters" :page-size-options="CUSTOMER_PAGE_SIZE_OPTIONS"
+        :extra-field-count="hasBasePermission('organization', 'view') ? 1 : 0"
+        @apply="applyQuery" @reset="reset">
+        <template #filters>
+          <label v-if="hasBasePermission('organization', 'view')" class="list-query-controls__field list-query-controls__field--wide supplier-company-filter">
+            <span>{{ t('supplier.companyFilter') }}</span>
+            <RemoteSearchableSelect :model-value="companyFilter" :search="companySearch"
+              :aria-label="t('supplier.companyFilter')" :placeholder="t('supplier.allCompaniesFilter')"
+              @update:model-value="changeCompanyFilter" />
+          </label>
+        </template>
+        <template #actions>
+          <button data-ds-icon="refresh" type="button" class="secondary-button supplier-toolbar-refresh"
+            @click="void load()">{{ t('common.refresh') }}</button>
+        </template>
+      </ListQueryControls>
     </div>
     <p v-if="error" role="alert" class="supplier-error">{{ t('supplier.loadError') }}</p>
     <ListShell :initial-loading="state.isInitialLoading.value" :refreshing="state.isBackgroundRefreshing.value"
@@ -147,19 +154,11 @@ onMounted(() => { void load() })
 </template>
 
 <style scoped>
-/* Match CUS list panel/toolbar rhythm while retaining Supplier SQL-paged Company filter. */
-.supplier-list-panel {
-  display: grid; gap: 14px; min-width: 0; padding: 18px 20px 20px;
-}
-.supplier-list-toolbar {
-  display: flex; gap: 10px; align-items: end;
-  justify-content: space-between; min-width: 0; flex-wrap: wrap;
-}
-.supplier-company-filter {
-  min-width: 210px; max-width: 290px; display: grid;
-  gap: 6px; color: #536b7b; font-size: 12px; font-weight: 600; flex: 1;
-}
+/* The shared list query grid owns responsive field/action layout.
+ * Supplier keeps only panel spacing and feature-specific statuses here. */
+.supplier-list-panel { display: grid; gap: 14px; min-width: 0; padding: 18px 20px 20px; }
+.supplier-list-toolbar { min-width: 0; }
 .supplier-status-cell { display: inline-flex; align-items: center; gap: 6px; }
 .supplier-row-actions { display: inline-flex; align-items: center; gap: 4px; white-space: nowrap; }
-.supplier-error { color: #b64444; font-size: 12px; }
+.supplier-error { color: var(--ds-danger); font-size: 12px; }
 </style>

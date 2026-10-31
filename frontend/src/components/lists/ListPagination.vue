@@ -9,10 +9,11 @@ const props = withDefaults(
     pageSize: number
     total: number
     pageSizeOptions?: readonly number[]
+    showPageSize?: boolean
     disabled?: boolean
     ariaLabel?: string
   }>(),
-  { pageSizeOptions: () => STANDARD_PAGE_SIZE_OPTIONS, disabled: false },
+  { pageSizeOptions: () => STANDARD_PAGE_SIZE_OPTIONS, showPageSize: true, disabled: false },
 )
 
 const emit = defineEmits<{
@@ -34,7 +35,7 @@ function goTo(page: number): void {
     <div class="list-pagination__summary" aria-live="polite">
       {{ t('list.pageSummary', { page: currentPage, pages: pageCount, total: props.total }) }}
     </div>
-    <label class="list-pagination__size">
+    <label v-if="props.showPageSize" class="list-pagination__size">
       <span>{{ t('list.pageSize') }}</span>
       <select
         :value="String(props.pageSize)"
@@ -46,89 +47,35 @@ function goTo(page: number): void {
       </select>
     </label>
     <div class="list-pagination__actions">
-      <button
+      <button class="ds-icon-control" data-ds-icon="first"
         type="button"
         :disabled="props.disabled || currentPage === 1"
         :aria-label="t('list.first')"
         @click="goTo(1)"
       >
-        «
       </button>
-      <button
+      <button class="ds-icon-control" data-ds-icon="previous"
         type="button"
         :disabled="props.disabled || currentPage === 1"
         :aria-label="t('list.previous')"
         @click="goTo(currentPage - 1)"
       >
-        ‹
       </button>
       <span aria-current="page">{{ currentPage }}</span>
-      <button
+      <button class="ds-icon-control" data-ds-icon="next"
         type="button"
         :disabled="props.disabled || currentPage === pageCount"
         :aria-label="t('list.next')"
         @click="goTo(currentPage + 1)"
       >
-        ›
       </button>
-      <button
+      <button class="ds-icon-control" data-ds-icon="last"
         type="button"
         :disabled="props.disabled || currentPage === pageCount"
         :aria-label="t('list.last')"
         @click="goTo(pageCount)"
       >
-        »
       </button>
     </div>
   </nav>
 </template>
-
-<style scoped>
-.list-pagination {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-  flex-wrap: wrap;
-  color: #536b7b;
-  font-size: 13px;
-}
-.list-pagination__size {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-}
-.list-pagination__size span {
-  font-size: 12px;
-}
-.list-pagination__size select {
-  min-height: 30px;
-  border: 1px solid #c7d6df;
-  border-radius: 4px;
-  padding: 4px 8px;
-  background: #fff;
-}
-.list-pagination__actions {
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-}
-.list-pagination__actions button {
-  min-width: 30px;
-  min-height: 30px;
-  border: 1px solid #c7d6df;
-  border-radius: 4px;
-  background: #fff;
-  color: #294b65;
-  cursor: pointer;
-}
-.list-pagination__actions button:disabled {
-  cursor: not-allowed;
-  opacity: 0.5;
-}
-.list-pagination__actions span {
-  min-width: 30px;
-  text-align: center;
-  font-weight: 700;
-}
-</style>

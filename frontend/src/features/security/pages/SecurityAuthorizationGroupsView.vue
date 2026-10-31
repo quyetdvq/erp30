@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import AppDialogHost from '@/components/ui/AppDialogHost.vue'
 import { rowAllowedActions } from '@/components/lists/rowActionPolicy'
 import { computed, onMounted, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
@@ -264,18 +265,22 @@ onMounted(() => void load())
       <h1>{{ t('security.groupsTitle') }}</h1>
       <p>{{ t('security.groupsDescription') }}</p>
     </div>
-    <button v-if="hasBasePermission('authorization_group', 'create')" type="button" class="primary-button"
+    <button data-ds-icon="add" v-if="hasBasePermission('authorization_group', 'create')" type="button" class="primary-button"
       @click="openCreate">
-      ＋ {{ t('common.create') }}
+      {{ t('common.create') }}
     </button>
   </div>
   <p v-if="error" class="inline-error" role="alert">{{ t('security.requestError') }}</p>
-  <section class="content-panel security-list-panel">
-    <div class="security-toolbar">
-      <ListQueryControls :model-value="state.query" @apply="applyQuery" @reset="resetQuery" /><button type="button"
-        class="secondary-button" @click="void load">
-        ↻ {{ t('common.refresh') }}
-      </button>
+  <section class="content-panel security-list-panel ds-page-panel">
+    <div class="security-toolbar ds-page-toolbar">
+      <ListQueryControls :show-page-size="false" :model-value="state.query" @apply="applyQuery" @reset="resetQuery" >
+        <template #actions>
+          <button data-ds-icon="refresh" type="button"
+            class="secondary-button" @click="void load">
+            {{ t('common.refresh') }}
+          </button>
+        </template>
+      </ListQueryControls>
     </div>
     <ListShell :initial-loading="state.isInitialLoading.value" :refreshing="state.isBackgroundRefreshing.value"
       :has-data="state.queryState.hasData.value" :empty-dataset="state.isEmptyDataset.value"
@@ -313,8 +318,8 @@ onMounted(() => void load())
     </ListShell>
   </section>
 
-  <div v-if="detailOpen && selected" class="modal-backdrop">
-    <section class="modal-card tabbed-detail-workspace" role="dialog" aria-modal="true"
+  <AppDialogHost :open="Boolean(detailOpen && selected)" size="lg" @close="detailOpen = false">
+    <section v-if="detailOpen && selected" class="ds-dialog-surface modal-card tabbed-detail-workspace" role="dialog" aria-modal="true"
       :aria-label="`${t('security.authorizationGroup')}: ${selected.name}`">
       <header class="modal-card__header">
         <h2 class="modal-card-title">
@@ -326,11 +331,11 @@ onMounted(() => void load())
         </h2>
         <small>{{ selected.code }} · {{ t('security.groupIdentityHint') }}</small>
         <button type="button" class="modal-card-button-close" :aria-label="t('common.close')"
-          @click="detailOpen = false">
+          @click="detailOpen = false" data-ds-icon="close">
         </button>
 
       </header>
-      <nav class="security-tabs" :aria-label="t('security.groupDetailTabs')">
+      <nav class="security-tabs ds-detail-tabs ds-detail-tabs--spaced" :aria-label="t('security.groupDetailTabs')">
         <button v-for="item in ['overview', 'members', 'permissions'] as const" :key="item" type="button"
           :class="{ active: tab === item }" @click="selectTab(item)">
           {{ t(`security.tabs.${item}`) }}
@@ -345,8 +350,8 @@ onMounted(() => void load())
 
       <div v-else-if="tab === 'members'" class="modal-card__body security-editor">
         <p class="security-note">{{ t('security.memberSourceNote') }}</p>
-        <div v-if="members.length" class="detail-table-wrap">
-          <table class="detail-table">
+        <div v-if="members.length" class="detail-table-wrap ds-table-scroll">
+          <table class="detail-table ds-data-grid">
             <caption class="sr-only">
               {{
                 t('security.memberList')
@@ -385,8 +390,8 @@ onMounted(() => void load())
 
       <div v-else class="modal-card__body security-editor">
         <p class="security-note">{{ t('security.permissionSourceNote') }}</p>
-        <div v-if="permissionRows.length" class="detail-table-wrap">
-          <table class="detail-table">
+        <div v-if="permissionRows.length" class="detail-table-wrap ds-table-scroll">
+          <table class="detail-table ds-data-grid">
             <caption class="sr-only">
               {{
                 t('security.permissionList')
@@ -431,10 +436,10 @@ onMounted(() => void load())
               <input type="checkbox" :checked="hasPermission(action.id)" @change="togglePermission(action.id)" />
               {{ action.code }}
 
-              
+
             </label>
 
-            
+
 
           </div>
         </div>
@@ -442,37 +447,31 @@ onMounted(() => void load())
 
 
       <footer class="modal-card__footer">
-        <button type="button" class="secondary-button" @click="detailOpen = false">
-          <NIcon :size="16">
-            <Refresh />
-          </NIcon>
+        <button type="button" class="secondary-button" @click="detailOpen = false" data-ds-icon="close">
+
           {{ t('common.close') }}
         </button>
         <button v-if="tab === 'members'" type="button" class="primary-button" :disabled="busy ||
           selected.status !== 'ACTIVE' ||
           !hasBasePermission('authorization_group', 'assign_member')
-          " @click="saveMembers">
-          <NIcon :size="16">
-            <SaveOutline />
-          </NIcon>
+          " @click="saveMembers" data-ds-icon="save">
+
           {{ busy ? t('common.saving') : t('security.saveMembers') }}
         </button>
         <button v-else-if="tab === 'permissions'" type="button" class="primary-button" :disabled="busy ||
           selected.status !== 'ACTIVE' ||
           !hasBasePermission('authorization_group', 'assign_permission')
-          " @click="savePermissions">
-          <NIcon :size="16">
-            <SaveOutline />
-          </NIcon>
+          " @click="savePermissions" data-ds-icon="save">
+
           {{ busy ? t('common.saving') : t('security.savePermissions') }}
         </button>
       </footer>
 
     </section>
-  </div>
+  </AppDialogHost>
 
-  <div v-if="modalOpen" class="modal-backdrop">
-    <section class="modal-card" role="dialog" aria-modal="true" :aria-label="t('security.groupForm')">
+  <AppDialogHost :open="modalOpen" size="lg" @close="modalOpen = false">
+    <section v-if="modalOpen" class="ds-dialog-surface modal-card" role="dialog" aria-modal="true" :aria-label="t('security.groupForm')">
       <header class="modal-card__header">
         <h2 class="modal-card-title">
           <NIcon :size="24">
@@ -481,7 +480,7 @@ onMounted(() => void load())
           {{ editingId ? t('common.edit') : t('common.create') }}
           {{ t('security.authorizationGroup') }}
         </h2>
-        <button type="button" class="modal-card-button-close" :aria-label="t('common.close')" @click="modalOpen = false">
+        <button type="button" class="modal-card-button-close" :aria-label="t('common.close')" @click="modalOpen = false" data-ds-icon="close">
         </button>
 
       </header>
@@ -497,62 +496,23 @@ onMounted(() => void load())
 
       </form>
       <footer class="modal-card__footer">
-        <button type="button" class="secondary-button" form="authorization-group-form" @click="modalOpen = false">
-          {{ t('common.cancel') }}</button><button type="submit" class="primary-button" :disabled="busy">
-          <NIcon :size="16">
-            <SaveOutline />
-          </NIcon>
+        <button data-ds-icon="cancel" type="button" class="secondary-button" form="authorization-group-form" @click="modalOpen = false">
+          {{ t('common.cancel') }}</button><button type="submit" class="primary-button" :disabled="busy" data-ds-icon="save">
+
           {{ busy ? t('common.saving') : t('common.save') }}
         </button>
       </footer>
     </section>
-  </div>
+  </AppDialogHost>
 </template>
 
-<style scoped>
-.security-list-panel,
-.security-detail-panel {
-  display: grid;
-  gap: 14px;
-  padding: 18px 20px 20px;
-}
-
-.security-toolbar {
-  display: flex;
-  align-items: end;
-  justify-content: space-between;
-  gap: 10px;
-  flex-wrap: wrap;
-}
+<style scoped>.detail-table { min-width: 560px; }
 
 .authorization-group-modal__header-actions {
   display: flex;
   justify-content: space-between;
   align-items: center;
   gap: 12px;
-}
-
-.security-tabs {
-  display: flex;
-  flex: 0 0 auto;
-  gap: 24px;
-  padding: 0 24px;
-  border-bottom: 1px solid #e3ebef;
-}
-
-.security-tabs button {
-  padding: 13px 2px 11px;
-  border: 0;
-  border-bottom: 2px solid transparent;
-  background: transparent;
-  color: #60798d;
-  font-size: 12px;
-}
-
-.security-tabs button.active {
-  border-bottom-color: #0873b8;
-  color: #075f9b;
-  font-weight: 700;
 }
 
 .security-detail-copy,
@@ -563,7 +523,7 @@ onMounted(() => void load())
 
 .security-note {
   margin: 0;
-  color: #6c8191;
+  color: var(--ds-text-secondary);
   font-size: 12px;
   line-height: 1.6;
 }
@@ -573,7 +533,7 @@ onMounted(() => void load())
   align-items: center;
   gap: 4px;
   min-height: 24px;
-  color: #34526b;
+  color: var(--ds-text-primary);
   font-size: 12px;
 }
 
@@ -586,53 +546,22 @@ onMounted(() => void load())
 .permission-group {
   gap: 4px;
   padding: 8px 12px;
-  border: 1px solid #dce6ec;
+  border: 1px solid var(--ds-border-subtle);
   border-radius: 6px;
 }
 
 .permission-group strong {
-  color: #173c59;
+  color: var(--ds-text-primary);
   font-family: ui-monospace, monospace;
   font-size: 12px;
-}
-
-.detail-table-wrap {
-  overflow-x: auto;
-  border: 1px solid #dbe5ea;
-  border-radius: 6px;
-}
-
-.detail-table {
-  width: 100%;
-  min-width: 560px;
-  border-collapse: collapse;
-  color: #183b57;
-  font-size: 12px;
-}
-
-.detail-table th,
-.detail-table td {
-  padding: 9px 10px;
-  border-bottom: 1px solid #e8eef1;
-  text-align: start;
-}
-
-.detail-table th {
-  background: #f7fafb;
-  color: #536b7b;
-  font-size: 11px;
-}
-
-.detail-table tbody tr:last-child td {
-  border-bottom: 0;
 }
 
 .effect {
   display: inline-flex;
   padding: 3px 7px;
-  border: 1px solid #b8dfcc;
-  background: #effbf4;
-  color: #1c8a62;
+  border: 1px solid var(--ds-success);
+  background: var(--ds-success-soft);
+  color: var(--ds-success);
   font-family: ui-monospace, monospace;
   font-size: 10px;
   font-weight: 700;
@@ -640,25 +569,13 @@ onMounted(() => void load())
 
 .inline-error {
   margin: 0 0 12px;
-  color: #b64444;
+  color: var(--ds-danger);
   font-size: 12px;
 }
 
-.modal-card {
-  width: min(100%, 760px);
-  max-height: calc(100vh - 40px);
-  display: flex;
-  flex-direction: column;
-  overflow: hidden;
-  border-radius: 7px;
-  background: #fff;
-  box-shadow: 0 20px 60px rgb(18 42 62 / 24%);
-}
-
-
 .modal-card__body label {
   gap: 5px;
-  color: #536b7b;
+  color: var(--ds-text-secondary);
   font-size: 12px;
   font-weight: 400;
 }
@@ -686,9 +603,5 @@ onMounted(() => void load())
     grid-template-columns: 1fr;
   }
 
-  .security-list-panel,
-  .security-detail-panel {
-    padding: 15px 12px;
   }
-}
 </style>

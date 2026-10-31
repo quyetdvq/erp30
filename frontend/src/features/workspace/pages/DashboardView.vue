@@ -15,7 +15,7 @@ const firstName = computed(() => auth.user?.username || 'bạn')
       <h1>{{ t('dashboard.title') }}</h1>
       <p>{{ t('dashboard.greeting', { name: firstName }) }}</p>
     </div>
-    <button class="primary-button" type="button">＋ {{ t('dashboard.quickCreate') }}</button>
+    <button data-ds-icon="add" class="primary-button" type="button">{{ t('dashboard.quickCreate') }}</button>
   </div>
   <div class="metric-grid">
     <div class="metric-card">
@@ -52,11 +52,11 @@ const firstName = computed(() => auth.user?.username || 'bạn')
   margin: auto;
   place-items: center;
   border-radius: 7px;
-  background: #e7f0f8;
-  color: #0d76b5;
+  background: var(--ds-primary-soft);
+  color: var(--ds-primary);
   font-size: 22px;
 }
-.metric-live {
-  color: #1c9a68 !important;
+.metric-card .metric-live {
+  color: var(--ds-success);
 }
 </style>

@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import AppDialogHost from '@/components/ui/AppDialogHost.vue'
 import { computed, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 
@@ -125,8 +126,8 @@ function save(): void {
 </script>
 
 <template>
-  <div v-if="props.open" class="modal-backdrop">
-    <section class="modal-card" role="dialog" aria-modal="true" :aria-label="title">
+  <AppDialogHost :open="props.open" size="md" @close="requestClose">
+    <section v-if="props.open" class="ds-dialog-surface modal-card" role="dialog" aria-modal="true" :aria-label="title">
       <header class="modal-card__header">
         <div>
           <h2 class="modal-card-title">
@@ -142,7 +143,7 @@ function save(): void {
           class="modal-card-button-close"
           :aria-label="t('common.close')"
           @click="requestClose"
-        ></button>
+         data-ds-icon="close"></button>
       </header>
       <form id="contact-form" class="modal-card__body" @submit.prevent="save">
         <div class="form-grid">
@@ -204,10 +205,8 @@ function save(): void {
         </label>
       </form>
       <footer class="modal-card__footer">
-        <button type="button" class="secondary-button" @click="requestClose">
-          <NIcon :size="20">
-            <Refresh />
-          </NIcon>
+        <button type="button" class="secondary-button" @click="requestClose" data-ds-icon="cancel">
+
           {{ t('common.cancel') }}
         </button>
         <button
@@ -215,30 +214,20 @@ function save(): void {
           class="primary-button"
           form="contact-form"
           :disabled="props.busy || !requiredFieldsFilled"
-        >
-          <NIcon :size="20">
-            <SaveOutline />
-          </NIcon>
+         data-ds-icon="save">
+
           {{ props.busy ? t('common.saving') : t('common.save') }}
         </button>
       </footer>
     </section>
-  </div>
+  </AppDialogHost>
 </template>
 
 <style scoped>
-.modal-card {
-  width: min(100%, 680px);
-  max-height: calc(100vh - 40px);
-  overflow: auto;
-  border-radius: 7px;
-  background: #fff;
-  box-shadow: 0 20px 60px rgb(18 42 62 / 24%);
-}
 
 .modal-card__header p {
   margin: 4px 0 0;
-  color: #8292a0;
+  color: var(--ds-text-secondary);
   font-size: 12px;
 }
 .modal-card__body {
@@ -249,7 +238,7 @@ function save(): void {
 .modal-card__body label {
   display: grid;
   gap: 5px;
-  color: #536b7b;
+  color: var(--ds-text-secondary);
   font-size: 12px;
   font-weight: 600;
 }
@@ -257,17 +246,17 @@ function save(): void {
 .modal-card__body select,
 .modal-card__body textarea {
   min-height: 34px;
-  border: 1px solid #c7d6df;
+  border: 1px solid var(--ds-border);
   border-radius: 4px;
   padding: 7px 9px;
-  color: #183b57;
+  color: var(--ds-text-primary);
   font: inherit;
 }
 .modal-card__body textarea {
   resize: vertical;
 }
 .required-mark {
-  color: #b42318;
+  color: var(--ds-danger);
 }
 .form-grid {
   display: grid;

@@ -318,11 +318,53 @@ test.describe('P1-FE-070 Pricing/COMBO UI', () => {
     await expect(page.getByRole('columnheader', { name: 'Phạm vi Organization' })).toBeVisible()
     await expect(page.getByRole('cell', { name: 'RETAIL', exact: true })).toBeVisible()
     await expect(page.getByRole('button', { name: 'Làm mới' })).toBeVisible()
-    await expect(page.getByLabel('Số dòng mỗi trang')).toHaveCount(2)
+    await expect(page.getByLabel('Số dòng mỗi trang')).toHaveCount(1)
     await expect(page.getByRole('img', { name: 'Đang hoạt động' })).toBeVisible()
     await expect(page.getByRole('menuitem', { name: 'Chính sách giá' })).toBeVisible()
     const accessibility = await new AxeBuilder({ page }).analyze()
     expect(accessibility.violations.filter(({ impact }) => impact === 'critical')).toEqual([])
+  })
+
+  test('main Price List table sorts by clicked header and never requests more than 100 rows', async ({ page }) => {
+    await mockSession(page)
+    await mockCatalog(page)
+    await page.goto('/products/price-lists')
+    await expect(page.getByRole('cell', { name: 'RETAIL', exact: true })).toBeVisible()
+
+    const pageSize = page.getByLabel('Số dòng mỗi trang')
+    await expect(pageSize).toHaveCount(1)
+    await expect(pageSize.locator('option[value="200"]')).toHaveCount(0)
+    await expect(pageSize.locator('option[value="100"]')).toHaveCount(1)
+
+    const requestWith = (key: string, value: string) => page.waitForRequest((request) => {
+      const url = new URL(request.url())
+      return request.method() === 'GET' && url.pathname.endsWith('/api/v1/price-lists') &&
+        url.searchParams.get(key) === value
+    })
+
+    const ascending = requestWith('sort', 'code')
+    await page.getByRole('columnheader', { name: 'Mã' }).getByRole('button').click()
+    await ascending
+    const descending = requestWith('sort', '-code')
+    await page.getByRole('columnheader', { name: 'Mã' }).getByRole('button').click()
+    await descending
+    const maximum = requestWith('page_size', '100')
+    await pageSize.selectOption('100')
+    await maximum
+
+    // The sticky Actions cell must not show a different surface than the row
+    // when hovered. Verify token resolution in both supported themes.
+    const row = page.getByRole('row').filter({ hasText: 'RETAIL' })
+    for (const theme of ['light', 'dark']) {
+      await page.evaluate((mode) => {
+        document.documentElement.setAttribute('data-ds-theme', mode)
+      }, theme)
+      await row.hover()
+      const regular = await row.locator('td').first().evaluate((cell) => getComputedStyle(cell).backgroundColor)
+      const actions = row.locator('td').last()
+      await expect(actions).toHaveCSS('position', 'sticky')
+      await expect(actions).toHaveCSS('background-color', regular)
+    }
   })
 
   test('creates a Price List with the canonical organization scope fields', async ({ page }) => {
@@ -331,9 +373,8 @@ test.describe('P1-FE-070 Pricing/COMBO UI', () => {
     await page.goto('/products/price-lists')
     await page.getByRole('button', { name: 'Tạo' }).click()
     const dialog = page.getByRole('dialog', { name: 'Biểu mẫu Price List' })
-    const backdrop = page.locator('.modal-backdrop')
-    await expect(backdrop).toHaveCSS('position', 'fixed')
-    await expect(backdrop).toHaveCSS('z-index', '1000')
+    // DS2 uses one Naive UI overlay host, not a legacy .modal-backdrop.
+    await expect(page.locator('.n-modal-mask').last()).toBeVisible()
     await expect(dialog).toBeVisible()
     await dialog.getByLabel('Mã').fill('WHOLESALE')
     await dialog.getByLabel('Tên').fill('Wholesale prices')
@@ -352,20 +393,20 @@ test.describe('P1-FE-070 Pricing/COMBO UI', () => {
     expect(requests.createBody).not.toHaveProperty('status')
   })
 
-  test('keeps the Price List modal open for backdrop clicks and Escape', async ({ page }) => {
+  test('uses the shared mask and lets Escape close a pristine Price List form', async ({ page }) => {
     await mockSession(page)
     await mockCatalog(page)
     await page.goto('/products/price-lists')
     await page.getByRole('button', { name: 'Tạo' }).click()
 
     const dialog = page.getByRole('dialog', { name: 'Biểu mẫu Price List' })
-    const backdrop = page.locator('.modal-backdrop')
+    const mask = page.locator('.n-modal-mask').last()
     await expect(dialog).toBeVisible()
-    await backdrop.click({ position: { x: 8, y: 8 } })
+    await mask.click({ position: { x: 8, y: 8 } })
     await expect(dialog).toBeVisible()
+    // DS2: Escape is delegated to the existing unsaved-changes guard. A pristine
+    // form closes; a modified draft may require user confirmation.
     await page.keyboard.press('Escape')
-    await expect(dialog).toBeVisible()
-    await dialog.getByRole('button', { name: 'Hủy' }).click()
     await expect(dialog).toBeHidden()
   })
 

@@ -11,6 +11,7 @@ import ListPagination from '@/components/lists/ListPagination.vue'
 import ListShell from '@/components/lists/ListShell.vue'
 import ListTable from '@/components/lists/ListTable.vue'
 import TableDetailModal from '@/components/lists/TableDetailModal.vue'
+import AppDialogHost from '@/components/ui/AppDialogHost.vue'
 import TableRowActions from '@/components/lists/TableRowActions.vue'
 import { useAuthStore } from '@/stores/auth'
 
@@ -105,7 +106,82 @@ describe('shared list components', () => {
     expect(table.emitted('sort-change')?.[0]).toEqual(['name'])
   })
 
-  it('focuses a detail modal and restores keyboard focus after Escape closes it', async () => {
+  it('uses next-action icons and labels for two-way Activate/Deactivate, with reactive updates', async () => {
+    setActivePinia(createPinia())
+    grantRowPermissions()
+    const actions = mount(TableRowActions, {
+      props: {
+        active: true,
+        showToggle: true,
+        togglePermission: 'product.setstate',
+        allowedActions: { setstate: true },
+      },
+      global: { plugins: [i18n] },
+    })
+    const toggle = () => actions.get('button.table-row-action--state')
+    expect(toggle().attributes('data-ds-icon')).toBe('deactivate')
+    expect(toggle().attributes('data-ds-state')).toBe('active')
+    expect(toggle().classes()).toContain('ds-state-toggle')
+    expect(toggle().attributes('aria-label')).toBe('Ngừng hoạt động')
+    expect(toggle().attributes('title')).toBe('Ngừng hoạt động')
+    await toggle().trigger('click')
+    expect(actions.emitted('toggle')).toHaveLength(1)
+
+    await actions.setProps({ active: false })
+    expect(toggle().attributes('data-ds-icon')).toBe('activate')
+    expect(toggle().attributes('data-ds-state')).toBe('inactive')
+    expect(toggle().attributes('aria-label')).toBe('Kích hoạt')
+    expect(toggle().attributes('title')).toBe('Kích hoạt')
+    await toggle().trigger('click')
+    expect(actions.emitted('toggle')).toHaveLength(2)
+
+    await actions.setProps({ busy: true })
+    expect(toggle().attributes('disabled')).toBeDefined()
+    await toggle().trigger('click')
+    expect(actions.emitted('toggle')).toHaveLength(2)
+
+    await actions.setProps({ busy: false, allowedActions: { setstate: false } })
+    expect(actions.find('button.table-row-action--state').exists()).toBe(false)
+    await actions.setProps({ allowedActions: { setstate: true }, active: undefined })
+    expect(actions.find('button.table-row-action--state').exists()).toBe(false)
+  })
+
+  it('alternates two sort directions and replaces rather than appends a previous field', async () => {
+    const table = mount(ListTable, {
+      props: {
+        rows: [{ id: '1', customer_code: 'CUS01', name: 'A' }],
+        columns: [
+          { key: 'name', labelKey: 'people.name', sortable: true },
+          { key: 'customer_code', labelKey: 'customer.code', sortable: true },
+        ],
+        sort: 'name',
+      },
+      global: { plugins: [i18n] },
+    })
+    const headers = table.findAll('th button')
+    await headers[1]!.trigger('click')
+    expect(table.emitted('sort-change')?.slice(-1)[0]).toEqual(['customer_code'])
+    await table.setProps({ sort: 'customer_code' })
+    expect(table.findAll('th')[1]!.attributes('aria-sort')).toBe('ascending')
+    await headers[1]!.trigger('click')
+    expect(table.emitted('sort-change')?.slice(-1)[0]).toEqual(['-customer_code'])
+    await table.setProps({ sort: '-customer_code' })
+    expect(table.findAll('th')[1]!.attributes('aria-sort')).toBe('descending')
+    await headers[1]!.trigger('click')
+    expect(table.emitted('sort-change')?.slice(-1)[0]).toEqual(['customer_code'])
+    await table.setProps({ sort: 'customer_code' })
+    await headers[0]!.trigger('click')
+    expect(table.emitted('sort-change')?.slice(-1)[0]).toEqual(['name'])
+    await table.setProps({ sort: 'name' })
+    await headers[0]!.trigger('click')
+    expect(table.emitted('sort-change')?.slice(-1)[0]).toEqual(['-name'])
+    table.unmount()
+  })
+
+  it('delegates detail modal dismissal to the shared host and restores opener focus', async () => {
+    // DS2 moved the real NModal into a Teleport. It is deliberately absent
+    // from wrapper.find(), and Naive UI now owns Tab/Escape focus trapping.
+    // AppDialogHost.spec.ts tests the host's focus-trap/Escape props separately.
     const opener = document.createElement('button')
     document.body.append(opener)
     opener.focus()
@@ -118,22 +194,21 @@ describe('shared list components', () => {
       },
       global: { plugins: [i18n], components: { NIcon, EyeOutline, Refresh } },
     })
-    await wrapper.setProps({ open: true })
-    await nextTick()
-    const headerClose = wrapper.get('[role="dialog"] header button')
-    const footerClose = wrapper.get('[role="dialog"] footer button')
-    expect(document.activeElement).toBe(headerClose.element)
-    await headerClose.trigger('keydown', { key: 'Tab', shiftKey: true })
-    expect(document.activeElement).toBe(footerClose.element)
-    await footerClose.trigger('keydown', { key: 'Tab' })
-    expect(document.activeElement).toBe(headerClose.element)
-    await wrapper.get('[role="dialog"]').trigger('keydown', { key: 'Escape' })
-    expect(wrapper.emitted('close')).toHaveLength(1)
-    await wrapper.setProps({ open: false })
-    await nextTick()
-    expect(document.activeElement).toBe(opener)
-    wrapper.unmount()
-    opener.remove()
+    try {
+      await wrapper.setProps({ open: true })
+      await nextTick()
+      const host = wrapper.getComponent(AppDialogHost)
+      expect(host.props('open')).toBe(true)
+      host.vm.$emit('close')
+      expect(wrapper.emitted('close')).toHaveLength(1)
+      await wrapper.setProps({ open: false })
+      await nextTick()
+      expect(host.props('open')).toBe(false)
+      expect(document.activeElement).toBe(opener)
+    } finally {
+      wrapper.unmount()
+      opener.remove()
+    }
   })
 
   it('renders canonical string values and accessible sortable headers', () => {

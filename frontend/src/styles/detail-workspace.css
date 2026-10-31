@@ -1,0 +1,109 @@
+/* DS3: shared Customer/Supplier detail presentation. Business forms,
+ * permissions, row_version/CAS, history and contact state remain separate. */
+.ds-detail-workspace { min-width: 0; min-height: 0; }
+.ds-detail-workspace--fixed {
+  height: min(760px, calc(100dvh - 40px));
+}
+.ds-detail-heading-code { color: var(--ds-text-secondary); font-size: var(--ds-font-md); font-weight: 400; }
+.ds-detail-workspace > .modal-card__footer { align-items: center; flex-wrap: wrap; }
+.ds-detail-tabs {
+  display: flex; flex: 0 0 auto; gap: var(--ds-space-1);
+  padding: var(--ds-space-2) var(--ds-space-5) 0;
+  overflow-x: auto; border-bottom: 1px solid var(--ds-border-subtle);
+  background: var(--ds-bg-elevated);
+}
+.ds-detail-tabs > button {
+  flex: 0 0 auto; padding: 10px 12px;
+  border: 0; border-bottom: 2px solid transparent;
+  background: transparent; color: var(--ds-text-secondary);
+  font: inherit; font-size: var(--ds-font-sm); cursor: pointer;
+}
+.ds-detail-tabs > button:hover:not(:disabled) { color: var(--ds-primary); background: var(--ds-bg-hover); }
+.ds-detail-tabs > button[aria-selected='true'] {
+  border-bottom-color: var(--ds-primary); color: var(--ds-primary); font-weight: 700;
+}
+/* Security/Workflow detail tabs use the same states at a roomier density. */
+.ds-detail-tabs--spaced { gap: var(--ds-space-6); padding: 0 var(--ds-space-6); }
+.ds-detail-tabs--spaced > button { padding: 13px 2px 11px; font-size: var(--ds-font-xs); }
+.ds-detail-tabs > button.active { border-bottom-color: var(--ds-primary); color: var(--ds-primary); font-weight: 700; }
+.ds-detail-tabs > button:focus-visible { outline: 2px solid var(--ds-focus-ring); outline-offset: -2px; }
+.ds-detail-body {
+  flex: 1 1 auto; min-width: 0; min-height: 0;
+  overflow-x: hidden; overflow-y: auto; overscroll-behavior: contain;
+  scrollbar-gutter: stable; padding: 18px 20px 24px;
+  color: var(--ds-text-primary);
+}
+.ds-detail-form-grid {
+  display: grid; grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--ds-space-4);
+}
+.ds-detail-form-grid > label, .ds-detail-field {
+  display: grid; gap: 6px; min-width: 0;
+  color: var(--ds-text-secondary); font-size: var(--ds-font-xs); font-weight: 600;
+}
+/* Do not add a second border to NSelect/NInput's internal input. */
+.ds-detail-form-grid :is(input:not([type='checkbox'], [type='radio']), select, textarea):not(.n-base-selection *, .n-input *),
+.ds-detail-field > :is(input, select, textarea) {
+  width: 100%; min-width: 0;
+  min-height: var(--ds-button-height-md); padding: 7px 9px;
+  border: 1px solid var(--ds-border); border-radius: var(--ds-radius-sm);
+  background: var(--ds-bg-surface); color: var(--ds-text-primary);
+  font: inherit; font-size: var(--ds-font-sm);
+}
+.ds-detail-form-grid :is(input, select, textarea):not(.n-base-selection *, .n-input *):hover:not(:disabled),
+.ds-detail-field > :is(input, select, textarea):hover:not(:disabled) { border-color: var(--ds-border-strong); }
+.ds-detail-form-grid :is(input, select, textarea):not(.n-base-selection *, .n-input *):focus-visible,
+.ds-detail-field > :is(input, select, textarea):focus-visible {
+  border-color: var(--ds-focus-ring); outline: 2px solid var(--ds-focus-ring); outline-offset: 1px;
+}
+.ds-detail-form-grid :is(input, select, textarea):not(.n-base-selection *, .n-input *):disabled,
+.ds-detail-form-grid :is(input, textarea):not(.n-base-selection *, .n-input *):read-only,
+.ds-detail-field > :is(input, select, textarea):disabled {
+  background: var(--ds-bg-subtle); color: var(--ds-text-secondary);
+}
+.ds-detail-form-grid :is(input, select, textarea):not(.n-base-selection *, .n-input *)[aria-invalid='true'] {
+  border-color: var(--ds-danger);
+}
+.ds-detail-form-wide { grid-column: 1 / -1; }
+.ds-detail-required { color: var(--ds-danger); font-weight: 700; }
+.ds-detail-error { color: var(--ds-danger); font-size: var(--ds-font-xs); font-weight: 500; }
+.ds-detail-help { color: var(--ds-text-secondary); font-size: var(--ds-font-xs); }
+@media (max-width: 640px) {
+  .ds-detail-workspace--fixed { height: calc(100dvh - 16px); }
+  .ds-detail-form-grid { grid-template-columns: minmax(0, 1fr); }
+  .ds-detail-form-wide { grid-column: auto; }
+  .ds-detail-tabs { padding-inline: var(--ds-space-2); }
+  .ds-detail-tabs--spaced { gap: var(--ds-space-3); }
+}
+
+/* DS5: one accessible, semantic tab style for account + system settings.
+ * Routing, visibility and permissions continue to be owned by the views. */
+.ds-settings-tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--ds-space-2);
+  margin-bottom: var(--ds-space-4);
+}
+.ds-settings-tabs > button {
+  padding: 9px 15px;
+  border: 1px solid var(--ds-border);
+  border-radius: var(--ds-radius-sm);
+  background: transparent;
+  color: var(--ds-text-primary);
+  font: inherit;
+  cursor: pointer;
+}
+.ds-settings-tabs > button:hover:not(:disabled) {
+  background: var(--ds-bg-hover);
+  color: var(--ds-primary);
+}
+.ds-settings-tabs > button[aria-selected='true'] {
+  border-color: var(--ds-primary);
+  background: var(--ds-primary);
+  color: var(--ds-primary-contrast);
+  font-weight: 600;
+}
+.ds-settings-tabs > button:focus-visible {
+  outline: 2px solid var(--ds-focus-ring);
+  outline-offset: 2px;
+}

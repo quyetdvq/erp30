@@ -1,9 +1,10 @@
 <script setup lang="ts">
+import AppDialogHost from '@/components/ui/AppDialogHost.vue'
 import { rowAllowedActions } from '@/components/lists/rowActionPolicy'
 import { computed, onMounted, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
-import { NIcon } from 'naive-ui'
-import { CloseOutline, RefreshOutline, TrashOutline } from '@vicons/ionicons5'
+
+
 import type {
   Organization,
   PriceList,
@@ -23,6 +24,7 @@ import {
   TableRowActions,
 } from '@/components/lists'
 import type { ListColumn, ListQuery } from '@/components/lists/listTypes'
+import { pageSizeOptionsFor } from '@/components/lists/listPageSizePolicy'
 import { useBasePermission } from '@/composables/useBasePermission'
 import { useFormatters } from '@/composables/useFormatters'
 import { usePresentationSettings } from '@/composables/usePresentationSettings'
@@ -64,6 +66,8 @@ const auth = useAuthStore()
 const formatters = useFormatters()
 const presentation = usePresentationSettings()
 const state = useListState<PriceList>((query) => listPriceListPage(query), { sort: 'priority' })
+// PriceListRules::query caps page_size at 100, unlike generic catalog lists.
+const priceListPageSizeOptions = pageSizeOptionsFor(100)
 const organizations = ref<Organization[]>([])
 const products = ref<ProductOption[]>([])
 const ownerLabels = ref<Record<string, OrganizationLabel>>({})
@@ -280,6 +284,13 @@ function resetQuery(): void {
   state.reset()
   void load()
 }
+function handleTableSort(sort: string): void {
+  // ListTable now emits one field per header click; retain the last-term guard
+  // for any legacy sort state supplied by query controls.
+  const terms = sort.split(',').filter(Boolean)
+  state.setSort(terms[terms.length - 1] ?? '')
+  void load()
+}
 function openCreate(): void {
   editingId.value = undefined
   editingRow.value = null
@@ -482,7 +493,7 @@ onMounted(() => void load())
       <h1>{{ t('pricing.title') }}</h1>
       <p>{{ t('pricing.description') }}</p>
     </div>
-    <button
+    <button data-ds-icon="add"
       v-if="hasBasePermission('price_list', 'create')"
       type="button"
       class="primary-button"
@@ -491,7 +502,7 @@ onMounted(() => void load())
       {{ t('common.create') }}
     </button>
   </div>
-  <section class="content-panel pricing-panel">
+  <section class="content-panel pricing-panel ds-page-panel">
     <div class="pricing-query-toolbar">
       <ListQueryControls
         :model-value="state.query"
@@ -499,21 +510,25 @@ onMounted(() => void load())
         :filters="statusFilters"
         @apply="applyQuery"
         @reset="resetQuery"
-      />
-      <button
-        type="button"
-        class="secondary-button pricing-refresh"
-        :disabled="listBusy"
-        :aria-label="t('common.refresh')"
-        @click="void refresh()"
       >
-        <NIcon :component="RefreshOutline" aria-hidden="true" />
-        {{ t('common.refresh') }}
-      </button>
+        <template #actions>
+          <button
+            type="button"
+            class="secondary-button pricing-refresh"
+            :disabled="listBusy"
+            :aria-label="t('common.refresh')"
+            @click="void refresh()"
+           data-ds-icon="refresh">
+
+            {{ t('common.refresh') }}
+          </button>
+        </template>
+      </ListQueryControls>
     </div>
     <ListPagination
       :page="state.query.page"
       :page-size="state.query.page_size"
+      :page-size-options="priceListPageSizeOptions"
       :total="state.total.value"
       :disabled="listBusy"
       :aria-label="t('pricing.topPagination')"
@@ -542,7 +557,8 @@ onMounted(() => void load())
         :rows="state.rows.value"
         :columns="columns"
         :sort="state.query.sort"
-        :busy="state.isBackgroundRefreshing.value"
+        :busy="listBusy"
+        @sort-change="handleTableSort"
       >
         <template #cell-organization_id="{ row }">{{
           organizationName(row.organization_id)
@@ -554,7 +570,7 @@ onMounted(() => void load())
           <TableRowActions authorization-mode="effective" :view-scope-verified="true" :allowed-actions="rowAllowedActions(row)"
             :active="row.status === 'ACTIVE'"
             :state-target-id="String(row.id)"
-            :busy="busy"
+            :busy="listBusy || busy"
             :show-view="hasBasePermission('price_list', 'view')"
             :show-edit="hasBasePermission('price_list', 'edit')"
             :show-toggle="hasBasePermission('price_list', 'setstate')"
@@ -571,7 +587,7 @@ onMounted(() => void load())
           />
         </template>
       </ListTable>
-      <ListPagination
+      <ListPagination :show-page-size="false"
         :page="state.query.page"
         :page-size="state.query.page_size"
         :total="state.total.value"
@@ -593,8 +609,8 @@ onMounted(() => void load())
     </ListShell>
   </section>
 
-  <div v-if="modalOpen" class="modal-backdrop">
-    <section class="modal-card" role="dialog" aria-modal="true" :aria-label="t('pricing.form')">
+  <AppDialogHost :open="modalOpen" size="md" @close="closeForm">
+    <section v-if="modalOpen" class="ds-dialog-surface modal-card" role="dialog" aria-modal="true" :aria-label="t('pricing.form')">
       <header class="modal-card__header">
         <h2 class="modal-card-title">
           {{ editingId ? t('common.edit') : t('common.create') }} {{ t('pricing.priceList') }}
@@ -604,9 +620,9 @@ onMounted(() => void load())
           class="modal-card-button-close"
           :aria-label="t('common.close')"
           @click="closeForm"
-        ></button>
+         data-ds-icon="close"></button>
       </header>
-      <form class="modal-card__body" id="create-pricing-list" @submit.prevent="save">
+      <form class="modal-card__body ds-dialog-form-fields" id="create-pricing-list" @submit.prevent="save">
         <label
           ><span>{{ t('pricing.code') }}</span
           ><input v-model="form.code" required
@@ -649,11 +665,11 @@ onMounted(() => void load())
         <p v-if="error" class="inline-error" role="alert">{{ t('pricing.requestError') }}</p>
       </form>
       <footer class="modal-card__footer">
-        <button type="button" class="secondary-button" for="create-pricing-list" @click="closeForm">
-          <NIcon :size="20"> <Refresh /> </NIcon>
+        <button type="button" class="secondary-button" for="create-pricing-list" @click="closeForm" data-ds-icon="cancel">
+
           {{ t('common.cancel') }}
         </button>
-        <button
+        <button data-ds-icon="edit"
           v-if="editingId && mayEditRow(editingRow)"
           type="button"
           class="secondary-button"
@@ -667,17 +683,17 @@ onMounted(() => void load())
           form="create-pricing-list"
           class="primary-button"
           :disabled="busy || !organizationLookupReady"
-        >
-          <NIcon :size="20"> <SaveOutline /> </NIcon>
+         data-ds-icon="save">
+
           {{ busy ? t('common.saving') : t('common.save') }}
         </button>
       </footer>
     </section>
-  </div>
+  </AppDialogHost>
 
-  <div v-if="detailOpen && detailRow" class="modal-backdrop">
-    <section
-      class="modal-card price-items-modal"
+  <AppDialogHost :open="Boolean(detailOpen && detailRow)" size="xl" @close="closeDetail">
+    <section v-if="detailOpen && detailRow"
+      class="ds-dialog-surface modal-card price-items-modal"
       role="dialog"
       aria-modal="true"
       :aria-label="detailMode === 'view' ? t('pricing.viewItems') : t('pricing.editItems')"
@@ -692,12 +708,10 @@ onMounted(() => void load())
         </div>
         <button
           type="button"
-          class="icon-button"
+          class="modal-card-button-close"
           :aria-label="t('common.close')"
           @click="closeDetail"
-        >
-          <NIcon :component="CloseOutline" aria-hidden="true" />
-        </button>
+         data-ds-icon="close"></button>
       </header>
       <div class="modal-card__body">
         <dl class="detail-grid">
@@ -725,7 +739,7 @@ onMounted(() => void load())
         <section class="items-section">
           <header class="section-header">
             <h3>{{ t('pricing.items') }}</h3>
-            <button
+            <button data-ds-icon="add"
               v-if="canEditItems"
               type="button"
               class="secondary-button"
@@ -789,8 +803,8 @@ onMounted(() => void load())
                       class="icon-button danger"
                       :aria-label="t('common.delete')"
                       @click="removeItem(index)"
-                    >
-                      <NIcon :component="TrashOutline" aria-hidden="true" />
+                     data-ds-icon="delete">
+
                     </button>
                   </td>
                 </tr>
@@ -806,28 +820,28 @@ onMounted(() => void load())
             class="primary-button"
             :disabled="itemBusy || !itemLookupsReady"
             @click="saveItems"
-          >
-            <NIcon :size="20"> <SaveOutline /> </NIcon>
+           data-ds-icon="save">
+
             {{ itemBusy ? t('common.saving') : t('common.save') }}
           </button>
         </section>
       </div>
       <footer class="modal-card__footer">
-        <button type="button" class="secondary-button" @click="closeDetail">
-          <NIcon :size="20"> <Refresh /> </NIcon>
+        <button type="button" class="secondary-button" @click="closeDetail" data-ds-icon="close">
+
           {{ t('common.close') }}
         </button>
       </footer>
     </section>
-  </div>
+  </AppDialogHost>
 </template>
 
 <style scoped>
-.pricing-panel {
-  display: grid;
-  min-width: 0;
-  gap: 14px;
-  padding: 18px 20px 20px;
+
+/* Eight price-list columns need enough width to remain legible. The shared
+   ListTable wrapper provides horizontal scrolling; only the action cell sticks. */
+.pricing-panel :deep(.list-table) {
+  min-width: 1080px;
 }
 
 /* On narrow workspaces the action cell must remain reachable without
@@ -837,56 +851,30 @@ onMounted(() => void load())
   position: sticky;
   right: 0;
   z-index: 1;
-  background: #fff;
-  box-shadow: -1px 0 0 #dbe5ea;
+  background: var(--ds-bg-surface);
+  box-shadow: -1px 0 0 var(--ds-border-subtle);
 }
 
 .pricing-panel :deep(.list-table th:last-child) {
   z-index: 2;
-  background: #f7fafb;
+  background: var(--ds-bg-subtle);
 }
 
-.pricing-query-toolbar {
-  display: flex;
-  align-items: end;
-  gap: 10px;
-  flex-wrap: wrap;
+/* Keyboard focus highlights the full row; the sticky Actions cell must
+   match the same hover/focus surface in both light and dark mode. */
+.pricing-panel :deep(.list-table tbody tr:focus-within td),
+.pricing-panel :deep(.list-table tbody tr:hover td:last-child),
+.pricing-panel :deep(.list-table tbody tr:focus-within td:last-child) {
+  background: var(--ds-bg-hover);
 }
 
-.pricing-query-toolbar :deep(.list-query-controls) {
-  flex: 1 1 auto;
-}
+.pricing-query-toolbar { min-width: 0; }
 
 .pricing-refresh {
   display: inline-flex;
   align-items: center;
   gap: 6px;
   white-space: nowrap;
-}
-
-.inline-error {
-  margin: 0;
-  color: #b64444;
-  font-size: 12px;
-}
-
-.modal-backdrop {
-  position: fixed;
-  inset: 0;
-  z-index: 1000;
-  display: grid;
-  place-items: center;
-  padding: 20px;
-  background: rgb(18 38 54 / 45%);
-}
-
-.modal-card {
-  width: min(100%, 680px);
-  max-height: calc(100vh - 40px);
-  overflow: hidden;
-  border-radius: 7px;
-  background: #fff;
-  box-shadow: 0 20px 60px rgb(18 42 62 / 24%);
 }
 
 .modal-card__body {
@@ -897,33 +885,8 @@ onMounted(() => void load())
   padding: 22px;
 }
 
-.modal-card__body label {
-  display: grid;
-  gap: 5px;
-  color: #536b7b;
-  font-size: 12px;
-  font-weight: 600;
-}
-
-.modal-card__body input,
-.modal-card__body select,
-.modal-card__body textarea {
-  min-height: 34px;
-  border: 1px solid #c7d6df;
-  border-radius: 4px;
-  padding: 7px 9px;
-  color: #183b57;
-  font: inherit;
-}
-
 /* Keep header/footer visible and scroll the BODY of the item editor.
    Previously the body and footer could exceed the clipped modal in WebKit. */
-.price-items-modal {
-  display: flex;
-  flex-direction: column;
-  width: min(1060px, 100%);
-  max-height: calc(100vh - 36px);
-}
 
 .price-items-modal .modal-card__body {
   flex: 1 1 auto;
@@ -938,7 +901,7 @@ onMounted(() => void load())
 
 .eyebrow {
   margin: 0 0 3px;
-  color: #1876a8;
+  color: var(--ds-primary);
   font-size: 11px;
   font-weight: 700;
 }
@@ -957,11 +920,11 @@ onMounted(() => void load())
 .detail-grid dd {
   margin: 0;
   padding: 8px 0;
-  border-bottom: 1px solid #edf2f4;
+  border-bottom: 1px solid var(--ds-border-subtle);
 }
 
 .detail-grid dt {
-  color: #536b7b;
+  color: var(--ds-text-secondary);
   font-size: 12px;
   font-weight: 700;
 }
@@ -988,13 +951,13 @@ onMounted(() => void load())
 
 .field-note {
   margin: 0;
-  color: #536b7b;
+  color: var(--ds-text-secondary);
   font-size: 12px;
 }
 
 .table-wrap {
   overflow-x: auto;
-  border: 1px solid #dbe5ea;
+  border: 1px solid var(--ds-border-subtle);
   border-radius: 6px;
 }
 
@@ -1008,26 +971,26 @@ onMounted(() => void load())
 .detail-table th,
 .detail-table td {
   padding: 9px 10px;
-  border-bottom: 1px solid #e8eef1;
+  border-bottom: 1px solid var(--ds-border-subtle);
   text-align: start;
   vertical-align: middle;
 }
 
 .detail-table th {
-  background: #f7fafb;
-  color: #536b7b;
+  background: var(--ds-bg-subtle);
+  color: var(--ds-text-secondary);
   font-size: 12px;
 }
 
 .detail-table input {
   min-height: 34px;
   width: 100%;
-  border: 1px solid #c7d6df;
+  border: 1px solid var(--ds-border);
   border-radius: 4px;
   padding: 7px 9px;
 }
 
 .danger {
-  color: #b64444;
+  color: var(--ds-danger);
 }
 </style>

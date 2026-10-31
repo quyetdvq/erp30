@@ -1,9 +1,11 @@
 <script setup lang="ts">
+import AppDialogHost from '@/components/ui/AppDialogHost.vue'
+import SearchableSelect from '@/components/forms/SearchableSelect.vue'
 import { rowAllowedActions } from '@/components/lists/rowActionPolicy'
-import { computed, nextTick, onMounted, ref, watch } from 'vue'
+import { computed, nextTick, ref, shallowRef, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { NIcon } from 'naive-ui'
-import { RefreshOutline } from '@vicons/ionicons5'
+
 
 import type {
   NumberingSeriesCreate,
@@ -24,7 +26,12 @@ import {
   changeNumberingSeriesState,
   getNumberingSeriesById,
   listNumberingSeriesPage,
+  listAllNumberingSeries,
+  numberSeriesSnapshotForAll,
+  numberSeriesSnapshotForResource,
+  numberSeriesSnapshotWithMutation,
   saveNumberingSeries,
+  type NumberingSeriesSnapshot,
   validateNumberingSeries,
   type NumberingSeriesRow,
 } from '@/services/autoNumbering'
@@ -37,12 +44,42 @@ const { hasBasePermissionKey } = useBasePermission()
 const canConfigure = computed(() => hasBasePermissionKey('resource.configure_numbering'))
 
 const resources = ref<Resource[]>([])
+// Effective row-action hints come from the authorized Resource catalog. They
+// narrow UI choices; every numbering request is still authorized by the API.
+const configurableResources = computed(() =>
+  resources.value.filter((item) => rowAllowedActions(item)?.configure_numbering === true),
+)
+const resourceById = computed(() =>
+  new Map(resources.value.map((item) => [String(item.id), item])),
+)
+const configurableResourceIds = computed(() =>
+  configurableResources.value.map((item) => String(item.id)),
+)
+const resourceFilterOptions = computed(() =>
+  configurableResources.value.map((item) => ({
+    value: String(item.id),
+    label: `${item.type} - ${item.name}`,
+  })),
+)
+// Empty means All resource; this is a listing filter, not the form's Resource.
 const selectedResourceId = ref('')
-const rows = ref<NumberingSeriesRow[]>([])
+const formResourceId = ref('')
+// Kept only for the lifetime of this view and cleared on permission/catalog
+// changes. All and per-Resource filters share the same complete snapshots.
+const seriesSnapshots = shallowRef<NumberingSeriesSnapshot>(new Map())
+const rows = computed<NumberingSeriesRow[]>(() => {
+  const ids = selectedResourceId.value ? [selectedResourceId.value] : configurableResourceIds.value
+  // Never render an incomplete All-Resource aggregation as a full result.
+  if (ids.some((id) => !seriesSnapshots.value.has(id))) return []
+  return ids.flatMap((id) => [...(seriesSnapshots.value.get(id) ?? [])])
+})
 const page = ref(1)
 const pageSize = ref(50)
 const loadingResources = ref(false)
 const loadingSeries = ref(false)
+// Prevent repeated Resource GET -> 403 -> auth refresh -> Resource GET loops.
+// Explicit Refresh can retry after the server has updated the permission snapshot.
+const deniedReadUntilRefresh = ref(false)
 const busy = ref(false)
 const error = ref<unknown | null>(null)
 const modalOpen = ref(false)
@@ -73,11 +110,10 @@ const form = ref({
   status: 'ACTIVE' as NumberingSeriesCreate['status'],
 })
 
-const { markClean, confirmDiscard } = useUnsavedChanges(form, modalOpen)
+const formDraft = computed(() => ({ ...form.value, resource_id: formResourceId.value }))
+const { markClean, confirmDiscard } = useUnsavedChanges(formDraft, modalOpen)
 
-const resource = computed(() =>
-  resources.value.find((candidate) => String(candidate.id) === selectedResourceId.value),
-)
+const resource = computed(() => resourceById.value.get(formResourceId.value))
 const pageCount = computed(() => Math.max(1, Math.ceil(rows.value.length / pageSize.value)))
 const visibleRows = computed(() => {
   const start = (page.value - 1) * pageSize.value
@@ -121,6 +157,7 @@ const detailFields = computed(() => {
 })
 
 const columns: readonly ListColumn<NumberingSeriesRow>[] = [
+  { key: 'resource_id', labelKey: 'numbering.resource', value: (row) => resourceLabel(row.resource_id) },
   { key: 'series_code', labelKey: 'numbering.seriesCode', sortable: false },
   { key: 'name', labelKey: 'numbering.name', sortable: false },
   {
@@ -162,7 +199,7 @@ const tokens = [
 ] as const
 
 function resourceLabel(resourceId: string): string {
-  const item = resources.value.find((candidate) => String(candidate.id) === String(resourceId))
+  const item = resourceById.value.get(String(resourceId))
   return item ? `${item.type} - ${item.name}` : `#${resourceId}`
 }
 
@@ -212,7 +249,13 @@ function isIssued(row: NumberingSeriesRow | null): boolean {
 }
 
 function currentRow(): NumberingSeriesRow | null {
-  return rows.value.find((row) => String(row.id) === editingId.value) ?? null
+  return (seriesSnapshots.value.get(formResourceId.value) ?? [])
+    .find((row) => String(row.id) === editingId.value) ?? null
+}
+
+function setResourceFilter(value: string | string[]): void {
+  // Clearing the searchable select means All resource; it is not a real API ID.
+  selectedResourceId.value = typeof value === 'string' ? value : ''
 }
 
 function applyPageSize(value: number): void {
@@ -220,45 +263,136 @@ function applyPageSize(value: number): void {
   page.value = Math.min(page.value, pageCount.value)
 }
 
+let resourceLoadGeneration = 0
+let seriesLoadGeneration = 0
+
+function clearSeriesSnapshots(): void {
+  ++seriesLoadGeneration
+  seriesSnapshots.value = new Map()
+  loadingSeries.value = false
+}
+
+function stopAfterDeniedRead(caught: unknown): boolean {
+  if (normalizeApiError(caught)?.status !== 403) return false
+  deniedReadUntilRefresh.value = true
+  clearSeriesSnapshots()
+  resources.value = []
+  error.value = caught
+  reportApiError(caught)
+  return true
+}
+
+async function refreshSeries(): Promise<void> {
+  if (!canConfigure.value) return
+  if (deniedReadUntilRefresh.value) {
+    deniedReadUntilRefresh.value = false
+    await loadResources() // re-check the authorized catalog before any series GET.
+  } else {
+    await loadSeries(true)
+  }
+}
+
 async function loadResources(): Promise<void> {
+  const generation = ++resourceLoadGeneration
+  clearSeriesSnapshots()
+  resources.value = []
   loadingResources.value = true
   error.value = null
   try {
-    const result = await loadLookupPages(listResourcePage, { sort: 'type' })
+    const result = await loadLookupPages((query) => listResourcePage(query, true), { sort: 'type' })
+    if (generation !== resourceLoadGeneration || !canConfigure.value) return
     resources.value = result
-    if (!selectedResourceId.value && result[0]) selectedResourceId.value = String(result[0].id)
+    // Losing a Resource hint cannot leave its old filter or cached rows visible.
+    if (selectedResourceId.value && !configurableResourceIds.value.includes(selectedResourceId.value)) {
+      selectedResourceId.value = '' // Its watcher performs the only list read.
+    } else {
+      await loadSeries()
+    }
   } catch (caught: unknown) {
+    if (stopAfterDeniedRead(caught)) return
+    if (generation !== resourceLoadGeneration || !canConfigure.value) return
+    clearSeriesSnapshots()
     error.value = caught
     reportApiError(caught)
   } finally {
-    loadingResources.value = false
+    if (generation === resourceLoadGeneration) loadingResources.value = false
   }
 }
 
-async function loadSeries(): Promise<void> {
-  if (!selectedResourceId.value) {
-    rows.value = []
-    page.value = 1
+/**
+ * Resource filter changes are local when a complete snapshot is available.
+ * Only initial/missing data and explicit Refresh contact the existing
+ * Resource-scoped API. No global All Resource endpoint is introduced.
+ */
+async function loadSeries(force = false): Promise<void> {
+  const generation = ++seriesLoadGeneration
+  if (!canConfigure.value || deniedReadUntilRefresh.value) {
+    if (!canConfigure.value) seriesSnapshots.value = new Map()
+    loadingSeries.value = false
+    return
+  }
+  const resourceId = selectedResourceId.value
+  const ids = resourceId ? [resourceId] : configurableResourceIds.value
+  // A stale Resource selector must never issue an unapproved API request.
+  if (resourceId && !configurableResourceIds.value.includes(resourceId)) {
+    seriesSnapshots.value = new Map()
+    loadingSeries.value = false
+    return
+  }
+  error.value = null
+  if (!force && ids.every((id) => seriesSnapshots.value.has(id))) {
+    loadingSeries.value = false
     return
   }
   loadingSeries.value = true
-  error.value = null
   try {
-    const result = await listNumberingSeriesPage(selectedResourceId.value)
-    rows.value = result.data
-    page.value = 1
+    if (resourceId) {
+      const result = await listNumberingSeriesPage(resourceId)
+      if (generation !== seriesLoadGeneration || !canConfigure.value) return
+      seriesSnapshots.value = numberSeriesSnapshotForResource(seriesSnapshots.value, resourceId, result.data)
+    } else {
+      const data = await listAllNumberingSeries(ids)
+      if (generation !== seriesLoadGeneration || !canConfigure.value) return
+      seriesSnapshots.value = numberSeriesSnapshotForAll(ids, data)
+    }
+    page.value = Math.min(page.value, pageCount.value)
   } catch (caught: unknown) {
-    rows.value = []
+    if (stopAfterDeniedRead(caught)) return
+    if (generation !== seriesLoadGeneration || !canConfigure.value) return
+    // Fail closed: never keep stale cached records after a Resource-scoped
+    // authorization or data-integrity failure.
+    seriesSnapshots.value = new Map()
     error.value = caught
     reportApiError(caught)
   } finally {
-    loadingSeries.value = false
+    if (generation === seriesLoadGeneration) loadingSeries.value = false
   }
 }
 
+/** Use the canonical mutation response instead of N Resource GETs. */
+async function reconcileMutation(resourceId: string, row: NumberingSeriesRow): Promise<void> {
+  ++seriesLoadGeneration // Pending list responses must not overwrite this write.
+  loadingSeries.value = false
+  if (!canConfigure.value || !configurableResourceIds.value.includes(resourceId)) {
+    clearSeriesSnapshots()
+    return
+  }
+  const hasSnapshot = seriesSnapshots.value.has(resourceId)
+  seriesSnapshots.value = numberSeriesSnapshotWithMutation(seriesSnapshots.value, resourceId, row)
+  // A write cannot establish completeness for a Resource that was not loaded.
+  if (!hasSnapshot) await loadSeries(true)
+  page.value = Math.min(page.value, pageCount.value)
+}
+
+function isAccessDenied(caught: unknown): boolean {
+  const status = normalizeApiError(caught)?.status
+  return status === 401 || status === 403
+}
+
 function openCreate(): void {
-  if (!selectedResourceId.value) return
+  if (!configurableResources.value.length || loadingResources.value) return
   editingId.value = undefined
+  formResourceId.value = selectedResourceId.value
   resetForm()
   markClean()
   modalOpen.value = true
@@ -283,23 +417,36 @@ function fillForm(row: NumberingSeriesRow): void {
 
 function openEdit(row: NumberingSeriesRow): void {
   editingId.value = String(row.id)
-  selectedResourceId.value = String(row.resource_id)
+  formResourceId.value = String(row.resource_id)
   fillForm(row)
   markClean()
   modalOpen.value = true
 }
 
+let viewLoadGeneration = 0
 async function openView(row: NumberingSeriesRow): Promise<void> {
+  const generation = ++viewLoadGeneration
   viewOpen.value = true
   viewLoading.value = true
   viewRow.value = row
   try {
-    viewRow.value = await getNumberingSeriesById(String(row.resource_id), String(row.id))
+    const detail = await getNumberingSeriesById(String(row.resource_id), String(row.id))
+    if (generation !== viewLoadGeneration || !viewOpen.value || !canConfigure.value) return
+    if (String(detail.id) !== String(row.id) || String(detail.resource_id) !== String(row.resource_id)) {
+      throw new Error('Numbering detail returned a different series or Resource.')
+    }
+    viewRow.value = detail
   } catch (caught: unknown) {
+    if (generation !== viewLoadGeneration || !viewOpen.value || !canConfigure.value) return
+    if (stopAfterDeniedRead(caught) || isAccessDenied(caught)) {
+      clearSeriesSnapshots()
+      viewOpen.value = false
+      viewRow.value = null
+    }
     error.value = caught
     reportApiError(caught)
   } finally {
-    viewLoading.value = false
+    if (generation === viewLoadGeneration) viewLoading.value = false
   }
 }
 
@@ -364,37 +511,53 @@ function sampleFromPattern(pattern: string): string {
     .replace(/\{RESOURCE\}/g, resource.value?.type ?? 'RESOURCE')
 }
 
+let validationGeneration = 0
 async function validateConfig(): Promise<void> {
-  if (!selectedResourceId.value) return
+  if (!formResourceId.value || validationBusy.value || busy.value || !canConfigure.value) return
+  const generation = ++validationGeneration
   validationBusy.value = true
   validation.value = null
   formError.value = null
   try {
-    validation.value = await validateNumberingSeries(selectedResourceId.value, fullPayload())
+    const result = await validateNumberingSeries(formResourceId.value, fullPayload(), editingId.value)
+    if (generation !== validationGeneration || !modalOpen.value || !canConfigure.value) return
+    validation.value = result
   } catch (caught: unknown) {
+    if (generation !== validationGeneration || !modalOpen.value || !canConfigure.value) return
     formError.value = caught
     reportApiError(caught)
   } finally {
-    validationBusy.value = false
+    if (generation === validationGeneration) validationBusy.value = false
   }
 }
 
 async function save(): Promise<void> {
-  if (!selectedResourceId.value) return
+  if (!formResourceId.value || busy.value || !canConfigure.value) return
+  ++validationGeneration
+  validationBusy.value = false
+  const resourceId = formResourceId.value
+  const editId = editingId.value
+  const authGeneration = resourceLoadGeneration
   busy.value = true
   formError.value = null
   validation.value = null
   try {
-    await saveNumberingSeries(
-      selectedResourceId.value,
-      editingId.value ? editablePayload() : fullPayload(),
-      editingId.value,
+    const saved = await saveNumberingSeries(
+      resourceId,
+      editId ? editablePayload() : fullPayload(),
+      editId,
     )
+    if (authGeneration !== resourceLoadGeneration || !canConfigure.value) return
+    if (editId && String(saved.id) !== editId) {
+      throw new Error('Numbering update returned a different series.')
+    }
+    await reconcileMutation(resourceId, saved)
     markClean()
     modalOpen.value = false
     editingId.value = undefined
-    await loadSeries()
   } catch (caught: unknown) {
+    if (authGeneration !== resourceLoadGeneration || !canConfigure.value) return
+    if (!stopAfterDeniedRead(caught) && isAccessDenied(caught)) clearSeriesSnapshots()
     formError.value = caught
     const notice = normalizeApiError(caught)
     if (notice?.code === 'NUM_ISSUED_FIELD_IMMUTABLE' && editingId.value) {
@@ -407,17 +570,24 @@ async function save(): Promise<void> {
 }
 
 async function toggle(row: NumberingSeriesRow): Promise<void> {
-  if (!selectedResourceId.value || !window.confirm(t('common.confirmStateChange'))) return
+  if (busy.value || !canConfigure.value || !window.confirm(t('common.confirmStateChange'))) return
+  const authGeneration = resourceLoadGeneration
   busy.value = true
   error.value = null
   try {
-    await changeNumberingSeriesState(
-      selectedResourceId.value,
+    const updated = await changeNumberingSeriesState(
+      String(row.resource_id),
       String(row.id),
       row.status === 'ACTIVE' ? 'INACTIVE' : 'ACTIVE',
     )
-    await loadSeries()
+    if (authGeneration !== resourceLoadGeneration || !canConfigure.value) return
+    if (String(updated.id) !== String(row.id)) {
+      throw new Error('Numbering state update returned a different series.')
+    }
+    await reconcileMutation(String(row.resource_id), updated)
   } catch (caught: unknown) {
+    if (authGeneration !== resourceLoadGeneration || !canConfigure.value) return
+    if (!stopAfterDeniedRead(caught) && isAccessDenied(caught)) clearSeriesSnapshots()
     error.value = caught
     reportApiError(caught)
   } finally {
@@ -425,14 +595,53 @@ async function toggle(row: NumberingSeriesRow): Promise<void> {
   }
 }
 
-watch(selectedResourceId, () => void loadSeries())
+watch(selectedResourceId, () => {
+  page.value = 1
+  void loadSeries()
+})
+// A late validation result cannot describe an edited draft or a new dialog.
+watch(formDraft, () => {
+  ++validationGeneration
+  validationBusy.value = false
+  validation.value = null
+}, { deep: true })
+watch(viewOpen, (open) => {
+  if (!open) {
+    ++viewLoadGeneration
+    viewLoading.value = false
+  }
+})
 watch(modalOpen, (open) => {
+  if (!open) {
+    ++validationGeneration
+    validationBusy.value = false
+  }
+
   if (open) void nextTick(() => formCard.value?.focus())
 })
 
-onMounted(() => {
-  if (canConfigure.value) void loadResources()
-})
+// Direct route entry can mount before /auth/me resolves. Fetch on permission
+// readiness instead of a one-shot mount check; invalidate pending reads on loss.
+watch(canConfigure, (authorized) => {
+  if (authorized) {
+    if (!deniedReadUntilRefresh.value) void loadResources()
+    return
+  }
+  ++resourceLoadGeneration
+  clearSeriesSnapshots()
+  ++viewLoadGeneration
+  ++validationGeneration
+  resources.value = []
+  loadingResources.value = false
+  loadingSeries.value = false
+  selectedResourceId.value = ''
+  formResourceId.value = ''
+  if (modalOpen.value) markClean()
+  modalOpen.value = false
+  viewOpen.value = false
+  viewLoading.value = false
+  validationBusy.value = false
+}, { immediate: true })
 </script>
 
 <template>
@@ -441,43 +650,52 @@ onMounted(() => {
       <h1>{{ t('numbering.title') }}</h1>
       <p>{{ t('numbering.description') }}</p>
     </div>
-    <button v-if="canConfigure" type="button" class="primary-button" :disabled="!selectedResourceId || loadingResources"
+    <button data-ds-icon="add" v-if="canConfigure" type="button" class="primary-button" :disabled="!configurableResources.length || loadingResources"
       @click="openCreate">
       {{ t('numbering.create') }}
     </button>
   </div>
 
-  <section class="content-panel numbering-panel">
-    <form class="numbering-query-controls" role="search" @submit.prevent="void loadSeries()">
-      <label>
+  <section class="content-panel numbering-panel ds-page-panel ds-page-panel--relaxed">
+    <div class="ds-filter-container">
+    <form class="numbering-query-controls ds-filter-form" role="search" @submit.prevent="void refreshSeries()">
+      <div class="ds-filter-fields">
+      <label class="numbering-resource-filter">
         <span>{{ t('numbering.resource') }}</span>
-        <select v-model="selectedResourceId" :disabled="!canConfigure || loadingResources"
-          :aria-label="t('numbering.selectResource')">
-          <option value="">{{ t('numbering.selectResource') }}</option>
-          <option v-for="item in resources" :key="String(item.id)" :value="String(item.id)">
-            {{ item.type }} - {{ item.name }}
-          </option>
-        </select>
+        <SearchableSelect
+          :model-value="selectedResourceId"
+          :options="resourceFilterOptions"
+          :placeholder="t('numbering.allResources')"
+          :aria-label="t('numbering.resource')"
+          :disabled="!canConfigure || loadingResources"
+          :clearable="true"
+          @update:model-value="setResourceFilter"
+        />
       </label>
-      <button type="submit" class="secondary-button" :disabled="!selectedResourceId || loadingSeries">
-        <NIcon :component="RefreshOutline" aria-hidden="true" />
+      </div>
+      <div class="ds-filter-actions">
+      <button type="submit" class="secondary-button" :disabled="loadingResources || loadingSeries" data-ds-icon="refresh">
+
         {{ t('common.refresh') }}
       </button>
+      </div>
     </form>
+    </div>
 
     <p v-if="errorMessage" class="inline-error" role="alert">{{ errorMessage }}</p>
     <p v-if="!canConfigure" class="permission-note" role="status">{{ t('common.noPermission') }}</p>
 
     <ListPagination :aria-label="t('numbering.topPagination')" :page="page" :page-size="pageSize" :total="rows.length"
-      :disabled="loadingSeries || !selectedResourceId" @update:page="page = $event" @update:page-size="applyPageSize" />
+      :disabled="loadingResources || loadingSeries" @update:page="page = $event" @update:page-size="applyPageSize" />
 
-    <ListShell :initial-loading="loadingResources || loadingSeries" :has-data="visibleRows.length > 0"
-      :empty-dataset="Boolean(selectedResourceId) && !loadingSeries && rows.length === 0" :empty-filtered-result="false"
+    <ListShell :initial-loading="loadingResources || (loadingSeries && rows.length === 0)"
+      :refreshing="loadingSeries && rows.length > 0" :has-data="visibleRows.length > 0"
+      :empty-dataset="!loadingResources && !loadingSeries && rows.length === 0" :empty-filtered-result="false"
       :error="error">
       <template #empty>
         <p>{{ t('numbering.noSeries') }}</p>
       </template>
-      <ListTable :rows="visibleRows" :columns="columns">
+      <ListTable :rows="visibleRows" :columns="columns" :busy="loadingSeries">
         <template #cell-scope_type="{ row }">{{ enumLabel('scope', row.scope_type) }}</template>
         <template #cell-reset_policy="{ row }">{{ enumLabel('reset', row.reset_policy) }}</template>
         <template #cell-generation_mode="{ row }">{{
@@ -485,7 +703,7 @@ onMounted(() => {
           }}</template>
         <template #cell-issued="{ row }">{{ issuedLabel(row) }}</template>
         <template #cell-actions="{ row }">
-          <TableRowActions authorization-mode="effective" :view-scope-verified="true" view-action-code="configure_numbering" :allowed-actions="rowAllowedActions(resources.find((item) => String(item.id) === String(row.resource_id)))" :action-codes="{ edit: 'configure_numbering', toggle: 'configure_numbering' }" :active="row.status === 'ACTIVE'" :busy="busy" :show-view="canConfigure"
+          <TableRowActions authorization-mode="effective" :view-scope-verified="true" view-action-code="configure_numbering" :allowed-actions="rowAllowedActions(resourceById.get(String(row.resource_id)))" :action-codes="{ edit: 'configure_numbering', toggle: 'configure_numbering' }" :active="row.status === 'ACTIVE'" :busy="busy || loadingSeries" :show-view="canConfigure"
             :show-edit="canConfigure" :show-toggle="canConfigure" view-permission="resource.configure_numbering"
             edit-permission="resource.configure_numbering" toggle-permission="resource.configure_numbering"
             :view-label="t('common.view')" :edit-label="t('common.edit')" :activate-label="t('common.activate')"
@@ -493,13 +711,13 @@ onMounted(() => {
             @toggle="void toggle(row)" />
         </template>
       </ListTable>
-      <ListPagination :aria-label="t('numbering.bottomPagination')" :page="page" :page-size="pageSize"
-        :total="rows.length" :disabled="loadingSeries" @update:page="page = $event" @update:page-size="applyPageSize" />
+      <ListPagination :aria-label="t('numbering.bottomPagination')" :page="page" :page-size="pageSize" :show-page-size="false"
+        :total="rows.length" :disabled="loadingResources || loadingSeries" @update:page="page = $event" @update:page-size="applyPageSize" />
     </ListShell>
   </section>
 
-  <div v-if="modalOpen" class="modal-backdrop">
-    <section ref="formCard" class="modal-card" role="dialog" aria-modal="true" :aria-label="t('numbering.form')"
+  <AppDialogHost :open="modalOpen" size="lg" @close="closeModal">
+    <section v-if="modalOpen" ref="formCard" class="ds-dialog-surface modal-card" role="dialog" aria-modal="true" :aria-label="t('numbering.form')"
       tabindex="-1">
       <header class="modal-card__header">
         <h2 class="modal-card-title">
@@ -508,15 +726,15 @@ onMounted(() => {
           </NIcon>
           {{ editingId ? t('numbering.edit') : t('numbering.create') }}
         </h2>
-        <button type="button" class="modal-card-button-close" :aria-label="t('common.close')" @click="closeModal">
+        <button type="button" class="modal-card-button-close" :aria-label="t('common.close')" @click="closeModal" data-ds-icon="close">
         </button>
       </header>
-      <form id="numbering-form" class="modal-card__body" @submit.prevent="void save()">
+      <form id="numbering-form" class="modal-card__body ds-dialog-form-fields" @submit.prevent="void save()">
         <label>
           <span>{{ t('numbering.resource') }}</span>
-          <select v-model="selectedResourceId" required :disabled="Boolean(editingId)">
+          <select v-model="formResourceId" required :disabled="Boolean(editingId)">
             <option value="">{{ t('numbering.selectResource') }}</option>
-            <option v-for="item in resources" :key="String(item.id)" :value="String(item.id)">
+            <option v-for="item in configurableResources" :key="String(item.id)" :value="String(item.id)">
               {{ item.type }} - {{ item.name }}
             </option>
           </select>
@@ -594,7 +812,7 @@ onMounted(() => {
         <section class="validation-panel" aria-live="polite">
           <div class="validation-panel__header">
             <h3>{{ t('numbering.validationPreview') }}</h3>
-            <button type="button" class="secondary-button" :disabled="validationBusy || !canConfigure"
+            <button data-ds-icon="validate" type="button" class="secondary-button" :disabled="validationBusy || busy || !canConfigure || !formResourceId"
               @click="void validateConfig()">
               {{ validationBusy ? t('common.loading') : t('numbering.validate') }}
             </button>
@@ -622,85 +840,33 @@ onMounted(() => {
 
       </form>
       <footer class="modal-card__footer">
-        <button type="button" class="secondary-button" @click="closeModal">
-          <NIcon :size="24" aria-hidden="true"> <Refresh /> </NIcon>
+        <button type="button" class="secondary-button" @click="closeModal" data-ds-icon="cancel">
+
           {{ t('common.cancel') }}
         </button>
-        <button type="submit" form="numbering-form" class="primary-button" :disabled="busy || !canConfigure">
-          <NIcon :size="24" aria-hidden="true"> <SaveOutline /> </NIcon>
+        <button type="submit" form="numbering-form" class="primary-button" :disabled="busy || !canConfigure" data-ds-icon="save">
+
           {{ busy ? t('common.saving') : t('common.save') }}
         </button>
       </footer>
     </section>
-  </div>
+  </AppDialogHost>
 
   <TableDetailModal :open="viewOpen" :title="viewLoading ? t('common.loading') : t('numbering.view')"
     :fields="detailFields" @close="viewOpen = false" />
 </template>
 
 <style scoped>
-.numbering-panel {
-  display: grid;
-  gap: 16px;
-  padding: 18px 20px 20px;
-}
-
-.numbering-query-controls {
-  display: flex;
-  align-items: end;
-  gap: 10px;
-  flex-wrap: wrap;
-}
-
-.numbering-query-controls label,
-.modal-card__body label {
-  display: grid;
-  gap: 5px;
-  color: #536b7b;
-  font-size: 12px;
-  font-weight: 600;
-}
-
-.numbering-query-controls label {
-  min-width: min(440px, 100%);
-}
-
-.numbering-query-controls select,
-.modal-card__body input,
-.modal-card__body select {
-  min-height: 34px;
-  border: 1px solid #c7d6df;
-  border-radius: 4px;
-  padding: 7px 9px;
-  background: #fff;
-  color: #183b57;
-  font: inherit;
-}
-
-.inline-error {
-  margin: 0;
-  color: #a23a32;
-  font-size: 12px;
-}
-
+.numbering-query-controls { min-width: 0; }
+.numbering-query-controls label { min-width: 0; }
+.numbering-resource-filter { max-width: 480px; }
+.numbering-query-controls .numbering-resource-filter :deep(.n-base-selection) { min-height: var(--ds-button-height-md); }
 .permission-note,
 .immutable-note {
   margin: 0;
-  color: #536b7b;
+  color: var(--ds-text-secondary);
   font-size: 12px;
 }
-
-.modal-card {
-  width: min(100%, 760px);
-  max-height: calc(100vh - 40px);
-  display: flex;
-  flex-direction: column;
-  overflow: hidden;
-  border-radius: 7px;
-  background: #fff;
-  box-shadow: 0 20px 60px rgb(18 42 62 / 24%);
-}
-
 
 .checkbox-field {
   display: flex !important;
@@ -717,9 +883,9 @@ onMounted(() => {
   display: grid;
   gap: 9px;
   padding: 12px;
-  border: 1px solid #dbe5ea;
+  border: 1px solid var(--ds-border-subtle);
   border-radius: 6px;
-  background: #f8fbfc;
+  background: var(--ds-bg-subtle);
 }
 
 .pattern-builder__width {
@@ -734,11 +900,11 @@ onMounted(() => {
 
 .token-button {
   min-height: 30px;
-  border: 1px solid #b8ccd8;
+  border: 1px solid var(--ds-border-subtle);
   border-radius: 4px;
   padding: 4px 8px;
-  background: #fff;
-  color: #294b65;
+  background: var(--ds-bg-surface);
+  color: var(--ds-text-primary);
   cursor: pointer;
   font: inherit;
   font-size: 12px;
@@ -759,7 +925,7 @@ onMounted(() => {
 }
 
 .validation-results dt {
-  color: #536b7b;
+  color: var(--ds-text-secondary);
   font-weight: 700;
 }
 
@@ -770,17 +936,17 @@ onMounted(() => {
 
 .validation-ok {
   margin: 0;
-  color: #15803d;
+  color: var(--ds-success);
 }
 
 .validation-fail {
   margin: 0;
-  color: #a23a32;
+  color: var(--ds-danger);
 }
 
 .validation-messages {
   margin: 0;
   padding-left: 20px;
-  color: #a23a32;
+  color: var(--ds-danger);
 }
 </style>

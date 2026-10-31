@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import AppDialogHost from '@/components/ui/AppDialogHost.vue'
 import { rowAllowedActions } from '@/components/lists/rowActionPolicy'
 import { computed, onMounted, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
@@ -143,17 +144,20 @@ onMounted(() => void load())
       <h1>{{ t('workflow.statesTitle') }}</h1>
       <p>{{ t('workflow.statesDescription') }}</p>
     </div>
-    <button v-if="hasBasePermission('workflow_state', 'create')" type="button" class="primary-button"
+    <button data-ds-icon="add" v-if="hasBasePermission('workflow_state', 'create')" type="button" class="primary-button"
       @click="openCreate">
-      ＋ {{ t('common.create') }}
+      {{ t('common.create') }}
     </button>
   </div>
-  <section class="content-panel workflow-panel">
-    <div class="workflow-toolbar">
-      <ListQueryControls :model-value="state.query" @apply="applyQuery" @reset="resetQuery" />
-      <button type="button" class="secondary-button" @click="void load()">
-        ↻ {{ t('common.refresh') }}
-      </button>
+  <section class="content-panel workflow-panel ds-page-panel">
+    <div class="workflow-toolbar ds-page-toolbar">
+      <ListQueryControls :show-page-size="false" :model-value="state.query" @apply="applyQuery" @reset="resetQuery" >
+        <template #actions>
+          <button data-ds-icon="refresh" type="button" class="secondary-button" @click="void load()">
+            {{ t('common.refresh') }}
+          </button>
+        </template>
+      </ListQueryControls>
     </div>
     <p v-if="error" class="inline-error" role="alert">{{ errorMessage }}</p>
     <ListShell :initial-loading="state.isInitialLoading.value" :refreshing="state.isBackgroundRefreshing.value"
@@ -188,8 +192,8 @@ onMounted(() => void load())
         " />
     </ListShell>
   </section>
-  <div v-if="modalOpen" class="modal-backdrop">
-    <section class="modal-card" role="dialog" aria-modal="true" :aria-label="t('workflow.stateForm')">
+  <AppDialogHost :open="modalOpen" size="md" @close="closeForm">
+    <section v-if="modalOpen" class="ds-dialog-surface modal-card" role="dialog" aria-modal="true" :aria-label="t('workflow.stateForm')">
       <header class="modal-card__header">
         <h2 class="modal-card-title">
           <NIcon :size="24">
@@ -197,11 +201,11 @@ onMounted(() => void load())
           </NIcon>
           {{ editingId ? t('common.edit') : t('common.create') }} {{ t('workflow.state') }}
         </h2>
-        <button type="button" class="modal-card-button-close" :aria-label="t('common.close')" @click="closeForm">
+        <button type="button" class="modal-card-button-close" :aria-label="t('common.close')" @click="closeForm" data-ds-icon="close">
 
         </button>
       </header>
-      <form class="modal-card__body" id="workflow-form" @submit.prevent="save">
+      <form class="modal-card__body ds-dialog-form-fields" id="workflow-form" @submit.prevent="save">
         <label><span>{{ t('workflow.code') }}</span><input v-model="form.code" required /></label>
         <label><span>{{ t('workflow.name') }}</span><input v-model="form.name" required /></label>
         <label><span>{{ t('workflow.description') }}</span><textarea v-model="form.description" rows="3" />
@@ -214,71 +218,20 @@ onMounted(() => void load())
       </form>
 
       <footer class="modal-card__footer">
-        <button type="button" class="secondary-button" @click="closeForm">
-          <NIcon :size="16">
-            <Refresh />
-          </NIcon>
+        <button type="button" class="secondary-button" @click="closeForm" data-ds-icon="cancel">
+
           {{ t('common.cancel') }}
         </button>
         <button type="submit" class="primary-button" form="workflow-form"
-          :disabled="busy || !hasBasePermission('workflow_state', editingId ? 'edit' : 'create')">
-          <NIcon :size="16">
-            <SaveOutline />
-          </NIcon>
+          :disabled="busy || !hasBasePermission('workflow_state', editingId ? 'edit' : 'create')" data-ds-icon="save">
+
           {{ busy ? t('common.saving') : t('common.save') }}
         </button>
       </footer>
     </section>
-  </div>
+  </AppDialogHost>
 </template>
 
 <style scoped>
-.workflow-panel {
-  display: grid;
-  gap: 14px;
-  padding: 18px 20px 20px;
-}
 
-.workflow-toolbar {
-  display: flex;
-  align-items: end;
-  justify-content: space-between;
-  gap: 10px;
-  flex-wrap: wrap;
-}
-
-.inline-error {
-  margin: 0;
-  color: #b64444;
-  font-size: 12px;
-}
-
-.modal-card {
-  width: min(100%, 680px);
-  max-height: calc(100vh - 40px);
-  overflow: hidden;
-  border-radius: 7px;
-  background: #fff;
-  box-shadow: 0 20px 60px rgb(18 42 62 / 24%);
-}
-
-
-.modal-card__body label {
-  display: grid;
-  gap: 5px;
-  color: #536b7b;
-  font-size: 12px;
-  font-weight: 600;
-}
-
-.modal-card__body input,
-.modal-card__body select,
-.modal-card__body textarea {
-  min-height: 34px;
-  border: 1px solid #c7d6df;
-  border-radius: 4px;
-  padding: 7px 9px;
-  color: #183b57;
-  font: inherit;
-}
 </style>

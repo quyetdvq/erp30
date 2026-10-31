@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import AppDialogHost from '@/components/ui/AppDialogHost.vue'
 import { useI18n } from 'vue-i18n'
 import { nextTick, onBeforeUnmount, ref, watch } from 'vue'
 
@@ -47,50 +48,16 @@ watch(
 
 onBeforeUnmount(restoreFocus)
 
-function onKeydown(event: KeyboardEvent): void {
-  if (event.key === 'Escape') {
-    event.preventDefault()
-    event.stopPropagation()
-    emit('close')
-    return
-  }
-  if (event.key !== 'Tab' || !dialog.value) return
-  const focusable = [
-    ...dialog.value.querySelectorAll<HTMLElement>(
-      'button:not(:disabled), [href], input:not(:disabled), select:not(:disabled), textarea:not(:disabled), [tabindex]:not([tabindex="-1"])',
-    ),
-  ]
-  if (focusable.length === 0) {
-    event.preventDefault()
-    return
-  }
-  const first = focusable[0]!
-  const last = focusable[focusable.length - 1]!
-  if (
-    event.shiftKey &&
-    (document.activeElement === first || !dialog.value.contains(document.activeElement))
-  ) {
-    event.preventDefault()
-    last.focus()
-  } else if (
-    !event.shiftKey &&
-    (document.activeElement === last || !dialog.value.contains(document.activeElement))
-  ) {
-    event.preventDefault()
-    first.focus()
-  }
-}
 </script>
 
 <template>
-  <div v-if="props.open" class="modal-backdrop">
-    <section
+  <AppDialogHost :open="props.open" size="sm" @close="emit('close')">
+    <section v-if="props.open"
       ref="dialog"
-      class="table-detail-modal"
+      class="ds-dialog-surface table-detail-modal"
       role="dialog"
       aria-modal="true"
       :aria-label="props.title"
-      @keydown="onKeydown"
     >
       <header class="modal-card__header">
         <h2 class="modal-card-title">
@@ -105,7 +72,7 @@ function onKeydown(event: KeyboardEvent): void {
           :aria-label="t('common.close')"
           :title="t('common.close')"
           @click="emit('close')"
-        ></button>
+         data-ds-icon="close"></button>
       </header>
       <div class="table-detail-modal__body">
         <dl class="table-detail-modal__fields">
@@ -119,24 +86,16 @@ function onKeydown(event: KeyboardEvent): void {
         </dl>
       </div>
       <footer class="modal-card__footer">
-        <button type="button" class="secondary-button" @click="emit('close')">
-          <NIcon :size="20"> <Refresh /> </NIcon>
+        <button type="button" class="secondary-button" @click="emit('close')" data-ds-icon="close">
+
           {{ t('common.close') }}
         </button>
       </footer>
     </section>
-  </div>
+  </AppDialogHost>
 </template>
 
 <style scoped>
-.table-detail-modal {
-  width: min(100%, 560px);
-  max-height: calc(100vh - 40px);
-  overflow: auto;
-  border-radius: 7px;
-  background: #fff;
-  box-shadow: 0 20px 60px rgb(18 42 62 / 24%);
-}
 
 .table-detail-modal__fields {
   display: grid;
@@ -154,16 +113,16 @@ function onKeydown(event: KeyboardEvent): void {
 .table-detail-modal__fields dd {
   margin: 0;
   padding: 10px 0;
-  border-bottom: 1px solid #edf2f4;
+  border-bottom: 1px solid var(--ds-border-subtle);
 }
 .table-detail-modal__fields dt {
-  color: #536b7b;
+  color: var(--ds-text-secondary);
   font-size: 12px;
   font-weight: 700;
 }
 .table-detail-modal__fields dd {
   min-width: 0;
-  color: #183b57;
+  color: var(--ds-text-primary);
   overflow-wrap: anywhere;
 }
 </style>

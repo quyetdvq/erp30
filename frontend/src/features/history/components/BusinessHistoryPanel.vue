@@ -64,7 +64,7 @@ function actorLabel(event: BusinessHistoryEvent): string {
   <section class="business-history" :aria-label="t('history.title')">
     <header class="business-history__header">
       <h3>{{ t('history.title') }}</h3>
-      <button class="secondary-button" type="button" :disabled="busy" @click="void load()">
+      <button data-ds-icon="refresh" class="secondary-button" type="button" :disabled="busy" @click="void load()">
         {{ t('common.refresh') }}
       </button>
     </header>
@@ -72,7 +72,7 @@ function actorLabel(event: BusinessHistoryEvent): string {
     <p v-if="busy" role="status">{{ t('history.loading') }}</p>
     <p v-if="error" role="alert" class="business-history__error">
       {{ t('history.loadError') }}
-      <button class="secondary-button" type="button" @click="void load()">{{ t('list.retry') }}</button>
+      <button data-ds-icon="retry" class="secondary-button" type="button" @click="void load()">{{ t('list.retry') }}</button>
     </p>
     <p v-else-if="!busy && !hasRecords">{{ t('history.noEvents') }}</p>
     <ol v-if="hasRecords" class="business-history__items">
@@ -100,9 +100,9 @@ function actorLabel(event: BusinessHistoryEvent): string {
 .business-history { display: grid; gap: 12px; min-width: 0; }
 .business-history__header { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
 .business-history__header h3 { margin: 0; font-size: 16px; }
-.business-history__hint, .business-history__event span, .business-history__event small { color: #5c7181; font-size: 12px; }
-.business-history__error { color: #b64444; }
+.business-history__hint, .business-history__event span, .business-history__event small { color: var(--ds-text-secondary); font-size: 12px; }
+.business-history__error { color: var(--ds-danger); }
 .business-history__items { margin: 0; padding-left: 22px; display: grid; gap: 12px; min-width: 0; }
-.business-history__event { display: grid; gap: 4px; min-width: 0; overflow-wrap: anywhere; border-bottom: 1px solid #e0e9ef; padding: 0 0 10px; }
+.business-history__event { display: grid; gap: 4px; min-width: 0; overflow-wrap: anywhere; border-bottom: 1px solid var(--ds-border-subtle); padding: 0 0 10px; }
 .business-history__changes { padding-left: 18px; margin: 0; font-size: 12px; overflow-wrap: anywhere; }
 </style>

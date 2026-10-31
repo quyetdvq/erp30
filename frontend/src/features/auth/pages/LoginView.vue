@@ -201,7 +201,6 @@ function handleLanguageTrigger(event: MouseEvent): void {
               type="primary"
               size="large"
               block
-              color="#0b75b9"
               :loading="auth.busy"
               class="submit-button"
             >
@@ -232,7 +231,7 @@ function handleLanguageTrigger(event: MouseEvent): void {
   place-items: center;
   overflow: hidden;
   padding: clamp(12px, 2.5vh, 28px);
-  background: #edf2f6;
+  background: var(--ds-bg-canvas);
 }
 
 .auth-layout {
@@ -242,10 +241,10 @@ function handleLanguageTrigger(event: MouseEvent): void {
   height: min(720px, 100%);
   min-height: 0;
   overflow: hidden;
-  border: 1px solid #d7e1e8;
+  border: 1px solid var(--ds-border-subtle);
   border-radius: 14px;
-  background: #fff;
-  box-shadow: 0 24px 70px rgb(20 48 70 / 14%);
+  background: var(--ds-bg-surface);
+  box-shadow: var(--ds-shadow-modal);
 }
 
 .auth-spotlight {
@@ -254,8 +253,8 @@ function handleLanguageTrigger(event: MouseEvent): void {
   flex-direction: column;
   padding: clamp(24px, 4vh, 42px) clamp(26px, 4vw, 44px) 28px;
   overflow: hidden;
-  background: #102f46;
-  color: #fff;
+  background: var(--ds-auth-brand-bg);
+  color: var(--ds-auth-brand-text);
 }
 
 .auth-spotlight::after {
@@ -301,7 +300,7 @@ function handleLanguageTrigger(event: MouseEvent): void {
 
 .auth-eyebrow {
   margin: 0 0 14px;
-  color: #075f91;
+  color: var(--ds-primary);
   font-size: 11px;
   font-weight: 800;
   letter-spacing: 0.14em;
@@ -309,13 +308,13 @@ function handleLanguageTrigger(event: MouseEvent): void {
 }
 
 .auth-spotlight .auth-eyebrow {
-  color: #7fd0e1;
+  color: var(--ds-auth-brand-accent);
 }
 
 .spotlight-content h2 {
   max-width: 340px;
   margin: 0;
-  color: #fff;
+  color: var(--ds-auth-brand-text);
   font-size: clamp(30px, 3.2vw, 46px);
   line-height: 1.08;
   letter-spacing: -0.03em;
@@ -324,7 +323,7 @@ function handleLanguageTrigger(event: MouseEvent): void {
 .spotlight-lead {
   max-width: 350px;
   margin: 20px 0 0;
-  color: #b5cad8;
+  color: var(--ds-auth-brand-subtle);
   font-size: 14px;
   line-height: 1.7;
 }
@@ -341,12 +340,12 @@ function handleLanguageTrigger(event: MouseEvent): void {
   display: flex;
   align-items: center;
   gap: 11px;
-  color: #e4f0f5;
+  color: var(--ds-auth-brand-text);
   font-size: 13px;
 }
 
 .trust-list .n-icon {
-  color: #76d0b2;
+  color: var(--ds-auth-brand-success);
 }
 
 .spotlight-note {
@@ -355,20 +354,20 @@ function handleLanguageTrigger(event: MouseEvent): void {
   display: flex;
   align-items: center;
   gap: 9px;
-  color: #a9c4d4;
+  color: var(--ds-auth-brand-subtle);
   font-size: 11px;
   line-height: 1.5;
 }
 
 .spotlight-note .n-icon {
-  color: #8bd9e9;
+  color: var(--ds-auth-brand-accent);
 }
 
 .auth-panel {
   display: grid;
   grid-template-rows: auto 1fr auto;
   min-width: 0;
-  background: #fff;
+  background: var(--ds-bg-surface);
 }
 
 .auth-panel-header {
@@ -376,20 +375,20 @@ function handleLanguageTrigger(event: MouseEvent): void {
   align-items: center;
   justify-content: space-between;
   padding: clamp(14px, 2.5vh, 23px) 30px;
-  border-bottom: 1px solid #edf1f4;
+  border-bottom: 1px solid var(--ds-border-subtle);
 }
 
 .panel-context {
   display: inline-flex;
   align-items: center;
   gap: 8px;
-  color: #5d7182;
+  color: var(--ds-text-secondary);
   font-size: 12px;
   font-weight: 600;
 }
 
 .panel-context .n-icon {
-  color: #0877b9;
+  color: var(--ds-primary);
 }
 
 .auth-form-wrap {
@@ -405,14 +404,14 @@ function handleLanguageTrigger(event: MouseEvent): void {
 
 .auth-form-wrap h1 {
   margin: 0;
-  color: #112d45;
+  color: var(--ds-text-primary);
   font-size: 31px;
   letter-spacing: -0.03em;
 }
 
 .auth-lead {
   margin: 10px 0 31px;
-  color: #526976;
+  color: var(--ds-text-secondary);
   font-size: 13px;
   line-height: 1.6;
 }
@@ -422,7 +421,7 @@ function handleLanguageTrigger(event: MouseEvent): void {
 }
 
 .auth-form-wrap :deep(.n-form-item-label) {
-  color: #334e63;
+  color: var(--ds-text-secondary);
   font-size: 12px;
   font-weight: 700;
 }
@@ -432,7 +431,7 @@ function handleLanguageTrigger(event: MouseEvent): void {
 }
 
 .auth-form-wrap :deep(.n-input .n-icon) {
-  color: #7d95a5;
+  color: var(--ds-text-muted);
 }
 
 .form-options {
@@ -447,13 +446,13 @@ function handleLanguageTrigger(event: MouseEvent): void {
   display: inline-flex;
   align-items: center;
   gap: 5px;
-  color: #5d6f7d;
+  color: var(--ds-text-secondary);
   font-size: 11px;
   white-space: nowrap;
 }
 
 .secure-label .n-icon {
-  color: #2d9a78;
+  color: var(--ds-success);
 }
 
 .form-alert {
@@ -470,7 +469,7 @@ function handleLanguageTrigger(event: MouseEvent): void {
 
 .form-caption {
   margin: 16px 0 0;
-  color: #5f707e;
+  color: var(--ds-text-secondary);
   font-size: 11px;
   line-height: 1.6;
   text-align: center;
@@ -481,8 +480,8 @@ function handleLanguageTrigger(event: MouseEvent): void {
   justify-content: space-between;
   gap: 16px;
   padding: 14px 30px;
-  border-top: 1px solid #edf1f4;
-  color: #5c6d7b;
+  border-top: 1px solid var(--ds-border-subtle);
+  color: var(--ds-text-muted);
   font-size: 10px;
 }
 

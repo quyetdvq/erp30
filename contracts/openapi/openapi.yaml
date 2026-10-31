@@ -749,8 +749,12 @@ paths:
     post:
       operationId: validateNumberingSeriesConfig
       summary: Validate numbering series configuration without consuming a counter
-      requestBody: {$ref: '#/components/requestBodies/NumberingSeriesCreate'}
-      responses: {'200': {$ref: '#/components/responses/NumberingSeriesValidationResponse'}, '401': {$ref: '#/components/responses/Unauthorized'}, '403': {$ref: '#/components/responses/Forbidden'}, '404': {$ref: '#/components/responses/NotFound'}, '422': {$ref: '#/components/responses/UnprocessableEntity'}}
+      description: >-
+        Create preview omits series_id. Edit preview may provide series_id to
+        exclude the matching persisted series within the route Resource; an
+        unknown or cross-Resource ID is rejected. Save/PATCH remains authoritative.
+      requestBody: {$ref: '#/components/requestBodies/NumberingSeriesValidationRequest'}
+      responses: {'200': {$ref: '#/components/responses/NumberingSeriesValidationResponse'}, '401': {$ref: '#/components/responses/Unauthorized'}, '403': {$ref: '#/components/responses/Forbidden'}, '404': {$ref: '#/components/responses/NotFound'}, '409': {$ref: '#/components/responses/Conflict'}, '422': {$ref: '#/components/responses/UnprocessableEntity'}}
   /api/v1/policies:
     get:
       operationId: listPolicies
@@ -1637,6 +1641,7 @@ components:
     ResourceActionCreate: {required: true, content: {application/json: {schema: {$ref: '#/components/schemas/ResourceActionCreate'}}}}
     ResourceActionPatch: {required: true, content: {application/json: {schema: {$ref: '#/components/schemas/ResourceActionPatch'}}}}
     NumberingSeriesCreate: {required: true, content: {application/json: {schema: {$ref: '#/components/schemas/NumberingSeriesCreate'}}}}
+    NumberingSeriesValidationRequest: {required: true, content: {application/json: {schema: {$ref: '#/components/schemas/NumberingSeriesValidationRequest'}}}}
     NumberingSeriesPatch: {required: true, content: {application/json: {schema: {$ref: '#/components/schemas/NumberingSeriesPatch'}}}}
     NumberingSeriesState: {required: true, content: {application/json: {schema: {$ref: '#/components/schemas/NumberingSeriesState'}}}}
     PolicyCreate: {required: true, content: {application/json: {schema: {$ref: '#/components/schemas/PolicyCreate'}}}}
@@ -3512,6 +3517,14 @@ components:
     ResourceActionSummary: {type: object, required: [id, code, description], additionalProperties: false, properties: {id: {$ref: '#/components/schemas/BigInt'}, code: {type: string}, description: {type: [string, 'null']}}}
     NumberingSeries: {type: object, required: [id, resource_id, series_code, name, scope_type, pattern, reset_policy, generation_mode, start_number, increment_by, is_default, status], properties: {id: {$ref: '#/components/schemas/BigInt'}, resource_id: {$ref: '#/components/schemas/BigInt'}, series_code: {type: string}, name: {type: string}, scope_type: {type: string, enum: [GROUP, COMPANY, ORGANIZATION]}, pattern: {type: string}, reset_policy: {type: string, enum: [NEVER, YEARLY, MONTHLY, DAILY]}, generation_mode: {type: string, enum: [AUTO_REQUIRED, AUTO_IF_EMPTY]}, start_number: {$ref: '#/components/schemas/BigInt'}, increment_by: {type: integer, minimum: 1}, is_default: {type: boolean}, status: {type: string, enum: [ACTIVE, INACTIVE]}}}
     NumberingSeriesCreate: {type: object, required: [series_code, name, scope_type, pattern, reset_policy, generation_mode, start_number, increment_by, is_default, status], properties: {series_code: {type: string}, name: {type: string}, scope_type: {type: string, enum: [GROUP, COMPANY, ORGANIZATION]}, pattern: {type: string}, reset_policy: {type: string, enum: [NEVER, YEARLY, MONTHLY, DAILY]}, generation_mode: {type: string, enum: [AUTO_REQUIRED, AUTO_IF_EMPTY]}, start_number: {$ref: '#/components/schemas/BigInt'}, increment_by: {type: integer, minimum: 1}, is_default: {type: boolean}, status: {type: string, enum: [ACTIVE, INACTIVE]}}}
+    NumberingSeriesValidationRequest:
+      allOf:
+        - {$ref: '#/components/schemas/NumberingSeriesCreate'}
+        - type: object
+          properties:
+            series_id:
+              $ref: '#/components/schemas/BigInt'
+              description: Optional persisted series ID when previewing an edit; omitted for create.
     NumberingSeriesPatch: {type: object, properties: {resource_id: {$ref: '#/components/schemas/BigInt'}, series_code: {type: string}, name: {type: string}, scope_type: {type: string, enum: [GROUP, COMPANY, ORGANIZATION]}, pattern: {type: string}, reset_policy: {type: string, enum: [NEVER, YEARLY, MONTHLY, DAILY]}, generation_mode: {type: string, enum: [AUTO_REQUIRED, AUTO_IF_EMPTY]}, start_number: {$ref: '#/components/schemas/BigInt'}, increment_by: {type: integer, minimum: 1}, is_default: {type: boolean}, status: {type: string, enum: [ACTIVE, INACTIVE]}}}
     NumberingSeriesState: {type: object, required: [status], properties: {status: {type: string, enum: [ACTIVE, INACTIVE]}}}
     NumberingSeriesValidation: {type: object, required: [valid, normalized_pattern, validation_messages], properties: {valid: {type: boolean}, normalized_pattern: {type: string}, validation_messages: {type: array, items: {type: string}}}}

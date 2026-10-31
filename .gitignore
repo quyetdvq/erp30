@@ -15,6 +15,7 @@ backend/TEMP/**
 *.patch
 *.PATCH
 TEMP/**
+/backend/app/app.zip
 
 # Dependencies and generated frontend output
 **/vendor/

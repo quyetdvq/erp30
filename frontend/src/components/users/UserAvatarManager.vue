@@ -108,8 +108,8 @@ onBeforeUnmount(clearSelection)
       </label>
       <p class="security-note">{{ t('security.avatarLimit') }}</p>
       <div class="avatar-manager__buttons">
-        <button type="button" class="primary-button" :disabled="busy || !selected" @click="void upload()">{{ t('security.avatarUpload') }}</button>
-        <button v-if="hasAvatar" type="button" class="secondary-button" :disabled="busy" @click="void remove()">{{ t('security.avatarRemove') }}</button>
+        <button data-ds-icon="upload" type="button" class="primary-button" :disabled="busy || !selected" @click="void upload()">{{ t('security.avatarUpload') }}</button>
+        <button data-ds-icon="delete" v-if="hasAvatar" type="button" class="secondary-button ds-button--danger-outline" :disabled="busy" @click="void remove()">{{ t('security.avatarRemove') }}</button>
       </div>
     </div>
     <p v-if="error" class="inline-error" role="alert">{{ error }}</p>
@@ -124,5 +124,5 @@ onBeforeUnmount(clearSelection)
 .avatar-manager__file { display: grid; gap: 5px; }
 .avatar-manager__file input { width: 100%; max-width: 300px; }
 .avatar-manager__buttons { display: flex; gap: 8px; flex-wrap: wrap; }
-.inline-error { color: #b64444; font-size: 12px; }
+.inline-error { color: var(--ds-danger); font-size: 12px; }
 </style>

@@ -43,14 +43,14 @@ const emit = defineEmits<{ retry: [] }>()
     </div>
     <div v-else-if="props.error && !props.hasData" class="list-shell__state" role="alert">
       <slot name="error">{{ t('list.error') }}</slot>
-      <button v-if="props.retryable" type="button" class="list-shell__retry" @click="emit('retry')">
+      <button data-ds-icon="retry" v-if="props.retryable" type="button" class="list-shell__retry" @click="emit('retry')">
         {{ t('list.retry') }}
       </button>
     </div>
     <template v-else-if="props.hasData">
       <div v-if="props.error" class="list-shell__notice" role="alert">
         <slot name="refresh-error">{{ t('list.refreshError') }}</slot>
-        <button
+        <button data-ds-icon="retry"
           v-if="props.retryable && !props.refreshing"
           type="button"
           class="list-shell__retry"
@@ -73,57 +73,3 @@ const emit = defineEmits<{ retry: [] }>()
     <slot v-else />
   </section>
 </template>
-
-<style scoped>
-.list-shell {
-  display: grid;
-  gap: 16px;
-  min-width: 0;
-}
-.list-shell__header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 16px;
-  flex-wrap: wrap;
-}
-.list-shell__title {
-  margin: 0;
-  font-size: 18px;
-}
-.list-shell__toolbar {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  flex-wrap: wrap;
-}
-.list-shell__state,
-.list-shell__notice,
-.list-shell__refreshing {
-  padding: 16px;
-  border: 1px solid #dbe5ea;
-  border-radius: 6px;
-}
-.list-shell__notice {
-  color: #a23a32;
-  background: #fff7f6;
-}
-.list-shell__refreshing {
-  color: #536b7b;
-  font-size: 13px;
-}
-.list-shell__retry {
-  display: block;
-  margin-top: 8px;
-  padding: 4px 0;
-  border: 0;
-  background: transparent;
-  color: #1876a8;
-  text-decoration: underline;
-  cursor: pointer;
-}
-.list-shell__retry:focus-visible {
-  outline: 2px solid #1876a8;
-  outline-offset: 2px;
-}
-</style>

@@ -36,29 +36,14 @@ async function requestExport(): Promise<void> {
 </script>
 
 <template>
-  <button
+  <button data-ds-icon="download"
     v-if="props.canExport && props.exportAction"
     type="button"
-    class="list-export-button"
+    class="list-export-button ds-button ds-button--secondary"
     :disabled="props.disabled || busy"
+    :aria-busy="busy"
     @click="requestExport"
   >
     {{ busy ? t('list.exporting') : t('list.export') }}
   </button>
 </template>
-
-<style scoped>
-.list-export-button {
-  min-height: 34px;
-  border: 1px solid #1876a8;
-  border-radius: 4px;
-  padding: 6px 12px;
-  background: #fff;
-  color: #1876a8;
-  cursor: pointer;
-}
-.list-export-button:disabled {
-  cursor: not-allowed;
-  opacity: 0.6;
-}
-</style>

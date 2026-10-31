@@ -80,9 +80,16 @@ export async function customerPage(params: Record<string, string | number>): Pro
   return response.data
 }
 /** The CUS API consumes flat whitelisted filters, unlike the generic P1 list transport. */
+const CUSTOMER_SORT_WHITELIST = new Set([
+  'name', '-name', 'customer_code', '-customer_code', 'id', '-id',
+])
+
 export function listCustomerPage(query: ListQuery): Promise<Page<Customer>> {
+  // The CUS backend rejects compound and unknown sort expressions with 400.
+  // Only issue a sort authorized by its actual CustomerSql whitelist.
+  const sort = CUSTOMER_SORT_WHITELIST.has(query.sort) ? query.sort : 'name'
   const params: Record<string, string | number> = {
-    page: query.page, page_size: query.page_size, q: query.q, sort: query.sort || 'name',
+    page: query.page, page_size: query.page_size, q: query.q, sort,
   }
   for (const key of ['status', 'customer_type', 'customer_group_code', 'company_id'] as const) {
     const value = query.filter[key]

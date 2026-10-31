@@ -428,7 +428,7 @@ onUnmounted(() => {
       <h1>{{ t('product.productsTitle') }}</h1>
       <p>{{ t('product.productsDescription') }}</p>
     </div>
-    <button
+    <button data-ds-icon="add"
       v-if="hasBasePermission('product', 'create')"
       type="button"
       class="primary-button"
@@ -437,8 +437,8 @@ onUnmounted(() => {
       {{ t('common.create') }}
     </button>
   </div>
-  <section class="content-panel product-panel">
-    <ListQueryControls
+  <section class="content-panel product-panel ds-page-panel">
+    <ListQueryControls :show-page-size="false"
       :model-value="state.query"
       :filters="filters()"
       :sort-options="productSortOptions"
@@ -475,8 +475,8 @@ onUnmounted(() => {
       :empty-filtered-result="state.isEmptyFilteredResult.value"
       :error="state.queryState.error.value"
     >
-      <div class="master-table-wrap">
-        <table class="master-table">
+      <div class="master-table-wrap ds-table-scroll">
+        <table class="master-table ds-data-grid">
           <caption class="sr-only">
             {{
               t('product.productsTitle')
@@ -628,7 +628,7 @@ onUnmounted(() => {
           </tbody>
         </table>
       </div>
-      <ListPagination
+      <ListPagination :show-page-size="false"
         :page="state.query.page"
         :page-size="state.query.page_size"
         :total="state.total.value"
@@ -673,45 +673,9 @@ onUnmounted(() => {
 </template>
 
 <style scoped>
-.product-panel {
-  display: grid;
-  gap: 14px;
-  padding: 18px 20px 20px;
-}
-.inline-error {
-  margin: 0;
-  color: #b64444;
-  font-size: 12px;
-}
-.master-table-wrap {
-  overflow-x: auto;
-  border: 1px solid #dbe5ea;
-  border-radius: 6px;
-}
-.master-table {
-  width: 100%;
-  min-width: 1100px;
-  border-collapse: collapse;
-  color: #183b57;
-  font-size: 13px;
-}
-.master-table th,
-.master-table td {
-  padding: 10px 12px;
-  border-bottom: 1px solid #e8eef1;
-  text-align: start;
-  vertical-align: middle;
-}
-.master-table th {
-  background: #f7fafb;
-  color: #536b7b;
-  font-size: 12px;
-  font-weight: 700;
-  white-space: nowrap;
-}
-.master-table tbody tr:last-child td {
-  border-bottom: 0;
-}
+
+
+.master-table { min-width: 1100px; }
 .master-table th.table-actions,
 .master-table td.table-actions {
   display: table-cell;
@@ -748,7 +712,7 @@ onUnmounted(() => {
 }
 .product-meta-label {
   flex: 0 0 42px;
-  color: #708696;
+  color: var(--ds-text-secondary);
   font-size: 11px;
 }
 .product-meta-value {
@@ -787,48 +751,48 @@ onUnmounted(() => {
   flex: 0 0 24px;
   width: 24px;
   height: 24px;
-  border: 1px solid #b8ccd8;
+  border: 1px solid var(--ds-border);
   border-radius: 4px;
-  background: #fff;
-  color: #294b65;
+  background: var(--ds-bg-surface);
+  color: var(--ds-text-primary);
   font-weight: 700;
   cursor: pointer;
 }
 .product-tree-toggle:hover {
-  background: #edf6fb;
-  border-color: #77a8c4;
+  background: var(--ds-bg-hover);
+  border-color: var(--ds-border-strong);
 }
 .product-tree-branch {
   display: block;
   flex: 0 0 20px;
   width: 20px;
   height: 20px;
-  border-left: 1px solid #b8cfdd;
-  border-bottom: 1px solid #b8cfdd;
+  border-left: 1px solid var(--ds-border-subtle);
+  border-bottom: 1px solid var(--ds-border-subtle);
   border-bottom-left-radius: 4px;
 }
 .master-table tbody tr.product-data-row:hover,
 .master-table tbody tr.product-data-row:focus-within {
-  background: #f0f7fb;
+  background: var(--ds-bg-hover);
 }
 .product-child-row {
-  background: #f8fbfd;
+  background: var(--ds-bg-subtle);
 }
 .product-child-row td.product-name-column {
-  box-shadow: inset 3px 0 0 #dceaf2;
+  box-shadow: inset 3px 0 0 var(--ds-border-strong);
 }
 .product-child-total {
   display: inline-flex;
   align-items: center;
   padding: 2px 7px;
   border-radius: 999px;
-  background: #edf4f9;
-  color: #5c7586;
+  background: var(--ds-bg-subtle);
+  color: var(--ds-text-secondary);
   font-size: 11px;
   white-space: nowrap;
 }
 .product-child-control-row td {
-  background: #f8fbfd;
+  background: var(--ds-bg-subtle);
 }
 .master-table td.product-child-control-cell {
   padding-left: 48px;
@@ -839,7 +803,7 @@ onUnmounted(() => {
   gap: 7px;
   border: 0;
   padding: 4px 0;
-  color: #176b9d;
+  color: var(--ds-primary);
   background: transparent;
   cursor: pointer;
   font-weight: 650;
@@ -856,7 +820,7 @@ onUnmounted(() => {
   border: 0;
   padding: 0;
   background: transparent;
-  color: #1876a8;
+  color: var(--ds-primary);
   cursor: pointer;
   text-align: start;
   font: inherit;
@@ -870,39 +834,28 @@ onUnmounted(() => {
 .product-tree-toggle:focus-visible,
 .product-link:focus-visible,
 .product-children-control:focus-visible {
-  outline: 2px solid #1682bd;
+  outline: 2px solid var(--ds-focus-ring);
   outline-offset: 2px;
 }
 .role-badge {
   display: inline-block;
   border-radius: 3px;
   padding: 3px 6px;
-  background: #e8f1f5;
-  color: #294b65;
+  background: var(--ds-info-soft);
+  color: var(--ds-text-primary);
   font-size: 11px;
   font-weight: 700;
 }
 .role-parent {
-  background: #fff4dc;
-  color: #8a5a00;
+  background: var(--ds-warning-soft);
+  color: var(--ds-warning);
 }
 .role-child {
-  background: #e8f4e8;
-  color: #27653a;
+  background: var(--ds-success-soft);
+  color: var(--ds-success);
 }
 .role-combo {
-  background: #efe9fa;
-  color: #5b3e86;
-}
-.sr-only {
-  position: absolute;
-  width: 1px;
-  height: 1px;
-  padding: 0;
-  margin: -1px;
-  overflow: hidden;
-  clip: rect(0, 0, 0, 0);
-  white-space: nowrap;
-  border: 0;
+  background: var(--ds-role-combo-soft);
+  color: var(--ds-role-combo);
 }
 </style>

@@ -102,15 +102,19 @@ onMounted(() => void load())
     </div>
   </div>
   <p v-if="error" class="inline-error" role="alert">{{ t('security.requestError') }}</p>
-  <section class="content-panel security-list-panel">
-    <div class="security-toolbar">
-      <ListQueryControls
+  <section class="content-panel security-list-panel ds-page-panel">
+    <div class="security-toolbar ds-page-toolbar">
+      <ListQueryControls :show-page-size="false"
         :model-value="state.query"
         @apply="applyQuery"
         @reset="resetQuery"
-      /><button type="button" class="secondary-button" @click="void load">
-        ↻ {{ t('common.refresh') }}
-      </button>
+      >
+        <template #actions>
+          <button data-ds-icon="refresh" type="button" class="secondary-button" @click="void load">
+            {{ t('common.refresh') }}
+          </button>
+        </template>
+      </ListQueryControls>
     </div>
     <p class="security-note">{{ t('security.logScopeNote') }}</p>
     <ListShell
@@ -147,7 +151,7 @@ onMounted(() => void load())
             {{ copiedId === row.request_id ? t('security.copied') : row.request_id }}</button
           ><span v-else>{{ t('list.noValue') }}</span></template
         ><template #cell-row_actions="{ row }"
-          ><button
+          ><button data-ds-icon="view"
             v-if="hasBasePermission('authorization_log', 'view')"
             type="button"
             class="secondary-button"
@@ -183,27 +187,15 @@ onMounted(() => void load())
 </template>
 
 <style scoped>
-.security-list-panel {
-  display: grid;
-  gap: 14px;
-  padding: 18px 20px 20px;
-}
-.security-toolbar {
-  display: flex;
-  align-items: end;
-  justify-content: space-between;
-  gap: 10px;
-  flex-wrap: wrap;
-}
 .security-note {
   margin: 0;
-  color: #526b7b;
+  color: var(--ds-text-secondary);
   font-size: 12px;
   line-height: 1.6;
 }
 .inline-error {
   margin: 0 0 12px;
-  color: #b64444;
+  color: var(--ds-danger);
   font-size: 12px;
 }
 .decision {
@@ -215,21 +207,21 @@ onMounted(() => void load())
   font-weight: 700;
 }
 .decision--allow {
-  border-color: #b8dfcc;
-  background: #effbf4;
-  color: #1c8a62;
+  border-color: var(--ds-success);
+  background: var(--ds-success-soft);
+  color: var(--ds-success);
 }
 .decision--deny {
-  border-color: #e7c9c9;
-  background: #fff4f4;
-  color: #b64a4a;
+  border-color: var(--ds-danger);
+  background: var(--ds-danger-soft);
+  color: var(--ds-danger);
 }
 .request-id {
   max-width: 170px;
   overflow: hidden;
   border: 0;
   background: transparent;
-  color: #0b69a3;
+  color: var(--ds-primary);
   font-family: ui-monospace, monospace;
   font-size: 10px;
   text-overflow: ellipsis;
@@ -237,7 +229,7 @@ onMounted(() => void load())
   cursor: pointer;
 }
 .request-id:focus-visible {
-  outline: 2px solid #1876a8;
+  outline: 2px solid var(--ds-focus-ring);
   outline-offset: 2px;
 }
 </style>

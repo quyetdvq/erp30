@@ -106,8 +106,8 @@ onMounted(() => { void reload() })
       <p class="info">{{ t('runtimeConfiguration.migrationNote') }}</p>
       <p class="info">{{ t('runtimeConfiguration.secretNote') }}</p>
       <div class="actions">
-        <button type="button" :disabled="loading || saving" @click="reload">{{ t('runtimeConfiguration.reload') }}</button>
-        <button type="button" :disabled="!canEdit || !snapshot || loading || saving" @click="save">
+        <button type="button" class="ds-button ds-button--secondary" data-ds-icon="refresh" :disabled="loading || saving" @click="reload">{{ t('runtimeConfiguration.reload') }}</button>
+        <button type="button" class="ds-button ds-button--primary" data-ds-icon="save" :disabled="!canEdit || !snapshot || loading || saving" @click="save">
           {{ saving ? t('runtimeConfiguration.saving') : t('runtimeConfiguration.saveAll') }}
         </button>
         <small v-if="snapshot">{{ t('runtimeConfiguration.revision') }}: {{ snapshot.revision }}</small>
@@ -143,17 +143,15 @@ onMounted(() => { void reload() })
 .runtime-config p { line-height: 1.55; }
 .info { color: var(--n-text-color, inherit); }
 .sections { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 350px), 1fr)); gap: 16px; margin-top: 18px; }
-.group { border: 1px solid #8297a966; border-radius: 10px; padding: 18px; }
+.group { border: 1px solid var(--ds-border-subtle); border-radius: 10px; padding: 18px; }
 .flag { display: flex; align-items: flex-start; gap: 12px; padding: 10px 0; cursor: pointer; }
-.flag + .flag { border-top: 1px solid #8297a933; }
+.flag + .flag { border-top: 1px solid var(--ds-border-subtle); }
 .flag input { margin-top: 4px; width: 18px; height: 18px; }
 .flag span { display: flex; flex-direction: column; gap: 4px; overflow-wrap: anywhere; }
 .flag small { opacity: .75; }
 .key { font-family: monospace; }
 .scheduler-note { font-size: .9rem; opacity: .85; }
 .actions { display: flex; flex-wrap: wrap; align-items: center; gap: 12px; margin-top: 18px; }
-.actions button { padding: 8px 16px; border-radius: 6px; border: 1px solid #8297a9; background: transparent; color: inherit; cursor: pointer; }
-.actions button:disabled { opacity: .5; cursor: not-allowed; }
-.error { color: #c73737; }
+.error { color: var(--ds-danger); }
 .pending { font-weight: 600; }
 </style>

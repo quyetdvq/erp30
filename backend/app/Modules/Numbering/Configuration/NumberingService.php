@@ -74,15 +74,7 @@ final class NumberingService
             if ((string) ($candidate['resource_id'] ?? '') !== $resourceId) {
                 throw new DomainException('NUM_INVALID_CONFIGURATION', ['field'=>'resource_id']);
             }
-            $counters = $this->db->table('auto_numbering_counters')->select('id')
-                ->where('numbering_series_id',$seriesId)->limit(1)->get()->getRowArray();
-            if ($counters !== null) {
-                foreach (['resource_id','series_code','scope_type','reset_policy'] as $field) {
-                    if ((string) $candidate[$field] !== (string) $current[$field]) {
-                        throw new DomainException('NUM_ISSUED_FIELD_IMMUTABLE', ['field'=>$field]);
-                    }
-                }
-            }
+            $this->assertIssuedFieldsUnchanged($seriesId,$current,$candidate);
             $this->validateCandidate($resourceId,$candidate,$seriesId);
             if (!$this->db->table('auto_numbering_series')->where('id',$seriesId)->where('resource_id',$resourceId)
                     ->update([...$patch, 'updated_by'=>$this->actorId,'updated_at'=>gmdate('Y-m-d H:i:s')])) {
@@ -103,10 +95,32 @@ final class NumberingService
     {
         $resourceId = NumberingRules::id($resourceId);
         $this->authorize($this->resource($resourceId));
+        // Optional EDIT context; CREATE requests omit series_id entirely.
+        // Do not trust an arbitrary exclusion: verify the series belongs to the
+        // route-scoped Resource, and enforce issuance locks just like PATCH.
+        $seriesId = array_key_exists('series_id',$payload) ? NumberingRules::id($payload['series_id']) : null;
+        unset($payload['series_id']);
         $payload['resource_id'] = $resourceId;
         $candidate = NumberingRules::normalize($payload, true);
-        $this->validateCandidate($resourceId,$candidate,null);
+        if ($seriesId !== null) {
+            $current = $this->series($resourceId,$seriesId);
+            $this->assertIssuedFieldsUnchanged($seriesId,$current,$candidate);
+        }
+        $this->validateCandidate($resourceId,$candidate,$seriesId);
         return ['valid'=>true,'normalized_pattern'=>(string) $candidate['pattern'],'validation_messages'=>[]];
+    }
+
+    /** @param array<string,mixed> $current @param array<string,mixed> $candidate */
+    private function assertIssuedFieldsUnchanged(string $seriesId, array $current, array $candidate): void
+    {
+        $counters = $this->db->table('auto_numbering_counters')->select('id')
+            ->where('numbering_series_id',$seriesId)->limit(1)->get()->getRowArray();
+        if ($counters === null) return;
+        foreach (['resource_id','series_code','scope_type','reset_policy'] as $field) {
+            if ((string) $candidate[$field] !== (string) $current[$field]) {
+                throw new DomainException('NUM_ISSUED_FIELD_IMMUTABLE', ['field'=>$field]);
+            }
+        }
     }
 
     /** @param array<string,mixed> $candidate */

@@ -98,10 +98,10 @@ onBeforeUnmount(() => { ++requestNumber; controller?.abort() })
 .m11-diagnostics p { line-height: 1.5; }
 .m11-diagnostics-asof,.m11-diagnostics-disclaimer { opacity: .8; }
 .m11-diagnostics-grid { display: grid; grid-template-columns: repeat(3,minmax(0,1fr)); gap: 14px; margin-top: 12px; }
-.m11-diagnostics-card { border: 1px solid var(--n-border-color,#a0a0a040); border-radius: 10px; padding: 18px; min-width: 0; }
+.m11-diagnostics-card { border: 1px solid var(--n-border-color,var(--ds-border-subtle)); border-radius: 10px; padding: 18px; min-width: 0; }
 .m11-diagnostics-findings { padding-left: 20px; font-weight: 600; }
 .m11-diagnostics-counters { display: grid; gap: 6px; }
-.m11-diagnostics-counters > div { display: flex; justify-content: space-between; gap: 12px; border-bottom: 1px solid var(--n-divider-color,#a0a0a029); }
+.m11-diagnostics-counters > div { display: flex; justify-content: space-between; gap: 12px; border-bottom: 1px solid var(--n-divider-color,var(--ds-border-subtle)); }
 .m11-diagnostics-counters dt { overflow-wrap: anywhere; }
 .m11-diagnostics-counters dd { font-variant-numeric: tabular-nums; font-weight: 650; margin: 0; }
 .m11-diagnostics summary { cursor: pointer; margin-top: 16px; }

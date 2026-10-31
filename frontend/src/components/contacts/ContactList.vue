@@ -231,25 +231,28 @@ onMounted(async () => {
 <template>
   <section class="contact-list" :aria-label="t('contact.title')">
     <header class="contact-list__header">
-      <button
+      <button data-ds-icon="add"
         v-if="hasBasePermission(ownerResource, 'create')"
         type="button"
         class="primary-button"
         @click="openCreate"
       >
-        ＋ {{ t('contact.add') }}
+        {{ t('contact.add') }}
       </button>
     </header>
     <div class="contact-list__toolbar">
-      <ListQueryControls
+      <ListQueryControls :show-page-size="false"
         :model-value="state.query"
         :filters="statusFilters"
         @apply="applyQuery"
         @reset="resetQuery"
-      />
-      <button type="button" class="secondary-button" @click="void load()">
-        ↻ {{ t('common.refresh') }}
-      </button>
+      >
+        <template #actions>
+          <button data-ds-icon="refresh" type="button" class="secondary-button" @click="void load()">
+            {{ t('common.refresh') }}
+          </button>
+        </template>
+      </ListQueryControls>
     </div>
     <p v-if="error" class="inline-error" role="alert">{{ t('contact.error') }}</p>
     <ListShell
@@ -316,9 +319,8 @@ onMounted(async () => {
         "
       />
     </ListShell>
-    <!-- Nested Contact dialogs must escape the scrolling detail workspace. -->
-    <Teleport to="body">
-      <ContactFormModal
+    <!-- ContactFormModal now uses the shared, portalled AppDialogHost. -->
+    <ContactFormModal
         :open="modalOpen"
         :owner-id="props.ownerId"
         :owner-type="props.ownerType"
@@ -329,8 +331,7 @@ onMounted(async () => {
         @close="modalOpen = false"
         @save="save"
         @province-change="loadWards"
-      />
-    </Teleport>
+    />
     <TableDetailModal
       :open="detailOpen"
       :title="t('common.view') + ' - ' + t('contact.title')"
@@ -347,33 +348,19 @@ onMounted(async () => {
   min-width: 0;
   width: 100%;
 }
-.contact-list__header,
-.contact-list__toolbar {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 10px;
-  flex-wrap: wrap;
-}
 .contact-list__header {
-  justify-content: flex-end;
+  display: flex; justify-content: flex-end; gap: 10px; flex-wrap: wrap;
 }
+.contact-list__toolbar { min-width: 0; }
 .contact-list__status {
   display: inline-flex;
   align-items: center;
   gap: 8px;
   white-space: nowrap;
 }
-.contact-list__toolbar input {
-  min-height: 34px;
-  width: min(320px, 100%);
-  border: 1px solid #c7d6df;
-  border-radius: 4px;
-  padding: 7px 9px;
-}
 .inline-error {
   margin: 0;
-  color: #b64444;
+  color: var(--ds-danger);
   font-size: 12px;
 }
 </style>

@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import AppDialogHost from '@/components/ui/AppDialogHost.vue'
 import { rowAllowedActions } from '@/components/lists/rowActionPolicy'
 import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
@@ -302,17 +303,20 @@ onUnmounted(() => {
       <h1>{{ title }}</h1>
       <p>{{ description }}</p>
     </div>
-    <button v-if="hasBasePermissionKey(isWards ? 'ward.create' : 'province.create')" type="button"
+    <button data-ds-icon="add" v-if="hasBasePermissionKey(isWards ? 'ward.create' : 'province.create')" type="button"
       class="primary-button" @click="openCreate">
-      ＋ {{ t('common.create') }}
+      {{ t('common.create') }}
     </button>
   </div>
-  <section class="content-panel location-panel">
-    <div class="location-toolbar">
-      <ListQueryControls :model-value="state.query" :filters="filters" @apply="applyQuery" @reset="resetQuery" />
-      <button type="button" class="secondary-button" @click="void load()">
-        ↻ {{ t('common.refresh') }}
-      </button>
+  <section class="content-panel location-panel ds-page-panel">
+    <div class="location-toolbar ds-page-toolbar">
+      <ListQueryControls :show-page-size="false" :model-value="state.query" :filters="filters" @apply="applyQuery" @reset="resetQuery" >
+        <template #actions>
+          <button data-ds-icon="refresh" type="button" class="secondary-button" @click="void load()">
+            {{ t('common.refresh') }}
+          </button>
+        </template>
+      </ListQueryControls>
     </div>
     <p v-if="error" class="inline-error" role="alert">{{ t('locations.error') }}</p>
     <ListShell :title="title" :initial-loading="state.isInitialLoading.value"
@@ -353,8 +357,8 @@ onUnmounted(() => {
   </section>
   <TableDetailModal :open="detailOpen" :title="t('common.view') + ' - ' + title" :fields="detailFields"
     @close="detailOpen = false" />
-  <div v-if="modalOpen" class="modal-backdrop">
-    <section class="modal-card" role="dialog" aria-modal="true" :aria-label="t('common.form')">
+  <AppDialogHost :open="modalOpen" size="sm" @close="closeForm">
+    <section v-if="modalOpen" class="ds-dialog-surface modal-card" role="dialog" aria-modal="true" :aria-label="t('common.form')">
       <header class="modal-card__header">
         <h2 class="modal-card-title">
           <NIcon :size="24">
@@ -363,10 +367,10 @@ onUnmounted(() => {
           {{ editingId ? t('common.edit') : t('common.create') }}
         </h2>
         <p>{{ title }}</p>
-        <button type="button" class="modal-card-button-close" :aria-label="t('common.close')" @click="closeForm">
+        <button type="button" class="modal-card-button-close" :aria-label="t('common.close')" @click="closeForm" data-ds-icon="close">
         </button>
       </header>
-      <form id="locations-form" @submit.prevent="save">
+      <form class="ds-dialog-form-fields" id="locations-form" @submit.prevent="save">
         <label v-if="isWards"><span>{{ t('locations.province') }}</span>
           <SearchableSelect :model-value="form.province_id" :options="provinceSelectOptions"
             :placeholder="t('locations.selectProvince')" :aria-label="t('locations.province')" @update:model-value="
@@ -386,77 +390,23 @@ onUnmounted(() => {
 
       </form>
       <footer class="modal-card__footer">
-        <button type="button" class="secondary-button" @click="closeForm">
-          <NIcon :size="20">
-            <Refresh />
-          </NIcon>
+        <button type="button" class="secondary-button" @click="closeForm" data-ds-icon="cancel">
+
           {{ t('common.cancel') }}
         </button>
         <button type="submit" class="primary-button" form="locations-form" :disabled="mutationBusy ||
           (Boolean(editingId) &&
             !hasBasePermissionKey(isWards ? 'ward.edit' : 'province.edit')) ||
           (!editingId && !hasBasePermissionKey(isWards ? 'ward.create' : 'province.create'))
-          ">
-          <NIcon :size="20">
-            <SaveOutline />
-          </NIcon>
+          " data-ds-icon="save">
+
           {{ mutationBusy ? t('common.saving') : t('common.save') }}
         </button>
       </footer>
     </section>
-  </div>
+  </AppDialogHost>
 </template>
 
 <style scoped>
-.location-panel {
-  display: grid;
-  gap: 14px;
-  padding: 18px 20px 20px;
-}
 
-.location-toolbar {
-  display: flex;
-  align-items: end;
-  justify-content: space-between;
-  gap: 10px;
-  flex-wrap: wrap;
-}
-
-.inline-error {
-  margin: 0;
-  color: #b64444;
-  font-size: 12px;
-}
-
-.modal-card {
-  width: min(100%, 520px);
-  max-height: calc(100vh - 40px);
-  overflow: auto;
-  border-radius: 7px;
-  background: #fff;
-  box-shadow: 0 20px 60px rgb(18 42 62 / 24%);
-}
-
-.modal-card form {
-  display: grid;
-  gap: 12px;
-  padding: 18px;
-}
-
-.modal-card label {
-  display: grid;
-  gap: 5px;
-  color: #536b7b;
-  font-size: 12px;
-  font-weight: 600;
-}
-
-.modal-card input,
-.modal-card select {
-  min-height: 34px;
-  border: 1px solid #c7d6df;
-  border-radius: 4px;
-  padding: 7px 9px;
-  font: inherit;
-}
 </style>

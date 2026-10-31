@@ -102,7 +102,7 @@ onMounted(() => void load())
         <h1>{{ t('notificationSettings.systemTitle') }}</h1>
         <p>{{ t('notificationSettings.systemHelp') }}</p>
       </div>
-      <button type="button" :disabled="loading || saving !== null" @click="load">{{ t('notificationSettings.reload') }}</button>
+      <button type="button" class="ds-button ds-button--secondary" data-ds-icon="refresh" :disabled="loading || saving !== null" @click="load">{{ t('notificationSettings.reload') }}</button>
     </header>
     <p v-if="pendingCount > 0" role="status" class="m11-notice">{{ t('notificationSettings.pendingCount', { count: pendingCount }) }}</p>
     <p v-if="!editable && !loading" class="m11-notice">{{ t('notificationSettings.readOnly') }}</p>
@@ -138,7 +138,7 @@ onMounted(() => void load())
             @change="status = ''" />
           <span>{{ t('notificationSettings.allowOverride') }}</span>
         </label>
-        <button type="button" :disabled="!canSave(row, draft)" @click="save(row)">
+        <button type="button" class="ds-button ds-button--primary" data-ds-icon="save" :disabled="!canSave(row, draft)" @click="save(row)">
           {{ saving === row.key ? t('notificationSettings.saving') : t('notificationSettings.save') }}
         </button>
       </div>
@@ -152,12 +152,12 @@ onMounted(() => void load())
 .m11-heading h1, .m11-group h2 { margin: 0; }
 .m11-heading p, .m11-group p { margin: 6px 0 0; opacity: .78; }
 .m11-heading button { white-space: nowrap; }
-.m11-group { border: 1px solid #8297a955; border-radius: 10px; padding: 16px; display: grid; gap: 12px; min-width: 0; }
+.m11-group { border: 1px solid var(--ds-border-subtle); border-radius: 10px; padding: 16px; display: grid; gap: 12px; min-width: 0; }
 .m11-group h2 { font-size: 1.1rem; }
-.m11-row { display: grid; grid-template-columns: minmax(170px,2fr) minmax(140px,1fr) minmax(140px,1fr) auto; gap: 14px; align-items: center; border-top: 1px solid #8297a955; padding-top: 12px; min-width: 0; }
+.m11-row { display: grid; grid-template-columns: minmax(170px,2fr) minmax(140px,1fr) minmax(140px,1fr) auto; gap: 14px; align-items: center; border-top: 1px solid var(--ds-border-subtle); padding-top: 12px; min-width: 0; }
 .m11-detail { display: grid; gap: 3px; min-width: 0; }
 .m11-row small { overflow-wrap: anywhere; opacity: .76; }
-.m11-row .m11-unsaved, .m11-row .m11-impact { color: #b66a18; font-weight: 600; opacity: 1; }
+.m11-row .m11-unsaved, .m11-row .m11-impact { color: var(--ds-warning); font-weight: 600; opacity: 1; }
 .m11-field { display: flex; gap: 8px; align-items: center; }
 .m11-row button { min-height: 34px; padding: 6px 12px; }
 .m11-notice { margin: 0; font-weight: 600; }

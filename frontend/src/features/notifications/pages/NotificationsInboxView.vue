@@ -2,6 +2,7 @@
 import { computed, onMounted, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { NButton } from 'naive-ui'
+
 import { RouterLink } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
 import { useNotificationsStore } from '@/stores/notifications'
@@ -65,8 +66,7 @@ async function markAll(): Promise<void> {
         <h1>{{ t('notificationsInbox.title') }}</h1>
         <p>{{ t('notificationsInbox.description') }}</p>
       </div>
-      <NButton v-if="inboxUiEnabled" secondary :disabled="inbox.unreadCount === 0" @click="markAll">
-        {{ t('shell.markAllRead') }}
+      <NButton v-if="inboxUiEnabled" secondary :disabled="inbox.unreadCount === 0" @click="markAll" data-ds-icon="check">{{ t('shell.markAllRead') }}
       </NButton>
     </header>
     <p v-if="!inboxUiEnabled" role="status">{{ t('notificationsInbox.disabled') }}</p>
@@ -77,7 +77,9 @@ async function markAll(): Promise<void> {
           {{ t('notificationsInbox.unread') }} ({{ inbox.unreadCount }})
         </NButton>
       </nav>
-      <div class="m11-advanced-filters" role="group" :aria-label="t('notificationsInbox.advancedFilters')">
+      <div class="ds-filter-container">
+      <div class="m11-advanced-filters ds-filter-form" role="group" :aria-label="t('notificationsInbox.advancedFilters')">
+        <div class="ds-filter-fields">
         <label>
           <span>{{ t('notificationsInbox.eventGroup') }}</span>
           <select v-model="groupDraft" data-testid="inbox-event-group" :disabled="inbox.busy">
@@ -94,12 +96,14 @@ async function markAll(): Promise<void> {
           <span>{{ t('notificationsInbox.toUtc') }}</span>
           <input v-model="toDraft" data-testid="inbox-to" type="date" min="1970-01-01" max="2099-12-31" :disabled="inbox.busy" />
         </label>
-        <NButton data-testid="inbox-apply" :disabled="inbox.busy || invalidPeriod" @click="applyFilters">
-          {{ t('notificationsInbox.applyFilters') }}
+        </div>
+        <div class="ds-filter-actions">
+        <NButton data-testid="inbox-apply" :disabled="inbox.busy || invalidPeriod" @click="applyFilters" data-ds-icon="apply">{{ t('notificationsInbox.applyFilters') }}
         </NButton>
-        <NButton data-testid="inbox-reset" secondary :disabled="inbox.busy" @click="resetFilters">
-          {{ t('notificationsInbox.resetFilters') }}
+        <NButton data-testid="inbox-reset" secondary :disabled="inbox.busy" @click="resetFilters" data-ds-icon="reset">{{ t('notificationsInbox.resetFilters') }}
         </NButton>
+        </div>
+      </div>
       </div>
       <p v-if="pendingFilters && !invalidPeriod" role="status">{{ t('notificationsInbox.pendingFilters') }}</p>
       <p v-if="invalidPeriod" role="alert">{{ t('notificationsInbox.dateRangeError') }}</p>
@@ -119,15 +123,13 @@ async function markAll(): Promise<void> {
               {{ t(row.destination.kind === 'detail' ? 'notificationsInbox.openTarget' : 'notificationsInbox.openList') }}
             </RouterLink>
             <span v-else>{{ t('notificationsInbox.targetUnavailable') }}</span>
-            <NButton v-if="row.item.read_at === null" size="small" @click="markRead(row.item.id)">
-              {{ t('notificationsInbox.markRead') }}
+            <NButton v-if="row.item.read_at === null" size="small" @click="markRead(row.item.id)" data-ds-icon="check">{{ t('notificationsInbox.markRead') }}
             </NButton>
             <span v-else>{{ t('notificationsInbox.read') }}</span>
           </div>
         </article>
       </div>
-      <NButton v-if="inbox.nextCursor" :disabled="inbox.busy" @click="inbox.loadPage(inbox.filter, true)">
-        {{ t('notificationsInbox.more') }}
+      <NButton v-if="inbox.nextCursor" :disabled="inbox.busy" @click="inbox.loadPage(inbox.filter, true)" data-ds-icon="next">{{ t('notificationsInbox.more') }}
       </NButton>
     </template>
   </section>
@@ -140,11 +142,11 @@ async function markAll(): Promise<void> {
 .m11-heading p { opacity: .75; }
 .m11-filters, .m11-notice-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 12px; }
 .m11-filters { margin: 16px 0; }
-.m11-advanced-filters { display: flex; flex-wrap: wrap; align-items: end; gap: 12px; margin: 14px 0; }
-.m11-advanced-filters label { display: flex; flex-direction: column; gap: 5px; font-size: .85rem; }
-.m11-advanced-filters select, .m11-advanced-filters input { min-height: 34px; padding: 5px 8px; border: 1px solid var(--n-border-color, #aaa5); border-radius: 6px; background: var(--n-color, white); color: inherit; }
+.m11-advanced-filters { margin: 14px 0; }
+.m11-advanced-filters label { font-size: .85rem; }
+.m11-advanced-filters select, .m11-advanced-filters input { min-height: 34px; padding: 5px 8px; border: 1px solid var(--ds-border-subtle); border-radius: 6px; background: var(--ds-bg-surface); color: inherit; }
 .m11-notices { display: grid; gap: 10px; margin: 12px 0; }
-.m11-notice { display: flex; gap: 18px; justify-content: space-between; padding: 16px; border: 1px solid var(--n-border-color, #aaa5); border-radius: 10px; }
+.m11-notice { display: flex; gap: 18px; justify-content: space-between; padding: 16px; border: 1px solid var(--ds-border-subtle); border-radius: 10px; }
 .m11-notice p { margin: 8px 0; }
 .m11-notice time { opacity: .7; font-size: .82rem; }
 .m11-target-context { display: block; margin-top: 5px; opacity: .7; font-size: .82rem; }

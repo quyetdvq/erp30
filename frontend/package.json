@@ -31,6 +31,7 @@
     "check:refactor-external": "node scripts/refactor/check-equivalence.cjs --strict-external",
     "check:v2-baseline": "node --test scripts/refactor/v2-checkpoint.test.cjs && node scripts/refactor/check-v2-checkpoint.cjs --strict",
     "diff:v2-baseline": "node scripts/refactor/check-v2-checkpoint.cjs --report",
+    "check:design-system": "node --test scripts/design-system/design-system.test.cjs scripts/design-system/modal-migration.test.cjs scripts/design-system/form-detail-table.test.cjs scripts/design-system/button-icon-states.test.cjs scripts/design-system/final-cleanup.test.cjs scripts/design-system/hover-selection.test.cjs scripts/design-system/customer-table.test.cjs scripts/design-system/customer-sort-notices.test.cjs scripts/design-system/global-error-toast.test.cjs scripts/design-system/modal-close-toast.test.cjs scripts/design-system/unified-query-grid.test.cjs scripts/design-system/auto-numbering-all-resource.test.cjs scripts/design-system/auto-numbering-data-flow.test.cjs scripts/design-system/auto-numbering-searchable-resource.test.cjs scripts/design-system/auto-numbering-fixtures.test.cjs scripts/design-system/action-icon-unification.test.cjs",
     "check:v2-1-shell": "node --test scripts/refactor/v2-1-shell.test.cjs",
     "check:v2-2-product-editor": "node --test scripts/refactor/v2-2-product-editor.test.cjs",
     "check:v2-3-employees": "node --test scripts/refactor/v2-3-employees.test.cjs",

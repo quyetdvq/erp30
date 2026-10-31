@@ -2,6 +2,7 @@
 import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { NButton } from 'naive-ui'
+
 import { RouterLink } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
 import { workflowDestination } from '@/services/notificationInbox'
@@ -127,7 +128,9 @@ onBeforeUnmount(() => { ++requestSerial; activeController?.abort() })
       <p class="my-work-description">{{ t('myWork.description') }}</p>
     </header>
 
-    <div class="my-work-toolbar">
+    <div class="ds-filter-container">
+    <div class="my-work-toolbar ds-filter-form">
+      <div class="ds-filter-fields">
       <label class="my-work-control">
         <span>{{ t('myWork.filter') }}</span>
         <select data-testid="my-work-resource-filter" :value="resourceType" :disabled="busy" @change="selectType">
@@ -136,7 +139,7 @@ onBeforeUnmount(() => { ++requestSerial; activeController?.abort() })
           </option>
         </select>
       </label>
-      <label class="my-work-control my-work-control--search">
+      <label class="my-work-control my-work-control--search ds-filter-field--wide">
         <span>{{ t('myWork.searchLoaded') }}</span>
         <input v-model="searchText" data-testid="my-work-search" type="search"
           :placeholder="t('myWork.searchPlaceholder')" />
@@ -148,16 +151,18 @@ onBeforeUnmount(() => { ++requestSerial; activeController?.abort() })
           <option v-for="state in states" :key="state" :value="state">{{ stateLabel(state) }}</option>
         </select>
       </label>
-      <NButton data-testid="my-work-refresh" secondary :disabled="busy" @click="load()">
-        {{ t('myWork.refresh') }}
+      </div>
+      <div class="ds-filter-actions">
+      <NButton data-testid="my-work-refresh" secondary :disabled="busy" @click="load()" data-ds-icon="refresh">{{ t('myWork.refresh') }}
       </NButton>
+      </div>
+    </div>
     </div>
 
     <p v-if="busy && !items.length" role="status" aria-busy="true">{{ t('myWork.loading') }}</p>
     <p v-if="!enabled" role="status">{{ t('myWork.disabled') }}</p>
     <p v-if="error" role="alert">{{ t('myWork.error') }}</p>
-    <NButton v-if="error" size="small" @click="load(items.length > 0 || nextCursor !== null)">
-      {{ t('myWork.retry') }}
+    <NButton v-if="error" size="small" @click="load(items.length > 0 || nextCursor !== null)" data-ds-icon="retry">{{ t('myWork.retry') }}
     </NButton>
 
     <template v-if="enabled && (items.length || nextCursor !== null)">
@@ -221,52 +226,50 @@ onBeforeUnmount(() => { ++requestSerial; activeController?.abort() })
     </template>
     <p v-else-if="!busy && !error && enabled">{{ t('myWork.empty') }}</p>
     <div v-if="nextCursor !== null" class="my-work-more">
-      <NButton data-testid="my-work-more" :disabled="busy" secondary @click="load(true)">
-        {{ t('myWork.more') }}
+      <NButton data-testid="my-work-more" :disabled="busy" secondary @click="load(true)" data-ds-icon="next">{{ t('myWork.more') }}
       </NButton>
     </div>
   </section>
 </template>
 
 <style scoped>
-.my-work-actions { width: min(100%, 1240px); margin: 0 auto; padding: 20px; color: #183b57; }
+.my-work-actions { width: min(100%, 1240px); margin: 0 auto; padding: 20px; color: var(--ds-text-primary); }
 .my-work-heading h1 { font-size: 1.65rem; margin: 0 0 8px; }
-.my-work-description { max-width: 900px; margin: 0; line-height: 1.6; color: #526a7b; }
-.my-work-toolbar { display: flex; align-items: end; flex-wrap: wrap; gap: 12px; margin: 24px 0 16px; }
-.my-work-control { display: grid; gap: 5px; min-width: 160px; font-size: 12px; font-weight: 600; color: #526a7b; }
-.my-work-control--search { flex: 1 1 260px; }
-.my-work-control :is(select, input) { width: 100%; min-height: 38px; padding: 8px 10px; border: 1px solid #cad7e1; border-radius: 6px; background: #fff; color: #183b57; font: inherit; font-size: 13px; }
-.my-work-summary { display: flex; flex-wrap: wrap; gap: 8px 20px; padding: 12px 16px; border: 1px solid #dbe5ea; border-radius: 7px 7px 0 0; background: #f7fafb; color: #536b7b; font-size: 13px; }
-.my-work-summary strong { color: #183b57; }
-.my-work-table-scroll { width: 100%; max-width: 100%; overflow-x: auto; border: 1px solid #dbe5ea; border-top: 0; border-radius: 0 0 7px 7px; background: #fff; }
+.my-work-description { max-width: 900px; margin: 0; line-height: 1.6; color: var(--ds-text-secondary); }
+.my-work-toolbar { margin: 24px 0 16px; }
+.my-work-control { font-size: 12px; font-weight: 600; color: var(--ds-text-secondary); }
+.my-work-control :is(select, input) { width: 100%; min-height: 38px; padding: 8px 10px; border: 1px solid var(--ds-border); border-radius: 6px; background: var(--ds-bg-surface); color: var(--ds-text-primary); font: inherit; font-size: 13px; }
+.my-work-summary { display: flex; flex-wrap: wrap; gap: 8px 20px; padding: 12px 16px; border: 1px solid var(--ds-border-subtle); border-radius: 7px 7px 0 0; background: var(--ds-bg-subtle); color: var(--ds-text-secondary); font-size: 13px; }
+.my-work-summary strong { color: var(--ds-text-primary); }
+.my-work-table-scroll { width: 100%; max-width: 100%; overflow-x: auto; border: 1px solid var(--ds-border-subtle); border-top: 0; border-radius: 0 0 7px 7px; background: var(--ds-bg-surface); }
 .my-work-table { width: 100%; border-collapse: collapse; font-size: 13px; text-align: start; }
-.my-work-table th { padding: 12px; text-align: start; white-space: nowrap; color: #536b7b; background: #f7fafb; border-bottom: 1px solid #dbe5ea; }
-.my-work-table td { padding: 14px 12px; border-top: 1px solid #e9eff3; vertical-align: middle; }
-.my-work-table tbody tr:hover { background: #fafcfe; }
+.my-work-table th { padding: 12px; text-align: start; white-space: nowrap; color: var(--ds-text-secondary); background: var(--ds-bg-subtle); border-bottom: 1px solid var(--ds-border-subtle); }
+.my-work-table td { padding: 14px 12px; border-top: 1px solid var(--ds-border-subtle); vertical-align: middle; }
+.my-work-table tbody tr:hover { background: var(--ds-bg-hover); }
 .my-work-record { display: grid; justify-items: start; gap: 5px; min-width: 180px; max-width: 340px; }
-.my-work-type { padding: 3px 7px; border-radius: 4px; font-size: 11px; background: #ebf4fa; color: #35607a; }
-.my-work-name { color: #183b57; overflow-wrap: anywhere; font-size: 14px; }
-.my-work-identity { display: flex; flex-wrap: wrap; gap: 6px 10px; font-size: 12px; color: #718294; }
-.my-work-code { font-weight: 600; color: #4f6575; }
-.my-work-state { display: inline-flex; padding: 5px 9px; border-radius: 20px; border: 1px solid #d9e3eb; background: #f4f7fa; font-size: 12px; font-weight: 600; white-space: nowrap; }
-.my-work-state--active { background: #e4f8ed; color: #178549; border-color: #c1eed5; }
+.my-work-type { padding: 3px 7px; border-radius: 4px; font-size: 11px; background: var(--ds-info-soft); color: var(--ds-info); }
+.my-work-name { color: var(--ds-text-primary); overflow-wrap: anywhere; font-size: 14px; }
+.my-work-identity { display: flex; flex-wrap: wrap; gap: 6px 10px; font-size: 12px; color: var(--ds-text-muted); }
+.my-work-code { font-weight: 600; color: var(--ds-text-secondary); }
+.my-work-state { display: inline-flex; padding: 5px 9px; border-radius: 20px; border: 1px solid var(--ds-border-subtle); background: var(--ds-bg-subtle); font-size: 12px; font-weight: 600; white-space: nowrap; }
+.my-work-state--active { background: var(--ds-success-soft); color: var(--ds-success); border-color: var(--ds-success); }
 .my-work-options { display: grid; gap: 7px; list-style: none; margin: 0; padding: 0; min-width: 150px; }
-.my-work-options li { display: grid; gap: 3px; width: fit-content; max-width: 100%; padding: 6px 9px; border-radius: 5px; background: #f0f5fa; color: #204963; font-size: 12px; }
-.my-work-options code { color: #668196; font-size: 11px; overflow-wrap: anywhere; }
-.my-work-time { white-space: nowrap; color: #546c7d; }
-.my-work-link { color: #036aa5; font-weight: 600; white-space: nowrap; }
-.my-work-muted { color: #7c8c9a; }
-.my-work-scope-note { font-size: 12px; line-height: 1.5; color: #667c8b; }
-.my-work-empty-filter { padding: 24px; text-align: center; border: 1px solid #dbe5ea; border-top: 0; margin: 0; }
+.my-work-options li { display: grid; gap: 3px; width: fit-content; max-width: 100%; padding: 6px 9px; border-radius: 5px; background: var(--ds-bg-subtle); color: var(--ds-text-primary); font-size: 12px; }
+.my-work-options code { color: var(--ds-text-muted); font-size: 11px; overflow-wrap: anywhere; }
+.my-work-time { white-space: nowrap; color: var(--ds-text-secondary); }
+.my-work-link { color: var(--ds-primary); font-weight: 600; white-space: nowrap; }
+.my-work-muted { color: var(--ds-text-muted); }
+.my-work-scope-note { font-size: 12px; line-height: 1.5; color: var(--ds-text-muted); }
+.my-work-empty-filter { padding: 24px; text-align: center; border: 1px solid var(--ds-border-subtle); border-top: 0; margin: 0; }
 .my-work-more { display: flex; justify-content: center; padding: 12px; }
 @media (max-width: 760px) {
   .my-work-actions { padding: 12px; }
   .my-work-table-scroll { overflow-x: visible; border: 0; background: transparent; }
   .my-work-table, .my-work-table tbody { display: block; }
   .my-work-table thead { display: none; }
-  .my-work-table tbody tr { display: grid; gap: 10px; margin: 10px 0; padding: 14px; border: 1px solid #dbe5ea; border-radius: 8px; background: #fff; }
+  .my-work-table tbody tr { display: grid; gap: 10px; margin: 10px 0; padding: 14px; border: 1px solid var(--ds-border-subtle); border-radius: 8px; background: var(--ds-bg-surface); }
   .my-work-table td { display: grid; grid-template-columns: 100px minmax(0, 1fr); align-items: start; gap: 8px; padding: 0; border: 0; }
-  .my-work-table td::before { content: attr(data-label); color: #536b7b; font-size: 12px; font-weight: 600; }
+  .my-work-table td::before { content: attr(data-label); color: var(--ds-text-secondary); font-size: 12px; font-weight: 600; }
   .my-work-record { min-width: 0; }
   .my-work-time { white-space: normal; }
 }

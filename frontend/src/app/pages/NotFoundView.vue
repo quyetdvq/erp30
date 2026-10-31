@@ -1,5 +1,6 @@
 <script setup lang="ts">
-import { NButton, NResult } from 'naive-ui'
+import { NButton, NIcon, NResult } from 'naive-ui'
+import { ChevronBackOutline } from '@vicons/ionicons5'
 import { useI18n } from 'vue-i18n'
 import { useRouter } from 'vue-router'
 
@@ -14,7 +15,10 @@ const { t } = useI18n()
     :description="t('errors.notFoundDescription')"
   >
     <template #footer>
-      <NButton type="primary" @click="router.push('/')">{{ t('errors.backToWorkspace') }}</NButton>
+      <NButton type="primary" @click="router.push('/')">
+        <template #icon><NIcon aria-hidden="true"><ChevronBackOutline /></NIcon></template>
+        {{ t('errors.backToWorkspace') }}
+      </NButton>
     </template>
   </NResult>
 </template>

@@ -1,0 +1,284 @@
+/* ERP Design System / DS-P2: sole visual contract for every modal/dialog.
+ * AppDialogHost (Naive NModal) owns portal, stacking, scroll lock, focus and Escape.
+ * Business-specific dialog content/validation remains in feature components.
+ */
+.modal-card__header, .modal-card__footer {
+  display: flex;
+  flex: 0 0 auto;
+  align-items: center;
+  gap: var(--ds-space-3);
+  min-width: 0;
+  
+}
+.modal-card__header {
+  justify-content: space-between;
+  padding: var(--ds-space-3) var(--ds-space-4);
+  border-bottom: 1px solid var(--ds-border-subtle);
+}
+.modal-card__body {
+  display: grid;
+  flex: 1 1 auto;
+  gap: var(--ds-space-3);
+  min-height: 0;
+  padding: var(--ds-space-4);
+  overflow-y: auto;
+  color: var(--ds-text-primary);
+}
+.modal-card__footer {
+  justify-content: flex-end;
+  padding: var(--ds-space-3) var(--ds-space-4);
+  border-top: 1px solid var(--ds-border-subtle);
+}
+.modal-card-title { display: inline-flex; align-items: center; gap: var(--ds-space-2); margin: 0; padding: 0; color: var(--ds-text-primary); font-size: var(--ds-font-xl); font-weight: 600; line-height: var(--ds-line-height); }
+/* Fixed-height detail workspace: tabs/header/footer fixed, content scrolls. */
+.tabbed-detail-workspace {
+  height: min(760px, calc(100vh - 40px));
+  height: min(760px, calc(100dvh - 40px));
+  min-width: 0;
+  min-height: 0;
+  overflow: hidden;
+}
+.tabbed-detail-workspace > :is(.modal-card__header, .detail-header, .detail-back, .modal-card__footer, .detail-footer, .detail-tabs, .workflow-tabs, .security-tabs) { flex: 0 0 auto; min-width: 0; }
+.tabbed-detail-workspace > :is(.modal-card__body, .detail-body, .tabbed-detail-workspace__body) { flex: 1 1 auto; min-width: 0; min-height: 0; overflow-y: auto; overflow-x: auto; overscroll-behavior: contain; scrollbar-gutter: stable; }
+.tabbed-detail-workspace > :is(.detail-tabs, .security-tabs, .workflow-tabs) { overflow-x: auto; white-space: nowrap; }
+.business-detail-header-main { display: flex; flex: 1 1 auto; align-items: center; flex-wrap: wrap; gap: 8px 14px; min-width: 0; }
+.business-detail-header-main .modal-card-title { min-width: 0; overflow-wrap: anywhere; }
+.business-detail-header-status { display: inline-flex; flex: 0 0 auto; align-items: center; gap: 6px; max-width: 100%; padding: 2px 10px 2px 3px; border: 1px solid var(--ds-border); border-radius: 15px; background: var(--ds-bg-subtle); color: var(--ds-text-primary); font-size: var(--ds-font-xs); font-weight: 600; overflow-wrap: anywhere; }
+.business-detail-header-status .table-status { flex: 0 0 auto; }
+
+/* New AppModal primitive is hosted in NModal (focus trap + scroll locking). */
+.ds-modal {
+  display: flex;
+  flex-direction: column;
+  width: min(var(--ds-modal-width-md), calc(100vw - 40px));
+  max-width: 100%;
+  max-height: var(--ds-modal-max-height);
+  min-width: 0;
+  overflow: hidden;
+  border: 1px solid var(--ds-border);
+  border-radius: var(--ds-radius-lg);
+  background: var(--ds-bg-elevated);
+  color: var(--ds-text-primary);
+  box-shadow: var(--ds-shadow-modal);
+}
+.ds-modal--sm { width: min(var(--ds-modal-width-sm), calc(100vw - 40px)); }
+.ds-modal--lg { width: min(var(--ds-modal-width-lg), calc(100vw - 40px)); }
+.ds-modal--xl { width: min(var(--ds-modal-width-xl), calc(100vw - 40px)); }
+.ds-modal__header { display: flex; flex: 0 0 auto; align-items: center; justify-content: space-between; gap: var(--ds-space-3); padding: var(--ds-space-4) var(--ds-space-5); border-bottom: 1px solid var(--ds-border-subtle); }
+.ds-modal__title { display: flex; align-items: center; gap: var(--ds-space-2); min-width: 0; margin: 0; color: var(--ds-text-primary); font-size: var(--ds-font-xl); font-weight: 650; line-height: var(--ds-line-height); overflow-wrap: anywhere; }
+.ds-modal__body { flex: 1 1 auto; min-height: 0; padding: var(--ds-space-5); overflow: auto; overscroll-behavior: contain; }
+.ds-modal__footer { display: flex; flex: 0 0 auto; align-items: center; justify-content: flex-end; flex-wrap: wrap; gap: var(--ds-space-2); padding: var(--ds-space-3) var(--ds-space-5); border-top: 1px solid var(--ds-border-subtle); }
+.ds-modal__title-icon { display: inline-flex; flex: 0 0 auto; color: var(--ds-primary); }
+@media (max-width: 600px) { .ds-modal { max-height: calc(100dvh - 24px); width: calc(100vw - 24px); } .ds-modal__header, .ds-modal__body, .ds-modal__footer { padding: var(--ds-space-3); } }
+.ds-confirm-dialog__message { margin: 0; color: var(--ds-text-secondary); font-size: var(--ds-font-md); line-height: 1.6; overflow-wrap: anywhere; }
+
+/* The portal is outside AppShell: use document-scoped light/dark tokens only. */
+.n-modal-mask { background-color: var(--ds-overlay-scrim) !important; }
+.ds-dialog-host {
+  display: flex;
+  flex-direction: column;
+  width: min(var(--ds-modal-width-md), calc(100vw - 40px));
+  min-width: 0;
+  max-width: calc(100vw - 24px);
+  max-height: var(--ds-modal-max-height);
+  margin: auto;
+  color: var(--ds-text-primary);
+}
+.ds-dialog-host--sm { width: min(var(--ds-modal-width-sm), calc(100vw - 40px)); }
+.ds-dialog-host--lg { width: min(var(--ds-modal-width-lg), calc(100vw - 40px)); }
+.ds-dialog-host--xl { width: min(var(--ds-modal-width-xl), calc(100vw - 40px)); }
+.ds-dialog-host--wide { width: min(var(--ds-modal-width-wide), calc(100vw - 32px)); }
+
+/* One surface, one elevation and one typography scale, regardless of which
+ * business module supplies the content or legacy-specific class name. */
+.ds-dialog-host.ds-dialog-host > .ds-dialog-surface {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
+  min-height: 0;
+  max-height: var(--ds-modal-max-height);
+  margin: 0;
+  padding: 0;
+  overflow: hidden;
+  border: 1px solid var(--ds-border);
+  border-radius: var(--ds-radius-lg);
+  background: var(--ds-bg-elevated);
+  color: var(--ds-text-primary);
+  box-shadow: var(--ds-shadow-modal);
+  font-size: var(--ds-font-md);
+  line-height: var(--ds-line-height);
+}
+.ds-dialog-host .ds-dialog-surface > header,
+.ds-dialog-host .ds-dialog-surface > .ds-modal__header {
+  display: flex;
+  flex: 0 0 auto;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--ds-space-3);
+  min-width: 0;
+  margin: 0;
+  padding: var(--ds-space-1) var(--ds-space-4);
+  border-bottom: 1px solid var(--ds-border-subtle);
+  color: var(--ds-text-primary);
+  background: var(--ds-bg-hover);
+}
+.ds-dialog-host .ds-dialog-surface > footer,
+.ds-dialog-host .ds-dialog-surface > .ds-modal__footer {
+  display: flex;
+  flex: 0 0 auto;
+  align-items: center;
+  justify-content: flex-end;
+  flex-wrap: wrap;
+  gap: var(--ds-space-2);
+  min-width: 0;
+  margin: 0;
+  padding: var(--ds-space-1) var(--ds-space-4);
+  border-top: 1px solid var(--ds-border-subtle);
+  color: var(--ds-text-primary);
+  background: var(--ds-bg-hover);
+}
+.ds-dialog-host .ds-dialog-surface > :is(.modal-card__body, .ds-modal__body, .ds-dialog-stack-body,
+  .ds-dialog-palette__body, .table-detail-modal__body, .relation-dialog-body,
+  .workflow-dialog__body, .supplier-state-dialog__body, .customer-detail-modal__body,
+  .supplier-detail-modal__body, .employee-detail-modal__body, .customer-contact-form,
+  .detail-body, .form-grid, form) {
+  flex: 1 1 auto;
+  min-height: 0;
+  min-width: 0;
+  overflow-x: auto;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  scrollbar-gutter: stable;
+  padding: var(--ds-space-5);
+  color: var(--ds-text-primary);
+}
+.ds-dialog-host .ds-dialog-surface > :is([role='tablist'], .detail-tabs, .security-tabs,
+  .workflow-tabs, .supplier-detail-tabs, .customer-detail-tabs) {
+  flex: 0 0 auto;
+  background: var(--ds-bg-elevated);
+  border-bottom-color: var(--ds-border-subtle);
+}
+.ds-dialog-host .ds-dialog-surface :is(h2, h3, .modal-card-title) {
+  color: var(--ds-text-primary);
+  line-height: var(--ds-line-height);
+}
+.ds-dialog-host .ds-dialog-surface > header :is(h2, h3, .modal-card-title) {
+  margin: 0;
+  font-size: var(--ds-font-xl);
+  font-weight: 650;
+  overflow-wrap: anywhere;
+}
+.ds-dialog-host .ds-dialog-surface :is(.field-note, .relation-subtitle,
+  .customer-contact-meta, .supplier-heading-code, .customer-help) {
+  color: var(--ds-text-secondary);
+}
+.ds-dialog-host .ds-dialog-surface :is(label, dt, th) {
+  color: var(--ds-text-secondary);
+}
+/* Keep Naive UI selection/input shells aligned with the 36px native control
+ * contract. The shell, never its nested input, owns border/focus styling. */
+.ds-dialog-host .ds-dialog-surface :is(.n-base-selection, .n-input) {
+  min-height: var(--ds-button-height-md);
+}
+/* Native form fields get one semantic border. Do not reach into Naive UI
+ * NSelect/NTreeSelect/NInput's internal elements: their outer .n-base-selection
+ * or .n-input already owns the border, background and focus indicator.
+ * The descendant guard is intentional for light and dark portals alike. */
+.ds-dialog-host .ds-dialog-surface
+  :is(input:where(:not([type='checkbox'], [type='radio'])), select, textarea):not(.n-base-selection *, .n-input *) {
+  min-height: var(--ds-button-height-md);
+  border: 1px solid var(--ds-border);
+  border-radius: var(--ds-radius-sm);
+  background: var(--ds-bg-surface);
+  color: var(--ds-text-primary);
+  font-size: var(--ds-font-md);
+}
+.ds-dialog-host .ds-dialog-surface
+  :is(input, textarea):not(.n-base-selection *, .n-input *)::placeholder {
+  color: var(--ds-text-muted);
+  opacity: 1;
+}
+.ds-dialog-host .ds-dialog-surface
+  :is(input, select, textarea):not(.n-base-selection *, .n-input *):disabled,
+.ds-dialog-host .ds-dialog-surface
+  :is(input, textarea):not(.n-base-selection *, .n-input *):read-only {
+  background: var(--ds-bg-subtle);
+  color: var(--ds-text-secondary);
+}
+.ds-dialog-host .ds-dialog-surface
+  :is(input, select, textarea):not(.n-base-selection *, .n-input *):focus-visible,
+.ds-dialog-host .ds-dialog-surface button:focus-visible,
+.ds-dialog-host .ds-dialog-surface [role='tab']:focus-visible {
+  outline: 2px solid var(--ds-focus-ring);
+  outline-offset: 2px;
+}
+.ds-dialog-host .ds-dialog-surface
+  :is(input, select, textarea):not(.n-base-selection *, .n-input *)[aria-invalid='true'] {
+  border-color: var(--ds-danger);
+}
+.ds-dialog-host .ds-dialog-surface :is(.inline-error, .customer-field-error, .field-error) {
+  color: var(--ds-danger);
+}
+.ds-dialog-host .ds-dialog-surface :is(table, .detail-grid) { color: var(--ds-text-primary); }
+.ds-dialog-host .ds-dialog-surface :is(th, dt) { border-color: var(--ds-border-subtle); }
+.ds-dialog-host .ds-dialog-surface :is(td, dd) { border-color: var(--ds-border-subtle); }
+.ds-dialog-host .ds-dialog-surface :is(.modal-card-button-close, .icon-button) {
+  flex: 0 0 auto;
+  display: inline-grid;
+  width: var(--ds-button-height-md);
+  height: var(--ds-button-height-md);
+  place-items: center;
+  border: 1px solid transparent;
+  border-radius: var(--ds-radius-sm);
+  background: transparent;
+  color: var(--ds-text-secondary);
+  cursor: pointer;
+}
+.ds-dialog-host .ds-dialog-surface :is(.modal-card-button-close, .icon-button):hover:not(:disabled) {
+  background: var(--ds-bg-hover);
+  color: var(--ds-primary);
+}
+.ds-dialog-host .ds-dialog-surface button:disabled { cursor: not-allowed; opacity: .6; }
+
+/* Long-form and nested product editors use the same stationary footer. */
+.ds-dialog-host .ds-dialog-surface > .ds-dialog-stack-body {
+  display: grid;
+  align-content: start;
+  gap: var(--ds-space-3);
+}
+.ds-dialog-host .ds-dialog-surface > .ds-dialog-stack-body > label {
+  display: grid;
+  gap: var(--ds-space-2);
+}
+.ds-dialog-host .ds-dialog-surface > .ds-dialog-palette__body {
+  display: block;
+}
+.ds-dialog-host .ds-dialog-surface > .command-modal-footer {
+  justify-content: space-between;
+}
+
+@media (max-width: 640px) {
+  .ds-dialog-host,
+  .ds-dialog-host--sm,
+  .ds-dialog-host--lg,
+  .ds-dialog-host--xl,
+  .ds-dialog-host--wide { width: calc(100vw - 24px); max-height: calc(100dvh - 24px); }
+  .ds-dialog-host.ds-dialog-host > .ds-dialog-surface { max-height: calc(100dvh - 24px); }
+  .ds-dialog-host .ds-dialog-surface > header,
+  .ds-dialog-host .ds-dialog-surface > footer,
+  .ds-dialog-host .ds-dialog-surface > :is(.ds-modal__header, .ds-modal__footer,
+    .modal-card__body, .ds-modal__body, .ds-dialog-stack-body, .ds-dialog-palette__body,
+    .table-detail-modal__body, .relation-dialog-body, .workflow-dialog__body,
+    .supplier-state-dialog__body, .customer-detail-modal__body, .supplier-detail-modal__body,
+    .employee-detail-modal__body, .customer-contact-form, .detail-body, .form-grid, form) {
+    padding: var(--ds-space-3);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .n-modal-mask, .ds-dialog-host, .ds-dialog-host * {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
+}

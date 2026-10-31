@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import AppDialogHost from '@/components/ui/AppDialogHost.vue'
 import { rowAllowedActions } from '@/components/lists/rowActionPolicy'
 import { computed, onMounted, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
@@ -139,24 +140,28 @@ onMounted(() => void load())
       <h1>{{ t('people.positionsTitle') }}</h1>
       <p>{{ t('people.positionsDescription') }}</p>
     </div>
-    <button
+    <button data-ds-icon="add"
       v-if="hasBasePermission('position', 'create')"
       type="button"
       class="primary-button"
       @click="openCreate"
     >
-      ＋ {{ t('common.create') }}
+      {{ t('common.create') }}
     </button>
   </div>
-  <section class="content-panel location-panel">
-    <div class="location-toolbar">
-      <ListQueryControls
+  <section class="content-panel location-panel ds-page-panel">
+    <div class="location-toolbar ds-page-toolbar">
+      <ListQueryControls :show-page-size="false"
         :model-value="state.query"
         @apply="applyQuery"
         @reset="resetQuery"
-      /><button type="button" class="secondary-button" @click="void load()">
-        ↻ {{ t('common.refresh') }}
-      </button>
+      >
+        <template #actions>
+          <button data-ds-icon="refresh" type="button" class="secondary-button" @click="void load()">
+            {{ t('common.refresh') }}
+          </button>
+        </template>
+      </ListQueryControls>
     </div>
     <p v-if="error" class="inline-error" role="alert">{{ t('people.requestError') }}</p>
     <ListShell
@@ -227,9 +232,9 @@ onMounted(() => void load())
     :fields="detailFields"
     @close="detailOpen = false"
   />
-  <div v-if="modalOpen" class="modal-backdrop">
-    <section
-      class="modal-card"
+  <AppDialogHost :open="modalOpen" size="md" @close="closeForm">
+    <section v-if="modalOpen"
+      class="ds-dialog-surface modal-card"
       role="dialog"
       aria-modal="true"
       :aria-label="t('people.positionForm')"
@@ -244,9 +249,9 @@ onMounted(() => void load())
           class="modal-card-button-close"
           :aria-label="t('common.close')"
           @click="closeForm"
-        ></button>
+         data-ds-icon="close"></button>
       </header>
-      <form class="modal-card__body" id="position-form" @submit.prevent="save">
+      <form class="modal-card__body ds-dialog-form-fields" id="position-form" @submit.prevent="save">
         <div class="form-grid">
           <label
             ><span>{{ t('people.code') }}</span
@@ -273,8 +278,8 @@ onMounted(() => void load())
       </form>
 
       <footer class="modal-card__footer">
-        <button type="button" class="secondary-button" @click="closeForm">
-          <NIcon :size="20"> <Refresh /> </NIcon>
+        <button type="button" class="secondary-button" @click="closeForm" data-ds-icon="cancel">
+
           {{ t('common.cancel') }}
         </button>
 
@@ -283,67 +288,15 @@ onMounted(() => void load())
           class="primary-button"
           form="position-form"
           :disabled="busy || !hasBasePermission('position', editingId ? 'edit' : 'create')"
-        >
-          <NIcon :size="20"> <SaveOutline /> </NIcon>
+         data-ds-icon="save">
+
           {{ busy ? t('common.saving') : t('common.save') }}
         </button>
       </footer>
     </section>
-  </div>
+  </AppDialogHost>
 </template>
 
 <style scoped>
-.location-panel {
-  display: grid;
-  gap: 14px;
-  padding: 18px 20px 20px;
-}
 
-.location-toolbar {
-  display: flex;
-  align-items: end;
-  justify-content: space-between;
-  gap: 10px;
-  flex-wrap: wrap;
-}
-
-.inline-error {
-  margin: 0;
-  color: #b64444;
-  font-size: 12px;
-}
-
-.modal-card {
-  width: min(100%, 680px);
-  max-height: calc(100vh - 40px);
-  overflow: auto;
-  border-radius: 7px;
-  background: #fff;
-  box-shadow: 0 20px 60px rgb(18 42 62 / 24%);
-}
-
-.modal-card__body {
-  display: grid;
-  gap: 12px;
-  padding: 18px;
-}
-
-.modal-card__body label {
-  display: grid;
-  gap: 5px;
-  color: #536b7b;
-  font-size: 12px;
-  font-weight: 600;
-}
-
-.modal-card__body input,
-.modal-card__body select,
-.modal-card__body textarea {
-  min-height: 34px;
-  border: 1px solid #c7d6df;
-  border-radius: 4px;
-  padding: 7px 9px;
-  color: #183b57;
-  font: inherit;
-}
 </style>

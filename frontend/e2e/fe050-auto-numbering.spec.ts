@@ -1,5 +1,6 @@
 import AxeBuilder from '@axe-core/playwright'
 import { expect, test, type Page } from '@playwright/test'
+import { fulfillAutoNumberingFixture, mockAutoNumberingPreflight, mockAutoNumberingSession } from './support/autoNumberingApiFixture'
 
 const resources = [
   { id: '2', type: 'PRODUCT', name: 'Products', domain: 'MASTER', allowed_actions: { edit: false, setstate: false, delete: false, configure_numbering: true } },
@@ -26,37 +27,12 @@ async function mockSession(
   page: Page,
   permissions = ['resource.view', 'resource.configure_numbering'],
 ) {
-  await page.route('**/api/v1/auth/csrf', (route) =>
-    route.fulfill({
-      status: 200,
-      headers: { 'X-CSRF-TOKEN': 'csrf-e2e' },
-      contentType: 'application/json',
-      body: JSON.stringify({ data: { csrf_token: 'csrf-e2e', header_name: 'X-CSRF-TOKEN' } }),
-    }),
-  )
-  await page.route('**/api/v1/auth/me', async (route) =>
-    route.fulfill({
-      status: 200,
-      contentType: 'application/json',
-      body: JSON.stringify({
-        data: {
-          user: {
-            id: 7,
-            username: 'numbering-admin',
-            email: 'numbering@example.test',
-            active: true,
-            status: 'ACTIVE',
-            groups: [],
-            base_permissions: permissions,
-          },
-        },
-      }),
-    }),
-  )
+  await mockAutoNumberingSession(page, { permissions })
 }
 
 async function mockNumberingApi(page: Page, options: { conflict?: boolean } = {}) {
   let validateRequests = 0
+  const validatePayloads: Array<Record<string, unknown>> = []
   let counterRequests = 0
   let patchRequests = 0
   let createRequests = 0
@@ -66,21 +42,31 @@ async function mockNumberingApi(page: Page, options: { conflict?: boolean } = {}
   await page.route('**/api/v1/resources*', async (route) => {
     const url = new URL(route.request().url())
     if (url.pathname === '/api/v1/resources' && route.request().method() === 'GET') {
-      return route.fulfill({
+      return fulfillAutoNumberingFixture(route, {
         status: 200,
         contentType: 'application/json',
         body: JSON.stringify({ data: resources, meta: { page: 1, page_size: 200, total: 2 } }),
       })
     }
-    return route.continue()
+    return route.fallback()
   })
+
+  // All resource is the default, so the page also requests Resource 3.
+  await page.route('**/api/v1/resources/3/numbering-series**', (route) =>
+    fulfillAutoNumberingFixture(route, {
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify({ data: [], meta: { page: 1, page_size: 1, total: 0 } }),
+    }),
+  )
 
   await page.route('**/api/v1/resources/2/numbering-series**', async (route) => {
     const url = new URL(route.request().url())
     const method = route.request().method()
     if (url.pathname.endsWith('/actions/validate-config')) {
       validateRequests += 1
-      return route.fulfill({
+      validatePayloads.push(JSON.parse(route.request().postData() ?? '{}') as Record<string, unknown>)
+      return fulfillAutoNumberingFixture(route, {
         status: 200,
         contentType: 'application/json',
         body: JSON.stringify({
@@ -91,7 +77,7 @@ async function mockNumberingApi(page: Page, options: { conflict?: boolean } = {}
     }
     if (url.pathname.endsWith('/actions/set-state')) {
       stateRequests += 1
-      return route.fulfill({
+      return fulfillAutoNumberingFixture(route, {
         status: 200,
         contentType: 'application/json',
         body: JSON.stringify({ data: { ...series, status: 'INACTIVE' } }),
@@ -99,7 +85,7 @@ async function mockNumberingApi(page: Page, options: { conflict?: boolean } = {}
     }
     if (/\/numbering-series\/\d+$/.test(url.pathname) && method === 'GET') {
       detailRequests += 1
-      return route.fulfill({
+      return fulfillAutoNumberingFixture(route, {
         status: 200,
         contentType: 'application/json',
         body: JSON.stringify({ data: series }),
@@ -114,7 +100,7 @@ async function mockNumberingApi(page: Page, options: { conflict?: boolean } = {}
         (payload.reset_policy !== undefined && payload.reset_policy !== series.reset_policy) ||
         (payload.resource_id !== undefined && String(payload.resource_id) !== series.resource_id)
       if (options.conflict && changesImmutableField) {
-        return route.fulfill({
+        return fulfillAutoNumberingFixture(route, {
           status: 409,
           contentType: 'application/json',
           body: JSON.stringify({
@@ -123,7 +109,7 @@ async function mockNumberingApi(page: Page, options: { conflict?: boolean } = {}
           }),
         })
       }
-      return route.fulfill({
+      return fulfillAutoNumberingFixture(route, {
         status: 200,
         contentType: 'application/json',
         body: JSON.stringify({ data: series }),
@@ -131,26 +117,30 @@ async function mockNumberingApi(page: Page, options: { conflict?: boolean } = {}
     }
     if (url.pathname.endsWith('/numbering-series') && method === 'POST') {
       createRequests += 1
-      return route.fulfill({
+      return fulfillAutoNumberingFixture(route, {
         status: 201,
         contentType: 'application/json',
         body: JSON.stringify({ data: series }),
       })
     }
     if (url.pathname.endsWith('/numbering-series') && method === 'GET') {
-      return route.fulfill({
+      return fulfillAutoNumberingFixture(route, {
         status: 200,
         contentType: 'application/json',
         body: JSON.stringify({ data: [series], meta: { page: 1, page_size: 1, total: 1 } }),
       })
     }
     if (url.pathname.includes('/counters')) counterRequests += 1
-    return route.continue()
+    return route.fallback()
   })
 
+  await mockAutoNumberingPreflight(page)
   return {
     get validateRequests() {
       return validateRequests
+    },
+    get validatePayloads() {
+      return validatePayloads
     },
     get counterRequests() {
       return counterRequests
@@ -194,6 +184,7 @@ test.describe('P1-FE-050 Auto Numbering configuration UI', () => {
       name: /Biểu mẫu Auto Numbering|Auto Numbering form/,
     })
     await expect(dialog).toBeVisible()
+    await dialog.getByRole('combobox', { name: 'Resource' }).selectOption('2')
     await dialog.getByLabel('Mã series').fill('MONTHLY')
     await dialog.getByLabel('Tên').fill('Monthly series')
     await dialog.getByRole('textbox', { name: 'Pattern' }).fill('PRD-')
@@ -207,6 +198,7 @@ test.describe('P1-FE-050 Auto Numbering configuration UI', () => {
     await expect(dialog.getByText(/Cấu hình hợp lệ|Configuration is valid/)).toBeVisible()
     await expect(dialog.getByText(/không giữ chỗ|does not reserve/)).toBeVisible()
     expect(requests.validateRequests).toBe(1)
+    expect(requests.validatePayloads[0]).not.toHaveProperty('series_id')
     expect(requests.counterRequests).toBe(0)
     await dialog.getByLabel('Số bắt đầu').fill('10')
     await dialog.getByLabel('Bước tăng').fill('2')
@@ -234,6 +226,16 @@ test.describe('P1-FE-050 Auto Numbering configuration UI', () => {
       name: /Biểu mẫu Auto Numbering|Auto Numbering form/,
     })
     await editDialog.getByLabel('Tên').fill('Updated series')
+    // Edit preview includes the existing series ID, so the backend excludes
+    // only this row from duplicate-code/default/pattern comparisons.
+    await editDialog.getByRole('button', { name: /Kiểm tra cấu hình|Validate configuration/ })
+      .dispatchEvent('click')
+    await expect(editDialog.getByText(/Cấu hình hợp lệ|Configuration is valid/)).toBeVisible()
+    await expect.poll(() => requests.validateRequests).toBe(2)
+    expect(requests.validatePayloads[1]).toMatchObject({
+      series_id: '11', series_code: 'DEFAULT',
+    })
+    expect(requests.counterRequests).toBe(0)
     await editDialog.getByRole('button', { name: /Lưu|Save/ }).dispatchEvent('click')
     await expect.poll(() => requests.patchRequests).toBe(1)
     await expect(editDialog).toHaveCount(0)

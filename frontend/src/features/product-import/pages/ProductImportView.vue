@@ -60,7 +60,7 @@ async function submit(file: File, mode: ImportMode): Promise<void> {
         <h1>{{ t('productImport.title') }}</h1>
         <p class="page-description">{{ t('productImport.description') }}</p>
       </div>
-      <button type="button" class="secondary-button" @click="router.push('/products/import-jobs')">
+      <button data-ds-icon="back" type="button" class="secondary-button" @click="router.push('/products/import-jobs')">
         {{ t('productImport.viewJobs') }}
       </button>
     </header>
@@ -85,7 +85,7 @@ async function submit(file: File, mode: ImportMode): Promise<void> {
       }) }}
     </p>
     <p v-if="error" role="alert" class="inline-error">{{ t('productImport.requestError') }}</p>
-    <button type="button" class="secondary-button cancel" @click="router.push('/products')">
+    <button data-ds-icon="cancel" type="button" class="secondary-button cancel" @click="router.push('/products')">
       {{ t('common.cancel') }}
     </button>
   </section>
@@ -95,13 +95,12 @@ async function submit(file: File, mode: ImportMode): Promise<void> {
 .import-panel {display:grid;gap:18px;padding:18px 20px 24px;max-width:920px;}
 .page-header {display:flex;align-items:center;justify-content:space-between;gap:16px;}
 .page-header h1,.guidance h2 {margin:0;}
-.page-description {margin:6px 0 0;color:#536b7b;}
-.eyebrow {margin:0 0 4px;color:#1876a8;font-size:11px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;}
-.guidance {padding:14px 16px;border-left:3px solid #1876a8;background:#f4f8fa;}
-.guidance ul {display:grid;gap:6px;margin:10px 0 0;padding-left:20px;color:#536b7b;font-size:13px;}
-.inline-error {margin:0;color:#b64444;}
-.import-summary {margin:0;padding:12px;border:1px solid #b9d7c9;background:#eff8f3;color:#205a42;}
-.secondary-button {min-height:36px;border:1px solid #1876a8;border-radius:4px;padding:7px 14px;cursor:pointer;background:#fff;color:#294b65;}
+.page-description {margin:6px 0 0;color:var(--ds-text-secondary);}
+.eyebrow {margin:0 0 4px;color:var(--ds-primary);font-size:11px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;}
+.guidance {padding:14px 16px;border-left:3px solid var(--ds-primary);background:var(--ds-primary-soft);}
+.guidance ul {display:grid;gap:6px;margin:10px 0 0;padding-left:20px;color:var(--ds-text-secondary);font-size:13px;}
+.inline-error {margin:0;color:var(--ds-danger);}
+.import-summary {margin:0;padding:12px;border:1px solid var(--ds-success);background:var(--ds-success-soft);color:var(--ds-success);}
 .cancel {justify-self:end;}
 @media(max-width:640px){.page-header {align-items:stretch;flex-direction:column;}}
 </style>

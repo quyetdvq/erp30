@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import AppDialogHost from '@/components/ui/AppDialogHost.vue'
 import { rowAllowedActions } from '@/components/lists/rowActionPolicy'
 import { computed, onMounted, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
@@ -121,8 +122,8 @@ function applyQuery(query: ListQuery): void {
   void load()
 }
 
-// ListTable may include previous sort terms; the clicked column is last.
-// This changes only the displayed order, never the API query or pagination.
+// ListTable emits one sort term per click. Continue to tolerate older
+// compound local state without passing it to this API.
 function handleSortChange(sort: string): void {
   const term = sort.split(',').pop() ?? ''
   const field = term.startsWith('-') ? term.slice(1) : term
@@ -204,12 +205,12 @@ onMounted(() => void load())
       <h1>{{ t('product.uomsTitle') }}</h1>
       <p>{{ t('product.uomsDescription') }}</p>
     </div>
-    <button v-if="permissions.create" type="button" class="primary-button" @click="openCreate">
+    <button data-ds-icon="add" v-if="permissions.create" type="button" class="primary-button" @click="openCreate">
       {{ t('common.create') }}
     </button>
   </div>
-  <section class="content-panel product-panel">
-    <ListQueryControls
+  <section class="content-panel product-panel ds-page-panel">
+    <ListQueryControls :show-page-size="false"
       :model-value="state.query"
       :filters="statusFilters"
       @apply="applyQuery"
@@ -262,7 +263,7 @@ onMounted(() => void load())
           />
         </template>
       </ListTable>
-      <ListPagination
+      <ListPagination :show-page-size="false"
         :page="state.query.page"
         :page-size="state.query.page_size"
         :total="state.total.value"
@@ -278,8 +279,8 @@ onMounted(() => void load())
     :fields="detailFields"
     @close="detailOpen = false"
   />
-  <div v-if="modalOpen" class="modal-backdrop">
-    <section class="modal-card" role="dialog" aria-modal="true" :aria-label="t('product.uomForm')">
+  <AppDialogHost :open="modalOpen" size="md" @close="closeForm">
+    <section v-if="modalOpen" class="ds-dialog-surface modal-card" role="dialog" aria-modal="true" :aria-label="t('product.uomForm')">
       <header class="modal-card__header">
         <h2 class="modal-card-title">
           <NIcon :size="24"> <ScaleOutline /> </NIcon>
@@ -292,9 +293,9 @@ onMounted(() => void load())
           class="modal-card-button-close"
           :aria-label="t('common.close')"
           @click="closeForm"
-        ></button>
+         data-ds-icon="close"></button>
       </header>
-      <form id="product-uom-form" class="modal-card__body" @submit.prevent="save">
+      <form id="product-uom-form" class="modal-card__body ds-dialog-form-fields" @submit.prevent="save">
         <label>
           <span>{{ t('product.code') }}</span>
           <input v-model="form.code" required />
@@ -315,8 +316,8 @@ onMounted(() => void load())
       </form>
 
       <footer class="modal-card__footer">
-        <button type="button" class="secondary-button" @click="closeForm">
-          <NIcon :size="20"> <Refresh /> </NIcon>
+        <button type="button" class="secondary-button" @click="closeForm" data-ds-icon="cancel">
+
           {{ t('common.cancel') }}
         </button>
         <button
@@ -324,53 +325,15 @@ onMounted(() => void load())
           class="primary-button"
           form="product-uom-form"
           :disabled="busy || !(editingId ? permissions.edit : permissions.create)"
-        >
-          <NIcon :size="20"> <SaveOutline /> </NIcon>
+         data-ds-icon="save">
+
           {{ busy ? t('common.saving') : t('common.save') }}
         </button>
       </footer>
     </section>
-  </div>
+  </AppDialogHost>
 </template>
 
 <style scoped>
-.product-panel {
-  display: grid;
-  gap: 14px;
-  padding: 18px 20px 20px;
-}
 
-.inline-error {
-  margin: 0;
-  color: #b64444;
-  font-size: 12px;
-}
-
-.modal-card {
-  width: min(100%, 680px);
-  max-height: calc(100vh - 40px);
-  overflow: auto;
-  border-radius: 7px;
-  background: #fff;
-  box-shadow: 0 20px 60px rgb(18 42 62 / 24%);
-}
-
-.modal-card__body label {
-  display: grid;
-  gap: 5px;
-  color: #536b7b;
-  font-size: 12px;
-  font-weight: 600;
-}
-
-.modal-card__body input,
-.modal-card__body select,
-.modal-card__body textarea {
-  min-height: 34px;
-  border: 1px solid #c7d6df;
-  border-radius: 4px;
-  padding: 7px 9px;
-  color: #183b57;
-  font: inherit;
-}
 </style>

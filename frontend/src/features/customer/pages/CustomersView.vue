@@ -105,17 +105,20 @@ onMounted(() => {
       <h1>{{ t('customer.title') }}</h1>
       <p>{{ t('customer.description') }}</p>
     </div>
-    <button v-if="hasBasePermission('customer', 'create')" type="button" class="primary-button"
+    <button data-ds-icon="add" v-if="hasBasePermission('customer', 'create')" type="button" class="primary-button"
       @click="router.push('/customers/new')">
-      ＋ {{ t('common.create') }}
+      {{ t('common.create') }}
     </button>
   </div>
   <section class="content-panel customer-list-panel">
     <div class="customer-list-toolbar">
-      <ListQueryControls :model-value="state.query" :filters="filters" :page-size-options="CUSTOMER_PAGE_SIZE_OPTIONS" @apply="applyQuery" @reset="resetQuery" />
-      <button type="button" class="secondary-button" @click="void load()">
-        ↻ {{ t('common.refresh') }}
-      </button>
+      <ListQueryControls :show-page-size="false" :model-value="state.query" :filters="filters" :page-size-options="CUSTOMER_PAGE_SIZE_OPTIONS" @apply="applyQuery" @reset="resetQuery" >
+        <template #actions>
+          <button data-ds-icon="refresh" type="button" class="secondary-button" @click="void load()">
+            {{ t('common.refresh') }}
+          </button>
+        </template>
+      </ListQueryControls>
     </div>
     <p v-if="error" class="inline-error" role="alert">
       {{ t('customer.loadError') }} <span v-if="error instanceof Error">{{ error.message }}</span>
@@ -124,7 +127,7 @@ onMounted(() => {
       :has-data="state.queryState.hasData.value" :empty-dataset="state.isEmptyDataset.value"
       :empty-filtered-result="state.isEmptyFilteredResult.value" :error="state.queryState.error.value"
       :retryable="true" @retry="void load()">
-      <ListTable :busy="state.isBackgroundRefreshing.value" :rows="state.rows.value" :columns="columns"
+      <ListTable class="list-table-wrap--sticky-actions" :busy="state.isBackgroundRefreshing.value" :rows="state.rows.value" :columns="columns"
         :sort="state.query.sort" @sort-change="(sort) => { state.setSort(sort); void load() }">
         <template #cell-customer_code="{ row }"><strong>{{ row.customer_code }}</strong></template>
         <template #cell-status="{ row }">
@@ -161,13 +164,6 @@ onMounted(() => {
   min-width: 0;
   padding: 18px 20px 20px;
 }
-.customer-list-toolbar {
-  display: flex;
-  align-items: end;
-  justify-content: space-between;
-  gap: 10px;
-  min-width: 0;
-  flex-wrap: wrap;
-}
-.inline-error { color: #b64444; font-size: 12px; }
+.customer-list-toolbar { min-width: 0; }
+.inline-error { color: var(--ds-danger); font-size: 12px; }
 </style>

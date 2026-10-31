@@ -2,7 +2,6 @@
 import { ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import {
-  NAlert,
   NBadge,
   NButton,
   NIcon,
@@ -11,7 +10,6 @@ import {
   NLayoutHeader,
   NLayoutSider,
   NMenu,
-  NModal,
   NPopover,
   NTabPane,
   NTabs,
@@ -19,7 +17,6 @@ import {
 } from 'naive-ui'
 import {
   AddOutline,
-  AlertCircleOutline,
   ChevronBackOutline,
   ChevronDownOutline,
   ChevronForwardOutline,
@@ -34,13 +31,13 @@ import { RouterLink, RouterView, useRoute } from 'vue-router'
 
 import { sidebarModes } from '@/app/navigation'
 import AppBreadcrumbs from '@/components/AppBreadcrumbs.vue'
+import AppDialogHost from '@/components/ui/AppDialogHost.vue'
 import UserAvatar from '@/components/users/UserAvatar.vue'
 import NotificationPopoverList from '@/features/notifications/components/NotificationPopoverList.vue'
 import { useShellHeader } from '@/components/app-shell/useShellHeader'
 import { useShellNavigation } from '@/components/app-shell/useShellNavigation'
 import { useShellSidebarResize } from '@/components/app-shell/useShellSidebarResize'
 import { useShellWorkspaceTabs } from '@/components/app-shell/useShellWorkspaceTabs'
-import { dismissApiError, errorNotices } from '@/services/errorBoundary'
 import { useWorkspaceStore } from '@/stores/workspace'
 import { useDisplaySettingsStore } from '@/stores/displaySettings'
 
@@ -346,28 +343,6 @@ watch(() => auth.user?.id, (userId) => {
             </NButton>
           </div>
 
-          <div class="error-stack" aria-live="polite">
-            <NAlert
-              v-for="notice in errorNotices"
-              :key="notice.id"
-              :type="notice.status === 401 || notice.status === 403 ? 'warning' : 'error'"
-              closable
-              @close="dismissApiError(notice.id)"
-            >
-              <template #icon>
-                <NIcon><AlertCircleOutline /></NIcon>
-              </template>
-              <strong>{{ notice.code === 'SUPPLIER_API_NOT_ENABLED'
-                ? t('supplier.apiNotEnabledTitle') : t(`errors.status.${notice.status}`) }}</strong>
-              <span class="error-copy">{{ notice.code === 'SUPPLIER_API_NOT_ENABLED'
-                ? t('supplier.apiNotEnabledMessage') : (notice.message || t('errors.defaultMessage')) }}</span>
-              <small v-if="notice.code || notice.requestId" class="error-meta">
-                {{ notice.code || t('errors.unknownCode')
-                }}<span v-if="notice.requestId"> · {{ notice.requestId }}</span>
-              </small>
-            </NAlert>
-          </div>
-
           <main class="workspace-content">
             <AppBreadcrumbs />
             <RouterView />
@@ -376,15 +351,10 @@ watch(() => auth.user?.id, (userId) => {
       </NLayout>
     </NLayout>
 
-    <NModal
-      v-model:show="commandOpen"
-      preset="card"
-      class="command-modal"
-      :mask-closable="false"
-      :close-on-esc="true"
-    >
-      <template #header>
-        <div class="command-modal-header">
+    <AppDialogHost :open="commandOpen" size="sm" @close="commandOpen = false">
+      <section v-if="commandOpen" class="ds-dialog-surface command-modal" role="dialog" aria-modal="true"
+        :aria-label="t('shell.commandPalette')">
+        <header class="command-modal-header">
           <span class="command-modal-icon"
             ><NIcon><SearchOutline /></NIcon
           ></span>
@@ -392,43 +362,45 @@ watch(() => auth.user?.id, (userId) => {
             <strong>{{ t('shell.commandPalette') }}</strong>
             <small>{{ t('shell.commandDescription') }}</small>
           </div>
+        </header>
+        <div class="ds-dialog-palette__body">
+          <NInput
+            v-model:value="commandSearch"
+            autofocus
+            size="large"
+            clearable
+            :placeholder="t('shell.searchCommand')"
+            class="command-search-input"
+            @keydown="handleCommandKeydown"
+          >
+            <template #prefix>
+              <NIcon><SearchOutline /></NIcon>
+            </template>
+          </NInput>
+          <div v-if="commandOptions.length" class="command-list">
+            <NButton
+              v-for="command in commandOptions"
+              :key="command.key"
+              class="command-option"
+              quaternary
+              block
+              @click="openCommandRoute(command.key)"
+            >
+              <template #icon>
+                <NIcon :component="command.icon" />
+              </template>
+              <span class="command-option-label">{{ command.label }}</span>
+              <NIcon class="command-option-arrow"><ChevronForwardOutline /></NIcon>
+            </NButton>
+          </div>
+          <div v-else class="command-empty">{{ t('shell.noCommands') }}</div>
         </div>
-      </template>
-      <NInput
-        v-model:value="commandSearch"
-        autofocus
-        size="large"
-        clearable
-        :placeholder="t('shell.searchCommand')"
-        class="command-search-input"
-        @keydown="handleCommandKeydown"
-      >
-        <template #prefix>
-          <NIcon><SearchOutline /></NIcon>
-        </template>
-      </NInput>
-      <div v-if="commandOptions.length" class="command-list">
-        <NButton
-          v-for="command in commandOptions"
-          :key="command.key"
-          class="command-option"
-          quaternary
-          block
-          @click="openCommandRoute(command.key)"
-        >
-          <template #icon>
-            <NIcon :component="command.icon" />
-          </template>
-          <span class="command-option-label">{{ command.label }}</span>
-          <NIcon class="command-option-arrow"><ChevronForwardOutline /></NIcon>
-        </NButton>
-      </div>
-      <div v-else class="command-empty">{{ t('shell.noCommands') }}</div>
-      <footer class="command-modal-footer">
-        <span><kbd>↵</kbd> {{ t('shell.commandOpen') }}</span>
-        <span>{{ t('common.close') }}</span>
-      </footer>
-    </NModal>
+        <footer class="command-modal-footer">
+          <span><kbd>↵</kbd> {{ t('shell.commandOpen') }}</span>
+          <span>{{ t('common.close') }}</span>
+        </footer>
+      </section>
+    </AppDialogHost>
   </div>
 </template>
 

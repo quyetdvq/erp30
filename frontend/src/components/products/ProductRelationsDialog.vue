@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import AppDialogHost from '@/components/ui/AppDialogHost.vue'
 import { computed, nextTick, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import type { ComboItem, Product, ProductUom } from '@/api/generated/types.gen'
@@ -75,14 +76,13 @@ watch(
 </script>
 
 <template>
-  <Teleport to="body">
-    <div v-if="open" class="relation-backdrop" @click.self="emit('close')">
-      <section
-        class="relation-dialog"
+
+    <AppDialogHost :open="open" size="lg" :mask-closable="true" @close="emit('close')">
+      <section v-if="open"
+        class="ds-dialog-surface relation-dialog"
         role="dialog"
         aria-modal="true"
         :aria-label="title"
-        @keydown.esc.stop="emit('close')"
       >
         <header class="relation-dialog-header">
           <div>
@@ -95,18 +95,16 @@ watch(
           <button
             ref="closeButton"
             type="button"
-            class="relation-close"
+            class="modal-card-button-close"
             :aria-label="t('common.close')"
             @click="emit('close')"
-          >
-            ×
-          </button>
+           data-ds-icon="close"></button>
         </header>
         <div class="relation-dialog-body">
           <p v-if="loading" class="relation-empty" role="status">{{ t('list.loading') }}</p>
           <p v-else-if="error" class="relation-empty" role="alert">
             {{ t('product.requestError') }}
-            <button type="button" class="relation-retry" @click="emit('retry')">
+            <button type="button" class="relation-retry ds-button ds-button--secondary" data-ds-icon="retry" @click="emit('retry')">
               {{ t('list.retry') }}
             </button>
           </p>
@@ -154,55 +152,34 @@ watch(
             {{ t('product.relationPageInfo', { from, to, total: products.length }) }}
           </span>
           <div v-if="!loading && pages > 1" class="relation-pagination">
-            <button type="button" :disabled="currentPage <= 1" @click="page = currentPage - 1">
+            <button type="button" class="ds-button ds-button--secondary ds-button--sm" data-ds-icon="previous" :disabled="currentPage <= 1" @click="page = currentPage - 1">
               {{ t('list.previous') }}
             </button>
             <span>{{ currentPage }}/{{ pages }}</span>
-            <button type="button" :disabled="currentPage >= pages" @click="page = currentPage + 1">
+            <button type="button" class="ds-button ds-button--secondary ds-button--sm" data-ds-icon="next" :disabled="currentPage >= pages" @click="page = currentPage + 1">
               {{ t('list.next') }}
             </button>
           </div>
-          <button type="button" class="relation-done" @click="emit('close')">
+          <button type="button" class="relation-done ds-button ds-button--secondary" data-ds-icon="close" @click="emit('close')">
             {{ t('common.close') }}
           </button>
         </footer>
       </section>
-    </div>
-  </Teleport>
+    </AppDialogHost>
+
 </template>
 
 <style scoped>
-.relation-backdrop {
-  position: fixed;
-  inset: 0;
-  z-index: 1100;
-  display: grid;
-  place-items: center;
-  padding: 20px;
-  background: rgb(12 30 49 / 52%);
-}
-.relation-dialog {
-  display: flex;
-  flex-direction: column;
-  width: min(980px, 100%);
-  max-height: min(84vh, 820px);
-  overflow: hidden;
-  border: 1px solid #d9e5ed;
-  border-radius: 12px;
-  background: #fff;
-  box-shadow: 0 24px 64px rgb(8 29 48 / 20%);
-  color: #183b57;
-}
 .relation-dialog-header {
   display: flex;
   justify-content: space-between;
   gap: 20px;
   padding: 22px 26px 18px;
-  border-bottom: 1px solid #e6edf1;
+  border-bottom: 1px solid var(--ds-border-subtle);
 }
 .relation-eyebrow {
   margin: 0 0 6px;
-  color: #166897;
+  color: var(--ds-primary);
   font-size: 12px;
   font-weight: 700;
 }
@@ -214,17 +191,8 @@ watch(
 }
 .relation-subtitle {
   margin: 8px 0 0;
-  color: #5a7180;
+  color: var(--ds-text-secondary);
   font-size: 13px;
-}
-.relation-close {
-  align-self: flex-start;
-  border: 0;
-  background: none;
-  color: #546d7c;
-  font-size: 26px;
-  line-height: 1;
-  cursor: pointer;
 }
 .relation-dialog-body {
   min-height: 100px;
@@ -233,7 +201,7 @@ watch(
 }
 .relation-table-scroll {
   overflow: auto;
-  border: 1px solid #dfe7ee;
+  border: 1px solid var(--ds-border-subtle);
   border-radius: 8px;
 }
 .relation-table {
@@ -245,15 +213,15 @@ watch(
 .relation-table th,
 .relation-table td {
   padding: 12px 13px;
-  border-bottom: 1px solid #e7edf2;
+  border-bottom: 1px solid var(--ds-border-subtle);
   text-align: start;
   vertical-align: middle;
 }
 .relation-table th {
   position: sticky;
   top: 0;
-  background: #f5f8fa;
-  color: #4d6475;
+  background: var(--ds-bg-subtle);
+  color: var(--ds-text-secondary);
   font-size: 12px;
   font-weight: 700;
   white-space: nowrap;
@@ -262,7 +230,7 @@ watch(
   border-bottom: 0;
 }
 .relation-table tbody tr:hover {
-  background: #f7fafc;
+  background: var(--ds-bg-subtle);
 }
 .relation-name-cell {
   min-width: 240px;
@@ -271,7 +239,7 @@ watch(
   padding: 0;
   border: 0;
   background: none;
-  color: #126a9c;
+  color: var(--ds-primary);
   font: inherit;
   font-weight: 600;
   text-align: start;
@@ -283,7 +251,7 @@ watch(
 }
 .relation-code {
   white-space: nowrap;
-  color: #4c6274;
+  color: var(--ds-text-secondary);
   font-variant-numeric: tabular-nums;
 }
 .relation-quantity {
@@ -300,7 +268,7 @@ watch(
 .relation-empty {
   margin: 0;
   padding: 36px 12px;
-  color: #5a7180;
+  color: var(--ds-text-secondary);
   text-align: center;
 }
 .relation-dialog-footer {
@@ -308,10 +276,10 @@ watch(
   align-items: center;
   gap: 12px;
   padding: 14px 26px;
-  border-top: 1px solid #e6edf1;
+  border-top: 1px solid var(--ds-border-subtle);
 }
 .relation-page-info {
-  color: #5e7483;
+  color: var(--ds-text-secondary);
   font-size: 12px;
 }
 .relation-pagination {
@@ -321,31 +289,8 @@ watch(
   margin-inline-start: auto;
   font-size: 12px;
 }
-.relation-pagination button,
-.relation-retry,
-.relation-done {
-  padding: 7px 10px;
-  border: 1px solid #ccdae4;
-  border-radius: 6px;
-  background: #fff;
-  color: #1a587e;
-  cursor: pointer;
-}
-.relation-pagination button:disabled {
-  opacity: 0.48;
-  cursor: not-allowed;
-}
-.relation-done {
-  margin-inline-start: auto;
-  padding: 8px 15px;
-  border-color: #116da6;
-  background: #116da6;
-  color: #fff;
-}
+.relation-done { margin-inline-start: auto; }
 @media (max-width: 700px) {
-  .relation-backdrop {
-    padding: 10px;
-  }
   .relation-dialog-header,
   .relation-dialog-footer {
     padding-inline: 16px;

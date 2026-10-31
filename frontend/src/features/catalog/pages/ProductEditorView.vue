@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import AppDialogHost from '@/components/ui/AppDialogHost.vue'
 import { computed, onMounted, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useRoute, useRouter } from 'vue-router'
@@ -513,9 +514,9 @@ watch(
         </label>
       </fieldset>
       <footer class="editor-actions">
-        <button type="button" class="secondary-button" @click="router.push('/products')">
+        <button data-ds-icon="cancel" type="button" class="secondary-button" @click="router.push('/products')">
           {{ t('common.cancel') }}</button
-        ><button type="submit" class="primary-button" :disabled="busy || !canEdit || !lookupsReady">
+        ><button data-ds-icon="save" type="submit" class="primary-button" :disabled="busy || !canEdit || !lookupsReady">
           {{ busy ? t('common.saving') : t('common.save') }}</button
         ><BusinessWorkflowAction
           v-if="editing && product && canSetState"
@@ -541,7 +542,7 @@ watch(
           <h2>{{ t('product.children') }}</h2>
           <p class="field-note">{{ t('product.childrenDescription') }}</p>
         </div>
-        <button
+        <button data-ds-icon="add"
           v-if="hasBasePermission('product', 'create')"
           type="button"
           class="secondary-button"
@@ -585,17 +586,13 @@ watch(
                   class="icon-button"
                   :aria-label="`${t('common.view')} ${row.full_name}`"
                   @click="router.push(`/products/${row.id}`)"
-                >
-                  {{ t('common.view') }}</button
-                ><button
+                 data-ds-icon="view"></button><button
                   v-if="row.allowed_actions?.edit === true"
                   type="button"
                   class="icon-button"
                   :aria-label="`${t('common.edit')} ${row.full_name}`"
                   @click="router.push(`/products/${row.id}`)"
-                >
-                  {{ t('common.edit') }}
-                </button>
+                 data-ds-icon="edit"></button>
               </td>
             </tr>
             <tr v-if="children.length === 0">
@@ -611,7 +608,7 @@ watch(
     >
       <header>
         <h2>{{ t('product.parentProduct') }}</h2>
-        <button
+        <button data-ds-icon="back"
           v-if="parentRow && hasBasePermission('product', 'view')"
           type="button"
           class="secondary-button"
@@ -638,7 +635,7 @@ watch(
           <h2>{{ t('product.conversions') }}</h2>
           <p class="field-note">{{ t('product.conversionDirection', { uom: baseUomName }) }}</p>
         </div>
-        <button
+        <button data-ds-icon="add"
           v-if="canEdit"
           type="button"
           class="secondary-button"
@@ -688,17 +685,13 @@ watch(
                   class="icon-button"
                   :aria-label="`${t('common.edit')} ${row.uom_id}`"
                   @click="openConversion(index)"
-                >
-                  {{ t('common.edit') }}</button
-                ><button
+                 data-ds-icon="edit"></button><button
                   v-if="canEdit"
                   type="button"
                   class="icon-button danger-button"
                   :aria-label="t('common.delete')"
                   @click="removeConversion(index)"
-                >
-                  {{ t('common.delete') }}
-                </button>
+                 data-ds-icon="delete"></button>
               </td>
             </tr>
             <tr v-if="conversions.length === 0">
@@ -707,7 +700,7 @@ watch(
           </tbody>
         </table>
       </div>
-      <button
+      <button data-ds-icon="save"
         v-if="canEdit"
         type="button"
         class="primary-button"
@@ -730,7 +723,7 @@ watch(
           <p class="field-note">{{ t('product.comboComponentsDescription') }}</p>
           <p v-if="!editing" class="field-note">{{ t('product.atomicComboCreate') }}</p>
         </div>
-        <button
+        <button data-ds-icon="add"
           v-if="editing ? canEdit : hasBasePermission('product', 'create')"
           type="button"
           class="secondary-button"
@@ -787,9 +780,7 @@ watch(
                   class="icon-button danger-button"
                   :aria-label="t('common.delete')"
                   @click="removeComboItem(index)"
-                >
-                  {{ t('common.delete') }}
-                </button>
+                 data-ds-icon="delete"></button>
               </td>
             </tr>
             <tr v-if="comboItems.length === 0">
@@ -798,7 +789,7 @@ watch(
           </tbody>
         </table>
       </div>
-      <button
+      <button data-ds-icon="save"
         v-if="editing && canEdit"
         type="button"
         class="primary-button"
@@ -809,26 +800,24 @@ watch(
       </button>
     </section>
   </section>
-  <div v-if="conversionEditorOpen" class="modal-backdrop" role="presentation">
-    <section
-      class="modal-card"
+  <AppDialogHost :open="conversionEditorOpen" size="md" @close="conversionEditorOpen = false">
+    <section v-if="conversionEditorOpen"
+      class="ds-dialog-surface modal-card"
       role="dialog"
       aria-modal="true"
       :aria-label="t('product.conversionForm')"
     >
-      <header>
+      <header class="modal-card__header">
         <h2>
           {{ conversionEditorIndex === null ? t('common.create') : t('common.edit') }}
           {{ t('product.conversions') }}
         </h2>
         <button
           type="button"
-          class="icon-button"
+          class="modal-card-button-close"
           :aria-label="t('common.close')"
           @click="conversionEditorOpen = false"
-        >
-          ×
-        </button>
+         data-ds-icon="close"></button>
       </header>
       <div class="form-grid">
         <label
@@ -893,15 +882,15 @@ watch(
         >
       </div>
       <p v-if="validationError" class="inline-error" role="alert">{{ validationError }}</p>
-      <footer class="editor-actions">
-        <button type="button" class="secondary-button" @click="conversionEditorOpen = false">
+      <footer class="modal-card__footer editor-actions">
+        <button data-ds-icon="cancel" type="button" class="secondary-button" @click="conversionEditorOpen = false">
           {{ t('common.cancel') }}</button
-        ><button type="button" class="primary-button" @click="saveConversionDraft">
+        ><button data-ds-icon="save" type="button" class="primary-button" @click="saveConversionDraft">
           {{ t('common.save') }}
         </button>
       </footer>
     </section>
-  </div>
+  </AppDialogHost>
 </template>
 
 <style scoped>
@@ -917,13 +906,13 @@ watch(
 fieldset {
   display: grid;
   gap: 12px;
-  border: 1px solid #dbe5ea;
+  border: 1px solid var(--ds-border-subtle);
   border-radius: 6px;
   padding: 16px;
 }
 legend {
   padding: 0 6px;
-  color: #294b65;
+  color: var(--ds-text-primary);
   font-weight: 700;
 }
 .form-grid {
@@ -934,7 +923,7 @@ legend {
 label {
   display: grid;
   gap: 5px;
-  color: #536b7b;
+  color: var(--ds-text-secondary);
   font-size: 12px;
   font-weight: 600;
 }
@@ -942,10 +931,10 @@ input,
 select,
 textarea {
   min-height: 34px;
-  border: 1px solid #c7d6df;
+  border: 1px solid var(--ds-border);
   border-radius: 4px;
   padding: 7px 9px;
-  color: #183b57;
+  color: var(--ds-text-primary);
   font: inherit;
 }
 .checkbox-field {
@@ -959,12 +948,12 @@ textarea {
 .checkbox-field small,
 .field-note,
 .restriction-note {
-  color: #536b7b;
+  color: var(--ds-text-secondary);
   font-size: 12px;
 }
 .inline-error {
   margin: 0;
-  color: #b64444;
+  color: var(--ds-danger);
   font-size: 12px;
 }
 .editor-actions,
@@ -978,7 +967,7 @@ textarea {
 .relationship-section {
   display: grid;
   gap: 12px;
-  border-top: 1px solid #dbe5ea;
+  border-top: 1px solid var(--ds-border-subtle);
   padding-top: 18px;
 }
 .relationship-section header {
@@ -990,26 +979,26 @@ textarea {
 }
 .data-table-wrap {
   overflow-x: auto;
-  border: 1px solid #dbe5ea;
+  border: 1px solid var(--ds-border-subtle);
   border-radius: 6px;
 }
 .data-table {
   width: 100%;
   min-width: 760px;
   border-collapse: collapse;
-  color: #183b57;
+  color: var(--ds-text-primary);
   font-size: 13px;
 }
 .data-table th,
 .data-table td {
   padding: 10px 12px;
-  border-bottom: 1px solid #e8eef1;
+  border-bottom: 1px solid var(--ds-border-subtle);
   text-align: start;
   vertical-align: middle;
 }
 .data-table th {
-  background: #f7fafb;
-  color: #536b7b;
+  background: var(--ds-bg-subtle);
+  color: var(--ds-text-secondary);
   font-size: 12px;
   font-weight: 700;
 }
@@ -1017,39 +1006,14 @@ textarea {
   border-bottom: 0;
 }
 
-.icon-button {
-  border: 0;
-  background: transparent;
-  color: #1876a8;
-  cursor: pointer;
-  padding: 4px 6px;
-}
+/* Preserve the shared icon control's 36px border-box and hover/focus box. */
+.icon-button { color: var(--ds-primary); }
 .danger-button {
-  color: #b64444;
+  color: var(--ds-danger);
 }
 .parent-summary p {
   margin: 0;
-  color: #183b57;
-}
-.modal-backdrop {
-  position: fixed;
-  inset: 0;
-  z-index: 20;
-  display: grid;
-  place-items: center;
-  padding: 16px;
-  background: rgb(24 59 87 / 35%);
-}
-.modal-card {
-  width: min(720px, 100%);
-  max-height: min(90vh, 760px);
-  overflow: auto;
-  display: grid;
-  gap: 16px;
-  border-radius: 6px;
-  background: #fff;
-  padding: 20px;
-  box-shadow: 0 16px 40px rgb(24 59 87 / 22%);
+  color: var(--ds-text-primary);
 }
 .modal-card header {
   display: flex;
@@ -1060,17 +1024,7 @@ textarea {
   margin: 0;
   font-size: 18px;
 }
-.sr-only {
-  position: absolute;
-  width: 1px;
-  height: 1px;
-  padding: 0;
-  margin: -1px;
-  overflow: hidden;
-  clip: rect(0, 0, 0, 0);
-  white-space: nowrap;
-  border: 0;
-}
+
 @media (max-width: 760px) {
   .data-table {
     min-width: 640px;

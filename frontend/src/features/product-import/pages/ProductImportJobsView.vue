@@ -116,7 +116,7 @@ onMounted(() => void load())
         <h1>{{ t('productImportJobs.title') }}</h1>
         <p class="page-description">{{ t('productImportJobs.description') }}</p>
       </div>
-      <button
+      <button data-ds-icon="add"
         v-if="hasBasePermission('product', 'import')"
         type="button"
         class="primary-button"
@@ -125,7 +125,7 @@ onMounted(() => void load())
         {{ t('productImportJobs.newImport') }}
       </button>
     </header>
-    <ListQueryControls
+    <ListQueryControls :show-page-size="false"
       :model-value="state.query"
       :filters="filters"
       :sort-options="sortOptions"
@@ -173,7 +173,7 @@ onMounted(() => void load())
           />
         </template>
       </ListTable>
-      <ListPagination
+      <ListPagination :show-page-size="false"
         :page="state.query.page"
         :page-size="state.query.page_size"
         :total="state.total.value"
@@ -204,25 +204,17 @@ onMounted(() => void load())
 }
 .page-description {
   margin: 6px 0 0;
-  color: #536b7b;
+  color: var(--ds-text-secondary);
 }
 .eyebrow {
   margin: 0 0 4px;
-  color: #1876a8;
+  color: var(--ds-primary);
   font-size: 11px;
   font-weight: 700;
   letter-spacing: 0.04em;
   text-transform: uppercase;
 }
-.primary-button {
-  min-height: 36px;
-  border: 1px solid #1876a8;
-  border-radius: 4px;
-  padding: 7px 14px;
-  background: #1876a8;
-  color: #fff;
-  cursor: pointer;
-}
+
 @media (max-width: 640px) {
   .page-header {
     align-items: stretch;

@@ -79,8 +79,9 @@ onMounted(checkConnection)
       </div>
 
       <button
+        data-ds-icon="refresh"
         type="button"
-        class="check-button"
+        class="check-button primary-button"
         :disabled="checkState === 'loading'"
         @click="checkConnection"
       >
@@ -91,25 +92,6 @@ onMounted(checkConnection)
 </template>
 
 <style scoped>
-:global(*) {
-  box-sizing: border-box;
-}
-
-:global(body) {
-  margin: 0;
-  min-width: 320px;
-  background: #f4f7fb;
-  color: #182230;
-  font-family:
-    Inter,
-    ui-sans-serif,
-    system-ui,
-    -apple-system,
-    BlinkMacSystemFont,
-    'Segoe UI',
-    sans-serif;
-}
-
 .page-shell {
   display: grid;
   min-height: 100vh;
@@ -120,15 +102,15 @@ onMounted(checkConnection)
 .status-panel {
   width: min(100%, 680px);
   padding: clamp(28px, 6vw, 56px);
-  background: #fff;
-  border: 1px solid #dce4ee;
+  background: var(--ds-bg-surface);
+  border: 1px solid var(--ds-border-subtle);
   border-radius: 8px;
-  box-shadow: 0 20px 55px rgb(24 34 48 / 8%);
+  box-shadow: var(--ds-shadow-popover);
 }
 
 .eyebrow {
   margin: 0 0 12px;
-  color: #1c6b54;
+  color: var(--ds-primary);
   font-size: 0.78rem;
   font-weight: 700;
   letter-spacing: 0.08em;
@@ -144,7 +126,7 @@ h1 {
 .lead {
   max-width: 54ch;
   margin: 16px 0 28px;
-  color: #536273;
+  color: var(--ds-text-secondary);
   line-height: 1.6;
 }
 
@@ -155,7 +137,7 @@ h1 {
 }
 
 .endpoint dt {
-  color: #687789;
+  color: var(--ds-text-muted);
   font-size: 0.78rem;
   font-weight: 700;
   letter-spacing: 0.06em;
@@ -165,7 +147,7 @@ h1 {
 .endpoint dd {
   margin: 0;
   overflow-wrap: anywhere;
-  color: #26394f;
+  color: var(--ds-text-primary);
   font-family: 'SFMono-Regular', Consolas, 'Liberation Mono', monospace;
   font-size: 0.92rem;
 }
@@ -176,9 +158,9 @@ h1 {
   gap: 12px;
   min-height: 72px;
   padding: 16px;
-  border: 1px solid #dce4ee;
+  border: 1px solid var(--ds-border-subtle);
   border-radius: 6px;
-  background: #f8fafc;
+  background: var(--ds-bg-subtle);
 }
 
 .status-dot {
@@ -187,19 +169,19 @@ h1 {
   flex: 0 0 auto;
   margin-top: 5px;
   border-radius: 50%;
-  background: #8794a4;
+  background: var(--ds-text-muted);
 }
 
 .result--loading .status-dot {
-  background: #c88a1a;
+  background: var(--ds-warning);
 }
 
 .result--success .status-dot {
-  background: #1c8a62;
+  background: var(--ds-success);
 }
 
 .result--error .status-dot {
-  background: #c44747;
+  background: var(--ds-danger);
 }
 
 .result strong {
@@ -209,30 +191,11 @@ h1 {
 
 .result-detail {
   margin: 4px 0 0;
-  color: #607084;
+  color: var(--ds-text-secondary);
   font-size: 0.9rem;
   line-height: 1.5;
 }
 
-.check-button {
-  width: 100%;
-  margin-top: 20px;
-  padding: 12px 18px;
-  border: 0;
-  border-radius: 6px;
-  background: #1c6b54;
-  color: #fff;
-  cursor: pointer;
-  font: inherit;
-  font-weight: 700;
-}
-
-.check-button:hover:not(:disabled) {
-  background: #155640;
-}
-
-.check-button:disabled {
-  cursor: wait;
-  opacity: 0.65;
-}
+/* Full-width action layout only; appearance/hover/disabled come from buttons.css. */
+.check-button { width: 100%; margin-top: 20px; }
 </style>

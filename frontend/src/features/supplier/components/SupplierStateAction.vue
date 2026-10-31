@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import AppDialogHost from '@/components/ui/AppDialogHost.vue'
 import { computed, nextTick, onBeforeUnmount, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { NIcon } from 'naive-ui'
@@ -190,26 +191,6 @@ function closeDialog(): void {
   if (disabled.value) return
   dismiss()
 }
-function onDialogKeydown(event: KeyboardEvent): void {
-  if (event.key === 'Escape') {
-    event.preventDefault()
-    event.stopPropagation()
-    closeDialog()
-    return
-  }
-  if (event.key !== 'Tab' || !dialog.value) return
-  const elements = [...dialog.value.querySelectorAll<HTMLElement>(
-    'button:not(:disabled), input:not(:disabled), select:not(:disabled), textarea:not(:disabled), [href]',
-  )]
-  if (!elements.length) { event.preventDefault(); return }
-  const first = elements[0]!
-  const last = elements[elements.length - 1]!
-  if (event.shiftKey && (document.activeElement === first || !dialog.value.contains(document.activeElement))) {
-    event.preventDefault(); last.focus()
-  } else if (!event.shiftKey && (document.activeElement === last || !dialog.value.contains(document.activeElement))) {
-    event.preventDefault(); first.focus()
-  }
-}
 
 async function apply(): Promise<void> {
   if (!canApply.value) return
@@ -242,19 +223,19 @@ onBeforeUnmount(() => { ++requestSequence; ++assigneeSequence; if (returnFocusTo
   <button v-if="authorized" type="button"
     :class="variant === 'icon' ? 'supplier-state-action-icon' : 'secondary-button'"
     :disabled="disabled" :title="t('workflow.changeState')" :aria-label="t('workflow.changeState')"
-    @click="void openDialog()">
-    <NIcon v-if="variant === 'icon'" :component="GitCompareOutline" aria-hidden="true" />
-    <template v-else><NIcon :component="GitCompareOutline" aria-hidden="true" /> {{ t('workflow.changeState') }}</template>
+    @click="void openDialog()" data-ds-icon="changestate">
+
+    <template v-if="variant !== 'icon'"> {{ t('workflow.changeState') }}</template>
   </button>
-  <Teleport to="body">
-    <div v-if="dialogOpen" class="supplier-state-backdrop" @click.self="closeDialog">
-      <section ref="dialog" class="supplier-state-dialog" role="dialog" aria-modal="true"
-        :aria-label="t('workflow.changeState')" @keydown.stop="onDialogKeydown">
+
+    <AppDialogHost :open="dialogOpen" size="lg" :mask-closable="true" @close="closeDialog">
+      <section v-if="dialogOpen" ref="dialog" class="ds-dialog-surface supplier-state-dialog" role="dialog" aria-modal="true"
+        :aria-label="t('workflow.changeState')">
         <header class="modal-card__header supplier-state-dialog__header">
           <h2 class="modal-card-title supplier-state-dialog__title"><NIcon :component="GitCompareOutline" aria-hidden="true" />
             {{ t('workflow.changeState') }}</h2>
           <button ref="closeButton" type="button" class="modal-card-button-close"
-            :aria-label="t('common.close')" :disabled="disabled" @click="closeDialog" />
+            :aria-label="t('common.close')" :disabled="disabled" @click="closeDialog" data-ds-icon="close" />
         </header>
         <div class="supplier-state-dialog__body">
           <section class="supplier-state-transition-section">
@@ -282,7 +263,7 @@ onBeforeUnmount(() => { ++requestSequence; ++assigneeSequence; if (returnFocusTo
                 <h3>{{ t('workflow.notificationSection') }}</h3>
                 <p>{{ t('workflow.notificationAssignmentOptional') }}</p>
               </div>
-              <button type="button" class="secondary-button workflow-notify-toggle"
+              <button data-ds-icon="settings" type="button" class="secondary-button workflow-notify-toggle"
                 :aria-expanded="showAssigneeEditor" :disabled="disabled"
                 @click="showAssigneeEditor = !showAssigneeEditor">
                 {{ showAssigneeEditor ? t('workflow.notificationSectionHide') : t('workflow.notificationSectionShow') }}
@@ -308,7 +289,7 @@ onBeforeUnmount(() => { ++requestSequence; ++assigneeSequence; if (returnFocusTo
                 />
                 <div class="workflow-notify-controls">
                   <span>{{ assigneeDraft.length }} / 25</span>
-                  <button type="button" class="secondary-button" :disabled="disabled || !assigneeChanged"
+                  <button data-ds-icon="save" type="button" class="secondary-button" :disabled="disabled || !assigneeChanged"
                     @click="void saveAssignees()">{{ t('workflow.saveNotificationAssignees') }}</button>
                 </div>
                 <p v-if="assigneeSaved && !assigneeChanged" class="workflow-success" role="status">
@@ -317,7 +298,7 @@ onBeforeUnmount(() => { ++requestSequence; ++assigneeSequence; if (returnFocusTo
               </template>
               <div v-else-if="assigneeFailed" class="workflow-notify-retry" role="alert">
                 <p class="workflow-error">{{ t('workflow.notificationAssigneesError') }}</p>
-                <button type="button" class="secondary-button" :disabled="disabled"
+                <button data-ds-icon="retry" type="button" class="secondary-button" :disabled="disabled"
                   @click="void loadAssignees()">{{ t('workflow.notificationRetry') }}</button>
               </div>
               <p v-if="assigneeFailed && assignees" class="workflow-error" role="alert">
@@ -338,52 +319,39 @@ onBeforeUnmount(() => { ++requestSequence; ++assigneeSequence; if (returnFocusTo
           <p v-if="conflict" class="supplier-state-hint">{{ t('supplier.preserveDraft') }}</p>
         </div>
         <footer class="modal-card__footer supplier-state-dialog__footer">
-          <button type="button" class="secondary-button" :disabled="disabled" @click="closeDialog">
+          <button data-ds-icon="cancel" type="button" class="secondary-button" :disabled="disabled" @click="closeDialog">
             {{ t('common.cancel') }}
           </button>
-          <button type="button" class="primary-button" :disabled="!canApply" @click="void apply()">
+          <button data-ds-icon="changestate" type="button" class="primary-button" :disabled="!canApply" @click="void apply()">
             {{ working ? t('common.saving') : t('workflow.transitionSubmit') }}
           </button>
         </footer>
       </section>
-    </div>
-  </Teleport>
+    </AppDialogHost>
+
 </template>
 
 <style scoped>
-.workflow-notify-section { border-top: 1px solid #dbe5ea; padding-top: 18px; display: grid; gap: 12px; }
+.workflow-notify-section { border-top: 1px solid var(--ds-border-subtle); padding-top: 18px; display: grid; gap: 12px; }
 .workflow-notify-heading { display: flex; align-items: center; justify-content: space-between; gap: 16px; }
 .workflow-notify-title { min-width: 0; }
-.workflow-notify-title p { margin: 10px 0 0; font-size: 13px; line-height: 1.6; color: #60768b; }
+.workflow-notify-title p { margin: 10px 0 0; font-size: 13px; line-height: 1.6; color: var(--ds-text-secondary); }
 .workflow-notify-toggle { flex: 0 0 auto; }
-.workflow-notify-editor { padding: 15px; border: 1px solid #d7e3ec; border-radius: 6px; background: #f6f9fb; display: grid; gap: 12px; min-width: 0; }
-.workflow-notify-hint { margin: 0; color: #60768b; font-size: 13px; line-height: 1.6; }
-.workflow-assignee-label { color: #536b7b; font-size: 13px; font-weight: 600; }
-.workflow-notify-controls { display: flex; align-items: center; justify-content: space-between; gap: 10px; font-size: 12px; color: #60768b; }
+.workflow-notify-editor { padding: 15px; border: 1px solid var(--ds-border-subtle); border-radius: 6px; background: var(--ds-bg-subtle); display: grid; gap: 12px; min-width: 0; }
+.workflow-notify-hint { margin: 0; color: var(--ds-text-secondary); font-size: 13px; line-height: 1.6; }
+.workflow-assignee-label { color: var(--ds-text-secondary); font-size: 13px; font-weight: 600; }
+.workflow-notify-controls { display: flex; align-items: center; justify-content: space-between; gap: 10px; font-size: 12px; color: var(--ds-text-secondary); }
 .workflow-notify-retry { display: grid; gap: 8px; justify-items: start; }
-.workflow-error, .workflow-unsaved-notice { margin: 0; color: #c03d36; font-size: 12px; }
-.workflow-success { margin: 0; color: #168457; font-size: 12px; }
+.workflow-error, .workflow-unsaved-notice { margin: 0; color: var(--ds-danger); font-size: 12px; }
+.workflow-success { margin: 0; color: var(--ds-success); font-size: 12px; }
 .supplier-state-action-icon {
   display: inline-flex; align-items: center; justify-content: center;
-  width: 30px; height: 30px; padding: 0; border: 1px solid #dbe5ea;
-  border-radius: 4px; background: #fff; color: #b45309; cursor: pointer; font-size: 17px;
+  width: 30px; height: 30px; padding: 0; border: 1px solid var(--ds-border-subtle);
+  border-radius: 4px; background: var(--ds-bg-surface); color: var(--ds-warning); cursor: pointer; font-size: 17px;
 }
 .supplier-state-action-icon:hover:not(:disabled),
-.supplier-state-action-icon:focus-visible { border-color: #b45309; }
+.supplier-state-action-icon:focus-visible { border-color: var(--ds-warning); }
 .supplier-state-action-icon:disabled { opacity: 0.5; cursor: not-allowed; }
-.supplier-state-backdrop {
-  position: fixed; inset: 0; z-index: 3000; display: flex;
-  align-items: center; justify-content: center; padding: 12px;
-  background: rgba(10, 25, 38, 0.52);
-}
-.supplier-state-dialog {
-  width: min(750px, 100%); max-width: calc(100vw - 24px);
-  max-height: calc(100dvh - 24px); min-width: 0;
-  display: flex; flex-direction: column; overflow: hidden;
-  border-radius: 8px; background: #fff; color: #1d2934;
-  box-shadow: 0 18px 48px rgba(0, 0, 0, 0.22);
-}
-.supplier-state-dialog, .supplier-state-dialog * { box-sizing: border-box; }
 .supplier-state-dialog__header { flex: 0 0 auto; min-width: 0; }
 .supplier-state-dialog__title { display: inline-flex; align-items: center; gap: 9px; min-width: 0; font-size: 19px; }
 .supplier-state-dialog__body {
@@ -392,15 +360,15 @@ onBeforeUnmount(() => { ++requestSequence; ++assigneeSequence; if (returnFocusTo
 }
 .supplier-state-dialog__body > * { min-width: 0; }
 .supplier-state-transition-section { display: grid; gap: 10px; min-width: 0; }
-.supplier-state-dialog h3 { margin: 0; font-size: 15px; color: #183b57; }
-.supplier-state-current, .supplier-state-hint { margin: 0; color: #536b7b; font-size: 13px; }
+.supplier-state-dialog h3 { margin: 0; font-size: 15px; color: var(--ds-text-primary); }
+.supplier-state-current, .supplier-state-hint { margin: 0; color: var(--ds-text-secondary); font-size: 13px; }
 .supplier-state-current code { margin-inline-start: 4px; font-size: 11px; }
-.supplier-state-label { display: grid; gap: 8px; color: #536b7b; font-size: 13px; }
+.supplier-state-label { display: grid; gap: 8px; color: var(--ds-text-secondary); font-size: 13px; }
 .supplier-state-label select {
   width: 100%; min-height: 38px; padding: 8px; min-width: 0;
-  border: 1px solid #a9b9c7; border-radius: 4px; background: #fff; color: #183b57;
+  border: 1px solid var(--ds-border-subtle); border-radius: 4px; background: var(--ds-bg-surface); color: var(--ds-text-primary);
 }
-.supplier-state-error { margin: 0; color: #ad3434; font-size: 12px; }
+.supplier-state-error { margin: 0; color: var(--ds-danger); font-size: 12px; }
 .supplier-state-dialog__footer { flex: 0 0 auto; display: flex; gap: 8px; justify-content: flex-end; }
 @media (max-width: 560px) {
   .workflow-notify-heading { flex-direction: column; align-items: stretch; }

@@ -142,7 +142,7 @@ onMounted(() => {
     <p v-if="!supported">{{ t('pushDevices.unsupported') }}</p>
     <p v-else-if="!available?.available">{{ t('pushDevices.disabled') }}</p>
     <p v-else-if="!consented">{{ t('pushDevices.optInFirst') }}</p>
-    <button type="button" :disabled="!canSubscribe || busy" @click="subscribe">
+    <button type="button" class="ds-button ds-button--primary" data-ds-icon="subscribe" :disabled="!canSubscribe || busy" @click="subscribe">
       {{ t('pushDevices.subscribe') }}
     </button>
     <p v-if="error" role="alert">{{ error }}</p>
@@ -154,7 +154,7 @@ onMounted(() => {
           <strong v-if="!device.detail_ready" class="push-devices__warning">{{ t('pushDevices.legacyDevice') }}</strong>
           <strong v-else class="push-devices__ready">{{ t('pushDevices.detailedReady') }}</strong>
         </span>
-        <button type="button" :disabled="busy" @click="remove(device)">
+        <button type="button" class="ds-button ds-button--danger-outline" data-ds-icon="delete" :disabled="busy" @click="remove(device)">
           {{ t('pushDevices.remove') }}
         </button>
       </li>
@@ -163,13 +163,12 @@ onMounted(() => {
 </template>
 
 <style scoped>
-.push-devices { border-top: 1px solid #8297a944; padding: 20px 0; display: grid; gap: 12px; }
+.push-devices { border-top: 1px solid var(--ds-border-subtle); padding: 20px 0; display: grid; gap: 12px; }
 .push-devices h2 { font-size: 1.1rem; margin: 0; }
 .push-devices p { margin: 0; }
 .push-devices ul { display: grid; gap: 8px; list-style: none; padding: 0; }
 .push-devices li { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 8px; }
-.push-devices button { padding: 6px 12px; }
-.push-devices__origin-note { font-size: .85rem; color: #61758c; }
-.push-devices__warning { color: #9a6517; margin-left: 6px; }
-.push-devices__ready { color: #198754; margin-left: 6px; }
+.push-devices__origin-note { font-size: .85rem; color: var(--ds-text-secondary); }
+.push-devices__warning { color: var(--ds-warning); margin-left: 6px; }
+.push-devices__ready { color: var(--ds-success); margin-left: 6px; }
 </style>

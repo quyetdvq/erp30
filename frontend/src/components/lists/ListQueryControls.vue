@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, watch } from 'vue'
+import { computed, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 
 import SearchableSelect from '@/components/forms/SearchableSelect.vue'
@@ -13,6 +13,7 @@ const props = withDefaults(
     sortOptions?: readonly ListSortOption[]
     pageSizeOptions?: readonly number[]
     showPageSize?: boolean
+    extraFieldCount?: number
     disabled?: boolean
   }>(),
   {
@@ -20,6 +21,7 @@ const props = withDefaults(
     sortOptions: () => [],
     pageSizeOptions: () => STANDARD_PAGE_SIZE_OPTIONS,
     showPageSize: true,
+    extraFieldCount: 0,
     disabled: false,
   },
 )
@@ -35,6 +37,20 @@ const search = ref(props.modelValue.q)
 const sort = ref(props.modelValue.sort)
 const pageSize = ref(String(props.modelValue.page_size))
 const filters = ref<Record<string, string | readonly string[]>>({ ...props.modelValue.filter })
+
+// Field counts are presentational only. Extra fields are supplied by named
+// slots (Supplier Company, etc.); never alter the query or its API contract.
+const extraFields = computed(() => Math.max(0, Math.trunc(props.extraFieldCount)))
+const commonFields = computed(() =>
+  props.filters.length + Number(props.sortOptions.length > 0) + Number(props.showPageSize),
+)
+const dense = computed(() => commonFields.value + extraFields.value > 5)
+const desktopColumns = computed(() => {
+  const columns = ['minmax(230px, 2.6fr)']
+  for (let i = 0; i < commonFields.value; i += 1) columns.push('minmax(140px, 1fr)')
+  for (let i = 0; i < extraFields.value; i += 1) columns.push('minmax(205px, 1.65fr)')
+  return columns.join(' ')
+})
 
 watch(
   () => props.modelValue,
@@ -109,147 +125,97 @@ function reset(): void {
 </script>
 
 <template>
-  <form class="list-query-controls" role="search" @submit.prevent="apply">
-    <label class="list-query-controls__field list-query-controls__search">
-      <span>{{ t('list.search') }}</span>
-      <input
-        v-model="search"
-        type="search"
-        :disabled="props.disabled"
-        :aria-label="t('list.search')"
-      />
-    </label>
-    <label
-      v-for="definition in props.filters"
-      :key="definition.key"
-      class="list-query-controls__field"
-    >
-      <span>{{ t(definition.labelKey) }}</span>
-      <SearchableSelect
-        v-if="searchable(definition)"
-        :model-value="definition.multiple ? valuesFor(definition.key) : valueFor(definition.key)"
-        :options="
-          (definition.options ?? []).map((option) => ({
-            value: option.value,
-            label: optionLabel(option),
-          }))
-        "
-        :multiple="definition.multiple"
-        :placeholder="t('list.all')"
-        :disabled="props.disabled"
-        :aria-label="t(definition.labelKey)"
-        @update:model-value="(value) => setFilter(definition.key, value)"
-      />
-      <select
-        v-else-if="definition.type === 'select' || definition.options"
-        :value="valueFor(definition.key)"
-        :multiple="definition.multiple"
-        :disabled="props.disabled"
-        :aria-label="t(definition.labelKey)"
-        @change="
-          setFilter(
-            definition.key,
-            definition.multiple
-              ? Array.from(($event.target as HTMLSelectElement).selectedOptions).map(
-                  (option) => option.value,
-                )
-              : ($event.target as HTMLSelectElement).value,
-          )
-        "
+  <form class="list-query-controls" :class="{ 'list-query-controls--dense': dense }" role="search" @submit.prevent="apply">
+    <div class="list-query-controls__grid" :style="{ '--ds-query-columns': desktopColumns }">
+      <label class="list-query-controls__field list-query-controls__search">
+        <span>{{ t('list.search') }}</span>
+        <input
+          v-model="search"
+          type="search"
+          :disabled="props.disabled"
+          :aria-label="t('list.search')"
+        />
+      </label>
+      <label
+        v-for="definition in props.filters"
+        :key="definition.key"
+        class="list-query-controls__field"
       >
-        <option value="">{{ t('list.all') }}</option>
-        <option
-          v-for="option in definition.options ?? []"
-          :key="option.value"
-          :value="option.value"
-          :selected="definition.multiple && selectedFor(definition.key, option.value)"
+        <span>{{ t(definition.labelKey) }}</span>
+        <SearchableSelect
+          v-if="searchable(definition)"
+          :model-value="definition.multiple ? valuesFor(definition.key) : valueFor(definition.key)"
+          :options="
+            (definition.options ?? []).map((option) => ({
+              value: option.value,
+              label: optionLabel(option),
+            }))
+          "
+          :multiple="definition.multiple"
+          :placeholder="t('list.all')"
+          :disabled="props.disabled"
+          :aria-label="t(definition.labelKey)"
+          @update:model-value="(value) => setFilter(definition.key, value)"
+        />
+        <select
+          v-else-if="definition.type === 'select' || definition.options"
+          :value="valueFor(definition.key)"
+          :multiple="definition.multiple"
+          :disabled="props.disabled"
+          :aria-label="t(definition.labelKey)"
+          @change="
+            setFilter(
+              definition.key,
+              definition.multiple
+                ? Array.from(($event.target as HTMLSelectElement).selectedOptions).map(
+                    (option) => option.value,
+                  )
+                : ($event.target as HTMLSelectElement).value,
+            )
+          "
         >
-          {{ optionLabel(option) }}
-        </option>
-      </select>
-      <input
-        v-else
-        :value="valueFor(definition.key)"
-        :disabled="props.disabled"
-        @input="setFilter(definition.key, ($event.target as HTMLInputElement).value)"
-      />
-    </label>
-    <label v-if="props.sortOptions.length" class="list-query-controls__field">
-      <span>{{ t('list.sort') }}</span>
-      <select v-model="sort" :disabled="props.disabled" :aria-label="t('list.sort')">
-        <option value="">{{ t('list.defaultSort') }}</option>
-        <option v-for="option in props.sortOptions" :key="option.value" :value="option.value">
-          {{ t(option.labelKey) }}
-        </option>
-      </select>
-    </label>
-    <label
-      v-if="props.showPageSize"
-      class="list-query-controls__field list-query-controls__page-size"
-    >
-      <span>{{ t('list.pageSize') }}</span>
-      <select v-model="pageSize" :disabled="props.disabled" :aria-label="t('list.pageSize')">
-        <option v-for="size in props.pageSizeOptions" :key="size" :value="size">{{ size }}</option>
-      </select>
-    </label>
-    <div class="list-query-controls__actions">
-      <button type="submit" :disabled="props.disabled">{{ t('list.apply') }}</button>
-      <button type="button" :disabled="props.disabled" @click="reset">{{ t('list.reset') }}</button>
+          <option value="">{{ t('list.all') }}</option>
+          <option
+            v-for="option in definition.options ?? []"
+            :key="option.value"
+            :value="option.value"
+            :selected="definition.multiple && selectedFor(definition.key, option.value)"
+          >
+            {{ optionLabel(option) }}
+          </option>
+        </select>
+        <input
+          v-else
+          :value="valueFor(definition.key)"
+          :disabled="props.disabled"
+          @input="setFilter(definition.key, ($event.target as HTMLInputElement).value)"
+        />
+      </label>
+      <label v-if="props.sortOptions.length" class="list-query-controls__field">
+        <span>{{ t('list.sort') }}</span>
+        <select v-model="sort" :disabled="props.disabled" :aria-label="t('list.sort')">
+          <option value="">{{ t('list.defaultSort') }}</option>
+          <option v-for="option in props.sortOptions" :key="option.value" :value="option.value">
+            {{ t(option.labelKey) }}
+          </option>
+        </select>
+      </label>
+      <label
+        v-if="props.showPageSize"
+        class="list-query-controls__field list-query-controls__page-size"
+      >
+        <span>{{ t('list.pageSize') }}</span>
+        <select v-model="pageSize" :disabled="props.disabled" :aria-label="t('list.pageSize')">
+          <option v-for="size in props.pageSizeOptions" :key="size" :value="size">{{ size }}</option>
+        </select>
+      </label>
+      <!-- Put feature-supplied fields in the same filter row, before actions. -->
+      <slot name="filters" :filters="filters" :set-filter="setFilter" />
     </div>
-    <slot name="filters" :filters="filters" :set-filter="setFilter" />
+    <div class="list-query-controls__actions">
+      <button type="submit" class="ds-button ds-button--primary" data-ds-icon="apply" :disabled="props.disabled">{{ t('list.apply') }}</button>
+      <button type="button" class="ds-button ds-button--secondary" data-ds-icon="reset" :disabled="props.disabled" @click="reset">{{ t('list.reset') }}</button>
+      <slot name="actions" />
+    </div>
   </form>
 </template>
-
-<style scoped>
-.list-query-controls {
-  display: flex;
-  align-items: end;
-  gap: 10px;
-  flex-wrap: wrap;
-}
-.list-query-controls__field {
-  display: grid;
-  gap: 4px;
-  min-width: 140px;
-  color: #536b7b;
-  font-size: 12px;
-  font-weight: 600;
-}
-.list-query-controls__search {
-  min-width: min(280px, 100%);
-  flex: 1 1 220px;
-}
-.list-query-controls__field input,
-.list-query-controls__field select {
-  min-height: 34px;
-  border: 1px solid #c7d6df;
-  border-radius: 4px;
-  padding: 6px 8px;
-  background: #fff;
-  color: #183b57;
-}
-.list-query-controls__actions {
-  display: flex;
-  gap: 6px;
-}
-.list-query-controls__actions button {
-  min-height: 34px;
-  border: 1px solid #1876a8;
-  border-radius: 4px;
-  padding: 6px 12px;
-  background: #1876a8;
-  color: #fff;
-  cursor: pointer;
-}
-.list-query-controls__actions button + button {
-  border-color: #c7d6df;
-  background: #fff;
-  color: #294b65;
-}
-.list-query-controls__actions button:disabled,
-.list-query-controls__field input:disabled,
-.list-query-controls__field select:disabled {
-  cursor: not-allowed;
-  opacity: 0.6;
-}
-</style>

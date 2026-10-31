@@ -1,0 +1,148 @@
+/* DinkERP Design System / DS-01. These tokens are the visual source of truth.
+ * Each text token is WCAG AA (>= 4.5:1) on both --ds-bg-surface and
+ * --ds-bg-subtle in its theme. Do not place literal palette values in views.
+ * Document-level theme is intentional: Naive UI portals mount under <body>.
+ */
+:root {
+  color-scheme: light;
+  --ds-bg-canvas: #f4f7fb;
+  --ds-bg-surface: #ffffff;
+  --ds-bg-elevated: #ffffff;
+  --ds-bg-subtle: #f1f5fa;
+  --ds-bg-hover: #eaf2f8;
+  --ds-bg-selected: #e6f3f5;
+  /* Text highlight must never reuse the subtle hover/selected surface. */
+  --ds-selection-bg: #075c99;
+  --ds-selection-text: #ffffff;
+  --ds-text-primary: #172b3d;
+  --ds-text-secondary: #40566d;
+  --ds-text-muted: #596f83;
+  --ds-text-inverse: #ffffff;
+  --ds-border: #7c91a4;
+  --ds-border-subtle: #cfdae4;
+  --ds-border-strong: #698197;
+  --ds-primary: #075c99;
+  --ds-primary-hover: #064b7c;
+  --ds-primary-pressed: #043a60;
+  --ds-primary-soft: #e7f2fa;
+  --ds-primary-contrast: #ffffff;
+  --ds-success: #166a46;
+  --ds-success-soft: #eaf7f0;
+  --ds-success-contrast: #ffffff;
+  --ds-warning: #885000;
+  --ds-warning-soft: #fff3df;
+  --ds-warning-contrast: #ffffff;
+  --ds-danger: #b32734;
+  --ds-danger-hover: #91202a;
+  --ds-danger-pressed: #751822;
+  --ds-danger-soft: #fff0f1;
+  /* Notice surfaces are more emphatic than ordinary semantic soft badges. */
+  --ds-toast-error-bg: #ffe2e6;
+  --ds-toast-warning-bg: #fff0d0;
+  --ds-shadow-toast: 0 16px 40px rgb(12 30 48 / 24%);
+  --ds-danger-contrast: #ffffff;
+  --ds-info: #0c659a;
+  --ds-info-soft: #eaf4fc;
+  --ds-info-contrast: #ffffff;
+  --ds-role-combo: #633c88;
+  --ds-role-combo-soft: #f1eafa;
+  /* Login spotlight is a fixed brand accent panel in either mode.
+   * The form/panel around it follows the active theme. */
+  --ds-auth-brand-bg: #102f46;
+  --ds-auth-brand-text: #e4f0f5;
+  --ds-auth-brand-subtle: #b5cad8;
+  --ds-auth-brand-accent: #8bd9e9;
+  --ds-auth-brand-success: #76d0b2;
+  --ds-focus-ring: #075c99;
+  --ds-focus-shadow: rgb(7 92 153 / 22%);
+  --ds-overlay-scrim: rgb(12 25 40 / 62%);
+  --ds-shadow-popover: 0 12px 32px rgb(20 40 60 / 15%);
+  --ds-shadow-modal: 0 24px 68px rgb(12 30 48 / 28%);
+  --ds-shadow-card: 0 2px 8px rgb(20 40 60 / 5%);
+
+  --ds-space-1: 4px;
+  --ds-space-2: 8px;
+  --ds-space-3: 12px;
+  --ds-space-4: 16px;
+  --ds-space-5: 20px;
+  --ds-space-6: 24px;
+  --ds-space-8: 32px;
+  --ds-font-xs: 12px;
+  --ds-font-sm: 13px;
+  --ds-font-md: 14px;
+  --ds-font-lg: 16px;
+  --ds-font-xl: 18px;
+  --ds-font-title: 20px;
+  --ds-line-height: 1.5;
+  --ds-radius-sm: 6px;
+  --ds-radius-md: 8px;
+  --ds-radius-lg: 10px;
+  --ds-list-table-min-width: 640px;
+  --ds-query-columns: minmax(0, 1fr); /* Fallback; each list computes its desktop filter tracks. */
+  --ds-button-height-sm: 32px;
+  --ds-button-height-md: 36px;
+  --ds-button-height-lg: 40px;
+  --ds-icon-size: 18px;
+  --ds-icon-gap: 8px;
+  --ds-action-mask: none; /* Default for declarative action icons; each data-ds-icon overrides it. */
+  --ds-modal-width-sm: 480px;
+  --ds-modal-width-md: 680px;
+  --ds-modal-width-lg: 920px;
+  --ds-modal-width-xl: 1120px;
+  --ds-modal-width-wide: 1800px;
+  --ds-modal-max-height: calc(100dvh - 40px);
+  --ds-layer-dropdown: 950;
+  --ds-layer-overlay: 900;
+  --ds-layer-toast: 999;
+  --ds-motion-fast: 140ms;
+  --ds-motion-normal: 200ms;
+}
+
+:root[data-ds-theme='dark'] {
+  color-scheme: dark;
+  --ds-bg-canvas: #0f1721;
+  --ds-bg-surface: #182532;
+  --ds-bg-elevated: #1c2b39;
+  --ds-bg-subtle: #223242;
+  --ds-bg-hover: #2b4052;
+  --ds-bg-selected: #1d4650;
+  --ds-selection-bg: #9ed6ff;
+  --ds-selection-text: #081a2b;
+  --ds-text-primary: #e8f0f7;
+  --ds-text-secondary: #c0d0df;
+  --ds-text-muted: #a7bdcf;
+  --ds-text-inverse: #081a2b;
+  --ds-border: #698395;
+  --ds-border-subtle: #364b5d;
+  --ds-border-strong: #8ba6b9;
+  --ds-primary: #75bfff;
+  --ds-primary-hover: #a0d4ff;
+  --ds-primary-pressed: #c4e5ff;
+  --ds-primary-soft: #1e3f56;
+  --ds-primary-contrast: #081a2b;
+  --ds-success: #69d4a4;
+  --ds-success-soft: #194434;
+  --ds-success-contrast: #082519;
+  --ds-warning: #f6c87b;
+  --ds-warning-soft: #48361f;
+  --ds-warning-contrast: #241705;
+  --ds-danger: #ff8f96;
+  --ds-danger-hover: #ffc0c4;
+  --ds-danger-pressed: #ffe0e3;
+  --ds-danger-soft: #4a2731;
+  --ds-toast-error-bg: #4a2731;
+  --ds-toast-warning-bg: #4a3820;
+  --ds-shadow-toast: 0 16px 40px rgb(0 0 0 / 52%);
+  --ds-danger-contrast: #290e15;
+  --ds-info: #88ccff;
+  --ds-info-soft: #203d58;
+  --ds-info-contrast: #081a2b;
+  --ds-role-combo: #d7b9ff;
+  --ds-role-combo-soft: #392a4b;
+  --ds-focus-ring: #7ecaff;
+  --ds-focus-shadow: rgb(126 202 255 / 32%);
+  --ds-overlay-scrim: rgb(2 8 15 / 74%);
+  --ds-shadow-popover: 0 12px 32px rgb(0 0 0 / 36%);
+  --ds-shadow-modal: 0 24px 68px rgb(0 0 0 / 55%);
+  --ds-shadow-card: 0 2px 8px rgb(0 0 0 / 22%);
+}

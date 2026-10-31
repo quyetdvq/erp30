@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import AppDialogHost from '@/components/ui/AppDialogHost.vue'
 import { computed, onMounted, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 
@@ -240,18 +241,20 @@ onMounted(() => void load())
       <h1>{{ t('organization.title') }}</h1>
       <p>{{ t('organization.description') }}</p>
     </div>
-    <button type="button" class="primary-button" v-if="hasBasePermission('organization', 'create')"
+    <button data-ds-icon="add" type="button" class="primary-button" v-if="hasBasePermission('organization', 'create')"
       :disabled="!!selected && (selected.status !== 'ACTIVE' || selected.type === 'WAREHOUSE')" @click="openCreate">
-      ＋ {{ t('organization.createChild') }}
+      {{ t('organization.createChild') }}
     </button>
   </div>
   <section class="content-panel organization-layout">
     <aside class="organization-tree" :aria-label="t('organization.tree')">
       <div class="organization-tree__toolbar">
-        <ListQueryControls :model-value="state.query" @apply="applyQuery" @reset="resetQuery" /><button type="button"
-          class="secondary-button" :aria-label="t('common.refresh')" @click="void load()">
-          ↻
-        </button>
+        <ListQueryControls :show-page-size="false" :model-value="state.query" @apply="applyQuery" @reset="resetQuery" >
+          <template #actions>
+            <button type="button" class="ds-icon-control" data-ds-icon="refresh"
+              :aria-label="t('common.refresh')" :title="t('common.refresh')" @click="void load()"></button>
+          </template>
+        </ListQueryControls>
       </div>
       <ListShell :initial-loading="state.isInitialLoading.value" :refreshing="state.isBackgroundRefreshing.value"
         :has-data="state.queryState.hasData.value" :empty-dataset="state.isEmptyDataset.value"
@@ -286,7 +289,7 @@ onMounted(() => void load())
             <p>{{ t(`status.${selected.status.toLowerCase()}`) }}</p>
           </div>
           <div class="detail-actions">
-            <button v-if="hasBasePermission('organization', 'edit')" type="button" class="secondary-button"
+            <button data-ds-icon="edit" v-if="hasBasePermission('organization', 'edit')" type="button" class="secondary-button"
               @click="openEdit(selected)">
               {{ t('common.edit') }}</button>
             <BusinessWorkflowAction v-if="hasBasePermission('organization', 'setstate')" resource="organization"
@@ -343,8 +346,8 @@ onMounted(() => void load())
     </section>
   </section>
 
-  <div v-if="modalOpen" class="modal-backdrop">
-    <section class="modal-card" role="dialog" aria-modal="true" :aria-label="t('organization.form')">
+  <AppDialogHost :open="modalOpen" size="lg" @close="closeForm">
+    <section v-if="modalOpen" class="ds-dialog-surface modal-card" role="dialog" aria-modal="true" :aria-label="t('organization.form')">
       <header class="modal-card__header">
 
         <h2 class="modal-card-title">
@@ -355,10 +358,10 @@ onMounted(() => void load())
         </h2>
         <p>{{ t('organization.formHint') }}</p>
 
-        <button type="button" class="modal-card-button-close" :aria-label="t('common.close')" @click="closeForm">
+        <button type="button" class="modal-card-button-close" :aria-label="t('common.close')" @click="closeForm" data-ds-icon="close">
         </button>
       </header>
-      <form class="modal-card__body" id="organization-form" @submit.prevent="save">
+      <form class="modal-card__body ds-dialog-form-fields" id="organization-form" @submit.prevent="save">
         <label>
           <span>{{ t('organization.parent') }}</span>
           <OrganizationTreeSelect v-model="form.parent_id" :organizations="parentOptions"
@@ -399,21 +402,17 @@ onMounted(() => void load())
 
       </form>
       <footer class="modal-card__footer">
-        <button type="button" class="secondary-button" @click="closeForm">
-          <NIcon :size="20">
-            <Refresh />
-          </NIcon>
+        <button type="button" class="secondary-button" @click="closeForm" data-ds-icon="cancel">
+
           {{ t('common.cancel') }}
         </button><button type="submit" class="primary-button" form="organization-form" :disabled="mutationBusy || !hasBasePermission('organization', editingId ? 'edit' : 'create')
-          ">
-          <NIcon :size="20">
-            <SaveOutline />
-          </NIcon>
+          " data-ds-icon="save">
+
           {{ mutationBusy ? t('common.saving') : t('common.save') }}
         </button>
       </footer>
     </section>
-  </div>
+  </AppDialogHost>
 </template>
 
 <style scoped>
@@ -426,16 +425,11 @@ onMounted(() => void load())
 
 .organization-tree {
   min-width: 0;
-  border-right: 1px solid #e4ebef;
+  border-right: 1px solid var(--ds-border-subtle);
   padding-right: 18px;
 }
 
-.organization-tree__toolbar {
-  display: flex;
-  align-items: end;
-  gap: 8px;
-  margin-bottom: 14px;
-}
+.organization-tree__toolbar { min-width: 0; margin-bottom: 14px; }
 
 .tree-list {
   display: grid;
@@ -450,7 +444,7 @@ onMounted(() => void load())
 }
 
 .tree-list li.selected {
-  background: #eaf5fa;
+  background: var(--ds-primary-soft);
 }
 
 .tree-node {
@@ -461,7 +455,7 @@ onMounted(() => void load())
   border: 0;
   padding: 8px;
   background: transparent;
-  color: #183b57;
+  color: var(--ds-text-primary);
   text-align: left;
   cursor: pointer;
 }
@@ -475,8 +469,8 @@ onMounted(() => void load())
   align-items: center;
   border-radius: 3px;
   padding: 2px 5px;
-  background: #eaf5fa;
-  color: #1876a8;
+  background: var(--ds-primary-soft);
+  color: var(--ds-primary);
   font-size: 10px;
   font-weight: 700;
 }
@@ -486,11 +480,11 @@ onMounted(() => void load())
   height: 8px;
   margin-left: auto;
   border-radius: 50%;
-  background: #2e9d68;
+  background: var(--ds-success);
 }
 
 .tree-status.off {
-  background: #bd7c32;
+  background: var(--ds-warning);
 }
 
 .organization-detail {
@@ -502,19 +496,19 @@ onMounted(() => void load())
   justify-content: space-between;
   gap: 14px;
   flex-wrap: wrap;
-  border-bottom: 1px solid #e4ebef;
+  border-bottom: 1px solid var(--ds-border-subtle);
   padding-bottom: 14px;
 }
 
 .organization-detail__header h2 {
   margin: 7px 0 4px;
-  color: #183b57;
+  color: var(--ds-text-primary);
   font-size: 20px;
 }
 
 .organization-detail__header p {
   margin: 0;
-  color: #536b7b;
+  color: var(--ds-text-secondary);
 }
 
 .detail-actions {
@@ -526,7 +520,7 @@ onMounted(() => void load())
 .detail-tabs {
   display: flex;
   gap: 4px;
-  border-bottom: 1px solid #e4ebef;
+  border-bottom: 1px solid var(--ds-border-subtle);
 }
 
 .detail-tabs button {
@@ -534,13 +528,13 @@ onMounted(() => void load())
   border-bottom: 2px solid transparent;
   padding: 10px 12px;
   background: transparent;
-  color: #536b7b;
+  color: var(--ds-text-secondary);
   cursor: pointer;
 }
 
 .detail-tabs button[aria-selected='true'] {
-  border-bottom-color: #1876a8;
-  color: #1876a8;
+  border-bottom-color: var(--ds-primary);
+  color: var(--ds-primary);
   font-weight: 700;
 }
 
@@ -554,19 +548,19 @@ onMounted(() => void load())
 .detail-grid div {
   display: grid;
   gap: 4px;
-  border-bottom: 1px solid #edf2f4;
+  border-bottom: 1px solid var(--ds-border-subtle);
   padding-bottom: 10px;
 }
 
 .detail-grid span,
 .audit-placeholder dt {
-  color: #8292a0;
+  color: var(--ds-text-secondary);
   font-size: 12px;
 }
 
 .detail-grid strong,
 .audit-placeholder dd {
-  color: #183b57;
+  color: var(--ds-text-primary);
 }
 
 .audit-placeholder {
@@ -577,12 +571,12 @@ onMounted(() => void load())
 
 .audit-placeholder h3 {
   margin: 0;
-  color: #183b57;
+  color: var(--ds-text-primary);
 }
 
 .audit-placeholder p {
   margin: 0;
-  color: #536b7b;
+  color: var(--ds-text-secondary);
 }
 
 .audit-placeholder dl {
@@ -596,43 +590,6 @@ onMounted(() => void load())
   margin: 0;
 }
 
-
-.modal-card {
-    width: min(100%, 760px);
-    max-height: calc(100vh - 40px);
-    display: flex;
-    flex-direction: column;
-    overflow: hidden;
-    border-radius: 7px;
-    background: #fff;
-    box-shadow: 0 20px 60px rgb(18 42 62 / 24%);
-}
-
-
-.modal-card form {
-  display: grid;
-  gap: 12px;
-  padding: 18px;
-}
-
-.modal-card label {
-  display: grid;
-  gap: 5px;
-  color: #536b7b;
-  font-size: 12px;
-  font-weight: 600;
-}
-
-.modal-card input,
-.modal-card select,
-.modal-card textarea {
-  min-height: 34px;
-  border: 1px solid #c7d6df;
-  border-radius: 4px;
-  padding: 7px 9px;
-  font: inherit;
-}
-
 .form-grid {
   display: grid;
   grid-template-columns: 1fr 1fr;
@@ -642,21 +599,19 @@ onMounted(() => void load())
 .company-fields {
   display: grid;
   gap: 10px;
-  border-left: 3px solid #eaf5fa;
+  border-left: 3px solid var(--ds-primary-soft);
   padding-left: 12px;
 }
 
 .company-fields h3 {
   margin: 0;
-  color: #183b57;
+  color: var(--ds-text-primary);
   font-size: 14px;
 }
 
-
-
 .inline-error {
   margin: 0;
-  color: #b64444;
+  color: var(--ds-danger);
   font-size: 12px;
 }
 
@@ -668,7 +623,7 @@ onMounted(() => void load())
 
   .organization-tree {
     border-right: 0;
-    border-bottom: 1px solid #e4ebef;
+    border-bottom: 1px solid var(--ds-border-subtle);
     padding-right: 0;
     padding-bottom: 16px;
   }

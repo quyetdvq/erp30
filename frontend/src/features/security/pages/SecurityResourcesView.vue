@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import AppDialogHost from '@/components/ui/AppDialogHost.vue'
 import { rowAllowedActions } from '@/components/lists/rowActionPolicy'
 import { computed, onMounted, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
@@ -310,17 +311,21 @@ onMounted(() => {
       <h1>{{ t('security.resourcesTitle') }}</h1>
       <p>{{ t('security.resourcesDescription') }}</p>
     </div>
-    <button v-if="hasBasePermission('resource', 'create')" type="button" class="primary-button" @click="openCreate">
-      ＋ {{ t('common.create') }}
+    <button data-ds-icon="add" v-if="hasBasePermission('resource', 'create')" type="button" class="primary-button" @click="openCreate">
+      {{ t('common.create') }}
     </button>
   </div>
   <p v-if="error" class="inline-error" role="alert">{{ t('security.requestError') }}</p>
-  <section class="content-panel security-list-panel">
-    <div class="security-toolbar">
-      <ListQueryControls :model-value="state.query" @apply="applyQuery" @reset="resetQuery" /><button type="button"
-        class="secondary-button" @click="void load">
-        ↻ {{ t('common.refresh') }}
-      </button>
+  <section class="content-panel security-list-panel ds-page-panel">
+    <div class="security-toolbar ds-page-toolbar">
+      <ListQueryControls :show-page-size="false" :model-value="state.query" @apply="applyQuery" @reset="resetQuery" >
+        <template #actions>
+          <button data-ds-icon="refresh" type="button"
+            class="secondary-button" @click="void load">
+            {{ t('common.refresh') }}
+          </button>
+        </template>
+      </ListQueryControls>
     </div>
     <ListShell :initial-loading="state.isInitialLoading.value" :refreshing="state.isBackgroundRefreshing.value"
       :has-data="state.queryState.hasData.value" :empty-dataset="state.isEmptyDataset.value"
@@ -357,8 +362,8 @@ onMounted(() => {
   </section>
 
 
-  <div v-if="detailOpen && selected" class="modal-backdrop">
-    <section class="modal-card tabbed-detail-workspace" role="dialog" aria-modal="true"
+  <AppDialogHost :open="Boolean(detailOpen && selected)" size="lg" @close="detailOpen = false">
+    <section v-if="detailOpen && selected" class="ds-dialog-surface modal-card tabbed-detail-workspace" role="dialog" aria-modal="true"
       :aria-label="`${t('security.resource')}: ${selected.name}`">
       <header class="modal-card__header">
         <h2 class="modal-card-title">
@@ -368,10 +373,10 @@ onMounted(() => {
         </h2>
         <small><code>{{ selected.type }}</code> · {{ selected.domain }}</small>
         <button type="button" class="modal-card-button-close" :aria-label="t('common.close')"
-          @click="detailOpen = false">
+          @click="detailOpen = false" data-ds-icon="close">
         </button>
       </header>
-      <nav class="security-tabs" :aria-label="t('security.resourceDetailTabs')">
+      <nav class="security-tabs ds-detail-tabs ds-detail-tabs--spaced" :aria-label="t('security.resourceDetailTabs')">
         <button type="button" :class="{ active: tab === 'resource' }" @click="tab = 'resource'">
           {{ t('security.tabs.resource') }}
         </button>
@@ -411,9 +416,9 @@ onMounted(() => {
       <div v-else class="modal-card__body security-editor">
         <div class="detail-actions">
           <h3>{{ t('security.resourceActions') }}</h3>
-          <button v-if="hasBasePermission('resource', 'edit')" type="button" class="primary-button"
+          <button data-ds-icon="add" v-if="hasBasePermission('resource', 'edit')" type="button" class="primary-button"
             @click="openActionCreate">
-            ＋ {{ t('common.create') }}
+            {{ t('common.create') }}
           </button>
         </div>
         <div class="action-list">
@@ -423,11 +428,11 @@ onMounted(() => {
               <small>{{ action.description || t('security.noDescription') }}</small>
             </div>
             <span>
-              <button v-if="hasBasePermission('resource', 'edit')" type="button" class="secondary-button"
+              <button data-ds-icon="edit" v-if="hasBasePermission('resource', 'edit')" type="button" class="secondary-button"
                 @click="openActionEdit(action)">
                 {{ t('common.edit') }}
               </button>
-              <button v-if="hasBasePermission('resource', 'edit')" type="button" class="secondary-button"
+              <button data-ds-icon="delete" v-if="hasBasePermission('resource', 'edit')" type="button" class="secondary-button ds-button--danger-outline"
                 @click="removeAction(action)">
                 {{ t('common.delete') }}
               </button>
@@ -438,18 +443,16 @@ onMounted(() => {
       </div>
 
       <footer class="modal-card__footer">
-        <button type="button" class="secondary-button" @click="detailOpen = false">
-          <NIcon :size="20">
-            <Refresh />
-          </NIcon>
+        <button type="button" class="secondary-button" @click="detailOpen = false" data-ds-icon="close">
+
           {{ t('common.close') }}
         </button>
       </footer>
     </section>
-  </div>
+  </AppDialogHost>
 
-  <div v-if="modalOpen" class="modal-backdrop">
-    <section class="modal-card" role="dialog" aria-modal="true" :aria-label="t('security.resourceForm')">
+  <AppDialogHost :open="modalOpen" size="md" @close="modalOpen = false">
+    <section v-if="modalOpen" class="ds-dialog-surface modal-card" role="dialog" aria-modal="true" :aria-label="t('security.resourceForm')">
       <header class="modal-card__header">
         <h2 class="modal-card-title">
           <NIcon :size="24">
@@ -458,7 +461,7 @@ onMounted(() => {
           {{ editingId ? t('common.edit') : t('common.create') }} {{ t('security.resource') }}
         </h2>
         <button type="button" class="modal-card-button-close" :aria-label="t('common.close')"
-          @click="modalOpen = false">
+          @click="modalOpen = false" data-ds-icon="close">
         </button>
       </header>
       <form id="resource-form" class="modal-card__body" @submit.prevent="save">
@@ -481,25 +484,21 @@ onMounted(() => {
         <p v-else class="security-note" role="note">{{ lifecycleIndependentHint }}</p>
       </form>
       <footer class="modal-card__footer">
-        <button type="button" class="secondary-button" @click="modalOpen = false">
-          <NIcon :size="16">
-            <Refresh />
-          </NIcon>
+        <button type="button" class="secondary-button" @click="modalOpen = false" data-ds-icon="cancel">
+
           {{ t('common.cancel') }}
         </button>
-        <button type="submit" form="resource-form" class="primary-button" :disabled="busy">
-          <NIcon :size="16">
-            <SaveOutline />
-          </NIcon>
+        <button type="submit" form="resource-form" class="primary-button" :disabled="busy" data-ds-icon="save">
+
           {{ busy ? t('common.saving') : t('common.save') }}
         </button>
       </footer>
     </section>
-  </div>
+  </AppDialogHost>
 
 
-  <div v-if="actionModalOpen" class="modal-backdrop">
-    <section class="modal-card" role="dialog" aria-modal="true" :aria-label="t('security.actionForm')">
+  <AppDialogHost :open="actionModalOpen" size="md" @close="actionModalOpen = false">
+    <section v-if="actionModalOpen" class="ds-dialog-surface modal-card" role="dialog" aria-modal="true" :aria-label="t('security.actionForm')">
       <header class="modal-card__header">
         <h2 class="modal-card-title">
           <NIcon :size="24">
@@ -508,7 +507,7 @@ onMounted(() => {
           {{ editingActionId ? t('common.edit') : t('common.create') }} {{ t('security.action') }}
         </h2>
         <button type="button" class="modal-card-button-close" :aria-label="t('common.close')"
-          @click="actionModalOpen = false">
+          @click="actionModalOpen = false" data-ds-icon="close">
         </button>
       </header>
       <form id="resource-action-form" class="modal-card__body" @submit.prevent="saveAction">
@@ -518,62 +517,20 @@ onMounted(() => {
         </label>
       </form>
       <footer class="modal-card__footer">
-        <button type="button" class="secondary-button" @click="actionModalOpen = false">
-          <NIcon :size="16">
-            <Refresh />
-          </NIcon>
+        <button type="button" class="secondary-button" @click="actionModalOpen = false" data-ds-icon="cancel">
+
           {{ t('common.cancel') }}
         </button>
-        <button type="submit" form="resource-action-form" class="primary-button" :disabled="busy">
-          <NIcon :size="16">
-            <SaveOutline />
-          </NIcon>
+        <button type="submit" form="resource-action-form" class="primary-button" :disabled="busy" data-ds-icon="save">
+
           {{ busy ? t('common.saving') : t('common.save') }}
         </button>
       </footer>
     </section>
-  </div>
+  </AppDialogHost>
 </template>
 
 <style scoped>
-.security-list-panel,
-.security-detail-panel {
-  display: grid;
-  gap: 14px;
-  padding: 18px 20px 20px;
-}
-
-.security-toolbar {
-  display: flex;
-  align-items: end;
-  justify-content: space-between;
-  gap: 10px;
-  flex-wrap: wrap;
-}
-
-.security-tabs {
-  display: flex;
-  flex: 0 0 auto;
-  gap: 24px;
-  padding: 0 24px;
-  border-bottom: 1px solid #e3ebef;
-}
-
-.security-tabs button {
-  padding: 13px 2px 11px;
-  border: 0;
-  border-bottom: 2px solid transparent;
-  background: transparent;
-  color: #60798d;
-  font-size: 12px;
-}
-
-.security-tabs button.active {
-  border-bottom-color: #0873b8;
-  color: #075f9b;
-  font-weight: 700;
-}
-
 .security-detail-copy,
 .security-editor {
   display: grid;
@@ -589,12 +546,12 @@ onMounted(() => {
 
 .security-definition-list div {
   padding: 12px;
-  border: 1px solid #dce6ec;
+  border: 1px solid var(--ds-border-subtle);
   border-radius: 6px;
 }
 
 .security-definition-list dt {
-  color: #708499;
+  color: var(--ds-text-secondary);
   font-size: 11px;
 }
 
@@ -602,20 +559,20 @@ onMounted(() => {
   display: grid;
   gap: 5px;
   margin: 5px 0 0;
-  color: #203f58;
+  color: var(--ds-text-primary);
   font-size: 13px;
   font-weight: 700;
 }
 
 .security-definition-list dd small {
-  color: #8293a2;
+  color: var(--ds-text-secondary);
   font-size: 11px;
   font-weight: 400;
 }
 
 .security-note {
   margin: 0;
-  color: #6c8191;
+  color: var(--ds-text-secondary);
   font-size: 12px;
   line-height: 1.6;
 }
@@ -629,7 +586,7 @@ onMounted(() => {
 
 .detail-actions h3 {
   margin: 0;
-  color: #173c59;
+  color: var(--ds-text-primary);
   font-size: 15px;
 }
 
@@ -644,7 +601,7 @@ onMounted(() => {
   align-items: center;
   gap: 12px;
   padding: 11px 12px;
-  border: 1px solid #dce6ec;
+  border: 1px solid var(--ds-border-subtle);
   border-radius: 6px;
 }
 
@@ -654,12 +611,12 @@ onMounted(() => {
 }
 
 .action-row strong {
-  color: #173c59;
+  color: var(--ds-text-primary);
   font-family: ui-monospace, monospace;
 }
 
 .action-row small {
-  color: #6d8292;
+  color: var(--ds-text-secondary);
 }
 
 .action-row span {
@@ -669,25 +626,15 @@ onMounted(() => {
 
 .inline-error {
   margin: 0 0 12px;
-  color: #b64444;
+  color: var(--ds-danger);
   font-size: 12px;
 }
 
-.modal-card {
-  width: min(100%, 620px);
-  max-height: calc(100vh - 40px);
-  display: flex;
-  flex-direction: column;
-  overflow: hidden;
-  border-radius: 7px;
-  background: #fff;
-  box-shadow: 0 20px 60px rgb(18 42 62 / 24%);
-}
 
 .modal-card__body label {
   display: grid;
   gap: 5px;
-  color: #536b7b;
+  color: var(--ds-text-secondary);
   font-size: 12px;
   font-weight: 600;
 }
@@ -700,7 +647,7 @@ onMounted(() => {
 
 code {
   font-family: ui-monospace, SFMono-Regular, Consolas, monospace;
-  color: #0d5b83;
+  color: var(--ds-primary);
 }
 
 @media (max-width: 700px) {
@@ -713,10 +660,5 @@ code {
     flex-direction: column;
   }
 
-  .security-list-panel,
-  .security-detail-panel {
-    padding: 15px 12px;
   }
-
-}
 </style>

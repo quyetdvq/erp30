@@ -40,7 +40,7 @@ const items = computed(() => breadcrumbsForRoute(route.meta, hasBasePermissionKe
 .app-breadcrumbs {
   width: min(100%, 1680px);
   margin: 0 auto 14px;
-  color: #75879b;
+  color: var(--ds-text-muted);
   font-size: 12px;
   line-height: 1.5;
 }
@@ -74,45 +74,29 @@ const items = computed(() => breadcrumbsForRoute(route.meta, hasBasePermissionKe
 
 .breadcrumb-separator {
   padding: 0 9px;
-  color: #a4b0bd;
+  color: var(--ds-text-muted);
   font-size: 15px;
 }
 
 .breadcrumb-link {
   border-radius: 3px;
-  color: #536f88;
+  color: var(--ds-text-secondary);
   text-decoration: none;
 }
 
 .breadcrumb-link:hover {
-  color: #0b78af;
+  color: var(--ds-primary);
   text-decoration: underline;
 }
 
 .breadcrumb-link:focus-visible {
-  outline: 2px solid #117eb9;
+  outline: 2px solid var(--ds-focus-ring);
   outline-offset: 3px;
 }
 
 .breadcrumb-current {
-  color: #203c54;
+  color: var(--ds-text-primary);
   font-weight: 600;
-}
-
-:global(.erp-shell.theme-dark) .app-breadcrumbs {
-  color: #a9bac7;
-}
-
-:global(.erp-shell.theme-dark) .breadcrumb-link {
-  color: #b8cfe2;
-}
-
-:global(.erp-shell.theme-dark) .breadcrumb-link:hover {
-  color: #8bd9e9;
-}
-
-:global(.erp-shell.theme-dark) .breadcrumb-current {
-  color: #e3edf3;
 }
 
 @media (max-width: 600px) {

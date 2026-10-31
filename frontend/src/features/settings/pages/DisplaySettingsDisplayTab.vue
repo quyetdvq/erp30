@@ -436,7 +436,7 @@ onMounted(async () => {
                 >
               </div>
               <div class="display-field-actions">
-                <button
+                <button data-ds-icon="save"
                   class="primary-button"
                   type="button"
                   :disabled="
@@ -451,7 +451,7 @@ onMounted(async () => {
                       : t('displaySettings.save')
                   }}
                 </button>
-                <button
+                <button data-ds-icon="reset"
                   v-if="
                     isOverridden(rowFor(definition)) && hasBasePermission('display_setting', 'edit')
                   "
@@ -487,7 +487,7 @@ onMounted(async () => {
   flex-wrap: wrap;
 }
 .context-toolbar label {
-  color: #294b65;
+  color: var(--ds-text-secondary);
   font-size: 12px;
   font-weight: 700;
 }
@@ -499,12 +499,12 @@ onMounted(async () => {
   gap: 22px;
 }
 .display-group {
-  border-top: 1px solid #e4ebef;
+  border-top: 1px solid var(--ds-border-subtle);
   padding-top: 16px;
 }
 .display-group h2 {
   margin: 0 0 12px;
-  color: #183b57;
+  color: var(--ds-text-primary);
   font-size: 16px;
 }
 .display-fields {
@@ -517,23 +517,23 @@ onMounted(async () => {
   align-items: center;
   gap: 16px;
   padding: 14px;
-  border: 1px solid #e4ebef;
+  border: 1px solid var(--ds-border-subtle);
   border-radius: 7px;
-  background: #fff;
+  background: var(--ds-bg-surface);
 }
 .display-field-main {
   min-width: 0;
 }
 .display-field-main label {
   display: block;
-  color: #294b65;
+  color: var(--ds-text-secondary);
   font-size: 13px;
   font-weight: 700;
 }
 .setting-key {
   display: block;
   margin-top: 4px;
-  color: #8798a6;
+  color: var(--ds-text-muted);
   font-family: ui-monospace, SFMono-Regular, Consolas, monospace;
   font-size: 10px;
 }
@@ -548,21 +548,21 @@ onMounted(async () => {
   display: flex;
   flex-wrap: wrap;
   gap: 6px 12px;
-  color: #6e8190;
+  color: var(--ds-text-muted);
   font-size: 11px;
 }
 .display-field-meta span {
   white-space: nowrap;
 }
 .state-override {
-  color: #0878b6;
+  color: var(--ds-primary);
   font-weight: 700;
 }
 .state-inherited {
-  color: #7b8d9d;
+  color: var(--ds-text-muted);
 }
 .preview {
-  color: #183b57;
+  color: var(--ds-text-primary);
 }
 .display-field-actions {
   display: flex;
@@ -581,7 +581,7 @@ onMounted(async () => {
   display: block;
   height: 64px;
   border-radius: 7px;
-  background: linear-gradient(90deg, #eef3f6 25%, #f8fafb 50%, #eef3f6 75%);
+  background: linear-gradient(90deg, var(--ds-bg-subtle) 25%, var(--ds-bg-elevated) 50%, var(--ds-bg-subtle) 75%);
   background-size: 200% 100%;
   animation: skeleton 1.2s infinite;
 }
@@ -589,6 +589,9 @@ onMounted(async () => {
   to {
     background-position: -200% 0;
   }
+}
+@media (prefers-reduced-motion: reduce) {
+  .display-settings-skeleton span { animation: none; background: var(--ds-bg-subtle); }
 }
 @media (max-width: 900px) {
   .display-settings-panel {

@@ -25,11 +25,11 @@ const { t } = useI18n()
 <style scoped>
 .inline-error {
   margin: 0;
-  color: #b64444;
+  color: var(--ds-danger);
   font-size: 12px;
 }
 .restriction-note {
-  color: #536b7b;
+  color: var(--ds-text-secondary);
   font-size: 12px;
 }
 </style>

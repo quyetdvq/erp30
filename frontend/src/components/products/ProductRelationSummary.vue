@@ -60,7 +60,7 @@ function productName(product: Product): string {
   gap: 5px;
   max-width: 360px;
   padding-top: 6px;
-  color: #526a7c;
+  color: var(--ds-text-secondary);
   font-size: 11px;
 }
 .relation-heading {
@@ -75,8 +75,8 @@ function productName(product: Product): string {
 .relation-count {
   padding: 1px 6px;
   border-radius: 999px;
-  background: #eaf3f8;
-  color: #265676;
+  background: var(--ds-info-soft);
+  color: var(--ds-info);
   font-weight: 650;
   white-space: nowrap;
 }
@@ -93,7 +93,7 @@ function productName(product: Product): string {
   overflow: hidden;
   border: 0;
   background: transparent;
-  color: #176b9d;
+  color: var(--ds-primary);
   cursor: pointer;
   font-size: inherit;
   text-align: start;
@@ -107,7 +107,7 @@ function productName(product: Product): string {
   text-decoration: underline;
 }
 .relation-overflow {
-  color: #5d6c79;
+  color: var(--ds-text-secondary);
   white-space: nowrap;
 }
 .relation-more {
@@ -117,14 +117,14 @@ function productName(product: Product): string {
   padding: 2px 0;
   border: 0;
   background: transparent;
-  color: #006c9e;
+  color: var(--ds-primary);
   font-size: inherit;
   font-weight: 700;
   cursor: pointer;
   white-space: nowrap;
 }
 .relation-muted {
-  color: #778797;
+  color: var(--ds-text-muted);
   font-size: inherit;
 }
 </style>

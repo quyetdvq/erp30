@@ -113,7 +113,7 @@ onMounted(() => {
         <h1>{{ t('productImportJobDetail.title') }}</h1>
         <p class="page-description">{{ t('productImportJobDetail.description', { id: jobId }) }}</p>
       </div>
-      <button type="button" class="secondary-button" @click="router.push('/products/import-jobs')">
+      <button data-ds-icon="back" type="button" class="secondary-button" @click="router.push('/products/import-jobs')">
         {{ t('productImportJobDetail.back') }}
       </button>
     </header>
@@ -152,7 +152,7 @@ onMounted(() => {
       </div>
     </section>
 
-    <ListQueryControls
+    <ListQueryControls :show-page-size="false"
       :model-value="state.query"
       :filters="filters"
       :disabled="state.isBackgroundRefreshing.value"
@@ -195,7 +195,7 @@ onMounted(() => {
           row.error_message || t('list.noValue')
         }}</template>
       </ListTable>
-      <ListPagination
+      <ListPagination :show-page-size="false"
         :page="state.query.page"
         :page-size="state.query.page_size"
         :total="state.total.value"
@@ -226,11 +226,11 @@ onMounted(() => {
 }
 .page-description {
   margin: 6px 0 0;
-  color: #536b7b;
+  color: var(--ds-text-secondary);
 }
 .eyebrow {
   margin: 0 0 4px;
-  color: #1876a8;
+  color: var(--ds-primary);
   font-size: 11px;
   font-weight: 700;
   letter-spacing: 0.04em;
@@ -242,15 +242,15 @@ onMounted(() => {
   gap: 12px;
   margin: 0;
   padding: 16px;
-  border: 1px solid #dbe5ea;
+  border: 1px solid var(--ds-border-subtle);
   border-radius: 6px;
-  background: #fff;
+  background: var(--ds-bg-surface);
 }
 .summary div {
   min-width: 0;
 }
 .summary dt {
-  color: #536b7b;
+  color: var(--ds-text-secondary);
   font-size: 12px;
   font-weight: 700;
 }
@@ -264,17 +264,9 @@ onMounted(() => {
   gap: 6px;
 }
 .inline-error {
-  color: #b64444;
+  color: var(--ds-danger);
 }
-.secondary-button {
-  min-height: 36px;
-  border: 1px solid #c7d6df;
-  border-radius: 4px;
-  padding: 7px 14px;
-  background: #fff;
-  color: #294b65;
-  cursor: pointer;
-}
+
 @media (max-width: 640px) {
   .page-header {
     align-items: stretch;

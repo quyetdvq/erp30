@@ -110,33 +110,31 @@ async function submit(): Promise<void> {
     </fieldset>
     <p v-if="clientError" class="inline-error" role="alert">{{ clientError }}</p>
     <p v-if="!canStart && !clientError" class="permission-note" role="status">{{ labels.noPermission }}</p>
-    <footer><button type="submit" class="primary-button" :disabled="busy || !canStart">
+    <footer><button data-ds-icon="upload" type="submit" class="primary-button" :disabled="busy || !canStart">
       {{ busy ? labels.starting : labels.start }}
     </button></footer>
   </form>
 </template>
 
 <style scoped>
-.import-wizard { display:grid;gap:20px;padding:20px;border:1px solid #dbe5ea;border-radius:6px;background:#fff; }
-.download-templates {display:flex;align-items:center;gap:12px;flex-wrap:wrap;padding:12px;border:1px dashed #bed2df;border-radius:6px;}
+.import-wizard { display:grid;gap:20px;padding:20px;border:1px solid var(--ds-border-subtle);border-radius:6px;background:var(--ds-bg-surface); }
+.download-templates {display:flex;align-items:center;gap:12px;flex-wrap:wrap;padding:12px;border:1px dashed var(--ds-border);border-radius:6px;}
 .download-templates h2 {margin:0;font-size:14px;font-weight:600;flex-basis:100%;}
-.template-link {display:inline-flex;border:1px solid #1876a8;border-radius:4px;padding:8px 12px;color:#145a7e;text-decoration:none;font-weight:600;}
-.template-link:hover {background:#f4f8fa;text-decoration:underline;}
+.template-link {display:inline-flex;border:1px solid var(--ds-primary);border-radius:4px;padding:8px 12px;color:var(--ds-primary);text-decoration:none;font-weight:600;}
+.template-link:hover {background:var(--ds-primary-soft);text-decoration:underline;}
 .step-heading {display:flex;align-items:center;gap:12px;}
 .step-heading h2 {margin:0;}
-.step-heading p {margin:4px 0 0;color:#536b7b;}
-.step-number {display:inline-flex;align-items:center;justify-content:center;width:30px;height:30px;border-radius:50%;background:#1876a8;color:#fff;font-weight:700;}
+.step-heading p {margin:4px 0 0;color:var(--ds-text-secondary);}
+.step-number {display:inline-flex;align-items:center;justify-content:center;width:30px;height:30px;border-radius:50%;background:var(--ds-primary);color:var(--ds-primary-contrast);font-weight:700;}
 .file-field,fieldset {display:grid;gap:8px;}
-.file-field span,legend {color:#294b65;font-size:13px;font-weight:700;}
+.file-field span,legend {color:var(--ds-text-secondary);font-size:13px;font-weight:700;}
 .file-field input {min-height:38px;}
-.file-field small {color:#536b7b;}
+.file-field small {color:var(--ds-text-secondary);}
 fieldset {grid-template-columns:repeat(3,minmax(0,1fr));border:0;padding:0;}
 legend {grid-column:1/-1;}
-fieldset label {display:flex;align-items:center;gap:8px;min-height:40px;padding:0 10px;border:1px solid #c7d6df;border-radius:4px;}
-.inline-error {margin:0;color:#b64444;}
-.permission-note {margin:0;color:#8a5a00;}
+fieldset label {display:flex;align-items:center;gap:8px;min-height:40px;padding:0 10px;border:1px solid var(--ds-border);border-radius:4px;}
+.inline-error {margin:0;color:var(--ds-danger);}
+.permission-note {margin:0;color:var(--ds-warning);}
 footer {display:flex;justify-content:flex-end;}
-.primary-button {min-height:36px;border:1px solid #1876a8;border-radius:4px;padding:7px 14px;cursor:pointer;background:#1876a8;color:#fff;}
-.primary-button:disabled {opacity:.55;cursor:not-allowed;}
 @media(max-width:640px) {fieldset {grid-template-columns:1fr;}}
 </style>

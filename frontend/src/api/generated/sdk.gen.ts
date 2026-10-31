@@ -1162,6 +1162,8 @@ export const setNumberingSeriesState = <ThrowOnError extends boolean = false>(op
 
 /**
  * Validate numbering series configuration without consuming a counter
+ *
+ * Create preview omits series_id. Edit preview may provide series_id to exclude the matching persisted series within the route Resource; an unknown or cross-Resource ID is rejected. Save/PATCH remains authoritative.
  */
 export const validateNumberingSeriesConfig = <ThrowOnError extends boolean = false>(options: Options<ValidateNumberingSeriesConfigData, ThrowOnError>): RequestResult<ValidateNumberingSeriesConfigResponses, ValidateNumberingSeriesConfigErrors, ThrowOnError> => (options.client ?? client).post<ValidateNumberingSeriesConfigResponses, ValidateNumberingSeriesConfigErrors, ThrowOnError>({
     responseType: 'json',

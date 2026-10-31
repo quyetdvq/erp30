@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import AppDialogHost from '@/components/ui/AppDialogHost.vue'
 import { computed, nextTick, onBeforeUnmount, onMounted, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useRoute, useRouter } from 'vue-router'
@@ -190,29 +191,6 @@ function close(): void {
   unsaved.markClean()
   emit('close')
 }
-function onDialogKeydown(event: KeyboardEvent): void {
-  if (!dialog.value) return
-  // ContactList owns its nested Contact dialogs; Escape must not close Supplier.
-  if (event.target instanceof HTMLElement && event.target.closest('[role="dialog"]') !== dialog.value) return
-  if (event.key === 'Escape') {
-    event.preventDefault()
-    event.stopPropagation()
-    close()
-    return
-  }
-  if (event.key !== 'Tab') return
-  const focusable = [...dialog.value.querySelectorAll<HTMLElement>(
-    'button:not(:disabled), input:not(:disabled), select:not(:disabled), textarea:not(:disabled), [href]',
-  )]
-  if (!focusable.length) { event.preventDefault(); return }
-  const first = focusable[0]!
-  const last = focusable[focusable.length - 1]!
-  if (event.shiftKey && (document.activeElement === first || !dialog.value.contains(document.activeElement))) {
-    event.preventDefault(); last.focus()
-  } else if (!event.shiftKey && (document.activeElement === last || !dialog.value.contains(document.activeElement))) {
-    event.preventDefault(); first.focus()
-  }
-}
 function beforeStateOpen(): boolean { return unsaved.confirmDiscard() }
 async function afterStateChanged(): Promise<void> {
   await refreshSupplier()
@@ -273,17 +251,16 @@ onMounted(async () => {
 </script>
 
 <template>
-  <div class="modal-backdrop supplier-detail-backdrop" @click.self="close">
-    <section ref="dialog" class="supplier-detail-modal"
-      :class="{ 'supplier-detail-modal--workspace': !isNew }"
-      role="dialog" aria-modal="true" :aria-label="isNew ? t('supplier.create') : row?.name || t('supplier.title')"
-      @keydown="onDialogKeydown">
+  <AppDialogHost :open="true" size="xl" :mask-closable="true" @close="close">
+    <section ref="dialog" class="ds-dialog-surface ds-detail-workspace supplier-detail-modal"
+      :class="{ 'supplier-detail-modal--workspace': !isNew, 'ds-detail-workspace--fixed': !isNew }"
+      role="dialog" aria-modal="true" :aria-label="isNew ? t('supplier.create') : row?.name || t('supplier.title')">
       <header class="modal-card__header">
         <div class="business-detail-header-main">
           <h2 class="modal-card-title">
             <NIcon :size="24" aria-hidden="true"><PeopleOutline /></NIcon>
             {{ isNew ? t('supplier.create') : row?.name || t('supplier.title') }}
-            <span v-if="row?.supplier_code" class="supplier-heading-code">· {{ row.supplier_code }}</span>
+            <span v-if="row?.supplier_code" class="ds-detail-heading-code supplier-heading-code">· {{ row.supplier_code }}</span>
           </h2>
           <span v-if="row" class="business-detail-header-status"
             :aria-label="`${t('supplier.status')}: ${statusLabel(row.status)}`">
@@ -291,19 +268,19 @@ onMounted(async () => {
           </span>
         </div>
         <button ref="closeButton" type="button" class="modal-card-button-close"
-          :aria-label="t('common.close')" :disabled="busy" @click="close" />
+          :aria-label="t('common.close')" :disabled="busy" @click="close" data-ds-icon="close" />
       </header>
-      <div v-if="!isNew" class="supplier-detail-tabs" role="tablist" :aria-label="t('supplier.title')">
+      <div v-if="!isNew" class="ds-detail-tabs supplier-detail-tabs" role="tablist" :aria-label="t('supplier.title')">
         <button v-for="item in (['profile', 'usage', 'contacts', 'history'] as const)"
           v-show="item !== 'contacts' || hasBasePermission('supplier_contact', 'view')"
           :key="item" type="button" role="tab" :aria-selected="tab === item"
           @click="changeTab(item)">{{ t(`supplier.${item}`) }}</button>
       </div>
-      <div ref="detailBody" class="supplier-detail-modal__body">
+      <div ref="detailBody" class="ds-detail-body supplier-detail-modal__body">
         <p v-if="error" role="alert" class="supplier-error">{{ error }}</p>
         <div v-if="conflict" class="supplier-conflict">
           <span>{{ t('supplier.preserveDraft') }}</span>
-          <button type="button" class="secondary-button" :disabled="busy" @click="reloadAfterConflict">
+          <button data-ds-icon="refresh" type="button" class="secondary-button" :disabled="busy" @click="reloadAfterConflict">
             {{ t('supplier.reload') }}
           </button>
         </div>
@@ -311,17 +288,17 @@ onMounted(async () => {
         <form v-if="(isNew || (row && tab === 'profile')) && !loading" id="supplier-profile-form"
           class="supplier-profile-form" @submit.prevent="saveProfile">
           <fieldset :disabled="!canSaveProfile || busy">
-            <div class="supplier-form-grid">
+            <div class="ds-detail-form-grid supplier-form-grid">
               <label>
                 <span>{{ t('supplier.code') }}</span>
                 <input v-model="draft.supplier_code" :readonly="!isNew" maxlength="50"
                   :placeholder="isNew ? t('supplier.autoCode') : undefined" />
-                <small v-if="isNew" class="supplier-help">{{ t('supplier.autoCodeHint') }}</small>
+                <small v-if="isNew" class="ds-detail-help supplier-help">{{ t('supplier.autoCodeHint') }}</small>
               </label>
               <label>
-                <span>{{ t('supplier.name') }} <span class="supplier-required-star" aria-hidden="true">*</span></span>
+                <span>{{ t('supplier.name') }} <span class="ds-detail-required supplier-required-star" aria-hidden="true">*</span></span>
                 <input v-model="draft.name" maxlength="255" required :aria-invalid="profileErrors.name" />
-                <small v-if="profileErrors.name" class="supplier-field-error">{{ t('supplier.fieldRequired') }}</small>
+                <small v-if="profileErrors.name" class="ds-detail-error supplier-field-error">{{ t('supplier.fieldRequired') }}</small>
               </label>
               <label><span>{{ t('supplier.type') }}</span>
                 <select v-model="draft.supplier_type">
@@ -336,72 +313,73 @@ onMounted(async () => {
                 </select>
               </label>
               <label><span>{{ t('supplier.tax') }}</span><input v-model="draft.tax_code" maxlength="50" /></label>
-              <label><span>{{ t('supplier.phone') }} <span class="supplier-required-star" aria-hidden="true">*</span></span>
+              <label><span>{{ t('supplier.phone') }} <span class="ds-detail-required supplier-required-star" aria-hidden="true">*</span></span>
                 <input v-model="draft.phone" type="tel" autocomplete="tel" maxlength="50" required :aria-invalid="profileErrors.phone" />
-                <small v-if="profileErrors.phone" class="supplier-field-error">{{ t('supplier.phoneInvalid') }}</small>
+                <small v-if="profileErrors.phone" class="ds-detail-error supplier-field-error">{{ t('supplier.phoneInvalid') }}</small>
               </label>
               <label><span>{{ t('supplier.email') }}</span><input v-model="draft.email" type="email" maxlength="255" /></label>
-              <label class="supplier-form-wide"><span>{{ t('supplier.address') }} <span class="supplier-required-star" aria-hidden="true">*</span></span>
+              <label class="ds-detail-form-wide supplier-form-wide"><span>{{ t('supplier.address') }} <span class="ds-detail-required supplier-required-star" aria-hidden="true">*</span></span>
                 <textarea v-model="draft.address" rows="2" required :aria-invalid="profileErrors.address" />
-                <small v-if="profileErrors.address" class="supplier-field-error">{{ t('supplier.fieldRequired') }}</small>
+                <small v-if="profileErrors.address" class="ds-detail-error supplier-field-error">{{ t('supplier.fieldRequired') }}</small>
               </label>
-              <label><span>{{ t('supplier.province') }} <span class="supplier-required-star" aria-hidden="true">*</span></span>
+              <label><span>{{ t('supplier.province') }} <span class="ds-detail-required supplier-required-star" aria-hidden="true">*</span></span>
                 <SearchableSelect :model-value="draft.province_id" :options="provinceOptions"
                   :placeholder="t('supplier.choose')" :aria-label="t('supplier.province')"
                   :aria-invalid="profileErrors.province" @update:model-value="changeProvince" />
-                <small v-if="profileErrors.province" class="supplier-field-error">{{ t('supplier.fieldRequired') }}</small>
+                <small v-if="profileErrors.province" class="ds-detail-error supplier-field-error">{{ t('supplier.fieldRequired') }}</small>
               </label>
-              <label><span>{{ t('supplier.ward') }} <span class="supplier-required-star" aria-hidden="true">*</span></span>
+              <label><span>{{ t('supplier.ward') }} <span class="ds-detail-required supplier-required-star" aria-hidden="true">*</span></span>
                 <RemoteSearchableSelect :key="`supplier-ward-${draft.province_id || 'none'}`"
                   :model-value="draft.ward_id" :search="searchWards"
                   :disabled="!draft.province_id || !canSaveProfile || busy"
                   :selected-options="draft.ward_id && wardLabel ? [{ value: draft.ward_id, label: wardLabel }] : []"
                   :placeholder="t('supplier.choose')" :aria-label="t('supplier.ward')"
                   :aria-invalid="profileErrors.ward" @update:model-value="(value) => { draft.ward_id = value }" />
-                <small v-if="profileErrors.ward" class="supplier-field-error">{{ t('supplier.fieldRequired') }}</small>
+                <small v-if="profileErrors.ward" class="ds-detail-error supplier-field-error">{{ t('supplier.fieldRequired') }}</small>
               </label>
             </div>
           </fieldset>
           <section v-if="isNew" class="supplier-company-section">
             <h3>{{ t('supplier.usage') }}</h3>
-            <p class="supplier-help">{{ t('supplier.usageNotPermission') }}</p>
+            <p class="ds-detail-help supplier-help">{{ t('supplier.usageNotPermission') }}</p>
             <label class="supplier-checkbox">
               <input type="checkbox" :checked="draft.all_companies" :disabled="busy"
                 @change="toggleAllCompanies(($event.target as HTMLInputElement).checked)" />
               <span>{{ t('supplier.allCompanies') }}</span>
             </label>
-            <div v-if="!draft.all_companies" class="supplier-company-picker">
+            <div v-if="!draft.all_companies" class="ds-detail-field supplier-company-picker">
               <span>{{ t('supplier.selectedCompanies') }}</span>
               <RemoteSearchableSelect v-if="hasBasePermission('organization', 'view')"
                 :model-value="selectedCompany" :search="searchCompanies"
                 :placeholder="t('supplier.addCompany')" :disabled="busy"
                 @update:model-value="selectCompany" />
-              <p v-else class="supplier-help">{{ t('supplier.companyViewRequired') }}</p>
+              <p v-else class="ds-detail-help supplier-help">{{ t('supplier.companyViewRequired') }}</p>
               <div class="supplier-chips"><span v-for="companyId in draft.company_ids" :key="companyId" class="supplier-chip">
                 {{ names[companyId] ?? companyId }}
-                <button type="button" :disabled="busy" :aria-label="t('common.delete')" @click="removeCompany(companyId)">×</button>
+                <button type="button" :disabled="busy" class="ds-icon-control ds-icon-control--danger" data-ds-icon="delete" :aria-label="t('common.delete')" @click="removeCompany(companyId)"></button>
               </span></div>
             </div>
           </section>
         </form>
         <section v-else-if="row && tab === 'usage' && !loading" class="supplier-company-section">
           <h3>{{ t('supplier.usage') }}</h3>
-          <p class="supplier-help">{{ t('supplier.usageNotPermission') }}</p>
+          <p class="ds-detail-help supplier-help">{{ t('supplier.usageNotPermission') }}</p>
           <label class="supplier-checkbox">
             <input type="checkbox" :checked="draft.all_companies" :disabled="!canEditUsage || busy"
               @change="toggleAllCompanies(($event.target as HTMLInputElement).checked)" />
             <span>{{ t('supplier.allCompanies') }}</span>
           </label>
-          <div v-if="!draft.all_companies" class="supplier-company-picker">
+          <div v-if="!draft.all_companies" class="ds-detail-field supplier-company-picker">
             <span>{{ t('supplier.selectedCompanies') }}</span>
             <RemoteSearchableSelect v-if="canEditUsage && hasBasePermission('organization', 'view')"
               :model-value="selectedCompany" :search="searchCompanies" :placeholder="t('supplier.addCompany')"
               :disabled="busy" @update:model-value="selectCompany" />
-            <p v-else-if="canEditUsage" class="supplier-help">{{ t('supplier.companyViewRequired') }}</p>
+            <p v-else-if="canEditUsage" class="ds-detail-help supplier-help">{{ t('supplier.companyViewRequired') }}</p>
             <div class="supplier-chips"><span v-for="companyId in draft.company_ids" :key="companyId" class="supplier-chip">
               {{ names[companyId] ?? companyId }}
-              <button v-if="canEditUsage" type="button" :disabled="busy" :aria-label="t('common.delete')"
-                @click="removeCompany(companyId)">×</button>
+              <button v-if="canEditUsage" type="button" :disabled="busy"
+                class="ds-icon-control ds-icon-control--danger" data-ds-icon="delete"
+                :aria-label="t('common.delete')" @click="removeCompany(companyId)"></button>
             </span></div>
           </div>
         </section>
@@ -415,8 +393,8 @@ onMounted(async () => {
       </div>
       <footer class="modal-card__footer supplier-detail-footer">
         <span v-if="row" class="supplier-version">{{ t('supplier.version') }}: {{ row.row_version }}</span>
-        <button type="button" class="secondary-button" :disabled="busy" @click="close">{{ t('common.close') }}</button>
-        <button v-if="row && !isEdit && canEdit" type="button" class="secondary-button"
+        <button data-ds-icon="close" type="button" class="secondary-button" :disabled="busy" @click="close">{{ t('common.close') }}</button>
+        <button data-ds-icon="edit" v-if="row && !isEdit && canEdit" type="button" class="secondary-button"
           :disabled="busy || loading" @click="router.push(`/suppliers/${id}/edit`)">
           {{ t('common.edit') }}
         </button>
@@ -424,91 +402,38 @@ onMounted(async () => {
         <SupplierStateAction v-if="row && !isEdit && canState" :supplier="row" variant="button"
           :busy="busy || loading" :before-open="beforeStateOpen"
           @changed="void afterStateChanged()" @conflict="onStateConflict" />
-        <button v-if="(isNew || tab === 'profile') && canSaveProfile" type="submit" form="supplier-profile-form"
+        <button data-ds-icon="save" v-if="(isNew || tab === 'profile') && canSaveProfile" type="submit" form="supplier-profile-form"
           class="primary-button" :disabled="busy || loading" @click="profileAttempted = true">
           {{ busy ? t('common.saving') : t('common.save') }}
         </button>
-        <button v-else-if="tab === 'usage' && canEditUsage" type="button" class="primary-button"
+        <button data-ds-icon="save" v-else-if="tab === 'usage' && canEditUsage" type="button" class="primary-button"
           :disabled="busy || loading || (!draft.all_companies && draft.company_ids.length === 0)"
           @click="void saveUsage()">{{ busy ? t('common.saving') : t('common.save') }}</button>
       </footer>
     </section>
-  </div>
+  </AppDialogHost>
 </template>
 
 <style scoped>
 /* CUS detail workspace dimensions, header/tabs/footer and scroll behavior. */
-.supplier-detail-modal {
-  width: min(1120px, calc(100vw - 32px));
-  max-height: calc(100vh - 40px); max-height: calc(100dvh - 40px);
-  min-height: 0; display: flex; flex-direction: column; overflow: hidden;
-  border: 1px solid #d5e1e8; border-radius: 7px; background: #fff;
-  box-shadow: 0 22px 70px rgb(18 42 62 / 25%);
-}
-.supplier-detail-modal--workspace {
-  height: min(760px, calc(100vh - 40px));
-  height: min(760px, calc(100dvh - 40px));
-}
-.supplier-heading-code { color: #536b7b; font-size: 14px; font-weight: 400; }
-.supplier-detail-tabs {
-  flex: 0 0 auto; display: flex; gap: 4px; padding: 8px 20px 0;
-  overflow-x: auto; border-bottom: 1px solid #e1e9ee;
-}
-.supplier-detail-tabs button {
-  flex: 0 0 auto; padding: 10px 12px; border: 0; border-bottom: 2px solid transparent;
-  background: transparent; color: #61768a; cursor: pointer; font: inherit; font-size: 13px;
-}
-.supplier-detail-tabs button[aria-selected='true'] {
-  border-bottom-color: #1674a6; color: #1674a6; font-weight: 700;
-}
-.supplier-detail-modal__body {
-  flex: 1 1 auto; min-height: 0; min-width: 0;
-  overflow-y: auto; overflow-x: hidden; overscroll-behavior: contain;
-  scrollbar-gutter: stable; padding: 18px 20px 24px;
-}
 .supplier-profile-form, .supplier-profile-form fieldset { margin: 0; min-width: 0; }
 .supplier-profile-form fieldset { padding: 0; border: 0; }
-.supplier-form-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; }
-.supplier-form-grid > label, .supplier-company-picker {
-  display: grid; gap: 6px; min-width: 0; color: #536b7b; font-size: 12px; font-weight: 600;
-}
-.supplier-form-grid input:not([type='checkbox']), .supplier-form-grid textarea,
-.supplier-form-grid select {
-  width: 100%; min-width: 0; min-height: 34px; padding: 7px 9px;
-  border: 1px solid #c7d6df; border-radius: 4px; background: #fff;
-  color: #183b57; font: inherit; font-size: 13px;
-}
-.supplier-form-grid :is(input, select, textarea):disabled,
-.supplier-form-grid :is(input, select, textarea):read-only { background: #f7fafb; color: #536b7b; }
-.supplier-form-wide { grid-column: 1 / -1; }
-.supplier-required-star { color: #b64444; font-weight: 700; }
-.supplier-field-error { color: #b64444; font-size: 12px; font-weight: 500; }
-.supplier-form-grid :is(input, textarea)[aria-invalid='true'] { border-color: #b64444; }
-.supplier-help { color: #61768a; font-size: 12px; margin: 0; }
 .supplier-company-section {
-  margin-top: 16px; padding: 14px; border: 1px solid #dbe5ea;
+  margin-top: 16px; padding: 14px; border: 1px solid var(--ds-border-subtle);
   border-radius: 6px; display: grid; align-content: start; gap: 12px;
 }
-.supplier-company-section h3 { margin: 0; color: #183b57; font-size: 16px; }
-.supplier-checkbox { display: inline-flex; align-items: center; gap: 9px; color: #536b7b; font-size: 13px; }
+.supplier-company-section h3 { margin: 0; color: var(--ds-text-primary); font-size: 16px; }
+.supplier-checkbox { display: inline-flex; align-items: center; gap: 9px; color: var(--ds-text-secondary); font-size: 13px; }
 .supplier-checkbox input { flex: 0 0 auto; width: 16px; height: 16px; }
 .supplier-chips { display: flex; flex-wrap: wrap; gap: 8px; }
 .supplier-chip {
   display: inline-flex; align-items: center; gap: 7px; padding: 4px 8px;
-  border: 1px solid #dbe5ea; border-radius: 12px; font-size: 12px;
+  border: 1px solid var(--ds-border-subtle); border-radius: 12px; font-size: 12px;
 }
-.supplier-chip button { border: 0; background: transparent; color: #b64444; cursor: pointer; }
+.supplier-chip button { border: 0; background: transparent; color: var(--ds-danger); cursor: pointer; }
 .supplier-detail-footer { align-items: center; flex-wrap: wrap; }
-.supplier-version { margin-right: auto; padding-left: 16px; color: #61768a; font-size: 12px; }
+.supplier-version { margin-right: auto; padding-left: 16px; color: var(--ds-text-secondary); font-size: 12px; }
 .supplier-conflict { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin-bottom: 14px; }
-.supplier-error { color: #b64444; font-size: 12px; margin: 0 0 12px; }
+.supplier-error { color: var(--ds-danger); font-size: 12px; margin: 0 0 12px; }
 .supplier-contacts { min-height: 140px; }
-@media (max-width: 640px) {
-  .supplier-detail-backdrop { padding: 8px; }
-  .supplier-detail-modal { width: calc(100vw - 16px); max-height: calc(100dvh - 16px); }
-  .supplier-detail-modal--workspace { height: calc(100dvh - 16px); }
-  .supplier-form-grid { grid-template-columns: 1fr; }
-  .supplier-form-wide { grid-column: auto; }
-  .supplier-detail-tabs { padding-inline: 8px; }
-}
 </style>
