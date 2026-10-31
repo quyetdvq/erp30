@@ -1685,6 +1685,22 @@ export type NumberingSeries = {
     status: 'ACTIVE' | 'INACTIVE';
 };
 
+export type AutoNumberingOverviewResource = {
+    id: BigInt;
+    type: string;
+    name: string;
+    domain: 'SYSTEM' | 'MASTER' | 'ORGANIZATION';
+    status: 'ACTIVE' | 'INACTIVE';
+    allowed_actions: {
+        configure_numbering: true;
+    };
+};
+
+export type AutoNumberingOverview = {
+    resources: Array<AutoNumberingOverviewResource>;
+    series: Array<NumberingSeries>;
+};
+
 export type NumberingSeriesCreate = {
     series_code: string;
     name: string;
@@ -1853,6 +1869,10 @@ export type ResourceResponse = SuccessResponse & {
 
 export type ResourceCollection = CollectionResponse & {
     data?: Array<Resource>;
+};
+
+export type AutoNumberingOverviewResponse = SuccessResponse & {
+    data?: AutoNumberingOverview;
 };
 
 export type NumberingSeriesResponse = SuccessResponse & {
@@ -5693,6 +5713,45 @@ export type UpdateResourceActionResponses = {
 };
 
 export type UpdateResourceActionResponse = UpdateResourceActionResponses[keyof UpdateResourceActionResponses];
+
+export type GetAutoNumberingOverviewData = {
+    body?: never;
+    headers?: {
+        /**
+         * Supported request language. Unsupported values fall back to vi.
+         */
+        'Accept-Language'?: 'vi' | 'en';
+        /**
+         * Client request correlation identifier; invalid or missing values are replaced by a generated UUID.
+         */
+        'X-Request-ID'?: RequestId;
+    };
+    path?: never;
+    query?: never;
+    url: '/api/v1/numbering-series/overview';
+};
+
+export type GetAutoNumberingOverviewErrors = {
+    /**
+     * Unauthenticated or invalid authentication.
+     */
+    401: ErrorResponse;
+    /**
+     * Visible target but action denied.
+     */
+    403: ErrorResponse;
+};
+
+export type GetAutoNumberingOverviewError = GetAutoNumberingOverviewErrors[keyof GetAutoNumberingOverviewErrors];
+
+export type GetAutoNumberingOverviewResponses = {
+    /**
+     * Authorized Resource catalog and complete Numbering Series snapshot.
+     */
+    200: AutoNumberingOverviewResponse;
+};
+
+export type GetAutoNumberingOverviewResponse = GetAutoNumberingOverviewResponses[keyof GetAutoNumberingOverviewResponses];
 
 export type ListNumberingSeriesData = {
     body?: never;

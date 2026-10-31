@@ -25,6 +25,39 @@ final class NumberingService
         $this->actorId = (string) $actor->id;
     }
 
+    /**
+     * One read model for the existing Auto Numbering screen. Evaluates the
+     * same persisted Resource VIEW + configure_numbering PBAC predicates as
+     * the old Resource catalog and its scoped numbering-series endpoints.
+     * SQL reads are batched; no per-Resource numbering-series request/query.
+     *
+     * @return array{resources:list<array<string,mixed>>,series:list<array<string,mixed>>}
+     */
+    public function overview(): array
+    {
+        $resourceRows = $this->db->table('resources')
+            ->orderBy('type', 'ASC')->orderBy('id', 'ASC')->get();
+        if ($resourceRows === false) throw new RuntimeException('Numbering Resource catalog read failed');
+        return NumberingOverview::assemble(
+            $resourceRows->getResultArray(),
+            fn (array $resource): bool =>
+                $this->access->canView('resource', $resource) &&
+                $this->access->decideMutation('resource', 'configure_numbering', $resource)['allowed'] === true,
+            function (array $ids): array {
+                $all = [];
+                // Avoid oversized IN lists for large catalogs; complexity is
+                // O(ceil(N/200)) SQL SELECTs, never O(N) HTTP requests.
+                foreach (array_chunk($ids, 200) as $batch) {
+                    $result = $this->db->table('auto_numbering_series')
+                        ->whereIn('resource_id', $batch)->orderBy('id', 'ASC')->get();
+                    if ($result === false) throw new RuntimeException('Numbering overview series read failed');
+                    array_push($all, ...$result->getResultArray());
+                }
+                return $all;
+            },
+        );
+    }
+
     /** @return list<array<string,mixed>> */
     public function listing(string $resourceId): array
     {

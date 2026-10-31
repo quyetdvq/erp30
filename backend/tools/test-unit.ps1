@@ -14,6 +14,7 @@
 #   .\tools\test-unit.ps1 RUN SUP-UNIT       # offline Supplier rules/catalog/Numbering/SQL-PBAC
 #   .\tools\test-unit.ps1 RUN P1-STANDARDS   # offline P1 SQL-first/PBAC improvement regression
 #   .\tools\test-unit.ps1 RUN ROUTES         # pinned 180-route registry, P1 150 and negative guards
+#   .\tools\test-unit.ps1 RUN NUM-HF05-UNIT  # HF05 Numbering backend PBAC/SQL/API regression (NO DB)
 #   .\tools\test-unit.ps1 RUN M11-UNIT         # M11 PHPUnit unit, no DB
 #   .\tools\test-unit.ps1 RUN M11-INTEGRATION  # M11 MariaDB E2E, uses database.tests
 #   .\tools\test-unit.ps1 RUN M11-RELIABILITY # M11.3A two-process + failure-injection, commits isolated test fixture
@@ -26,7 +27,7 @@ Set-StrictMode -Version Latest
 $ErrorActionPreference = 'Stop'
 
 $tokens = @($args)
-$usage = 'Usage: .\tools\test-unit.ps1 CHECK|RUN [UNIT-STANDARD|DB-READ|ALL|INTEGRATION|ACCEPTANCE|M4-INTEGRATION|M4-CONCURRENCY|M11|M11-UNIT|M11-INTEGRATION|M11-RELIABILITY|CUS-UNIT|HIS-UNIT|SUP-UNIT|P1-STANDARDS|ROUTES] OR PREPARE M11'
+$usage = 'Usage: .\tools\test-unit.ps1 CHECK|RUN [UNIT-STANDARD|DB-READ|ALL|INTEGRATION|ACCEPTANCE|M4-INTEGRATION|M4-CONCURRENCY|M11|M11-UNIT|M11-INTEGRATION|M11-RELIABILITY|CUS-UNIT|HIS-UNIT|SUP-UNIT|P1-STANDARDS|ROUTES|NUM-HF05-UNIT] OR PREPARE M11'
 if ($tokens.Count -lt 1 -or $tokens.Count -gt 3) { throw $usage }
 $action = ([string]$tokens[0]).ToUpperInvariant()
 if ($action -notin @('CHECK', 'RUN', 'PREPARE')) { throw $usage }
@@ -39,7 +40,7 @@ if ($tokens.Count -eq 2) {
 }
 $suite = $suite.TrimStart('-').ToUpperInvariant()
 if ($action -eq 'PREPARE' -and $suite -ne 'M11') { throw $usage }
-if ($suite -notin @('UNIT-STANDARD', 'DB-READ', 'ALL', 'INTEGRATION', 'ACCEPTANCE', 'M4-INTEGRATION', 'M4-CONCURRENCY', 'M11', 'M11-UNIT', 'M11-INTEGRATION', 'M11-RELIABILITY', 'CUS-UNIT', 'HIS-UNIT', 'SUP-UNIT', 'P1-STANDARDS', 'ROUTES')) { throw $usage }
+if ($suite -notin @('UNIT-STANDARD', 'DB-READ', 'ALL', 'INTEGRATION', 'ACCEPTANCE', 'M4-INTEGRATION', 'M4-CONCURRENCY', 'M11', 'M11-UNIT', 'M11-INTEGRATION', 'M11-RELIABILITY', 'CUS-UNIT', 'HIS-UNIT', 'SUP-UNIT', 'P1-STANDARDS', 'ROUTES', 'NUM-HF05-UNIT')) { throw $usage }
 
 function Invoke-PHPChecked {
     param([string[]]$Arguments, [string]$Description)
@@ -187,6 +188,29 @@ try {
         return
     }
 
+    if ($suite -eq 'NUM-HF05-UNIT') {
+        Write-Host '===== NUM-HF05-UNIT: overview/PBAC/SQL batching + M4/route regressions (NO DB/HTTP) ====='
+        foreach ($test in @(
+            'tests/num_hf05_overview_pure.php',
+            'tests/num_hf05_overview_service_fixture.php',
+            'tests/num_hf05_overview_stress_fixture.php',
+            'tests/num_hf05_overview_contract_pure.php',
+            'tests/num_hf05_dev_http_safety_pure.php',
+            'tests/m4_numbering_edit_validation_pure.php',
+            'tests/m4_numbering_rules_pure.php',
+            'tests/m4_baseline_pattern_parity_pure.php',
+            'tests/m4_security_pure.php',
+            'tests/m4_contract_pure.php',
+            'tests/m33_routes_pure.php',
+            'tests/m1924_route_architecture_pure.php'
+        )) {
+            Invoke-PHPChecked -Description "HF05 backend regression $test" -Arguments @($test)
+        }
+        Invoke-PHPChecked -Description 'HF05 frozen and approved route inventory' -Arguments @('tools/routes/route_inventory.php', '--verify')
+        Write-Host 'NUM-HF05-UNIT PASS: backend offline tests. Real HTTP/MariaDB integration NOT claimed.'
+        return
+    }
+
     if ($suite -eq 'ROUTES') {
         Write-Host '===== ROUTES: frozen v1.9.23 registry and routing migration gates (NO DB) ====='
         Invoke-PHPChecked -Description '180 frozen method/path/handler/filter registrations' -Arguments @('tools/routes/route_inventory.php', '--verify')
@@ -252,9 +276,18 @@ try {
         Invoke-PHPChecked -Description 'SUP-T06 fake Supplier Contact parent/PBAC' -Arguments @('tests/sup/supplier_contact_parent_fixture.php')
         Invoke-PHPChecked -Description 'SUP-T06 runtime/audit/Workflow source contracts' -Arguments @('tests/sup/supplier_contact_source_contract_pure.php')
         Invoke-PHPChecked -Description 'SUP-T07 API source/route policy regression' -Arguments @('tests/sup/supplier_core_http_pure.php')
+        foreach ($test in @(
+            'tests/num_hf05_overview_pure.php',
+            'tests/num_hf05_overview_service_fixture.php',
+            'tests/num_hf05_overview_stress_fixture.php',
+            'tests/num_hf05_overview_contract_pure.php',
+            'tests/num_hf05_dev_http_safety_pure.php'
+        )) {
+            Invoke-PHPChecked -Description "HF05 overview offline regression $test" -Arguments @($test)
+        }
         Invoke-PHPChecked -Description 'Supplier M11 notification pure regression' -Arguments @('tests/sup/supplier_m11_notifications_pure.php')
         Invoke-PHPChecked -Description 'Retired temporary environment modes and PBAC invariants' -Arguments @('tests/sup/supplier_retired_modes_pure.php')
-        Write-Host 'UNIT-STANDARD PASS: pinned 168, HIS and SUP-T01..T07 offline tests only; NOT HTTP/MariaDB integration.'
+        Write-Host 'UNIT-STANDARD PASS: pinned 168, HIS, SUP and NUM-HF05 offline tests only; NOT HTTP/MariaDB integration.'
         Invoke-PHPChecked -Description 'M3.4D static and baseline golden-master acceptance' -Arguments @('tools/m34d_accept.php', '--offline')
         Invoke-PHPChecked -Description 'M4 source/route extension acceptance (14 new APIs; no DB)' -Arguments @('tools/m4_accept.php')
         Invoke-PHPChecked -Description 'M5.1 Province/Ward source acceptance (six mutations; no DB)' -Arguments @('tools/m5_accept.php')

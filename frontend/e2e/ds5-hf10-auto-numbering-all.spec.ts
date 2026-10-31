@@ -1,5 +1,4 @@
-// DS5 HF10: real AutoNumberingView with mocked API-040 Resource-scoped endpoints.
-// No backend bypass: a single All resource endpoint does not exist.
+// DS5 HF10 + HF05: unchanged AutoNumberingView with an atomic PBAC-scoped overview GET.
 import { expect, test } from '@playwright/test'
 import { fulfillAutoNumberingFixture, mockAutoNumberingPreflight, mockAutoNumberingSession } from './support/autoNumberingApiFixture'
 
@@ -29,10 +28,12 @@ async function mockNumbering(page: import('@playwright/test').Page, denyThird = 
   })
   const requests: string[] = []
   const stateChanges: string[] = []
+  const currentByResource = new Map<string, ReturnType<typeof item>>()
   const deniedReads = new Set<string>()
   const slowReads = new Map<string, number>()
   for (const [id, record] of [['2', item('21', '2', 'Product number')], ['3', item('31', '3', 'Order number')]] as const) {
     let current = record
+    currentByResource.set(id, current)
     await page.route(`**/api/v1/resources/${id}/numbering-series**`, async (route) => {
       const url = new URL(route.request().url())
       const method = route.request().method()
@@ -49,6 +50,7 @@ async function mockNumbering(page: import('@playwright/test').Page, denyThird = 
       if (url.pathname.endsWith('/actions/set-state')) {
         stateChanges.push(id)
         current = { ...current, status: 'INACTIVE' }
+        currentByResource.set(id, current)
         return fulfillAutoNumberingFixture(route, { status: 200, contentType: 'application/json', body: JSON.stringify({ data: current }) })
       }
       if (/\/numbering-series\/\d+$/.test(url.pathname)) {
@@ -68,8 +70,24 @@ async function mockNumbering(page: import('@playwright/test').Page, denyThird = 
       return route.fallback()
     })
   }
+  await page.route('**/api/v1/numbering-series/overview', async (route) => {
+    requests.push(`GET ${new URL(route.request().url()).pathname}`)
+    const delay = slowReads.get('3') ?? 0
+    if (delay) await new Promise((resolve) => setTimeout(resolve, delay))
+    if (deniedReads.size > 0) {
+      return fulfillAutoNumberingFixture(route, { status: 403,
+        body: JSON.stringify({ error: { code: 'NUM_AUTHORIZATION_DENIED' } }) })
+    }
+    const visible = denyThird ? [resource2] : [resource2, resource3]
+    return fulfillAutoNumberingFixture(route, { status: 200,
+      body: JSON.stringify({ data: {
+        resources: visible,
+        series: visible.map((resource) => currentByResource.get(String(resource.id))),
+      } }),
+    })
+  })
   await mockAutoNumberingPreflight(page)
-  return { requests, stateChanges, denyRead: (id: string) => deniedReads.add(id), delayRead: (id: string, ms: number) => slowReads.set(id, ms) }
+  return { requests, stateChanges, denyRead: (id: string) => deniedReads.add(id), allowRead: (id: string) => deniedReads.delete(id), delayRead: (id: string, ms: number) => slowReads.set(id, ms) }
 }
 
 test('All resource is the default; table shows all authorized series and preserves scope on edit', async ({ page }) => {
@@ -85,8 +103,8 @@ test('All resource is the default; table shows all authorized series and preserv
   await expect(table.getByRole('row').filter({ hasText: 'Order number' })).toBeVisible()
   await expect(table.getByRole('row')).toHaveCount(3)
   await expect(table.getByRole('columnheader').first()).toContainText('Resource')
-  expect(api.requests).toContain('GET /api/v1/resources/2/numbering-series')
-  expect(api.requests).toContain('GET /api/v1/resources/3/numbering-series')
+  expect(api.requests.filter((request) => request === 'GET /api/v1/numbering-series/overview')).toHaveLength(1)
+  expect(api.requests.filter((request) => /^GET \/api\/v1\/resources\/\d+\/numbering-series$/.test(request))).toHaveLength(0)
 
   await listFilter.locator('.n-base-selection').click()
   await listFilter.locator('input').first().fill('Orders')
@@ -147,7 +165,7 @@ test('All resource never requests a Resource without effective configure_numberi
   await expect(table.getByRole('row').filter({ hasText: 'Product number' })).toBeVisible()
   await expect(table.getByRole('row').filter({ hasText: 'Order number' })).toHaveCount(0)
   await expect(table.getByRole('row')).toHaveCount(2)
-  expect(api.requests).toContain('GET /api/v1/resources/2/numbering-series')
+  expect(api.requests).toContain('GET /api/v1/numbering-series/overview')
   expect(api.requests).not.toContain('GET /api/v1/resources/3/numbering-series')
   const filter = page.locator('.numbering-resource-filter .searchable-select')
   await filter.locator('.n-base-selection').click()
@@ -164,8 +182,8 @@ test('direct route entry loads after a delayed permission snapshot', async ({ pa
   const table = page.locator('table.list-table')
   await expect(table.getByRole('row').filter({ hasText: 'Product number' })).toBeVisible()
   await expect(table.getByRole('row').filter({ hasText: 'Order number' })).toBeVisible()
-  expect(api.requests).toContain('GET /api/v1/resources/2/numbering-series')
-  expect(api.requests).toContain('GET /api/v1/resources/3/numbering-series')
+  expect(api.requests.filter((request) => request === 'GET /api/v1/numbering-series/overview')).toHaveLength(1)
+  expect(api.requests.filter((request) => /^GET \/api\/v1\/resources\/\d+\/numbering-series$/.test(request))).toHaveLength(0)
 })
 
 
@@ -175,8 +193,8 @@ test('reuses the All resource snapshot across filter changes without duplicate G
   await page.goto('/configuration/auto-numbering')
   const table = page.locator('table.list-table')
   await expect(table.getByRole('row').filter({ hasText: 'Order number' })).toBeVisible()
-  const listGetCount = () => api.requests.filter((request) => /^GET \/api\/v1\/resources\/\d+\/numbering-series$/.test(request)).length
-  expect(listGetCount()).toBe(2)
+  const listGetCount = () => api.requests.filter((request) => request === 'GET /api/v1/numbering-series/overview' || /^GET \/api\/v1\/resources\/\d+\/numbering-series$/.test(request)).length
+  expect(listGetCount()).toBe(1)
 
   const filter = page.locator('.numbering-resource-filter .searchable-select')
   await filter.locator('.n-base-selection').click()
@@ -184,25 +202,29 @@ test('reuses the All resource snapshot across filter changes without duplicate G
   await page.locator('.n-base-select-option').filter({ hasText: 'ORDER - Orders' }).click()
   await expect(table.getByRole('row').filter({ hasText: 'Order number' })).toBeVisible()
   await expect(table.getByRole('row').filter({ hasText: 'Product number' })).toHaveCount(0)
-  expect(listGetCount()).toBe(2) // No GET for an already complete Resource snapshot.
+  expect(listGetCount()).toBe(1) // Switching filters is entirely local.
 
   // A canonical mutation response updates the row without refetching either Resource.
   await table.getByRole('row').filter({ hasText: 'Order number' })
     .getByRole('button', { name: /Ngừng hoạt động|Deactivate/ }).click()
   await expect(table.getByRole('row').filter({ hasText: 'Order number' })
     .getByRole('button', { name: /Kích hoạt|Activate/ })).toBeVisible()
-  expect(listGetCount()).toBe(2)
+  expect(listGetCount()).toBe(1)
 
   // Refresh is an explicit server read scoped to the selected Resource.
   await page.locator('.numbering-query-controls button[type="submit"]').click()
-  await expect.poll(listGetCount).toBe(3)
+  await expect.poll(listGetCount).toBe(2)
   await filter.hover()
   await filter.locator('.n-base-clear').click()
   await expect(table.getByRole('row').filter({ hasText: 'Product number' })).toBeVisible()
-  expect(listGetCount()).toBe(3)
+  // Clearing an NSelect value is not a request to close its filter menu.
+  // Dismiss the menu with a normal outside click (as a user would), then
+  // verify the Refresh click and its network cost without force-clicking.
+  await page.locator('.page-heading h1').click()
+  expect(listGetCount()).toBe(2)
 
   await page.locator('.numbering-query-controls button[type="submit"]').click()
-  await expect.poll(listGetCount).toBe(5) // All Resource Refresh reads 2 authorized endpoints.
+  await expect.poll(listGetCount).toBe(3) // All Refresh uses exactly one overview GET.
 })
 
 test('a denied Resource refresh fails closed and clears the entire list', async ({ page }) => {
@@ -216,9 +238,19 @@ test('a denied Resource refresh fails closed and clears the entire list', async 
   await expect(page.locator('.numbering-panel .inline-error')).toBeVisible()
   await expect(page.getByRole('cell', { name: 'Product number' })).toHaveCount(0)
   await expect(page.getByRole('cell', { name: 'Order number' })).toHaveCount(0)
-  // A 403 triggers permission revalidation, but not an unbounded GET/403 loop.
+  // Axios triggers asynchronous PBAC refresh before the component catch runs.
+  // The denial must stay visible and never issue an unbounded GET/403 loop.
   await page.waitForTimeout(350)
-  expect(api.requests.filter((request) => request === 'GET /api/v1/resources/3/numbering-series')).toHaveLength(2)
+  expect(api.requests.filter((request) => request === 'GET /api/v1/numbering-series/overview')).toHaveLength(2)
+
+  // Retry is explicit: a real permission revalidation may restore the grant,
+  // but must never silently override the prior 403 and re-read the table.
+  api.allowRead('3')
+  await expect(page.locator('.numbering-query-controls button[type="submit"]')).toBeEnabled()
+  await page.locator('.numbering-query-controls button[type="submit"]').click()
+  await expect(table.getByRole('row').filter({ hasText: 'Product number' })).toBeVisible()
+  await expect(table.getByRole('row').filter({ hasText: 'Order number' })).toBeVisible()
+  expect(api.requests.filter((request) => request === 'GET /api/v1/numbering-series/overview')).toHaveLength(3)
 })
 
 test('a stale All resource response cannot replace newer filtered data', async ({ page }) => {
@@ -235,7 +267,7 @@ test('a stale All resource response cannot replace newer filtered data', async (
   await page.locator('.n-base-select-option').filter({ hasText: 'ORDER - Orders' }).click()
   await expect(table.getByRole('row').filter({ hasText: 'Order number' })).toBeVisible()
   await expect(table.getByRole('row').filter({ hasText: 'Product number' })).toHaveCount(0)
-  await expect.poll(() => api.requests.filter((request) => request === 'GET /api/v1/resources/3/numbering-series').length).toBe(2)
+  await expect.poll(() => api.requests.filter((request) => request === 'GET /api/v1/numbering-series/overview').length).toBe(2)
   // Give the delayed response enough time to arrive: the latest filter still wins.
   await page.waitForTimeout(450)
   await expect(table.getByRole('row').filter({ hasText: 'Product number' })).toHaveCount(0)

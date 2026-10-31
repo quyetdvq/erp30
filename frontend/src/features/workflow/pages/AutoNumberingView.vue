@@ -21,12 +21,13 @@ import {
 } from '@/components/lists'
 import type { ListColumn } from '@/components/lists/listTypes'
 import { useBasePermission } from '@/composables/useBasePermission'
+import { useAuthStore } from '@/stores/auth'
 import { useUnsavedChanges } from '@/composables/useUnsavedChanges'
 import {
   changeNumberingSeriesState,
   getNumberingSeriesById,
   listNumberingSeriesPage,
-  listAllNumberingSeries,
+  getAutoNumberingOverview,
   numberSeriesSnapshotForAll,
   numberSeriesSnapshotForResource,
   numberSeriesSnapshotWithMutation,
@@ -35,11 +36,10 @@ import {
   validateNumberingSeries,
   type NumberingSeriesRow,
 } from '@/services/autoNumbering'
-import { listResourcePage } from '@/services/security'
-import { loadLookupPages } from '@/services/listLookups'
 import { normalizeApiError, reportApiError } from '@/services/errorBoundary'
 
 const { t } = useI18n()
+const auth = useAuthStore()
 const { hasBasePermissionKey } = useBasePermission()
 const canConfigure = computed(() => hasBasePermissionKey('resource.configure_numbering'))
 
@@ -77,7 +77,7 @@ const page = ref(1)
 const pageSize = ref(50)
 const loadingResources = ref(false)
 const loadingSeries = ref(false)
-// Prevent repeated Resource GET -> 403 -> auth refresh -> Resource GET loops.
+// Prevent repeated overview GET -> 403 -> auth refresh -> overview GET loops.
 // Explicit Refresh can retry after the server has updated the permission snapshot.
 const deniedReadUntilRefresh = ref(false)
 const busy = ref(false)
@@ -282,49 +282,87 @@ function stopAfterDeniedRead(caught: unknown): boolean {
   return true
 }
 
+/**
+ * Axios revalidates PBAC as soon as a 403 arrives. That can flip canConfigure
+ * to false and invalidate read generations BEFORE the awaiting catch runs.
+ * Consume a real 403 first so it remains visible and blocks automatic retries.
+ * Never let a request from a previous login poison the current session.
+ */
+function handleReadDenial(caught: unknown, requestSession: number): boolean {
+  if (normalizeApiError(caught)?.status !== 403) return false
+  if (requestSession === auth.getSessionGeneration()) stopAfterDeniedRead(caught)
+  return true
+}
+
 async function refreshSeries(): Promise<void> {
   if (!canConfigure.value) return
   if (deniedReadUntilRefresh.value) {
     deniedReadUntilRefresh.value = false
-    await loadResources() // re-check the authorized catalog before any series GET.
+    await loadResources() // Re-evaluate catalog + PBAC after a denied read.
+  } else if (!selectedResourceId.value) {
+    await loadResources(true) // One overview GET; preserve rows while refreshing.
   } else {
-    await loadSeries(true)
-  }
-}
-
-async function loadResources(): Promise<void> {
-  const generation = ++resourceLoadGeneration
-  clearSeriesSnapshots()
-  resources.value = []
-  loadingResources.value = true
-  error.value = null
-  try {
-    const result = await loadLookupPages((query) => listResourcePage(query, true), { sort: 'type' })
-    if (generation !== resourceLoadGeneration || !canConfigure.value) return
-    resources.value = result
-    // Losing a Resource hint cannot leave its old filter or cached rows visible.
-    if (selectedResourceId.value && !configurableResourceIds.value.includes(selectedResourceId.value)) {
-      selectedResourceId.value = '' // Its watcher performs the only list read.
-    } else {
-      await loadSeries()
-    }
-  } catch (caught: unknown) {
-    if (stopAfterDeniedRead(caught)) return
-    if (generation !== resourceLoadGeneration || !canConfigure.value) return
-    clearSeriesSnapshots()
-    error.value = caught
-    reportApiError(caught)
-  } finally {
-    if (generation === resourceLoadGeneration) loadingResources.value = false
+    await loadSeries(true) // Keep the existing Resource-scoped Refresh behavior.
   }
 }
 
 /**
- * Resource filter changes are local when a complete snapshot is available.
- * Only initial/missing data and explicit Refresh contact the existing
- * Resource-scoped API. No global All Resource endpoint is introduced.
+ * The overview atomically supplies both the authorized selector catalog and
+ * all Resource series in ONE HTTP request. Initial load clears old data;
+ * explicit All-Resource Refresh retains the existing rows until replacement.
+ */
+async function loadResources(preserveRows = false): Promise<void> {
+  const requestSession = auth.getSessionGeneration()
+  const generation = ++resourceLoadGeneration
+  const seriesGeneration = ++seriesLoadGeneration
+  if (!preserveRows) {
+    seriesSnapshots.value = new Map()
+    resources.value = []
+    loadingResources.value = true
+  } else {
+    loadingSeries.value = true
+  }
+  error.value = null
+  try {
+    const result = await getAutoNumberingOverview()
+    if (generation !== resourceLoadGeneration ||
+      seriesGeneration !== seriesLoadGeneration || !canConfigure.value) return
+    // Build before publishing either side of the response: the old catalog
+    // and rows must never be mixed with a partially authorized new result.
+    const ids = result.resources.map((item) => String(item.id))
+    const snapshot = numberSeriesSnapshotForAll(ids, result.series)
+    resources.value = result.resources
+    seriesSnapshots.value = snapshot
+    if (selectedResourceId.value && !ids.includes(selectedResourceId.value)) {
+      selectedResourceId.value = ''
+    }
+    page.value = Math.min(page.value, pageCount.value)
+  } catch (caught: unknown) {
+    // PBAC revalidation can already have cleared canConfigure and generation.
+    // A 403 must fail closed with a visible error, not silently refetch.
+    if (handleReadDenial(caught, requestSession)) return
+    if (generation !== resourceLoadGeneration || !canConfigure.value) return
+    if (seriesGeneration !== seriesLoadGeneration) return
+    // Never leave a stale listing visible after a failed full refresh.
+    clearSeriesSnapshots()
+    resources.value = []
+    error.value = caught
+    reportApiError(caught)
+  } finally {
+    if (generation === resourceLoadGeneration) {
+      if (preserveRows) loadingSeries.value = false
+      else loadingResources.value = false
+    }
+  }
+}
+
+/**
+ * Single Resource Refresh retains the API-040 scoped endpoint and its strict
+ * complete-list validation. All Resource data comes from the overview, not
+ * a browser-side N-Resource fan-out.
  */
 async function loadSeries(force = false): Promise<void> {
+  const requestSession = auth.getSessionGeneration()
   const generation = ++seriesLoadGeneration
   if (!canConfigure.value || deniedReadUntilRefresh.value) {
     if (!canConfigure.value) seriesSnapshots.value = new Map()
@@ -333,7 +371,6 @@ async function loadSeries(force = false): Promise<void> {
   }
   const resourceId = selectedResourceId.value
   const ids = resourceId ? [resourceId] : configurableResourceIds.value
-  // A stale Resource selector must never issue an unapproved API request.
   if (resourceId && !configurableResourceIds.value.includes(resourceId)) {
     seriesSnapshots.value = new Map()
     loadingSeries.value = false
@@ -344,23 +381,21 @@ async function loadSeries(force = false): Promise<void> {
     loadingSeries.value = false
     return
   }
+  if (!resourceId) {
+    // A missing/invalid All Resource snapshot needs a fresh atomic overview.
+    await loadResources(true)
+    return
+  }
   loadingSeries.value = true
   try {
-    if (resourceId) {
-      const result = await listNumberingSeriesPage(resourceId)
-      if (generation !== seriesLoadGeneration || !canConfigure.value) return
-      seriesSnapshots.value = numberSeriesSnapshotForResource(seriesSnapshots.value, resourceId, result.data)
-    } else {
-      const data = await listAllNumberingSeries(ids)
-      if (generation !== seriesLoadGeneration || !canConfigure.value) return
-      seriesSnapshots.value = numberSeriesSnapshotForAll(ids, data)
-    }
+    const result = await listNumberingSeriesPage(resourceId)
+    if (generation !== seriesLoadGeneration || !canConfigure.value) return
+    seriesSnapshots.value = numberSeriesSnapshotForResource(seriesSnapshots.value, resourceId, result.data)
     page.value = Math.min(page.value, pageCount.value)
   } catch (caught: unknown) {
-    if (stopAfterDeniedRead(caught)) return
-    if (generation !== seriesLoadGeneration || !canConfigure.value) return
-    // Fail closed: never keep stale cached records after a Resource-scoped
-    // authorization or data-integrity failure.
+    // Treat 403 as authoritative even when PBAC revalidation is in flight.
+    if (handleReadDenial(caught, requestSession)) return
+    if (!canConfigure.value || generation !== seriesLoadGeneration) return
     seriesSnapshots.value = new Map()
     error.value = caught
     reportApiError(caught)

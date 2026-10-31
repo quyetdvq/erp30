@@ -51,6 +51,13 @@ async function mockNumberingApi(page: Page, options: { conflict?: boolean } = {}
     return route.fallback()
   })
 
+  // One combined initial read; all form/detail/validation mutations remain scoped.
+  await page.route('**/api/v1/numbering-series/overview', (route) =>
+    fulfillAutoNumberingFixture(route, { status: 200,
+      body: JSON.stringify({ data: { resources, series: [series] } }),
+    }),
+  )
+
   // All resource is the default, so the page also requests Resource 3.
   await page.route('**/api/v1/resources/3/numbering-series**', (route) =>
     fulfillAutoNumberingFixture(route, {

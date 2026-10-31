@@ -12,10 +12,48 @@ import type {
   NumberingSeriesPatch,
   NumberingSeriesState,
   NumberingSeriesValidation,
+  Resource,
 } from '@/api/generated/types.gen'
 import { withTypedClient } from '@/api/client'
+import { apiClient } from '@/services/api'
+import { rowAllowedActions } from '@/components/lists/rowActionPolicy'
 import { i18n } from '@/i18n'
 import type { ListResponse } from '@/components/lists/listTypes'
+
+/**
+ * Screen-specific read projection; the existing typed Resource/Numbering
+ * endpoints remain authoritative for detail, edits, validation and state.
+ * Uses the shared Axios transport (session, locale, request IDs, errors).
+ * This route is also documented in the canonical OpenAPI specification.
+ */
+export type AutoNumberingOverview = {
+  resources: Resource[]
+  series: NumberingSeriesRow[]
+}
+
+export async function getAutoNumberingOverview(): Promise<AutoNumberingOverview> {
+  const response = await apiClient.get<{ data?: AutoNumberingOverview }>(
+    '/api/v1/numbering-series/overview',
+  )
+  const payload = response.data?.data
+  if (!payload || !Array.isArray(payload.resources) || !Array.isArray(payload.series)) {
+    throw new Error('Numbering overview returned an invalid response.')
+  }
+  // A response must never elevate advisory row action hints or mix scopes.
+  // The view performs the complete, per-Resource series integrity check
+  // before atomically installing this snapshot.
+  const ids = new Set<string>()
+  for (const resource of payload.resources) {
+    const id = String(resource?.id)
+    if (!/^[1-9][0-9]*$/.test(id) || ids.has(id) ||
+      rowAllowedActions(resource)?.configure_numbering !== true) {
+      throw new Error('Numbering overview returned an invalid Resource catalog.')
+    }
+    ids.add(id)
+  }
+  numberSeriesSnapshotForAll([...ids], payload.series)
+  return payload
+}
 
 export type NumberingSeriesRow = NumberingSeries & {
   /** Optional forward-compatible metadata; API-040 currently omits issuance state. */
@@ -58,45 +96,6 @@ export function listNumberingSeriesPage(
       return result
     }),
   )
-}
-
-/**
- * Read across Resource-scoped API-040 endpoints without an unreviewed global
- * endpoint. The caller supplies only IDs with effective configure_numbering
- * hints. Backend PBAC remains authoritative and errors reject the entire list.
- * Inject the typed page reader so concurrency/fail-closed behavior can be
- * verified independently of generated SDK mock internals.
- */
-export async function aggregateNumberingSeries(
-  resourceIds: readonly string[],
-  readPage: (resourceId: string) => Promise<ListResponse<NumberingSeriesRow>>,
-): Promise<NumberingSeriesRow[]> {
-  const ids = [...new Set(resourceIds.filter((id) => /^[1-9][0-9]*$/.test(id)))]
-  const pages: NumberingSeriesRow[][] = new Array(ids.length)
-  let nextIndex = 0
-  let failed = false
-  const workers = Array.from({ length: Math.min(4, ids.length) }, async () => {
-    while (!failed && nextIndex < ids.length) {
-      const index = nextIndex++
-      const id = ids[index]!
-      try {
-        const result = await readPage(id)
-        // A Resource-scoped endpoint may never return another Resource's data.
-        if (result.meta.total !== result.data.length ||
-          result.data.some((row) => String(row.resource_id) !== id)) {
-          throw new Error('Numbering API returned an incomplete or cross-resource list.')
-        }
-        pages[index] = result.data
-      } catch (error: unknown) {
-        failed = true
-        throw error
-      }
-    }
-  })
-  const settled = await Promise.allSettled(workers)
-  const failure = settled.find((result) => result.status === 'rejected')
-  if (failure?.status === 'rejected') throw failure.reason
-  return pages.flat()
 }
 
 /**
@@ -167,13 +166,6 @@ export function numberSeriesSnapshotWithMutation(
   if (position === -1) updated.push(row)
   else updated[position] = row
   return numberSeriesSnapshotForResource(snapshot, resourceId, updated)
-}
-
-/** Normal production entry point: always use the existing typed SDK reader. */
-export function listAllNumberingSeries(
-  resourceIds: readonly string[],
-): Promise<NumberingSeriesRow[]> {
-  return aggregateNumberingSeries(resourceIds, listNumberingSeriesPage)
 }
 
 export async function getNumberingSeriesById(

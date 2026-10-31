@@ -36,6 +36,28 @@ describe('SearchableSelect', () => {
     expect(select.props('placeholder')).toBe('All resource')
   })
 
+  it('keeps popup visibility uncontrolled while clear and reselect update only the filter value', async () => {
+    const wrapper = mount(SearchableSelect, {
+      props: {
+        modelValue: '3',
+        options: [{ value: '3', label: 'ORDER - Orders' }],
+      },
+    })
+    const select = wrapper.getComponent(NSelect)
+    expect(select.props('show')).toBeUndefined()
+
+    await select.vm.$emit('update:value', null)
+    expect(wrapper.emitted('update:modelValue')?.slice(-1)[0]).toEqual([''])
+    expect(select.props('show')).toBeUndefined()
+    await wrapper.setProps({ modelValue: '' })
+    expect(select.props('value')).toBe(null)
+
+    await select.vm.$emit('update:value', '3')
+    expect(wrapper.emitted('update:modelValue')?.slice(-1)[0]).toEqual(['3'])
+    expect(select.props('show')).toBeUndefined()
+    wrapper.unmount()
+  })
+
   it('emits canonical string IDs and preserves multiple selection values', async () => {
     const wrapper = mount(SearchableSelect, {
       props: {

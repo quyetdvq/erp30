@@ -10,16 +10,19 @@ const allTest = read('e2e/ds5-hf10-auto-numbering-all.spec.ts')
 const originalTest = read('e2e/fe050-auto-numbering.spec.ts')
 const unit = read('src/services/__tests__/autoNumberingAll.spec.ts')
 
-test('All resource aggregation is unit tested without mocked SDK transport concurrency', () => {
+test('Auto Numbering uses an atomic overview and retains scoped SDK refresh', () => {
   const service = read('src/services/autoNumbering.ts')
-  assert.match(service, /export async function aggregateNumberingSeries\(/)
-  assert.match(service, /return aggregateNumberingSeries\(resourceIds, listNumberingSeriesPage\)/)
-  assert.match(unit, /aggregateNumberingSeries\(\['1', '2', '3', '4'/)
-  assert.match(unit, /readPage\.mockImplementation/)
-  assert.match(unit, /production All resource delegates through the typed SDK reader/)
+  const view = read('src/features/workflow/pages/AutoNumberingView.vue')
+  const overviewUnit = read('src/services/__tests__/autoNumberingOverview.spec.ts')
+  assert.match(view, /getAutoNumberingOverview\(\)/)
+  assert.doesNotMatch(view, /listAllNumberingSeries\(/)
+  assert.match(service, /'\/api\/v1\/numbering-series\/overview'/)
+  assert.match(allTest, /GET \/api\/v1\/numbering-series\/overview/)
+  assert.match(overviewUnit, /toHaveBeenCalledExactlyOnceWith/)
+  assert.match(overviewUnit, /cross-Resource series/)
+  assert.match(service, /listNumberingSeries\(\{/)
   assert.match(unit, /listNumberingSeries: sdkList/)
-  assert.match(unit, /expect\(options\.throwOnError\)\.toBe\(true\)/)
-  assert.doesNotMatch(unit, /sdkList\.mockImplementation/)
+  assert.doesNotMatch(service, /aggregateNumberingSeries\(/)
 })
 
 test('both Auto Numbering browser suites isolate background Inbox and CORS from fixture API', () => {

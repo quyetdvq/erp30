@@ -690,6 +690,18 @@ paths:
       operationId: deleteResourceAction
       summary: Delete resource action
       responses: {'204': {$ref: '#/components/responses/NoContent'}, '401': {$ref: '#/components/responses/Unauthorized'}, '403': {$ref: '#/components/responses/Forbidden'}, '404': {$ref: '#/components/responses/NotFound'}}
+  /api/v1/numbering-series/overview:
+    get:
+      operationId: getAutoNumberingOverview
+      summary: Load the Auto Numbering screen with one authorization-scoped GET
+      description: >
+        Returns every VIEW-authorized Resource with an effective resource.configure_numbering
+        decision and all of their Numbering Series. The server derives the Resource IDs
+        from persisted data and enforces PBAC per row (including ABSOLUTE_DENY);
+        the caller does not supply IDs. Non-paginated by design to preserve the
+        existing client-side All Resource filter and pagination.
+      parameters: [{$ref: '#/components/parameters/AcceptLanguage'}, {$ref: '#/components/parameters/RequestId'}]
+      responses: {'200': {$ref: '#/components/responses/AutoNumberingOverviewResponse'}, '401': {$ref: '#/components/responses/Unauthorized'}, '403': {$ref: '#/components/responses/Forbidden'}}
   /api/v1/resources/{resource_id}/numbering-series:
     parameters:
       - name: resource_id
@@ -1713,6 +1725,7 @@ components:
     UserPermissionsResponse: {description: Direct ALLOW permissions response., content: {application/json: {schema: {$ref: '#/components/schemas/UserPermissionsResponse'}}}}
     ResourceResponse: {description: Resource response., content: {application/json: {schema: {$ref: '#/components/schemas/ResourceResponse'}}}}
     ResourceCollection: {description: Resource collection., content: {application/json: {schema: {$ref: '#/components/schemas/ResourceCollection'}}}}
+    AutoNumberingOverviewResponse: {description: Authorized Resource catalog and complete Numbering Series snapshot., content: {application/json: {schema: {$ref: '#/components/schemas/AutoNumberingOverviewResponse'}}}}
     NumberingSeriesResponse: {description: Numbering series response., content: {application/json: {schema: {$ref: '#/components/schemas/NumberingSeriesResponse'}}}}
     NumberingSeriesCollection: {description: Numbering series collection., content: {application/json: {schema: {$ref: '#/components/schemas/NumberingSeriesCollection'}}}}
     NumberingSeriesValidationResponse: {description: Non-consuming numbering configuration validation response., content: {application/json: {schema: {$ref: '#/components/schemas/NumberingSeriesValidationResponse'}}}}
@@ -3516,6 +3529,29 @@ components:
     ResourceAction: {type: object, required: [id, resource_id, code, description], additionalProperties: false, properties: {id: {$ref: '#/components/schemas/BigInt'}, resource_id: {$ref: '#/components/schemas/BigInt'}, code: {type: string}, description: {type: [string, 'null']}}}
     ResourceActionSummary: {type: object, required: [id, code, description], additionalProperties: false, properties: {id: {$ref: '#/components/schemas/BigInt'}, code: {type: string}, description: {type: [string, 'null']}}}
     NumberingSeries: {type: object, required: [id, resource_id, series_code, name, scope_type, pattern, reset_policy, generation_mode, start_number, increment_by, is_default, status], properties: {id: {$ref: '#/components/schemas/BigInt'}, resource_id: {$ref: '#/components/schemas/BigInt'}, series_code: {type: string}, name: {type: string}, scope_type: {type: string, enum: [GROUP, COMPANY, ORGANIZATION]}, pattern: {type: string}, reset_policy: {type: string, enum: [NEVER, YEARLY, MONTHLY, DAILY]}, generation_mode: {type: string, enum: [AUTO_REQUIRED, AUTO_IF_EMPTY]}, start_number: {$ref: '#/components/schemas/BigInt'}, increment_by: {type: integer, minimum: 1}, is_default: {type: boolean}, status: {type: string, enum: [ACTIVE, INACTIVE]}}}
+    AutoNumberingOverviewResource:
+      type: object
+      additionalProperties: false
+      required: [id, type, name, domain, status, allowed_actions]
+      properties:
+        id: {$ref: '#/components/schemas/BigInt'}
+        type: {type: string}
+        name: {type: string}
+        domain: {type: string, enum: [SYSTEM, MASTER, ORGANIZATION]}
+        status: {type: string, enum: [ACTIVE, INACTIVE]}
+        allowed_actions:
+          type: object
+          additionalProperties: false
+          required: [configure_numbering]
+          properties:
+            configure_numbering: {type: boolean, const: true}
+    AutoNumberingOverview:
+      type: object
+      additionalProperties: false
+      required: [resources, series]
+      properties:
+        resources: {type: array, items: {$ref: '#/components/schemas/AutoNumberingOverviewResource'}}
+        series: {type: array, items: {$ref: '#/components/schemas/NumberingSeries'}}
     NumberingSeriesCreate: {type: object, required: [series_code, name, scope_type, pattern, reset_policy, generation_mode, start_number, increment_by, is_default, status], properties: {series_code: {type: string}, name: {type: string}, scope_type: {type: string, enum: [GROUP, COMPANY, ORGANIZATION]}, pattern: {type: string}, reset_policy: {type: string, enum: [NEVER, YEARLY, MONTHLY, DAILY]}, generation_mode: {type: string, enum: [AUTO_REQUIRED, AUTO_IF_EMPTY]}, start_number: {$ref: '#/components/schemas/BigInt'}, increment_by: {type: integer, minimum: 1}, is_default: {type: boolean}, status: {type: string, enum: [ACTIVE, INACTIVE]}}}
     NumberingSeriesValidationRequest:
       allOf:
@@ -3544,6 +3580,7 @@ components:
     AuthorizationGroupCollection: {allOf: [{$ref: '#/components/schemas/CollectionResponse'}], properties: {data: {type: array, items: {$ref: '#/components/schemas/AuthorizationGroup'}}}}
     ResourceResponse: {allOf: [{$ref: '#/components/schemas/SuccessResponse'}], properties: {data: {$ref: '#/components/schemas/Resource'}}}
     ResourceCollection: {allOf: [{$ref: '#/components/schemas/CollectionResponse'}], properties: {data: {type: array, items: {$ref: '#/components/schemas/Resource'}}}}
+    AutoNumberingOverviewResponse: {allOf: [{$ref: '#/components/schemas/SuccessResponse'}], properties: {data: {$ref: '#/components/schemas/AutoNumberingOverview'}}}
     NumberingSeriesResponse: {allOf: [{$ref: '#/components/schemas/SuccessResponse'}], properties: {data: {$ref: '#/components/schemas/NumberingSeries'}}}
     NumberingSeriesCollection: {allOf: [{$ref: '#/components/schemas/CollectionResponse'}], properties: {data: {type: array, items: {$ref: '#/components/schemas/NumberingSeries'}}}}
     NumberingSeriesValidationResponse: {allOf: [{$ref: '#/components/schemas/SuccessResponse'}], properties: {data: {$ref: '#/components/schemas/NumberingSeriesValidation'}}}

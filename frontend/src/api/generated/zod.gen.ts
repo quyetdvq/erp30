@@ -1817,6 +1817,26 @@ export const zNumberingSeries = z.object({
     status: z.enum(['ACTIVE', 'INACTIVE'])
 });
 
+export const zAutoNumberingOverviewResource = z.object({
+    id: zBigInt,
+    type: z.string(),
+    name: z.string(),
+    domain: z.enum([
+        'SYSTEM',
+        'MASTER',
+        'ORGANIZATION'
+    ]),
+    status: z.enum(['ACTIVE', 'INACTIVE']),
+    allowed_actions: z.object({
+        configure_numbering: z.literal(true)
+    })
+});
+
+export const zAutoNumberingOverview = z.object({
+    resources: z.array(zAutoNumberingOverviewResource),
+    series: z.array(zNumberingSeries)
+});
+
 export const zNumberingSeriesCreate = z.object({
     series_code: z.string(),
     name: z.string(),
@@ -2009,6 +2029,10 @@ export const zResourceResponse = zSuccessResponse.and(z.object({
 
 export const zResourceCollection = zCollectionResponse.and(z.object({
     data: z.array(zResource).optional()
+}));
+
+export const zAutoNumberingOverviewResponse = zSuccessResponse.and(z.object({
+    data: zAutoNumberingOverview.optional()
 }));
 
 export const zNumberingSeriesResponse = zSuccessResponse.and(z.object({
@@ -3314,6 +3338,16 @@ export const zUpdateResourceActionPath = z.object({
  * Successful API response.
  */
 export const zUpdateResourceActionResponse = zSuccessResponse;
+
+export const zGetAutoNumberingOverviewHeaders = z.object({
+    'Accept-Language': z.enum(['vi', 'en']).optional().default('vi'),
+    'X-Request-ID': zRequestId.optional()
+});
+
+/**
+ * Authorized Resource catalog and complete Numbering Series snapshot.
+ */
+export const zGetAutoNumberingOverviewResponse = zAutoNumberingOverviewResponse;
 
 export const zListNumberingSeriesHeaders = z.object({
     'Accept-Language': z.enum(['vi', 'en']).optional().default('vi'),

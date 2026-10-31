@@ -19,9 +19,31 @@ test('filtering reuses complete authorized Resource snapshots and Refresh bypass
   assert.match(view, /if \(normalizeApiError\(caught\)\?\.status !== 403\) return false/)
   assert.match(view, /deniedReadUntilRefresh\.value = true/)
   assert.match(view, /if \(!deniedReadUntilRefresh\.value\) void loadResources\(\)/)
-  assert.match(view, /numberSeriesSnapshotForAll\(ids, data\)/)
+  assert.match(view, /numberSeriesSnapshotForAll\(ids, result\.series\)/)
   assert.match(view, /numberSeriesSnapshotForResource\(seriesSnapshots\.value, resourceId, result\.data\)/)
   assert.match(browser, /reuses the All resource snapshot across filter changes without duplicate GETs/)
+})
+
+test('403 is handled before the PBAC readiness/generation guard can swallow it', () => {
+  assert.match(view, /function handleReadDenial\(caught: unknown, requestSession: number\): boolean/)
+  assert.match(view, /requestSession === auth\.getSessionGeneration\(\)/)
+  assert.match(view, /\} catch \(caught: unknown\) \{\s*\/\/ PBAC revalidation[\s\S]*?if \(handleReadDenial\(caught, requestSession\)\) return\s*if \(generation !== resourceLoadGeneration \|\| !canConfigure\.value\) return/)
+  assert.match(view, /\} catch \(caught: unknown\) \{\s*\/\/ Treat 403[\s\S]*?if \(handleReadDenial\(caught, requestSession\)\) return\s*if \(!canConfigure\.value \|\| generation !== seriesLoadGeneration\) return/)
+  assert.match(browser, /a denied Resource refresh fails closed and clears the entire list/)
+})
+
+test('Auto Numbering leaves SearchableSelect popup behavior to Naive UI and tests real Refresh interaction', () => {
+  const select = read('src/components/forms/SearchableSelect.vue')
+  const unit = read('src/components/forms/__tests__/SearchableSelect.spec.ts')
+  assert.doesNotMatch(view, /:blur-on-clear=/)
+  assert.doesNotMatch(select, /blurOnClear|filterMenuOpen|@update:show|:show=/)
+  assert.match(select, /@update:value="updateValue"/)
+  assert.match(unit, /uses the placeholder for an empty resource filter and restores it after clearing/)
+  assert.match(unit, /keeps popup visibility uncontrolled while clear and reselect update only the filter value/)
+  assert.doesNotMatch(unit, /\$emit\('update:show', true\)/)
+  assert.match(browser, /Clearing an NSelect value is not a request to close its filter menu/)
+  assert.match(browser, /await page\.locator\('\.page-heading h1'\)\.click\(\)/)
+  assert.doesNotMatch(browser, /\.n-base-select-option:visible'\)\)\.toHaveCount\(0\)/)
 })
 
 test('a successful mutation merges the canonical response, never reloads all Resource lists', () => {

@@ -11,9 +11,12 @@ use CodeIgniter\Controller;
 use CodeIgniter\HTTP\ResponseInterface;
 use CodeIgniter\Shield\Entities\User;
 
-/** Six exact Resource Numbering Series API operations from baseline v1.2.4. */
+/** Resource Numbering Series API-040 operations plus the additive overview read model. */
 final class NumberingController extends Controller
 {
+    public function overview(): ResponseInterface
+    { return ApiResponder::success($this->response, $this->service()->overview()); }
+
     public function listing(string $resource): ResponseInterface
     {
         $data = $this->service()->listing($resource);

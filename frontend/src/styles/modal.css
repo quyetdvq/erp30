@@ -8,7 +8,6 @@
   align-items: center;
   gap: var(--ds-space-3);
   min-width: 0;
-  
 }
 .modal-card__header {
   justify-content: space-between;
