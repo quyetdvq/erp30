@@ -38,7 +38,16 @@
   overflow: hidden;
 }
 .tabbed-detail-workspace > :is(.modal-card__header, .detail-header, .detail-back, .modal-card__footer, .detail-footer, .detail-tabs, .workflow-tabs, .security-tabs) { flex: 0 0 auto; min-width: 0; }
-.tabbed-detail-workspace > :is(.modal-card__body, .detail-body, .tabbed-detail-workspace__body) { flex: 1 1 auto; min-width: 0; min-height: 0; overflow-y: auto; overflow-x: auto; overscroll-behavior: contain; scrollbar-gutter: stable; }
+.tabbed-detail-workspace > :is(.modal-card__body, .detail-body, .tabbed-detail-workspace__body) { 
+flex: 1 1 auto; 
+min-width: 0; 
+min-height: 0; 
+overflow-y: auto; 
+overflow-x: auto; 
+overscroll-behavior: contain; 
+scrollbar-gutter: none; 
+}
+
 .tabbed-detail-workspace > :is(.detail-tabs, .security-tabs, .workflow-tabs) { overflow-x: auto; white-space: nowrap; }
 .business-detail-header-main { display: flex; flex: 1 1 auto; align-items: center; flex-wrap: wrap; gap: 8px 14px; min-width: 0; }
 .business-detail-header-main .modal-card-title { min-width: 0; overflow-wrap: anywhere; }
@@ -65,7 +74,15 @@
 .ds-modal--xl { width: min(var(--ds-modal-width-xl), calc(100vw - 40px)); }
 .ds-modal__header { display: flex; flex: 0 0 auto; align-items: center; justify-content: space-between; gap: var(--ds-space-3); padding: var(--ds-space-4) var(--ds-space-5); border-bottom: 1px solid var(--ds-border-subtle); }
 .ds-modal__title { display: flex; align-items: center; gap: var(--ds-space-2); min-width: 0; margin: 0; color: var(--ds-text-primary); font-size: var(--ds-font-xl); font-weight: 650; line-height: var(--ds-line-height); overflow-wrap: anywhere; }
-.ds-modal__body { flex: 1 1 auto; min-height: 0; padding: var(--ds-space-5); overflow: auto; overscroll-behavior: contain; }
+
+.ds-modal__body { 
+flex: 1 1 auto; 
+min-height: 0; 
+padding: var(--ds-space-4); 
+overflow: auto; 
+overscroll-behavior: none; 
+}
+
 .ds-modal__footer { display: flex; flex: 0 0 auto; align-items: center; justify-content: flex-end; flex-wrap: wrap; gap: var(--ds-space-2); padding: var(--ds-space-3) var(--ds-space-5); border-top: 1px solid var(--ds-border-subtle); }
 .ds-modal__title-icon { display: inline-flex; flex: 0 0 auto; color: var(--ds-primary); }
 @media (max-width: 600px) { .ds-modal { max-height: calc(100dvh - 24px); width: calc(100vw - 24px); } .ds-modal__header, .ds-modal__body, .ds-modal__footer { padding: var(--ds-space-3); } }
@@ -149,8 +166,8 @@
   overflow-x: auto;
   overflow-y: auto;
   overscroll-behavior: contain;
-  scrollbar-gutter: stable;
-  padding: var(--ds-space-5);
+  scrollbar-gutter: none;
+  padding: var(--ds-space-1);
   color: var(--ds-text-primary);
 }
 .ds-dialog-host .ds-dialog-surface > :is([role='tablist'], .detail-tabs, .security-tabs,

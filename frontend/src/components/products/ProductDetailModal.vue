@@ -1095,8 +1095,7 @@ watch(
   overflow-y: auto;
   overflow-x: hidden;
   overscroll-behavior: contain;
-  scrollbar-gutter: stable;
-  padding: 18px 20px 24px;
+  padding: 10px 0px;
 }
 .tab-panel {
   display: grid;

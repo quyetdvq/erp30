@@ -28,9 +28,14 @@
 .ds-detail-tabs > button.active { border-bottom-color: var(--ds-primary); color: var(--ds-primary); font-weight: 700; }
 .ds-detail-tabs > button:focus-visible { outline: 2px solid var(--ds-focus-ring); outline-offset: -2px; }
 .ds-detail-body {
-  flex: 1 1 auto; min-width: 0; min-height: 0;
-  overflow-x: hidden; overflow-y: auto; overscroll-behavior: contain;
-  scrollbar-gutter: stable; padding: 18px 20px 24px;
+  flex: 1 1 auto; 
+  min-width: 0; 
+  min-height: 0;
+  overflow-x: hidden; 
+  overflow-y: auto; 
+  overscroll-behavior: contain;
+  scrollbar-gutter: none; 
+  padding: 10px 0px;
   color: var(--ds-text-primary);
 }
 .ds-detail-form-grid {
