@@ -609,7 +609,7 @@ onMounted(() => void load())
     </ListShell>
   </section>
 
-  <AppDialogHost :open="modalOpen" size="md" @close="closeForm">
+  <AppDialogHost :open="modalOpen" size="md" @close="closeForm" variant="standard">
     <section v-if="modalOpen" class="ds-dialog-surface modal-card" role="dialog" aria-modal="true" :aria-label="t('pricing.form')">
       <header class="modal-card__header">
         <h2 class="modal-card-title">
@@ -691,7 +691,7 @@ onMounted(() => void load())
     </section>
   </AppDialogHost>
 
-  <AppDialogHost :open="Boolean(detailOpen && detailRow)" size="xl" @close="closeDetail">
+  <AppDialogHost :open="Boolean(detailOpen && detailRow)" size="xl" @close="closeDetail" variant="standard">
     <section v-if="detailOpen && detailRow"
       class="ds-dialog-surface modal-card price-items-modal"
       role="dialog"
@@ -877,23 +877,8 @@ onMounted(() => void load())
   white-space: nowrap;
 }
 
-.modal-card__body {
-  display: grid;
-  gap: 12px;
-  max-height: calc(100vh - 150px);
-  overflow: auto;
-  padding: 22px;
-}
-
 /* Keep header/footer visible and scroll the BODY of the item editor.
    Previously the body and footer could exceed the clipped modal in WebKit. */
-
-.price-items-modal .modal-card__body {
-  flex: 1 1 auto;
-  min-height: 0;
-  max-height: none;
-  overflow-y: auto;
-}
 
 .price-items-modal .items-section {
   min-width: 0;

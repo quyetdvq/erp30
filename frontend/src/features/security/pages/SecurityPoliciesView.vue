@@ -328,7 +328,7 @@ onMounted(() => {
   </section>
 
   <!-- View is never an editor: render plain values and no mutation controls. -->
-  <AppDialogHost :open="viewingPolicy !== null" size="lg" @close="closeView">
+  <AppDialogHost :open="viewingPolicy !== null" size="lg" @close="closeView" variant="standard">
     <section v-if="viewingPolicy" class="ds-dialog-surface modal-card policy-view-modal" role="dialog" aria-modal="true"
       :aria-label="t('security.policyView')">
       <header class="modal-card__header">
@@ -361,7 +361,7 @@ onMounted(() => {
     </section>
   </AppDialogHost>
 
-  <AppDialogHost :open="modalOpen" size="lg" @close="closeForm">
+  <AppDialogHost :open="modalOpen" size="lg" @close="closeForm" variant="standard">
     <section v-if="modalOpen" class="ds-dialog-surface modal-card policy-form-modal" role="dialog" aria-modal="true"
       :aria-label="t('security.policyForm')">
       <header class="modal-card__header">

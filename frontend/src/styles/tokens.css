@@ -7,9 +7,10 @@
   color-scheme: light;
   --ds-bg-canvas: #f4f7fb;
   --ds-bg-surface: #ffffff;
+  --ds-bg-modal-header: #EFFBFB;
   --ds-bg-elevated: #ffffff;
   --ds-bg-subtle: #f1f5fa;
-  --ds-bg-hover: #eaf2f8;
+  --ds-bg-hover: #B1E3F2;
   --ds-bg-selected: #e6f3f5;
   /* Text highlight must never reuse the subtle hover/selected surface. */
   --ds-selection-bg: #075c99;
@@ -91,6 +92,9 @@
   --ds-modal-width-xl: 1120px;
   --ds-modal-width-wide: 1800px;
   --ds-modal-max-height: calc(100dvh - 40px);
+  --ds-dialog-body-padding: var(--ds-space-4);
+  --ds-dialog-chrome-block: var(--ds-space-3);
+  --ds-dialog-chrome-inline: var(--ds-space-4);
   --ds-layer-dropdown: 950;
   --ds-layer-overlay: 900;
   --ds-layer-toast: 999;
@@ -105,6 +109,7 @@
   --ds-bg-elevated: #1c2b39;
   --ds-bg-subtle: #223242;
   --ds-bg-hover: #2b4052;
+  --ds-bg-modal-header: #2b4052;
   --ds-bg-selected: #1d4650;
   --ds-selection-bg: #9ed6ff;
   --ds-selection-text: #081a2b;

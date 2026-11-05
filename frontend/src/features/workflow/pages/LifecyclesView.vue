@@ -401,7 +401,7 @@ onMounted(() => void load())
     </ListShell>
   </section>
 
-  <AppDialogHost :open="Boolean(detailOpen && selected)" size="xl" @close="detailOpen = false">
+  <AppDialogHost :open="Boolean(detailOpen && selected)" size="xl" @close="detailOpen = false" variant="detail">
     <section v-if="detailOpen && selected" class="ds-dialog-surface modal-card tabbed-detail-workspace" role="dialog" aria-modal="true" aria-labelledby="lifecycle-detail-title"
       :aria-hidden="stateModalOpen || transitionModalOpen" :inert="stateModalOpen || transitionModalOpen">
       <header class="modal-card__header">
@@ -562,7 +562,7 @@ onMounted(() => void load())
     </section>
   </AppDialogHost>
 
-  <AppDialogHost :open="modalOpen" size="md" @close="closeForm">
+  <AppDialogHost :open="modalOpen" size="md" @close="closeForm" variant="standard">
     <section v-if="modalOpen" class="ds-dialog-surface modal-card" role="dialog" aria-modal="true" :aria-label="t('workflow.lifecycleForm')">
       <header class="modal-card__header">
         <h2 class="modal-card-title">
@@ -598,7 +598,7 @@ onMounted(() => void load())
     </section>
   </AppDialogHost>
 
-  <AppDialogHost :open="stateModalOpen" size="md" @close="closeStateForm">
+  <AppDialogHost :open="stateModalOpen" size="md" @close="closeStateForm" variant="standard">
     <section v-if="stateModalOpen" ref="stateDialog" class="ds-dialog-surface modal-card" role="dialog" aria-modal="true"
       :aria-label="t('workflow.stateMembershipForm')" tabindex="-1">
       <header class="modal-card__header">
@@ -650,7 +650,7 @@ onMounted(() => void load())
     </section>
   </AppDialogHost>
 
-  <AppDialogHost :open="transitionModalOpen" size="md" @close="closeTransitionForm">
+  <AppDialogHost :open="transitionModalOpen" size="md" @close="closeTransitionForm" variant="standard">
     <section v-if="transitionModalOpen" ref="transitionDialog" class="ds-dialog-surface modal-card" role="dialog" aria-modal="true"
       :aria-label="t('workflow.transitionForm')" tabindex="-1">
       <header class="modal-card__header">
@@ -771,25 +771,6 @@ onMounted(() => void load())
   display: block;
   margin-top: 3px;
   font-weight: 400;
-}
-
-.modal-card__body label {
-  display: grid;
-  gap: 5px;
-  color: var(--ds-text-secondary);
-  font-size: 12px;
-  font-weight: 600;
-}
-
-.modal-card__body input,
-.modal-card__body select,
-.modal-card__body textarea {
-  min-height: 34px;
-  border: 1px solid var(--ds-border);
-  border-radius: 4px;
-  padding: 7px 9px;
-  color: var(--ds-text-primary);
-  font: inherit;
 }
 
 .sr-only {

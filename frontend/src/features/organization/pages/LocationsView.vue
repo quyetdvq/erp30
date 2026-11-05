@@ -357,7 +357,7 @@ onUnmounted(() => {
   </section>
   <TableDetailModal :open="detailOpen" :title="t('common.view') + ' - ' + title" :fields="detailFields"
     @close="detailOpen = false" />
-  <AppDialogHost :open="modalOpen" size="sm" @close="closeForm">
+  <AppDialogHost :open="modalOpen" size="sm" @close="closeForm" variant="standard">
     <section v-if="modalOpen" class="ds-dialog-surface modal-card" role="dialog" aria-modal="true" :aria-label="t('common.form')">
       <header class="modal-card__header">
         <h2 class="modal-card-title">

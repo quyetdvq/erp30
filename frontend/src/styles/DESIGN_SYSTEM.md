@@ -18,6 +18,83 @@ Naive UI portals use the same semantic colors as AppShell.
 | Paging and row actions | `.list-pagination`, `.table-row-actions` | Shared List components |
 | Semantic statuses | `.table-status`, `.status-pill`, `.tag` | List/status components |
 
+## Modal/Form visual QA — responsive cascade HF02 (post HF01)
+
+A real Chromium computed-style audit found a regression the source gates could
+not detect: the narrow form grid stayed at **two columns on a 375px viewport**.
+In `forms.css`, the desktop selector `.ds-dialog-host .ds-dialog-surface :is(...)`
+has greater specificity than the old `@container` override using only
+`.ds-dialog-surface :is(...)`. The `@container ds-dialog (max-width: 560px)`
+override **must match the desktop selector specificity** to switch to one
+column. Do not replace it with a weaker media query or duplicate feature CSS.
+
+New guards:
+
+- `scripts/design-system/modal-form-unification.test.cjs` checks the narrow
+  selector contract as part of `pnpm run check:design-system` (source gate).
+- `e2e/modal-form-visual-qa.spec.ts` runs Chromium against the actual shared
+  CSS. It checks `standard`, `detail`, and `utility` variants in Light/Dark at
+  1440, 768, 600, 580, 375 and 320px; checks computed styles, overflow, focus,
+  textarea and checkbox geometry, grid breakpoints, fixed tabs and footer,
+  and attaches screenshots for manual comparison (browser gate).
+
+```powershell
+cd D:\XAMPP\htdocs\erp\frontend
+pnpm run check:design-system
+pnpm exec playwright test e2e/modal-form-visual-qa.spec.ts --project=chromium --reporter=line
+```
+
+This is **an isolated CSS fixture**: no Vue mount, Naive portal focus trap,
+PBAC, backend API, real authentication, CAS, or dirty-edit workflow. The live
+DEV smoke test for Customer/Supplier/Products/Security/Workflow and the actual
+modal layer/keyboard flow remains required for a production release.
+
+## Modal / Form unification — v2.5.0
+
+All business dialogs use `AppDialogHost` (`NModal` owns focus trapping,
+Escape, backdrop and scroll lock). Each host declares **exactly one**
+`variant="standard|detail|utility"` without changing its existing
+`:open`, `@close`, PBAC/CAS, confirmation or mutation handling.
+
+| Variant | Use | Presentation owner |
+| --- | --- | --- |
+| `standard` | Create/Edit, action, nested editor, association picker | `modal.css` |
+| `detail` | Product, Customer, Supplier, Security and Workflow workspaces with tabs | `modal.css` + `detail-workspace.css` |
+| `utility` | Confirm and command/compact dialogs | `modal.css` compact token override |
+
+**Only three stylesheets own the modal/form visual contract:**
+
+1. `modal.css` owns the surface, header/body/footer geometry, scroll region,
+   width and responsive chrome. Standard body padding is 16px, compact utility
+   is 12px; do not revive the old 4px body override.
+2. `forms.css` owns native input/select/textarea geometry (36px line controls),
+   label, placeholder, help/validation, hover/focus/disabled/readonly states
+   and responsive `.form-grid` / `.ds-detail-form-grid`. Keep multiline
+   textarea height flexible. Native checkbox/radio and Naive UI internals are
+   excluded from text-input chrome; `buttons.css` owns action controls.
+3. `detail-workspace.css` owns only tabbed workspace and detail navigation
+   layout (header/tab/footer stationary, body scrolls). It must **not**
+   redefine input geometry, errors, surface chrome or form-control states.
+
+View `<style scoped>` may define **business-only** composition such as
+relationships, interaction timelines, tables, chips and status panels, but
+never `.modal-card__header`, `.modal-card__footer`, direct
+`.modal-card__body` padding or another copy of the shared notification editor.
+Changes to modal or form styles should include source gates in
+`frontend/scripts/design-system/modal-form-unification.test.cjs`; to run:
+
+```powershell
+cd D:\XAMPP\htdocs\erp\frontend
+pnpm run check:design-system
+pnpm run type-check
+pnpm run build-only
+```
+
+A green source gate is **not** a visual regression acceptance. Manually
+check Light/Dark at desktop/mobile widths; native and Naive fields;
+buttons/headers/tabs; validation; body scrolling; nested dialogs; Escape;
+unsaved changes and Supplier row-version conflicts before deployment.
+
 **Rules:**
 
 1. Use `var(--ds-*)` rather than local hex/rgb colors. Use semantic tokens for

@@ -67,15 +67,17 @@ test('DS3 common CSS is imported once and every DS3 token resolves in both palet
 
 test('Customer/Supplier detail presentation is shared; guards and CAS stay separate', () => {
   const common = css('detail-workspace')
+  const fields = css('forms')
   for (const cls of ['ds-detail-workspace--fixed', 'ds-detail-tabs', 'ds-detail-body',
     'ds-detail-form-grid', 'ds-detail-form-wide', 'ds-detail-required', 'ds-detail-error']) {
-    assert.ok(common.includes(`.${cls}`), `shared contract ${cls}`)
+    const owner = cls.includes('form') || cls.includes('required') || cls.includes('error') ? fields : common
+    assert.ok(owner.includes(`.${cls}`), `shared contract ${cls}`)
     for (const module of ['customer/pages/CustomerDetailView', 'supplier/pages/SupplierDetailView']) {
       assert.ok(vue(`features/${module}`).includes(cls), `${module} missing ${cls}`)
     }
   }
   assert.match(common, /@media \(max-width: 640px\)/)
-  assert.match(common, /:not\(\.n-base-selection \*, \.n-input \*\)/)
+  assert.match(fields, /:not\(\.n-base-selection \*, \.n-input \*\)/)
   assert.match(vue('features/customer/pages/CustomerDetailView'), /profileDraft\.confirmDiscard\(\)/)
   assert.match(vue('features/customer/pages/CustomerDetailView'), /contactDraft\.confirmDiscard\(\)/)
   assert.match(vue('features/supplier/pages/SupplierDetailView'), /unsaved\.confirmDiscard\(\)/)

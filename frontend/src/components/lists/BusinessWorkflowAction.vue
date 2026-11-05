@@ -214,7 +214,7 @@ async function apply(): Promise<void> {
     <span v-if="variant !== 'icon'">{{ t('workflow.changeState') }}</span>
   </button>
 
-    <AppDialogHost :open="dialog" size="md" :mask-closable="true" @close="closeDialog">
+    <AppDialogHost :open="dialog" size="md" :mask-closable="true" @close="closeDialog" variant="standard">
     <section v-if="dialog" ref="dialogElement" class="ds-dialog-surface workflow-dialog" role="dialog" aria-modal="true"
       :aria-label="t('workflow.changeState')">
       <header class="modal-card__header workflow-dialog__header">
@@ -341,62 +341,19 @@ async function apply(): Promise<void> {
 .workflow-action-icon:hover:not(:disabled),
 .workflow-action-icon:focus-visible { border-color: var(--ds-warning); }
 .workflow-action-icon:disabled { opacity: 0.5; cursor: not-allowed; }
-.workflow-dialog__header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-  min-width: 0;
-  flex: 0 0 auto;
-}
-.workflow-dialog__title {
-  display: inline-flex;
-  align-items: center;
-  gap: 9px;
-  min-width: 0;
-  font-size: 19px;
-}
+
 .workflow-dialog__body {
   display: grid;
   align-content: start;
   gap: 18px;
-  padding: 18px 24px 24px;
   min-height: 0;
   min-width: 0;
-  overflow-y: auto;
-  overflow-x: hidden;
 }
 .workflow-dialog__body > *, .workflow-notify-heading > * { min-width: 0; }
-.workflow-dialog__footer { flex: 0 0 auto; display: flex; gap: 8px; justify-content: flex-end; }
+
 .workflow-dialog h3 { margin: 0; font-size: 15px; color: var(--ds-text-primary); }
 .workflow-transition-section { display: grid; gap: 10px; min-width: 0; }
 .workflow-current-state { margin: 0; font-size: 13px; color: var(--ds-text-secondary); }
-.workflow-select-label { display: grid; gap: 8px; min-width: 0; font-size: 13px; }
-.workflow-select-label select {
-  display: block;
-  width: 100%;
-  min-width: 0;
-  min-height: 38px;
-  padding: 8px;
-  border: 1px solid var(--ds-border-subtle);
-  border-radius: 4px;
-  background: var(--ds-bg-surface);
-  color: var(--ds-text-primary);
-}
-.workflow-notify-section { min-width: 0; display: grid; gap: 12px; padding-top: 16px; border-top: 1px solid var(--ds-border-subtle); }
-.workflow-notify-heading { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 10px; min-width: 0; }
-.workflow-notify-title { flex: 1 1 230px; }
-.workflow-notify-title p, .workflow-notify-hint { margin: 6px 0 0; font-size: 12px; line-height: 1.6; color: var(--ds-text-secondary); overflow-wrap: anywhere; }
-.workflow-notify-toggle { flex: 0 0 auto; }
-.workflow-notify-editor { display: grid; gap: 12px; min-width: 0; padding: 12px; border: 1px solid var(--ds-border-subtle); border-radius: 6px; background: var(--ds-bg-subtle); }
-.workflow-assignee-label { font-size: 12px; font-weight: 700; color: var(--ds-text-secondary); }
-.workflow-notify-controls { display: flex; align-items: center; flex-wrap: wrap; gap: 10px; justify-content: space-between; }
-.workflow-notify-controls > span { font-size: 12px; color: var(--ds-text-secondary); }
-.workflow-error, .workflow-unsaved-notice { color: var(--ds-danger); font-size: 12px; margin: 0; overflow-wrap: anywhere; }
-.workflow-success { font-size: 12px; color: var(--ds-success); margin: 0; }
-.workflow-notify-retry { display: grid; justify-items: start; gap: 8px; }
-@media (max-width: 560px) {
-  .workflow-dialog__body { padding: 14px 16px 18px; }
-  .workflow-dialog__footer { flex-wrap: wrap; }
-}
+.workflow-select-label { min-width: 0; }
+
 </style>

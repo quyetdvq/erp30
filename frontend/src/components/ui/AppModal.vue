@@ -9,11 +9,12 @@ withDefaults(
     open: boolean
     title: string
     size?: 'sm' | 'md' | 'lg' | 'xl' | 'wide'
+    variant?: 'standard' | 'detail' | 'utility'
     closeOnEsc?: boolean
     maskClosable?: boolean
     showClose?: boolean
   }>(),
-  { size: 'md', closeOnEsc: true, maskClosable: false, showClose: true },
+  { size: 'md', variant: 'utility', closeOnEsc: true, maskClosable: false, showClose: true },
 )
 
 const emit = defineEmits<{
@@ -34,6 +35,7 @@ function requestClose(): void {
   <AppDialogHost
     :open="open"
     :size="size"
+    :variant="variant"
     :mask-closable="maskClosable"
     :close-on-esc="closeOnEsc"
     @close="requestClose"

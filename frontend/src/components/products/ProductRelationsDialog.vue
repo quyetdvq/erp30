@@ -77,7 +77,7 @@ watch(
 
 <template>
 
-    <AppDialogHost :open="open" size="lg" :mask-closable="true" @close="emit('close')">
+    <AppDialogHost :open="open" size="lg" :mask-closable="true" @close="emit('close')" variant="standard">
       <section v-if="open"
         class="ds-dialog-surface relation-dialog"
         role="dialog"
@@ -170,34 +170,17 @@ watch(
 </template>
 
 <style scoped>
-.relation-dialog-header {
-  display: flex;
-  justify-content: space-between;
-  gap: 20px;
-  padding: 22px 26px 18px;
-  border-bottom: 1px solid var(--ds-border-subtle);
-}
+
 .relation-eyebrow {
   margin: 0 0 6px;
   color: var(--ds-primary);
   font-size: 12px;
   font-weight: 700;
 }
-.relation-dialog-header h2 {
-  margin: 0;
-  font-size: 20px;
-  line-height: 1.3;
-  overflow-wrap: anywhere;
-}
 .relation-subtitle {
   margin: 8px 0 0;
   color: var(--ds-text-secondary);
   font-size: 13px;
-}
-.relation-dialog-body {
-  min-height: 100px;
-  overflow: auto;
-  padding: 18px 26px;
 }
 .relation-table-scroll {
   overflow: auto;
@@ -271,13 +254,6 @@ watch(
   color: var(--ds-text-secondary);
   text-align: center;
 }
-.relation-dialog-footer {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  padding: 14px 26px;
-  border-top: 1px solid var(--ds-border-subtle);
-}
 .relation-page-info {
   color: var(--ds-text-secondary);
   font-size: 12px;
@@ -290,16 +266,5 @@ watch(
   font-size: 12px;
 }
 .relation-done { margin-inline-start: auto; }
-@media (max-width: 700px) {
-  .relation-dialog-header,
-  .relation-dialog-footer {
-    padding-inline: 16px;
-  }
-  .relation-dialog-body {
-    padding: 12px;
-  }
-  .relation-dialog-footer {
-    flex-wrap: wrap;
-  }
-}
+
 </style>

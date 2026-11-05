@@ -192,7 +192,7 @@ onMounted(() => void load())
         " />
     </ListShell>
   </section>
-  <AppDialogHost :open="modalOpen" size="md" @close="closeForm">
+  <AppDialogHost :open="modalOpen" size="md" @close="closeForm" variant="standard">
     <section v-if="modalOpen" class="ds-dialog-surface modal-card" role="dialog" aria-modal="true" :aria-label="t('workflow.stateForm')">
       <header class="modal-card__header">
         <h2 class="modal-card-title">

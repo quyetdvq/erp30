@@ -51,7 +51,7 @@ onBeforeUnmount(restoreFocus)
 </script>
 
 <template>
-  <AppDialogHost :open="props.open" size="sm" @close="emit('close')">
+  <AppDialogHost :open="props.open" size="sm" @close="emit('close')" variant="utility">
     <section v-if="props.open"
       ref="dialog"
       class="ds-dialog-surface table-detail-modal"

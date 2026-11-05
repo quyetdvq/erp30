@@ -228,7 +228,7 @@ onBeforeUnmount(() => { ++requestSequence; ++assigneeSequence; if (returnFocusTo
     <template v-if="variant !== 'icon'"> {{ t('workflow.changeState') }}</template>
   </button>
 
-    <AppDialogHost :open="dialogOpen" size="lg" :mask-closable="true" @close="closeDialog">
+    <AppDialogHost :open="dialogOpen" size="lg" :mask-closable="true" @close="closeDialog" variant="standard">
       <section v-if="dialogOpen" ref="dialog" class="ds-dialog-surface supplier-state-dialog" role="dialog" aria-modal="true"
         :aria-label="t('workflow.changeState')">
         <header class="modal-card__header supplier-state-dialog__header">
@@ -332,18 +332,7 @@ onBeforeUnmount(() => { ++requestSequence; ++assigneeSequence; if (returnFocusTo
 </template>
 
 <style scoped>
-.workflow-notify-section { border-top: 1px solid var(--ds-border-subtle); padding-top: 18px; display: grid; gap: 12px; }
-.workflow-notify-heading { display: flex; align-items: center; justify-content: space-between; gap: 16px; }
-.workflow-notify-title { min-width: 0; }
-.workflow-notify-title p { margin: 10px 0 0; font-size: 13px; line-height: 1.6; color: var(--ds-text-secondary); }
-.workflow-notify-toggle { flex: 0 0 auto; }
-.workflow-notify-editor { padding: 15px; border: 1px solid var(--ds-border-subtle); border-radius: 6px; background: var(--ds-bg-subtle); display: grid; gap: 12px; min-width: 0; }
-.workflow-notify-hint { margin: 0; color: var(--ds-text-secondary); font-size: 13px; line-height: 1.6; }
-.workflow-assignee-label { color: var(--ds-text-secondary); font-size: 13px; font-weight: 600; }
-.workflow-notify-controls { display: flex; align-items: center; justify-content: space-between; gap: 10px; font-size: 12px; color: var(--ds-text-secondary); }
-.workflow-notify-retry { display: grid; gap: 8px; justify-items: start; }
-.workflow-error, .workflow-unsaved-notice { margin: 0; color: var(--ds-danger); font-size: 12px; }
-.workflow-success { margin: 0; color: var(--ds-success); font-size: 12px; }
+
 .supplier-state-action-icon {
   display: inline-flex; align-items: center; justify-content: center;
   width: 30px; height: 30px; padding: 0; border: 1px solid var(--ds-border-subtle);
@@ -352,29 +341,15 @@ onBeforeUnmount(() => { ++requestSequence; ++assigneeSequence; if (returnFocusTo
 .supplier-state-action-icon:hover:not(:disabled),
 .supplier-state-action-icon:focus-visible { border-color: var(--ds-warning); }
 .supplier-state-action-icon:disabled { opacity: 0.5; cursor: not-allowed; }
-.supplier-state-dialog__header { flex: 0 0 auto; min-width: 0; }
-.supplier-state-dialog__title { display: inline-flex; align-items: center; gap: 9px; min-width: 0; font-size: 19px; }
+
 .supplier-state-dialog__body {
-  display: grid; align-content: start; gap: 18px; padding: 18px 24px 24px;
-  min-height: 0; min-width: 0; overflow-y: auto; overflow-x: hidden;
+  display: grid; align-content: start; gap: 18px;
+  min-height: 0; min-width: 0;
 }
 .supplier-state-dialog__body > * { min-width: 0; }
 .supplier-state-transition-section { display: grid; gap: 10px; min-width: 0; }
 .supplier-state-dialog h3 { margin: 0; font-size: 15px; color: var(--ds-text-primary); }
 .supplier-state-current, .supplier-state-hint { margin: 0; color: var(--ds-text-secondary); font-size: 13px; }
 .supplier-state-current code { margin-inline-start: 4px; font-size: 11px; }
-.supplier-state-label { display: grid; gap: 8px; color: var(--ds-text-secondary); font-size: 13px; }
-.supplier-state-label select {
-  width: 100%; min-height: 38px; padding: 8px; min-width: 0;
-  border: 1px solid var(--ds-border-subtle); border-radius: 4px; background: var(--ds-bg-surface); color: var(--ds-text-primary);
-}
-.supplier-state-error { margin: 0; color: var(--ds-danger); font-size: 12px; }
-.supplier-state-dialog__footer { flex: 0 0 auto; display: flex; gap: 8px; justify-content: flex-end; }
-@media (max-width: 560px) {
-  .workflow-notify-heading { flex-direction: column; align-items: stretch; }
-  .workflow-notify-toggle { align-self: flex-start; }
-  .workflow-notify-controls { flex-wrap: wrap; }
-  .supplier-state-dialog__body { padding: 14px 16px 18px; }
-  .supplier-state-dialog__footer { flex-wrap: wrap; }
-}
+
 </style>

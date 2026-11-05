@@ -423,7 +423,7 @@ onMounted(() => void load())
     @close="detailOpen = false"
   />
 
-  <AppDialogHost :open="modalOpen" size="md" @close="closeForm">
+  <AppDialogHost :open="modalOpen" size="md" @close="closeForm" variant="standard">
     <section v-if="modalOpen"
       class="ds-dialog-surface modal-card"
       role="dialog"

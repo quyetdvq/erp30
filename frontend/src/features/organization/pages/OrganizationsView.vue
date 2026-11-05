@@ -346,7 +346,7 @@ onMounted(() => void load())
     </section>
   </section>
 
-  <AppDialogHost :open="modalOpen" size="lg" @close="closeForm">
+  <AppDialogHost :open="modalOpen" size="lg" @close="closeForm" variant="standard">
     <section v-if="modalOpen" class="ds-dialog-surface modal-card" role="dialog" aria-modal="true" :aria-label="t('organization.form')">
       <header class="modal-card__header">
 

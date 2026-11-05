@@ -508,7 +508,7 @@ watch(
 </script>
 
 <template>
-  <AppDialogHost :open="props.open" size="xl" :close-on-esc="!childFormOpen && !conversionEditorOpen" @close="emit('close')">
+  <AppDialogHost :open="props.open" size="xl" :close-on-esc="!childFormOpen && !conversionEditorOpen" @close="emit('close')" variant="detail">
     <section v-if="props.open"
       class="ds-dialog-surface detail-modal tabbed-detail-workspace"
       role="dialog"
@@ -856,7 +856,7 @@ watch(
       </footer>
     </section>
   </AppDialogHost>
-  <AppDialogHost :open="childFormOpen" size="sm" @close="childFormOpen = false">
+  <AppDialogHost :open="childFormOpen" size="sm" @close="childFormOpen = false" variant="standard">
     <section v-if="childFormOpen"
       class="ds-dialog-surface child-modal"
       role="dialog"
@@ -921,7 +921,7 @@ watch(
       </footer>
     </section>
   </AppDialogHost>
-  <AppDialogHost :open="conversionEditorOpen" size="sm" @close="conversionEditorOpen = false">
+  <AppDialogHost :open="conversionEditorOpen" size="sm" @close="conversionEditorOpen = false" variant="standard">
     <section v-if="conversionEditorOpen"
       class="ds-dialog-surface child-modal"
       role="dialog"
@@ -1095,7 +1095,6 @@ watch(
   overflow-y: auto;
   overflow-x: hidden;
   overscroll-behavior: contain;
-  padding: 10px 0px;
 }
 .tab-panel {
   display: grid;
@@ -1178,7 +1177,6 @@ watch(
   .product-detail-title { font-size: 16px; }
   .product-detail-role { display: none; }
   .detail-tabs { padding-inline: 10px; }
-  .detail-body { padding: 14px 12px 20px; }
   .section-header { flex-wrap: wrap; }
 }
 
@@ -1204,19 +1202,5 @@ watch(
   color: var(--ds-text-secondary);
   font-size: 12px;
 }
-.child-modal label {
-  display: grid;
-  gap: 5px;
-  color: var(--ds-text-secondary);
-  font-size: 12px;
-  font-weight: 600;
-}
-.child-modal input,
-.child-modal select {
-  min-height: 34px;
-  border: 1px solid var(--ds-border);
-  border-radius: 4px;
-  padding: 7px 9px;
-  font: inherit;
-}
+
 </style>

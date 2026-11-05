@@ -318,7 +318,7 @@ onMounted(() => void load())
     </ListShell>
   </section>
 
-  <AppDialogHost :open="Boolean(detailOpen && selected)" size="lg" @close="detailOpen = false">
+  <AppDialogHost :open="Boolean(detailOpen && selected)" size="lg" @close="detailOpen = false" variant="detail">
     <section v-if="detailOpen && selected" class="ds-dialog-surface modal-card tabbed-detail-workspace" role="dialog" aria-modal="true"
       :aria-label="`${t('security.authorizationGroup')}: ${selected.name}`">
       <header class="modal-card__header">
@@ -470,7 +470,7 @@ onMounted(() => void load())
     </section>
   </AppDialogHost>
 
-  <AppDialogHost :open="modalOpen" size="lg" @close="modalOpen = false">
+  <AppDialogHost :open="modalOpen" size="lg" @close="modalOpen = false" variant="standard">
     <section v-if="modalOpen" class="ds-dialog-surface modal-card" role="dialog" aria-modal="true" :aria-label="t('security.groupForm')">
       <header class="modal-card__header">
         <h2 class="modal-card-title">
@@ -572,19 +572,6 @@ onMounted(() => void load())
   color: var(--ds-danger);
   font-size: 12px;
 }
-
-.modal-card__body label {
-  gap: 5px;
-  color: var(--ds-text-secondary);
-  font-size: 12px;
-  font-weight: 400;
-}
-
-.modal-card__body textarea {
-  height: auto;
-  padding: 8px 10px;
-}
-
 
 .sr-only {
   position: absolute;

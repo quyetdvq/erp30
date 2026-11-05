@@ -11,10 +11,12 @@ const props = withDefaults(
   defineProps<{
     open: boolean
     size?: 'sm' | 'md' | 'lg' | 'xl' | 'wide'
+    /** Presentation only: no change to closing, state, or dirty guards. */
+    variant?: 'standard' | 'detail' | 'utility'
     closeOnEsc?: boolean
     maskClosable?: boolean
   }>(),
-  { size: 'md', closeOnEsc: true, maskClosable: false },
+  { size: 'md', variant: 'standard', closeOnEsc: true, maskClosable: false },
 )
 
 const emit = defineEmits<{ close: [] }>()
@@ -35,7 +37,7 @@ function onUpdateShow(value: boolean): void {
     :block-scroll="true"
     @update:show="onUpdateShow"
   >
-    <div class="ds-dialog-host" :class="`ds-dialog-host--${size}`">
+    <div class="ds-dialog-host" :class="[`ds-dialog-host--${size}`, `ds-dialog-host--${props.variant}`]">
       <slot />
     </div>
   </NModal>

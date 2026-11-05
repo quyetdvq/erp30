@@ -79,7 +79,4 @@ function updateValue(next: string | number | Array<string | number> | null): voi
   min-width: 0;
 }
 
-.searchable-select :deep(.n-base-selection) {
-  min-height: 34px;
-}
 </style>

@@ -117,32 +117,27 @@ test('Security Policy read-only dialog passes a boolean open state', () => {
   assert.doesNotMatch(code, /<AppDialogHost\s+:open="viewingPolicy"/)
 })
 
-// Regression for DS-P2 HF2: a global dialog selector formerly painted a
-// second border inside NSelect/NTreeSelect. Both widgets render native inputs
-// below .n-base-selection, and NInput uses .n-input.
-test('Naive UI controls retain their own borders and focus indicators inside dialogs', () => {
-  const css = read('src/styles/modal.css')
+// Native controls now have exactly one owner (forms.css). The old test was
+// checking modal.css because it predated the three-family design system.
+test('Native modal controls are styled in forms.css without touching Naive internals or checkbox geometry', () => {
+  const forms = read('src/styles/forms.css')
+  const modal = read('src/styles/modal.css')
   const base = read('src/styles/base.css')
-  const formSelectors = [...css.matchAll(/([^{}]+)\{[^{}]*\}/g)]
-    .map((match) => match[1])
-    .filter((selector) => selector.includes('.ds-dialog-host .ds-dialog-surface') &&
-      /:is\(input/.test(selector))
-  assert.ok(formSelectors.length >= 5, 'must keep native input, disabled, focus and error states')
-  for (const selector of formSelectors) {
+  assert.doesNotMatch(modal, /:is\(input|input:where/, 'modal.css must not own native controls')
+  const selectors = [...forms.matchAll(/([^{}]+)\{[^{}]*\}/g)].map((m) => m[1])
+    .filter((selector) => selector.includes('.ds-dialog-host .ds-dialog-surface') && selector.includes('input:where'))
+  assert.ok(selectors.length >= 5, 'native states include base, placeholder, hover, focus, disabled and error')
+  for (const selector of selectors) {
     assert.match(selector, /:not\(\.n-base-selection \*, \.n-input \*\)/,
-      `Naive UI internal input must be excluded: ${selector}`)
+      `Naive internals must not be styled: ${selector}`)
   }
-  assert.match(css, /:is\(input, textarea\):not\(\.n-base-selection \*, \.n-input \*\):read-only/,
-    'readonly styles must be restricted to native text fields, not custom selects')
-  assert.match(css, /input:where\(:not\(\[type='checkbox'\], \[type='radio'\]\)\)/,
-    'input type exclusions must not outrank native readonly/disabled color states')
-  assert.match(css, /select, textarea\):not\(\.n-base-selection \*, \.n-input \*\) \{/,
-    'native form control selector must join :is() and :not() without descendant whitespace')
-  assert.match(css, /:is\(\.n-base-selection, \.n-input\) \{\s*min-height: var\(--ds-button-height-md\)/,
-    'Naive UI outer controls retain the standard form height')
-  assert.match(css, /border: 1px solid var\(--ds-border\)/,
-    'native form fields must retain their accessible border')
-  assert.match(base, /input:not\(\.n-base-selection \*, \.n-input \*\)/,
-    'global focus ring must not be drawn on Naive UI nested inputs')
+  for (const inputType of ['checkbox', 'radio', 'file', 'hidden', 'range', 'color']) {
+    assert.ok(forms.includes(`[type='${inputType}']`), `special input excluded: ${inputType}`)
+  }
+  assert.match(forms, /:is\(\.n-base-selection, \.n-input\)\s*\{[^}]*min-height:\s*var\(--ds-button-height-md\)/s)
+  assert.match(forms, /border: 1px solid var\(--ds-border\)/)
+  assert.match(forms, /:read-only/)
+  assert.match(forms, /\[aria-invalid='true'\]/)
+  assert.match(base, /input:not\(\.n-base-selection \*, \.n-input \*\)/)
   assert.match(base, /textarea:not\(\.n-input \*\)/)
 })

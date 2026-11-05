@@ -5,7 +5,8 @@ const path = require('node:path')
 
 const root = path.resolve(__dirname, '..')
 const modal = fs.readFileSync(path.join(root, 'src/components/products/ProductDetailModal.vue'), 'utf8')
-const common = fs.readFileSync(path.join(root, 'src/styles/global.css'), 'utf8')
+const common = fs.readFileSync(path.join(root, 'src/styles/detail-workspace.css'), 'utf8')
+const frame = fs.readFileSync(path.join(root, 'src/styles/modal.css'), 'utf8')
 
 function conversionTable() {
   const from = modal.indexOf('v-else-if="activeTab === \'conversions\'"')
@@ -14,8 +15,9 @@ function conversionTable() {
   return modal.slice(from, to)
 }
 
-test('Product detail reuses ERP header, title icon/code, backdrop and close button', () => {
-  assert.match(modal, /class="modal-backdrop detail-backdrop"/)
+test('Product detail reuses ERP header, title icon/code, portal host and close button', () => {
+  assert.match(modal, /<AppDialogHost[^>]*variant="detail"/s)
+  assert.match(modal, /class="ds-dialog-surface detail-modal tabbed-detail-workspace"/)
   assert.match(modal, /class="modal-card__header detail-header"/)
   assert.match(modal, /class="modal-card-title product-detail-title"/)
   assert.match(modal, /<CubeOutline\s*\/>/)
@@ -54,10 +56,11 @@ test('Product Vitest assertions use type-safe Vue Test Utils selectors', () => {
 })
 
 test('Fixed-height workspace has one scrolling body and non-scrolling header/tabs/footer', () => {
-  assert.match(modal, /class="detail-modal tabbed-detail-workspace"/)
+  assert.match(modal, /class="ds-dialog-surface detail-modal tabbed-detail-workspace"/)
   assert.match(modal, /<nav class="detail-tabs" role="tablist"/)
   assert.match(modal, /<div :key="activeTab" class="detail-body"/)
   assert.match(common, /\.tabbed-detail-workspace\s*\{[\s\S]*?height: min\(760px, calc\(100dvh - 40px\)\)/)
+  assert.match(frame, /\.ds-dialog-host\.ds-dialog-host > \.ds-dialog-surface/)
   const bodyCss = modal.match(/\.detail-body\s*\{([^}]+)\}/)?.[1]
   assert.ok(bodyCss)
   assert.match(bodyCss, /overflow-y:\s*auto/)
@@ -97,7 +100,8 @@ test('UOM mutation continues to use explicit replacement service and cannot bypa
 })
 
 test('Nested editor stays above the modal with responsive title and body', () => {
-  assert.match(modal, /\.nested-backdrop\s*\{[^}]*z-index:\s*60/)
+  assert.match(modal, /<AppDialogHost :open="childFormOpen"[^>]*variant="standard"/)
+  assert.match(modal, /<AppDialogHost :open="conversionEditorOpen"[^>]*variant="standard"/)
   assert.match(modal, /@media \(max-width:\s*600px\)/)
   assert.match(modal, /\.product-detail-name\s*\{[^}]*overflow-wrap:\s*anywhere/)
 })

@@ -126,7 +126,7 @@ function save(): void {
 </script>
 
 <template>
-  <AppDialogHost :open="props.open" size="md" @close="requestClose">
+  <AppDialogHost :open="props.open" size="md" @close="requestClose" variant="standard">
     <section v-if="props.open" class="ds-dialog-surface modal-card" role="dialog" aria-modal="true" :aria-label="title">
       <header class="modal-card__header">
         <div>
@@ -230,43 +230,5 @@ function save(): void {
   color: var(--ds-text-secondary);
   font-size: 12px;
 }
-.modal-card__body {
-  display: grid;
-  gap: 12px;
-  padding: 18px;
-}
-.modal-card__body label {
-  display: grid;
-  gap: 5px;
-  color: var(--ds-text-secondary);
-  font-size: 12px;
-  font-weight: 600;
-}
-.modal-card__body input,
-.modal-card__body select,
-.modal-card__body textarea {
-  min-height: 34px;
-  border: 1px solid var(--ds-border);
-  border-radius: 4px;
-  padding: 7px 9px;
-  color: var(--ds-text-primary);
-  font: inherit;
-}
-.modal-card__body textarea {
-  resize: vertical;
-}
-.required-mark {
-  color: var(--ds-danger);
-}
-.form-grid {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 12px;
-}
 
-@media (max-width: 600px) {
-  .form-grid {
-    grid-template-columns: 1fr;
-  }
-}
 </style>

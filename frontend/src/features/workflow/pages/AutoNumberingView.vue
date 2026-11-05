@@ -751,7 +751,7 @@ watch(canConfigure, (authorized) => {
     </ListShell>
   </section>
 
-  <AppDialogHost :open="modalOpen" size="lg" @close="closeModal">
+  <AppDialogHost :open="modalOpen" size="lg" @close="closeModal" variant="standard">
     <section v-if="modalOpen" ref="formCard" class="ds-dialog-surface modal-card" role="dialog" aria-modal="true" :aria-label="t('numbering.form')"
       tabindex="-1">
       <header class="modal-card__header">

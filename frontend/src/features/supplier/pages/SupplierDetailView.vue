@@ -251,7 +251,7 @@ onMounted(async () => {
 </script>
 
 <template>
-  <AppDialogHost :open="true" size="xl" :mask-closable="true" @close="close">
+  <AppDialogHost :open="true" size="xl" :mask-closable="true" @close="close" variant="detail">
     <section ref="dialog" class="ds-dialog-surface ds-detail-workspace supplier-detail-modal"
       :class="{ 'supplier-detail-modal--workspace': !isNew, 'ds-detail-workspace--fixed': !isNew }"
       role="dialog" aria-modal="true" :aria-label="isNew ? t('supplier.create') : row?.name || t('supplier.title')">
@@ -431,9 +431,8 @@ onMounted(async () => {
   border: 1px solid var(--ds-border-subtle); border-radius: 12px; font-size: 12px;
 }
 .supplier-chip button { border: 0; background: transparent; color: var(--ds-danger); cursor: pointer; }
-.supplier-detail-footer { align-items: center; flex-wrap: wrap; }
 .supplier-version { margin-right: auto; padding-left: 16px; color: var(--ds-text-secondary); font-size: 12px; }
 .supplier-conflict { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin-bottom: 14px; }
-.supplier-error { color: var(--ds-danger); font-size: 12px; margin: 0 0 12px; }
+.supplier-error { margin: 0 0 12px; }
 .supplier-contacts { min-height: 140px; }
 </style>

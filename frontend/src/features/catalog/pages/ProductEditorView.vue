@@ -800,7 +800,7 @@ watch(
       </button>
     </section>
   </section>
-  <AppDialogHost :open="conversionEditorOpen" size="md" @close="conversionEditorOpen = false">
+  <AppDialogHost :open="conversionEditorOpen" size="md" @close="conversionEditorOpen = false" variant="standard">
     <section v-if="conversionEditorOpen"
       class="ds-dialog-surface modal-card"
       role="dialog"
@@ -915,25 +915,19 @@ legend {
   color: var(--ds-text-primary);
   font-weight: 700;
 }
-.form-grid {
+.editor-form .form-grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
   gap: 12px;
 }
-label {
-  display: grid;
-  gap: 5px;
-  color: var(--ds-text-secondary);
-  font-size: 12px;
-  font-weight: 600;
-}
-input,
-select,
-textarea {
-  min-height: 34px;
+/* Standalone product page editor; dialog labels use the shared form contract. */
+.editor-form label { display: grid; gap: 5px; color: var(--ds-text-secondary); font-size: var(--ds-font-sm); font-weight: 600; }
+/* On the full-page editor only. Modal controls are owned by forms.css. */
+.editor-form :is(input:not([type='checkbox'], [type='radio']), select, textarea) {
+  min-height: var(--ds-button-height-md);
   border: 1px solid var(--ds-border);
-  border-radius: 4px;
-  padding: 7px 9px;
+  border-radius: var(--ds-radius-sm);
+  padding: 7px 10px;
   color: var(--ds-text-primary);
   font: inherit;
 }

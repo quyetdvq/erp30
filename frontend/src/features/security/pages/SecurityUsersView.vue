@@ -564,7 +564,7 @@ onMounted(() => void load())
   </section>
 
 
-  <AppDialogHost :open="Boolean(detailOpen && selected)" size="xl" @close="closeDetails">
+  <AppDialogHost :open="Boolean(detailOpen && selected)" size="xl" @close="closeDetails" variant="detail">
     <section v-if="detailOpen && selected" class="ds-dialog-surface modal-card tabbed-detail-workspace" role="dialog" aria-modal="true"
       :aria-label="`${t('users.detailTitle')}: ${selected.username}`">
       <header class="modal-card__header">
@@ -698,7 +698,7 @@ onMounted(() => void load())
   </AppDialogHost>
 
 
-  <AppDialogHost :open="formOpen" size="lg" @close="closeForm()">
+  <AppDialogHost :open="formOpen" size="lg" @close="closeForm()" variant="standard">
     <section v-if="formOpen" class="ds-dialog-surface modal-card" role="dialog" aria-modal="true" :aria-label="t('security.userForm')">
       <header class="modal-card__header">
         <h2 class="modal-card-title">
@@ -786,7 +786,7 @@ onMounted(() => void load())
 
 
 
-  <AppDialogHost :open="passwordOpen" size="sm" @close="passwordOpen = false">
+  <AppDialogHost :open="passwordOpen" size="sm" @close="passwordOpen = false" variant="standard">
     <section v-if="passwordOpen" class="ds-dialog-surface modal-card" role="dialog" aria-modal="true" :aria-label="t('security.resetPassword')">
       <header class="modal-card__header">
         <h2 class="modal-card-title">
@@ -834,7 +834,6 @@ onMounted(() => void load())
   color: var(--ds-danger);
   font-size: 12px;
 }
-
 
 .security-editor {
   display: grid;
@@ -913,24 +912,6 @@ onMounted(() => void load())
 
 .identity-summary dd {
   margin: 0;
-}
-
-
-.modal-card__body label {
-  gap: 5px;
-  color: var(--ds-text-secondary);
-  font-size: 12px;
-  font-weight: 600;
-}
-
-.modal-card__body input,
-.modal-card__body select {
-  min-height: 24px;
-  border: 1px solid var(--ds-border);
-  border-radius: 4px;
-  padding: 7px 9px;
-  color: var(--ds-text-primary);
-  font: inherit;
 }
 
 @media (max-width: 700px) {

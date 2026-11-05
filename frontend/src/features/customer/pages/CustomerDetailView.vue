@@ -422,7 +422,7 @@ onMounted(async () => {
 </script>
 
 <template>
-  <AppDialogHost :open="true" size="xl" :close-on-esc="!contactOpen && !detailOpen" :mask-closable="true" @close="closeDetail">
+  <AppDialogHost :open="true" size="xl" :close-on-esc="!contactOpen && !detailOpen" :mask-closable="true" @close="closeDetail" variant="detail">
     <section ref="dialog" class="ds-dialog-surface ds-detail-workspace customer-detail-modal" :class="{ 'customer-detail-modal--workspace': !isNew, 'ds-detail-workspace--fixed': !isNew }" role="dialog" aria-modal="true"
       :aria-label="isNew ? t('customer.create') : form.name || t('customer.title')">
       <header class="modal-card__header">
@@ -656,7 +656,7 @@ onMounted(async () => {
     :fields="detailFields"
     @close="closeContactDetail"
   />
-  <AppDialogHost :open="contactOpen" size="md" :mask-closable="true" @close="closeContact">
+  <AppDialogHost :open="contactOpen" size="md" :mask-closable="true" @close="closeContact" variant="standard">
     <section v-if="contactOpen" ref="contactDialog" class="ds-dialog-surface customer-contact-modal" role="dialog" aria-modal="true" :aria-label="t('customer.recipient')">
       <header class="modal-card__header">
         <h2 class="modal-card-title">{{ t('customer.recipient') }}</h2>
@@ -719,6 +719,5 @@ onMounted(async () => {
 .customer-activity-actions { display: flex; justify-content: flex-end; margin-top: 12px; }
 .customer-activity-item { display: grid; gap: 4px; border-bottom: 1px solid var(--ds-border-subtle); padding: 12px 2px; }
 .customer-activity-item p { margin: 0; white-space: pre-wrap; overflow-wrap: anywhere; }
-.customer-contact-form { padding: 18px 20px 24px; overflow-y: auto; }
 .inline-error { color: var(--ds-danger); font-size: 12px; }
 </style>

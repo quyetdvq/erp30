@@ -362,7 +362,7 @@ onMounted(() => {
   </section>
 
 
-  <AppDialogHost :open="Boolean(detailOpen && selected)" size="lg" @close="detailOpen = false">
+  <AppDialogHost :open="Boolean(detailOpen && selected)" size="lg" @close="detailOpen = false" variant="detail">
     <section v-if="detailOpen && selected" class="ds-dialog-surface modal-card tabbed-detail-workspace" role="dialog" aria-modal="true"
       :aria-label="`${t('security.resource')}: ${selected.name}`">
       <header class="modal-card__header">
@@ -451,7 +451,7 @@ onMounted(() => {
     </section>
   </AppDialogHost>
 
-  <AppDialogHost :open="modalOpen" size="md" @close="modalOpen = false">
+  <AppDialogHost :open="modalOpen" size="md" @close="modalOpen = false" variant="standard">
     <section v-if="modalOpen" class="ds-dialog-surface modal-card" role="dialog" aria-modal="true" :aria-label="t('security.resourceForm')">
       <header class="modal-card__header">
         <h2 class="modal-card-title">
@@ -497,7 +497,7 @@ onMounted(() => {
   </AppDialogHost>
 
 
-  <AppDialogHost :open="actionModalOpen" size="md" @close="actionModalOpen = false">
+  <AppDialogHost :open="actionModalOpen" size="md" @close="actionModalOpen = false" variant="standard">
     <section v-if="actionModalOpen" class="ds-dialog-surface modal-card" role="dialog" aria-modal="true" :aria-label="t('security.actionForm')">
       <header class="modal-card__header">
         <h2 class="modal-card-title">
@@ -629,21 +629,6 @@ onMounted(() => {
   color: var(--ds-danger);
   font-size: 12px;
 }
-
-
-.modal-card__body label {
-  display: grid;
-  gap: 5px;
-  color: var(--ds-text-secondary);
-  font-size: 12px;
-  font-weight: 600;
-}
-
-.modal-card__body textarea {
-  height: auto;
-  padding: 8px 10px;
-}
-
 
 code {
   font-family: ui-monospace, SFMono-Regular, Consolas, monospace;

@@ -450,7 +450,7 @@ onMounted(async () => {
   </section>
 
 
-  <AppDialogHost :open="Boolean(employeeDetailOpen && selected)" size="wide" @close="employeeDetailOpen = false">
+  <AppDialogHost :open="Boolean(employeeDetailOpen && selected)" size="wide" @close="employeeDetailOpen = false" variant="detail">
     <section v-if="employeeDetailOpen && selected" class="ds-dialog-surface employee-detail-modal tabbed-detail-workspace" role="dialog" aria-modal="true" :aria-label="selected.employee_name">
       <header class="modal-card__header">
 
@@ -590,7 +590,7 @@ onMounted(async () => {
     </section>
   </AppDialogHost>
 
-  <AppDialogHost :open="employeeModal" size="lg" @close="closeEmployeeForm">
+  <AppDialogHost :open="employeeModal" size="lg" @close="closeEmployeeForm" variant="standard">
     <section v-if="employeeModal" class="ds-dialog-surface modal-card" role="dialog" aria-modal="true" :aria-label="t('people.employeeForm')">
       <header class="modal-card__header">
         <h2 class="modal-card-title">
@@ -676,7 +676,7 @@ onMounted(async () => {
     </section>
   </AppDialogHost>
 
-  <AppDialogHost :open="assignmentModal" size="md" @close="closeAssignmentForm">
+  <AppDialogHost :open="assignmentModal" size="md" @close="closeAssignmentForm" variant="standard">
     <section v-if="assignmentModal" class="ds-dialog-surface modal-card" role="dialog" aria-modal="true" :aria-label="t('people.assignmentForm')">
       <header class="modal-card__header">
         <h2 class="modal-card-title">
@@ -853,7 +853,6 @@ onMounted(async () => {
   padding-bottom: 0;
 }
 
-
 .assignment-panel {
   padding-bottom: 24px;
 }
@@ -864,7 +863,6 @@ onMounted(async () => {
   margin-left: 0;
   margin-right: 0;
 }
-
 
 .employee-detail-modal :deep(.contact-list) {
   width: 100%;
@@ -942,25 +940,6 @@ onMounted(async () => {
   display: flex !important;
   grid-template-columns: auto 1fr;
   align-items: center;
-}
-
-.modal-card__body label {
-  display: grid;
-  gap: 5px;
-  color: var(--ds-text-secondary);
-  font-size: 12px;
-  font-weight: 600;
-}
-
-.modal-card__body input,
-.modal-card__body select,
-.modal-card__body textarea {
-  min-height: 34px;
-  border: 1px solid var(--ds-border);
-  border-radius: 4px;
-  padding: 7px 9px;
-  color: var(--ds-text-primary);
-  font: inherit;
 }
 
 @media (max-width: 900px) {

@@ -351,7 +351,7 @@ watch(() => auth.user?.id, (userId) => {
       </NLayout>
     </NLayout>
 
-    <AppDialogHost :open="commandOpen" size="sm" @close="commandOpen = false">
+    <AppDialogHost :open="commandOpen" size="sm" @close="commandOpen = false" variant="utility">
       <section v-if="commandOpen" class="ds-dialog-surface command-modal" role="dialog" aria-modal="true"
         :aria-label="t('shell.commandPalette')">
         <header class="command-modal-header">
