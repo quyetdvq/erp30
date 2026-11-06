@@ -132,6 +132,19 @@ async function afterWorkflowChange(): Promise<void> {
   await load()
 }
 onMounted(() => void load())
+
+// Diagnostic-only, explicit URL opt-in. Never loaded during normal ERP usage.
+// The standalone tracer paints a fixed download control and records geometry;
+// it never modifies this page, permissions, API calls, or table CSS.
+onMounted(() => {
+  if (new URLSearchParams(window.location.search).get('positions_trace') !== '1') return
+  if (document.querySelector('script[data-dink-positions-trace]')) return
+  const script = document.createElement('script')
+  script.src = '/diagnostics/positions-hover-live.js'
+  script.dataset.dinkPositionsTrace = '1'
+  script.onerror = () => console.warn('[DinkERP Positions Trace] Failed to load diagnostic script')
+  document.head.appendChild(script)
+})
 </script>
 
 <template>

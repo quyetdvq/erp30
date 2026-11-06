@@ -4,7 +4,7 @@ import { expect, test, type Page } from '@playwright/test'
 import { readFileSync } from 'node:fs'
 import { resolve } from 'node:path'
 
-const sharedCSS = ['tokens.css', 'base.css', 'buttons.css', 'tables.css']
+const sharedCSS = ['tokens.css', 'base.css', 'buttons.css', 'forms.css', 'tables.css']
   .map((name) => readFileSync(resolve(process.cwd(), 'src/styles', name), 'utf8'))
 
 const columns = ['Code', 'Name', 'Type', 'Group', 'Phone', 'Status', 'Actions']
@@ -49,16 +49,13 @@ for (const theme of ['light', 'dark'] as const) {
     await page.locator('#customer-edit').hover()
     const hovered = await geometry()
     expect(hovered).toEqual(original)
-    const visual = await actions.evaluate((el) => {
-      const root = getComputedStyle(document.documentElement)
-      const sample = document.createElement('div')
-      sample.style.backgroundColor = root.getPropertyValue('--ds-bg-hover').trim()
-      document.body.appendChild(sample)
-      const expected = getComputedStyle(sample).backgroundColor
-      sample.remove()
-      return { actual: getComputedStyle(el).backgroundColor, expected }
-    })
-    expect(visual.actual).toBe(visual.expected)
+    // Table-specific hover is intentionally softer than the button hover token.
+    // Sticky surfaces must be opaque immediately; a 140ms intermediate alpha
+    // would reveal horizontally scrolled text through the Actions column.
+    const hoverColor = theme === 'light' ? 'rgb(234, 242, 252)' : 'rgb(38, 57, 72)'
+    await expect(actions).toHaveCSS('background-color', hoverColor)
+    await expect(actions).toHaveCSS('transition-duration', '0s')
+    await expect(page.locator('#customer-row td').first()).toHaveCSS('transition-duration', '0s')
     await page.locator('#customer-edit').focus()
     expect(await geometry()).toEqual(original)
   })
@@ -81,4 +78,59 @@ for (const theme of ['light', 'dark'] as const) {
     expect(before.sizing).toBe('border-box')
     expect(before.border).toBe('0px') // Last row border is removed by the standard table contract.
   })
+}
+
+// HF11: table hover is a PAINT transition in ordinary lists, but a sticky
+// cell is an opaque overlay. Rapidly alternate two rows at DPR 1.25 and
+// assert every cell commits to the same color in the same animation frame.
+for (const theme of ['light', 'dark'] as const) {
+  for (const width of [375, 720]) {
+    test(`${theme} ${width}px: customer sticky row paint is atomic through rapid hover`, async ({ browser, baseURL }) => {
+      const context = await browser.newContext({ baseURL, viewport: { width, height: 700 }, deviceScaleFactor: 1.25 })
+      try {
+        const page = await context.newPage()
+        await mountFixture(page, theme, width)
+        await page.locator('#customers-table tbody').evaluate((body) => {
+          const copy = body.querySelector('tr')!.cloneNode(true) as HTMLTableRowElement
+          copy.querySelectorAll('[id]').forEach((el) => el.removeAttribute('id'))
+          copy.id = 'customer-row-2'
+          body.appendChild(copy)
+        })
+        const wrap = page.locator('#customers-scroll')
+        await wrap.evaluate((el) => { el.scrollLeft = el.scrollWidth - el.clientWidth })
+        const rows = [page.locator('#customer-row'), page.locator('#customer-row-2')]
+        const expectedHover = theme === 'light' ? 'rgb(234, 242, 252)' : 'rgb(38, 57, 72)'
+        const expectedSurface = theme === 'light' ? 'rgb(255, 255, 255)' : 'rgb(24, 37, 50)'
+        // Inspect all cells, not merely the rightmost one: otherwise the
+        // frozen Actions layer can repaint at a different time from the row.
+        const read = async () => page.locator('#customers-table tbody').evaluate((body) =>
+          [...body.querySelectorAll('tr')].map((row) =>
+            [...row.cells].map((cell) => ({
+              background: getComputedStyle(cell).backgroundColor,
+              duration: getComputedStyle(cell).transitionDuration,
+              bounds: [cell.getBoundingClientRect().x, cell.getBoundingClientRect().y,
+                cell.getBoundingClientRect().width, cell.getBoundingClientRect().height],
+            }))))
+        // A warm-up hover must not start any translucent background animation.
+        await rows[0]!.locator('td').last().hover()
+        const before = await read()
+        for (let step = 0; step < 8; step++) {
+          const active = step % 2
+          await rows[active]!.locator('td').last().hover()
+          const current = await read()
+          for (let i = 0; i < current.length; i++) {
+            for (let j = 0; j < current[i]!.length; j++) {
+              const cell = current[i]![j]!
+              expect(cell.duration, `row ${i} col ${j} must have no paint transition`).toBe('0s')
+              expect(cell.background, `row ${i} col ${j} paint`).toBe(i === active ? expectedHover :
+                j === current[i]!.length - 1 ? expectedSurface : 'rgba(0, 0, 0, 0)')
+              expect(cell.bounds, `row ${i} col ${j} geometry`).toEqual(before[i]![j]!.bounds)
+            }
+          }
+        }
+      } finally {
+        await context.close()
+      }
+    })
+  }
 }

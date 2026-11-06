@@ -1,0 +1,42 @@
+const { readFileSync } = require('node:fs')
+const { join } = require('node:path')
+const { test } = require('node:test')
+const assert = require('node:assert/strict')
+const root = join(__dirname, '../..')
+const get = (path) => readFileSync(join(root, path), 'utf8')
+
+test('HF13: background 403 may cause a fail-closed PBAC action phase', () => {
+  const api = get('src/services/api.ts')
+  const store = get('src/stores/auth.ts')
+  const actions = get('src/components/lists/TableRowActions.vue')
+  assert.match(api, /status === 403[^\n]*!url\.startsWith\('\/api\/v1\/auth\/'\)/)
+  assert.match(api, /auth\.markPermissionSnapshotStale\(\)/)
+  assert.match(api, /auth\.refreshBasePermissions\(\)/)
+  assert.match(store, /permissionSnapshotState\.value = 'loading'/)
+  assert.match(actions, /snapshotState\.value === 'ready'/)
+  assert.match(actions, /v-if="canView"/)
+  assert.match(actions, /v-if="canMutation\('edit'\)"/)
+  assert.match(actions, /class="table-row-actions"/)
+})
+
+test('HF13: sticky action slot keeps both min-height and vertical alignment', () => {
+  const css = get('src/styles/tables.css')
+  const rule = css.match(/\.list-table-wrap--sticky-actions \.table-row-actions\s*\{([^}]*)\}/)?.[1] || ''
+  assert.match(rule, /min-height:\s*var\(--ds-button-height-sm\)/)
+  assert.match(rule, /vertical-align:\s*middle/)
+  assert.match(css, /\.list-table-wrap--sticky-actions \.list-table :is\(th, td\):last-child\s*\{/)
+})
+
+test('HF13: diagnostic is strictly opt-in, records only geometry and PBAC state', () => {
+  const view = get('src/features/customer/pages/CustomersView.vue')
+  const js = get('public/diagnostics/customer-actions-live-hf13.js')
+  assert.match(view, /get\('customers_trace'\) === '1'/)
+  assert.match(view, /script\.src = '\/diagnostics\/customer-actions-live-hf13\.js'/)
+  assert.match(view, /data-customer-permission-snapshot/)
+  assert.match(js, /ROW_ACTIONS_CHANGED_/)
+  assert.match(js, /PERMISSION_SNAPSHOT_CHANGED/)
+  assert.match(js, /WORKSPACE_SCROLL_CHANGED/)
+  assert.match(js, /Xuất JSON/)
+  assert.doesNotMatch(js, /(?:localStorage|sessionStorage|XMLHttpRequest|fetch\()/)
+  assert.doesNotMatch(js, /(?:innerText|textContent\s*:\s*row\.text|outerHTML)/)
+})

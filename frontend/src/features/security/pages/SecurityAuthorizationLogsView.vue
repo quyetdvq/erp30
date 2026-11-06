@@ -187,17 +187,8 @@ onMounted(() => void load())
 </template>
 
 <style scoped>
-.security-note {
-  margin: 0;
-  color: var(--ds-text-secondary);
-  font-size: 12px;
-  line-height: 1.6;
-}
-.inline-error {
-  margin: 0 0 12px;
-  color: var(--ds-danger);
-  font-size: 12px;
-}
+.security-note { margin: 0; }
+.inline-error { margin: 0 0 12px; }
 .decision {
   display: inline-flex;
   padding: 3px 7px;

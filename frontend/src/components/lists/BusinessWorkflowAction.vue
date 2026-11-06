@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import '@/styles/workflow-notify.css'
 import AppDialogHost from '@/components/ui/AppDialogHost.vue'
 import { computed, nextTick, onBeforeUnmount, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
@@ -204,7 +205,7 @@ async function apply(): Promise<void> {
 <template>
   <button
     type="button"
-    :class="variant === 'icon' ? 'workflow-action-icon' : 'secondary-button'"
+    :class="variant === 'icon' ? 'workflow-action-icon ds-icon-control ds-icon-control--warning' : 'secondary-button'"
     :disabled="disabled"
     :title="t('workflow.changeState')"
     :aria-label="t('workflow.changeState')"
@@ -324,23 +325,6 @@ async function apply(): Promise<void> {
 </template>
 
 <style scoped>
-.workflow-action-icon {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 30px;
-  height: 30px;
-  padding: 0;
-  border: 1px solid var(--ds-border-subtle);
-  border-radius: 4px;
-  background: var(--ds-bg-surface);
-  color: var(--ds-warning);
-  cursor: pointer;
-  font-size: 17px;
-}
-.workflow-action-icon:hover:not(:disabled),
-.workflow-action-icon:focus-visible { border-color: var(--ds-warning); }
-.workflow-action-icon:disabled { opacity: 0.5; cursor: not-allowed; }
 
 .workflow-dialog__body {
   display: grid;

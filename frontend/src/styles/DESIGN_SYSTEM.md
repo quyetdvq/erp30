@@ -7,7 +7,7 @@ Naive UI portals use the same semantic colors as AppShell.
 
 | Need | Shared contract | Scope |
 | --- | --- | --- |
-| Page padding/grid | `.ds-page-panel` (optionally `--relaxed`) | List and master-data pages |
+| Page padding/grid | `.ds-page-panel` (optionally `--relaxed`) | `page-layout.css`; list and master-data pages |
 | Header/query controls | `.ds-page-toolbar`, `.list-query-controls` | Panel toolbar/list search |
 | Form in a modal | `.ds-dialog-form-fields` | Form markup under `AppDialogHost` |
 | Two-column forms | `.ds-form-grid`, `.ds-detail-form-grid` | Forms/detail workspaces |
@@ -62,7 +62,7 @@ Escape, backdrop and scroll lock). Each host declares **exactly one**
 | `detail` | Product, Customer, Supplier, Security and Workflow workspaces with tabs | `modal.css` + `detail-workspace.css` |
 | `utility` | Confirm and command/compact dialogs | `modal.css` compact token override |
 
-**Only three stylesheets own the modal/form visual contract:**
+**Three core stylesheets own modal chrome, Form Controls and detail workspace:**
 
 1. `modal.css` owns the surface, header/body/footer geometry, scroll region,
    width and responsive chrome. Standard body padding is 16px, compact utility
@@ -102,16 +102,21 @@ unsaved changes and Supplier row-version conflicts before deployment.
 2. Preserve component ownership: data/query/permission/mutation rules remain in
    Vue and composables. This phase does **not** change API, PBAC, `row_version`,
    unsaved-change checks, sorting, pagination or workflow transitions.
-3. A `Naive UI` input/select draws its own visual border. Do **not** add global
+3. Native `input`/`textarea` and native `select` match the visible 36px NSelect
+   surface: shared 12px left padding, text, hover border, focus shadow and invalid state.
+   `.n-base-selection-input` is only Naive's transparent *inner* content;
+   its outer `.n-base-selection` and state-border draw the visible chrome.
+   Do not copy `border: none` from that inner element onto native fields.
+4. A `Naive UI` input/select draws its own visual border. Do **not** add global
    borders, backgrounds or focus rings to `.n-base-selection input` or
    `.n-input input` / textarea. Use the outer component's theme instead.
-4. Shared defaults live in `forms.css`, `tables.css`, `detail-workspace.css`;
+5. Shared defaults live in `forms.css`, `tables.css`, `detail-workspace.css`;
    feature `scoped` CSS should contain only distinctive business layout (e.g.
    a Product hierarchy indent, Customer interaction list, Supplier conflict
    panel), never another copy of a shared field, list or tab rule.
-5. Avoid changing table row markup or authorization conditions when migrating
+6. Avoid changing table row markup or authorization conditions when migrating
    presentation. A row action must remain fail-closed.
-6. Add regression coverage to
+7. Add regression coverage to
    `scripts/design-system/form-detail-table.test.cjs` whenever the common
    contract changes. Check both themes at narrow/wide widths in a real browser.
 
@@ -376,3 +381,17 @@ pnpm exec playwright test e2e/ds5-hf7-supplier-toolbar.spec.ts e2e/ds5-hf9-unifi
 - Modal close controls retain `.modal-card-button-close`, `aria-label` and `type=button` and now also set `data-ds-icon="close"`. Their X comes from the **same** registry, never a second CSS SVG.
 - Direct binary toggles use `activate` (PowerOutline) when the row is inactive and `deactivate` (BanOutline) when the row is active. The icon represents the action the button will perform, matching its accessible label; it must update reactively after a successful state change. `TableRowActions` owns this rule for list rows, and Security User detail applies the same rule to `selected.active`. The button surface communicates the **current record status** independently of the next-action icon: `data-ds-state="active"` uses `--ds-success` / `--ds-success-contrast` (green); `data-ds-state="inactive"` uses `--ds-bg-subtle` / `--ds-text-secondary` (light neutral gray in Light Mode). The shared `.ds-state-toggle` variants are also used by the Security User detail action. Hover, focus and disabled states remain part of the shared button contract. Workflow/supplier multi-state transitions continue using `changestate`. Preserve all PBAC guards, click handlers, unsaved changes and CAS; do not add a second SVG or `NIcon` inside a semantic button.
 - Do not add decorative action icons to tab controls, tree disclosure arrows, shell navigation, user avatars or language/theme controls.
+
+## CSS ownership after CSS-HF01 / CSS-DS02 / CSS-DS03 (v2.6.0)
+
+- `forms.css` is the **only** owner for native input/select/textarea/file, shared field labels, validation presentation and modal form grids. `naiveTheme.ts` mirrors the same control tokens for Naive internals; never apply native input chrome to Naive inner inputs.
+- `buttons.css` owns action/button skin, including `ds-button--sm`, `ds-button--danger-outline` and `ds-icon-control--danger`. Feature components set only positioning, not alternate borders/paddings.
+- `tables.css` owns `.data-table`, `.list-table` and `.ds-table-scroll` skin; views can opt in to a minimum-width table and responsive composition. Scroll **the table wrapper**, not every `.content-panel`.
+- `detail-workspace.css` owns `.ds-detail-tabs` states, hover, focus and border. Use `--flat`, `--flush`, `--employee`, `--nested` modifiers to preserve placement without duplicate tab chrome.
+- `page-layout.css` owns `.ds-page-panel` and `.ds-page-toolbar`.
+- `utilities.css` owns semantic `.security-note` typography, while `forms.css` owns `.inline-error`; feature styles may define a local margin.
+- `workflow-notify.css` is imported only by the two workflow action components. `features/notifications/styles/notificationSettings.css` is imported only by Policy and Preferences pages. Neither is loaded from global.css.
+- `scripts/design-system/css-ownership-*.test.cjs` and `e2e/css-ownership-visual.spec.ts` guard cascade, token/Naive parity, overflow, and no new feature-level shared control skins.
+- Legacy `!important` selectors in AppShell and a few existing detail screens are explicitly grandfathered; no additional high-specificity overrides should be created.
+
+For a UI change, change the owning stylesheet and update both Light/Dark browser tests. Do **not** move all scoped styles to global: component-only composition stays scoped to preserve lazy CSS splitting.

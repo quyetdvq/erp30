@@ -97,8 +97,9 @@ test('Ten editor forms use shared layout/labels and preserve their submit handle
 })
 
 test('Shared page panels and toolbar replace the duplicated declarations', () => {
-  const styles = css('forms')
+  const styles = css('page-layout')
   for (const cls of ['ds-page-panel', 'ds-page-toolbar']) assert.ok(styles.includes(`.${cls}`))
+  assert.doesNotMatch(css('forms'), /\.ds-page-panel\s*\{|\.ds-page-toolbar\s*\{/)
   for (const name of panels) assert.match(vue(name), /\bds-page-panel\b/, name)
 })
 
@@ -110,9 +111,14 @@ test('All six list widgets source their presentation from shared tables.css', ()
   }
   for (const cls of ['list-table', 'list-table__sort', 'list-query-controls', 'list-pagination',
     'table-row-action', 'table-status', 'list-shell']) assert.ok(rules.includes(`.${cls}`), cls)
-  assert.match(rules, /\.list-query-controls__field > :is\(input, select\)/)
-  assert.match(rules, /:focus-visible/)
-  assert.match(rules, /:disabled/)
+  // tables.css owns the grid and table presentation, forms.css owns ALL
+  // list-field control chrome, focus and disabled rules.
+  assert.match(rules, /\.list-query-controls__field\s*\{[^}]*display:\s*grid/s)
+  assert.doesNotMatch(rules, /\.list-query-controls__field > :is\(input, select\)/)
+  const forms = css('forms')
+  assert.match(forms, /border:\s*1px solid var\(--ds-control-border\)/)
+  assert.match(forms, /\[aria-invalid='true'\]/)
+  assert.match(forms, /:disabled/)
   assert.match(vue('components/lists/ListTable'), /'sort-change'/)
   assert.match(vue('components/lists/TableRowActions'), /canMutation\('delete'\)/)
   assert.match(vue('components/lists/ListPagination'), /update:pageSize/)
@@ -224,11 +230,11 @@ test('Price Lists pagers respect API size 100 and sticky actions share theme hov
   assert.equal(pagers.length, 2)
   assert.match(pagers[0], /:page-size-options="priceListPageSizeOptions"/)
   assert.match(pagers[1], /:show-page-size="false"/)
-  assert.match(source, /\.pricing-panel :deep\(\.list-table\) \{\s*min-width: 1080px/)
-  assert.match(source, /list-table tbody tr:hover td:last-child/)
-  assert.match(source, /list-table tbody tr:focus-within td/)
-  assert.match(source, /list-table tbody tr:focus-within td:last-child/)
-  assert.match(source, /background: var\(--ds-bg-hover\)/)
+  assert.match(source, /class="list-table-wrap--sticky-actions list-table-wrap--price"/)
+  const tables = css('tables')
+  assert.match(tables, /\.list-table-wrap--sticky-actions \.list-table tbody tr:is\(:focus-visible, :has\(:focus-visible\)\) td/)
+  assert.match(tables, /\.list-table-wrap--sticky-actions \.list-table tbody tr:hover td:last-child/)
+  assert.match(tables, /background: var\(--ds-table-row-hover\)/)
 })
 
 // HF8: Supplier actions can no longer compete for width with the Company field.

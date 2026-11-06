@@ -449,7 +449,6 @@ onMounted(async () => {
     </ListShell>
   </section>
 
-
   <AppDialogHost :open="Boolean(employeeDetailOpen && selected)" size="wide" @close="employeeDetailOpen = false" variant="detail">
     <section v-if="employeeDetailOpen && selected" class="ds-dialog-surface employee-detail-modal tabbed-detail-workspace" role="dialog" aria-modal="true" :aria-label="selected.employee_name">
       <header class="modal-card__header">
@@ -468,8 +467,7 @@ onMounted(async () => {
         </button>
       </header>
 
-
-      <div class="detail-tabs" role="tablist">
+      <div class="detail-tabs ds-detail-tabs ds-detail-tabs--flat ds-detail-tabs--employee" role="tablist">
         <button v-for="tab in ['overview', 'assignments', 'contacts', 'audit'] as Tab[]" :key="tab" type="button"
           role="tab" :aria-selected="activeTab === tab" @click="activeTab = tab">
           {{ t(`people.tabs.${tab}`) }}
@@ -502,7 +500,7 @@ onMounted(async () => {
 
       <div v-else-if="activeTab === 'assignments'" class="assignment-panel">
         <header>
-          <div class="detail-tabs__sub" role="tablist">
+          <div class="detail-tabs__sub ds-detail-tabs ds-detail-tabs--nested" role="tablist">
             <button type="button" :aria-selected="assignmentMode === 'active'" @click="assignmentMode = 'active'">
               {{ t('people.activeAssignments') }}</button><button type="button"
               :aria-selected="assignmentMode === 'history'" @click="assignmentMode = 'history'">
@@ -515,39 +513,41 @@ onMounted(async () => {
           </button>
         </header>
         <p v-if="assignmentOverlap" class="hint">{{ t('people.primaryOverlap') }}</p>
-        <table class="data-table">
-          <thead>
-            <tr>
-              <th>{{ t('people.organization') }}</th>
-              <th>{{ t('people.department') }}</th>
-              <th>{{ t('people.position') }}</th>
-              <th>{{ t('people.primary') }}</th>
-              <th>{{ t('people.effectiveFrom') }}</th>
-              <th>{{ t('people.effectiveTo') }}</th>
-              <th>{{ t('people.status') }}</th>
-              <th class="table-actions">{{ t('people.actions') }}</th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr v-for="row in selectedAssignments" :key="row.id">
-              <td>{{ organizationName(row.organization_id) }}</td>
-              <td>{{ departmentName(row.department_id) }}</td>
-              <td>{{ positionName(row.position_id) }}</td>
-              <td>{{ row.is_primary ? t('people.primary') : t('people.secondary') }}</td>
-              <td>{{ displayDate(row.effective_from) }}</td>
-              <td>{{ displayDate(row.effective_to) }}</td>
-              <td>{{ t(`status.${row.status.toLowerCase()}`) }}</td>
-              <td class="table-actions">
-                <TableRowActions authorization-mode="effective" :view-scope-verified="true" :allowed-actions="rowAllowedActions(row)" :active="row.status === 'ACTIVE'"
-                  :busy="busy" :show-edit="true" :show-toggle="true"
-                  edit-permission="employee_assignment.edit" toggle-permission="employee_assignment.setstate"
-                  :edit-label="t('common.edit')" :activate-label="t('common.activate')"
-                  :deactivate-label="t('common.deactivate')" @edit="openAssignmentEdit(row)"
-                  @toggle="toggleAssignment(row)" />
-              </td>
-            </tr>
-          </tbody>
-        </table>
+        <div class="ds-table-scroll">
+          <table class="data-table ds-table ds-table--assignment">
+            <thead>
+              <tr>
+                <th>{{ t('people.organization') }}</th>
+                <th>{{ t('people.department') }}</th>
+                <th>{{ t('people.position') }}</th>
+                <th>{{ t('people.primary') }}</th>
+                <th>{{ t('people.effectiveFrom') }}</th>
+                <th>{{ t('people.effectiveTo') }}</th>
+                <th>{{ t('people.status') }}</th>
+                <th class="table-actions">{{ t('people.actions') }}</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr v-for="row in selectedAssignments" :key="row.id">
+                <td>{{ organizationName(row.organization_id) }}</td>
+                <td>{{ departmentName(row.department_id) }}</td>
+                <td>{{ positionName(row.position_id) }}</td>
+                <td>{{ row.is_primary ? t('people.primary') : t('people.secondary') }}</td>
+                <td>{{ displayDate(row.effective_from) }}</td>
+                <td>{{ displayDate(row.effective_to) }}</td>
+                <td>{{ t(`status.${row.status.toLowerCase()}`) }}</td>
+                <td class="table-actions">
+                  <TableRowActions authorization-mode="effective" :view-scope-verified="true" :allowed-actions="rowAllowedActions(row)" :active="row.status === 'ACTIVE'"
+                    :busy="busy" :show-edit="true" :show-toggle="true"
+                    edit-permission="employee_assignment.edit" toggle-permission="employee_assignment.setstate"
+                    :edit-label="t('common.edit')" :activate-label="t('common.activate')"
+                    :deactivate-label="t('common.deactivate')" @edit="openAssignmentEdit(row)"
+                    @toggle="toggleAssignment(row)" />
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
         <p v-if="selectedAssignments.length === 0" class="empty-state">
           {{ t('people.noAssignments') }}
         </p>
@@ -735,7 +735,6 @@ onMounted(async () => {
       <footer class="modal-card__footer">
         <button type="button" class="secondary-button" @click="closeAssignmentForm" data-ds-icon="cancel">
 
-
           {{ t('common.cancel') }}</button>
         <button type="submit" class="primary-button" form="assignment-form" :disabled="busy ||
           assignmentOverlap ||
@@ -780,33 +779,6 @@ onMounted(async () => {
   font-size: 12px;
 }
 
-.detail-tabs {
-  display: flex;
-  gap: 4px;
-  margin: 22px 0 0;
-  padding: 0 22px;
-  border-bottom: 1px solid var(--ds-border-subtle);
-  min-width: 0;
-  overflow-x: auto;
-}
-
-.detail-tabs button,
-.detail-tabs__sub button {
-  border: 0;
-  border-bottom: 2px solid transparent;
-  padding: 10px 12px;
-  background: transparent;
-  color: var(--ds-text-secondary);
-  cursor: pointer;
-}
-
-.detail-tabs button[aria-selected='true'],
-.detail-tabs__sub button[aria-selected='true'] {
-  border-bottom-color: var(--ds-primary);
-  color: var(--ds-primary);
-  font-weight: 700;
-}
-
 .detail-grid {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
@@ -833,10 +805,6 @@ onMounted(async () => {
 
 .detail-grid__wide {
   grid-column: span 3;
-}
-
-.detail-tabs__sub {
-  display: flex;
 }
 
 .assignment-panel header {
@@ -877,10 +845,6 @@ onMounted(async () => {
 
 .hint,
 .field-error,
-.inline-error {
-  color: var(--ds-danger);
-  font-size: 12px;
-}
 
 .empty-state {
   padding: 22px;
@@ -974,12 +938,5 @@ onMounted(async () => {
     padding-top: 3px;
   }
 
-  .data-table {
-    min-width: 820px;
-  }
-
-  .content-panel {
-    overflow-x: auto;
-  }
 }
 </style>

@@ -23,7 +23,10 @@ import CustomerDetailView from './CustomerDetailView.vue'
 const { t, te } = useI18n()
 const route = useRoute()
 const router = useRouter()
-const { hasBasePermission } = useBasePermission()
+const { hasBasePermission, snapshotState } = useBasePermission()
+// Diagnostic only: route opt-in; no API, permission or normal UI changes.
+const customerTraceEnabled = typeof window !== 'undefined' &&
+  new URLSearchParams(window.location.search).get('customers_trace') === '1'
 const state = useListState<Customer>(listCustomerPage, { sort: 'name' })
 const error = ref<unknown | null>(null)
 const companies = ref<Company[]>([])
@@ -97,6 +100,16 @@ onMounted(() => {
     void listCompanies().then((rows) => { companies.value = rows }).catch(reportApiError)
   }
 })
+
+onMounted(() => {
+  if (!customerTraceEnabled) return
+  if (document.querySelector('script[data-dink-customer-trace]')) return
+  const script = document.createElement('script')
+  script.src = '/diagnostics/customer-actions-live-hf13.js'
+  script.dataset.dinkCustomerTrace = '1'
+  script.onerror = () => console.warn('[DinkERP Customer Trace] Failed to load diagnostics')
+  document.head.appendChild(script)
+})
 </script>
 
 <template>
@@ -110,7 +123,8 @@ onMounted(() => {
       {{ t('common.create') }}
     </button>
   </div>
-  <section class="content-panel customer-list-panel">
+  <section class="content-panel customer-list-panel ds-page-panel"
+    :data-customer-permission-snapshot="customerTraceEnabled ? snapshotState : undefined">
     <div class="customer-list-toolbar">
       <ListQueryControls :show-page-size="false" :model-value="state.query" :filters="filters" :page-size-options="CUSTOMER_PAGE_SIZE_OPTIONS" @apply="applyQuery" @reset="resetQuery" >
         <template #actions>
@@ -131,7 +145,7 @@ onMounted(() => {
         :sort="state.query.sort" @sort-change="(sort) => { state.setSort(sort); void load() }">
         <template #cell-customer_code="{ row }"><strong>{{ row.customer_code }}</strong></template>
         <template #cell-status="{ row }">
-          <span class="customer-status-cell"><TableStatus :status="row.status" />{{ statusLabel(row.status) }}</span>
+          <span class="customer-status-cell ds-table-status-with-label"><TableStatus :status="row.status" />{{ statusLabel(row.status) }}</span>
         </template>
         <template #cell-customer_type="{ row }">{{ typeLabel(row.customer_type) }}</template>
         <template #cell-customer_group_code="{ row }">{{ groupLabel(row.customer_group_code) }}</template>
@@ -157,13 +171,6 @@ onMounted(() => {
 </template>
 
 <style scoped>
-.customer-status-cell { display: inline-flex; align-items: center; gap: 6px; }
-.customer-list-panel {
-  display: grid;
-  gap: 14px;
-  min-width: 0;
-  padding: 18px 20px 20px;
-}
 .customer-list-toolbar { min-width: 0; }
-.inline-error { color: var(--ds-danger); font-size: 12px; }
+
 </style>

@@ -22,8 +22,45 @@ export const naiveLightOverrides: GlobalThemeOverrides = {
     textColor3: '#596f83',
     borderColor: '#7c91a4',
     borderRadius: '8px',
+    heightMedium: '36px',
     fontSize: '14px',
+    placeholderColor: '#596f83',
+    inputColor: '#ffffff',
+    inputColorDisabled: '#f1f5fa',
   },
+  // Naive UI owns its own input/select chrome, including hover/focus/errors.
+  // These medium control values mirror --ds-control-* in tokens.css; never
+  // replace them with CSS var() (Naive performs theme color calculations in JS).
+  Input: {
+    heightMedium: '36px',
+    fontSizeMedium: '14px',
+    paddingMedium: '6px 12px',
+    color: '#ffffff',
+    colorDisabled: '#f1f5fa',
+    textColor: '#172b3d',
+    textColorDisabled: '#40566d',
+    placeholderColor: '#596f83',
+    borderRadius: '6px',
+    border: '1px solid #7c91a4',
+    borderHover: '1px solid #698197',
+    borderFocus: '1px solid #075c99',
+  },
+  Select: {
+    peers: {
+      InternalSelection: {
+        heightMedium: '36px',
+        fontSizeMedium: '14px',
+        textColor: '#172b3d',
+        placeholderColor: '#596f83',
+        borderRadius: '6px',
+        border: '1px solid #7c91a4',
+        borderHover: '1px solid #698197',
+        borderFocus: '1px solid #075c99',
+      },
+    },
+  },
+  Checkbox: { sizeMedium: '18px', fontSizeMedium: '14px' },
+  Radio: { radioSizeMedium: '18px', fontSizeMedium: '14px' },
   Button: {
     heightSmall: '32px',
     heightMedium: '36px',
@@ -50,8 +87,45 @@ export const naiveDarkOverrides: GlobalThemeOverrides = {
     textColor3: '#a7bdcf',
     borderColor: '#698395',
     borderRadius: '8px',
+    heightMedium: '36px',
     fontSize: '14px',
+    placeholderColor: '#a7bdcf',
+    inputColor: '#182532',
+    inputColorDisabled: '#223242',
   },
+  // Naive UI owns its own input/select chrome, including hover/focus/errors.
+  // These medium control values mirror --ds-control-* in tokens.css; never
+  // replace them with CSS var() (Naive performs theme color calculations in JS).
+  Input: {
+    heightMedium: '36px',
+    fontSizeMedium: '14px',
+    paddingMedium: '6px 12px',
+    color: '#182532',
+    colorDisabled: '#223242',
+    textColor: '#e8f0f7',
+    textColorDisabled: '#c0d0df',
+    placeholderColor: '#a7bdcf',
+    borderRadius: '6px',
+    border: '1px solid #698395',
+    borderHover: '1px solid #8ba6b9',
+    borderFocus: '1px solid #7ecaff',
+  },
+  Select: {
+    peers: {
+      InternalSelection: {
+        heightMedium: '36px',
+        fontSizeMedium: '14px',
+        textColor: '#e8f0f7',
+        placeholderColor: '#a7bdcf',
+        borderRadius: '6px',
+        border: '1px solid #698395',
+        borderHover: '1px solid #8ba6b9',
+        borderFocus: '1px solid #7ecaff',
+      },
+    },
+  },
+  Checkbox: { sizeMedium: '18px', fontSizeMedium: '14px' },
+  Radio: { radioSizeMedium: '18px', fontSizeMedium: '14px' },
   Button: {
     heightSmall: '32px',
     heightMedium: '36px',

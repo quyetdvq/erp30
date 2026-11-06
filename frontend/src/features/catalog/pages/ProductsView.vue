@@ -476,7 +476,7 @@ onUnmounted(() => {
       :error="state.queryState.error.value"
     >
       <div class="master-table-wrap ds-table-scroll">
-        <table class="master-table ds-data-grid">
+        <table class="master-table ds-data-grid ds-table ds-table--master">
           <caption class="sr-only">
             {{
               t('product.productsTitle')
@@ -675,12 +675,9 @@ onUnmounted(() => {
 <style scoped>
 
 
-.master-table { min-width: 1100px; }
 .master-table th.table-actions,
 .master-table td.table-actions {
   display: table-cell;
-  text-align: right;
-  vertical-align: middle;
   white-space: nowrap;
   width: 1%;
 }
@@ -770,10 +767,6 @@ onUnmounted(() => {
   border-left: 1px solid var(--ds-border-subtle);
   border-bottom: 1px solid var(--ds-border-subtle);
   border-bottom-left-radius: 4px;
-}
-.master-table tbody tr.product-data-row:hover,
-.master-table tbody tr.product-data-row:focus-within {
-  background: var(--ds-bg-hover);
 }
 .product-child-row {
   background: var(--ds-bg-subtle);

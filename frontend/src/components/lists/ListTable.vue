@@ -98,7 +98,7 @@ const ariaSort = computed(() => (column: ListColumn<TRow>) => {
 
 <template>
   <div class="list-table-wrap" :aria-busy="props.busy">
-    <table class="list-table">
+    <table class="list-table ds-table">
       <caption class="sr-only">
         {{
           t('list.tableCaption')

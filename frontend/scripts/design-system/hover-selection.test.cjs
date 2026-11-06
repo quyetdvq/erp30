@@ -72,8 +72,10 @@ test('Shared buttons and controls reserve a 1px border before any hover and use 
   assert.match(buttonCSS, /\.ds-button,\s*\.primary-button,\s*\.secondary-button\s*\{[^}]*border:\s*1px solid var\(--ds-border\)/s)
   assert.match(buttonCSS, /\.icon-button,\s*\.modal-card-button-close\s*\{[^}]*border:\s*1px solid transparent/s)
   assert.match(buttonCSS, /\.ds-icon-control\s*\{[^}]*border:\s*1px solid var\(--ds-border-subtle\)/s)
-  assert.match(formCSS, /:is\(\.ds-input, \.ds-select, \.ds-textarea, \.field-input, \.field-select\)\s*\{[^}]*border:\s*1px solid var\(--ds-border\)/s)
-  assert.match(tableCSS, /\.list-query-controls__field\s*>\s*:is\(input, select\)[\s\S]*?border:\s*1px solid var\(--ds-border\)/)
+  assert.match(formCSS, /:where\(input:not\([\s\S]*?border:\s*1px solid var\(--ds-control-border\)/)
+  assert.match(formCSS, /border-color:\s*var\(--ds-control-border-hover\)/)
+  assert.doesNotMatch(tableCSS, /\.list-query-controls__field\s*>\s*:is\(input, select\)/,
+    'List filters must never have a second border/focus owner')
   assert.match(buttonCSS, /\.modal-card-button-close\[data-ds-icon="close"\]::before\s*\{[^}]*width:\s*15px/s)
   assert.equal((buttonCSS.match(/\.modal-card-button-close\s*\{/g) || []).length, 1,
     'Close button must not have overridden duplicate background-image declarations')

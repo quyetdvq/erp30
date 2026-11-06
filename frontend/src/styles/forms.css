@@ -1,80 +1,309 @@
-/* Shared DinkERP form contract. Modal controls and opt-in page primitives
- * share a single 36px height, 14px type, 6px radius and semantic states.
- * Native controls only: Naive NInput/NSelect draw their own border & focus.
+/* DinkERP v2.6.0 — ONE Form Control Design System for ALL routes.
+ * Native HTML input/select/textarea, number/date fields, checkbox, radio,
+ * and optional switch share semantic tokens and state rules below.
+ * Naive UI NInput/NSelect/NInputNumber/NDatePicker render their own chrome;
+ * sync their CSS variables via NConfigProvider's naiveTheme.ts and style only
+ * the OUTER wrapper here. Never draw another border on Naive inner elements.
+ * Presentation variants must be tokens, not screen-scoped control overrides.
  */
-.ds-field, .form-row { display: grid; gap: var(--ds-space-2); min-width: 0; }
-.form-row { margin-bottom: 15px; }
-.ds-field__label, .form-row label { color: var(--ds-text-secondary); font-size: var(--ds-font-sm); font-weight: 600; }
-.ds-dialog-host .ds-dialog-surface :is(.n-base-selection, .n-input) {
-  min-height: var(--ds-button-height-md);
+
+/* Form field/label contract: same size, weight and label-to-control gap on
+ * standalone pages, list filters and dialog forms. Avoid styling check labels
+ * as vertically stacked text fields. */
+:where(.ds-field, .form-row, .list-query-controls__field,
+  label:has(> :is(input:not([type='checkbox'], [type='radio'], [type='file'], [type='hidden']), select, textarea, .n-select, .n-input, .n-input-number, .n-date-picker)),
+  .ds-dialog-host .ds-dialog-surface :is(
+    .modal-card__body, .ds-dialog-form-fields, .ds-dialog-stack-body,
+    .form-grid, .ds-detail-form-grid, .ds-detail-field,
+    .customer-contact-form, .supplier-profile-form,
+    .workflow-transition-section, .supplier-state-transition-section
+  ) label:not(.checkbox-field, .check-row, .checkbox-row, .customer-checkbox,
+    .supplier-checkbox, .workflow-notify-toggle):not(:has(input[type='checkbox'], input[type='radio']))
+) {
+  display: grid;
+  gap: var(--ds-control-label-gap);
+  min-width: 0;
+  color: var(--ds-control-label-color);
+  font-size: var(--ds-control-label-size);
+  font-weight: var(--ds-control-label-weight);
 }
-/* Never style the internal <input> of Naive's wrapper, or native
- * checkbox/radio/file/hidden/range/action controls as text fields. */
-.ds-dialog-host .ds-dialog-surface
-  :is(input:where(:not([type='checkbox'], [type='radio'], [type='file'], [type='hidden'], [type='range'], [type='color'], [type='button'], [type='submit'], [type='reset'])), select, textarea):not(.n-base-selection *, .n-input *),
-:is(.ds-input, .ds-select, .ds-textarea, .field-input, .field-select) {
+:where(.ds-field__label, .form-row label, .workflow-assignee-label,
+  .list-query-controls__field, .n-form-item .n-form-item-label, label) {
+  color: var(--ds-control-label-color);
+  font-size: var(--ds-control-label-size);
+  font-weight: var(--ds-control-label-weight);
+}
+/* The Naive FormItem label belongs to the same contract. The rest of its
+ * layout and validation remains owned by the library. */
+.n-form-item .n-form-item-label { padding-bottom: var(--ds-control-label-gap); }
+.form-row { margin-bottom: var(--ds-space-4); }
+
+/* Single native control selector and nested states. Never repeat the
+ * excluded input types or Naive internals in each state rule: add one new
+ * native type here only. CSS nesting is supported by DinkERP's target browsers.
+ * Date/number are standard <input> types. Native <select> shares dimensions;
+ * textarea keeps its natural rows and resizability. */
+:where(input:not(
+    [type='checkbox'], [type='radio'], [type='file'], [type='hidden'],
+    [type='range'], [type='color'], [type='button'], [type='submit'],
+    [type='reset'], [type='image']
+  ), select, textarea):not(.n-base-selection *, .n-input *) {
   display: block;
   width: 100%;
   min-width: 0;
-  min-height: var(--ds-button-height-md);
-  padding: 6px 10px;
-  border: 1px solid var(--ds-border);
-  border-radius: var(--ds-radius-sm);
-  background: var(--ds-bg-surface);
-  color: var(--ds-text-primary);
-  font-size: var(--ds-font-md);
+  min-height: var(--ds-control-height);
+  padding: var(--ds-control-padding-block) var(--ds-control-padding-inline);
+  border: 1px solid var(--ds-control-border);
+  border-radius: var(--ds-control-radius);
+  background: var(--ds-control-bg);
+  color: var(--ds-control-text);
+  font-family: inherit;
+  font-size: var(--ds-control-font-size);
+  font-weight: var(--ds-control-font-weight);
   line-height: var(--ds-line-height);
+
+  /* Naive's .n-base-selection-input is a borderless INNER text surface.
+   * Match the visible NSelect (outer .n-base-selection + state border) here:
+   * same 36px/14px/6px geometry, semantic colors and focus shadow. Do NOT
+   * put this chrome on Naive's inner input or textarea (excluded above). */
+  outline: none;
+  box-shadow: none;
+  caret-color: var(--ds-control-focus);
+  transition: border-color var(--ds-motion-normal) ease,
+    box-shadow var(--ds-motion-normal) ease;
+
+  /* One-line fields share 36px; textarea uses intrinsic rows/autosize. */
+  &:not(textarea) { height: var(--ds-control-height); }
+  &:is(input, textarea)::placeholder { color: var(--ds-control-placeholder); opacity: 1; }
+  &:hover:not(:disabled, [readonly], [aria-invalid='true']) {
+    border-color: var(--ds-control-border-hover);
+  }
+  &:is(:focus, :active):not(:disabled) {
+    border-color: var(--ds-control-focus);
+    box-shadow: 0 0 0 2px var(--ds-control-shadow-focus);
+  }
+  &:disabled {
+    border-color: var(--ds-control-border);
+    background: var(--ds-control-disabled-bg);
+    color: var(--ds-control-disabled-text);
+    box-shadow: none;
+    cursor: not-allowed;
+  }
+  &:is(input, textarea):read-only {
+    background: var(--ds-control-readonly-bg);
+    color: var(--ds-control-readonly-text);
+  }
+  &[aria-invalid='true']:not(:disabled) {
+    border-color: var(--ds-control-error);
+  }
+  &[aria-invalid='true']:is(:focus, :active):not(:disabled) {
+    border-color: var(--ds-control-error);
+    box-shadow: 0 0 0 2px var(--ds-control-shadow-error);
+  }
 }
-/* Text/selection controls have one 36px line-height; textarea height follows rows. */
-.ds-dialog-host .ds-dialog-surface
-  :is(input:where(:not([type='checkbox'], [type='radio'], [type='file'], [type='hidden'], [type='range'], [type='color'], [type='button'], [type='submit'], [type='reset'])), select):not(.n-base-selection *, .n-input *),
-:is(input, select):is(.ds-input, .ds-select, .field-input, .field-select) {
-  height: var(--ds-button-height-md);
-}
-.ds-dialog-host .ds-dialog-surface :is(input:where(:not([type='checkbox'], [type='radio'], [type='file'], [type='hidden'], [type='range'], [type='color'], [type='button'], [type='submit'], [type='reset'])), textarea):not(.n-base-selection *, .n-input *)::placeholder,
-:is(.ds-input, .ds-textarea, .field-input)::placeholder {
-  color: var(--ds-text-muted);
-  opacity: 1;
-}
-.ds-dialog-host .ds-dialog-surface :is(input:where(:not([type='checkbox'], [type='radio'], [type='file'], [type='hidden'], [type='range'], [type='color'], [type='button'], [type='submit'], [type='reset'])), select, textarea):not(.n-base-selection *, .n-input *):hover:not(:disabled),
-:is(.ds-input, .ds-select, .ds-textarea, .field-input, .field-select):hover:not(:disabled) {
-  border-color: var(--ds-border-strong);
-}
-.ds-dialog-host .ds-dialog-surface :is(input:where(:not([type='checkbox'], [type='radio'], [type='file'], [type='hidden'], [type='range'], [type='color'], [type='button'], [type='submit'], [type='reset'])), select, textarea):not(.n-base-selection *, .n-input *):focus-visible,
-:is(.ds-input, .ds-select, .ds-textarea, .field-input, .field-select, .command-input):focus-visible {
-  border-color: var(--ds-focus-ring);
-  outline: 2px solid var(--ds-focus-ring);
-  outline-offset: 1px;
-}
-.ds-dialog-host .ds-dialog-surface :is(input:where(:not([type='checkbox'], [type='radio'], [type='file'], [type='hidden'], [type='range'], [type='color'], [type='button'], [type='submit'], [type='reset'])), select, textarea):not(.n-base-selection *, .n-input *):disabled,
-.ds-dialog-host .ds-dialog-surface :is(input:where(:not([type='checkbox'], [type='radio'], [type='file'], [type='hidden'], [type='range'], [type='color'], [type='button'], [type='submit'], [type='reset'])), textarea):not(.n-base-selection *, .n-input *):read-only,
-:is(.ds-input, .ds-select, .ds-textarea, .field-input, .field-select):disabled,
-:is(.ds-input, .ds-textarea, .field-input):read-only {
-  background: var(--ds-bg-subtle);
-  color: var(--ds-text-secondary);
-}
-.ds-dialog-host .ds-dialog-surface :is(input:where(:not([type='checkbox'], [type='radio'], [type='file'], [type='hidden'], [type='range'], [type='color'], [type='button'], [type='submit'], [type='reset'])), select, textarea):not(.n-base-selection *, .n-input *)[aria-invalid='true'],
-:is(.ds-input, .ds-select, .ds-textarea, .field-input, .field-select)[aria-invalid='true'] {
-  border-color: var(--ds-danger);
-}
-.ds-dialog-host .ds-dialog-surface textarea:not(.n-input *),
-.ds-textarea { resize: vertical; }
-/* Do not turn checkbox/radio labels into vertically stacked text fields. */
-.ds-dialog-host .ds-dialog-surface label { color: var(--ds-text-secondary); }
-.ds-dialog-host .ds-dialog-surface :is(
-  .modal-card__body, .ds-dialog-form-fields, .ds-dialog-stack-body,
-  .form-grid, .ds-detail-form-grid, .ds-detail-field,
-  .customer-contact-form, .supplier-profile-form,
-  .workflow-transition-section, .supplier-state-transition-section
-) label:not(.checkbox-field, .check-row, .checkbox-row, .customer-checkbox,
-  .supplier-checkbox, .workflow-notify-toggle):not(:has(input[type='checkbox'], input[type='radio'])) {
-  display: grid;
-  gap: 6px;
+:where(textarea):not(.n-input *) { resize: vertical; }
+
+/* Naive UI: OUTER controls only. CSS vars/border/focus states are sourced from
+ * naiveTheme.ts, so input, select, date and number editors never gain a
+ * second native border. Multiple selections may expand vertically for tags. */
+:where(.n-input, .n-base-selection, .n-input-number, .n-date-picker) {
   min-width: 0;
-  color: var(--ds-text-secondary);
-  font-size: var(--ds-font-sm);
-  font-weight: 600;
+  font-size: var(--ds-control-font-size);
+  font-weight: var(--ds-control-font-weight);
 }
+:where(.n-input, .n-base-selection) { min-height: var(--ds-control-height); }
+:where(.n-select, .n-date-picker, .n-input-number) { min-width: 0; }
+.n-base-selection-tags { min-width: 0; }
+
+/* Checkbox/radio/switch labels use the same 6px field-to-control gap.
+ * A feature may still arrange its explanatory text, but never redraw the
+ * checkbox or invent another size/spacing contract. */
+:where(label:has(> input[type='checkbox']), label:has(> input[type='radio']),
+  .checkbox-field, .check-row, .checkbox-row, .customer-checkbox,
+  .supplier-checkbox, .workflow-notify-toggle) {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--ds-control-label-gap);
+}
+
+/* Native checkbox/radio: shared 18px hit geometry and semantic states;
+ * do not apply text input padding/borders/background to these toggles. */
+:where(input[type='checkbox']:not([role='switch'], .ds-switch), input[type='radio']) {
+  width: var(--ds-control-check-size);
+  height: var(--ds-control-check-size);
+  min-width: var(--ds-control-check-size);
+  min-height: var(--ds-control-check-size);
+  margin: 0;
+  accent-color: var(--ds-primary);
+  cursor: pointer;
+}
+:where(input[type='checkbox'], input[type='radio']):disabled { cursor: not-allowed; opacity: .6; }
+:where(input[type='checkbox'], input[type='radio']):focus-visible {
+  outline: 2px solid var(--ds-control-focus);
+  outline-offset: 2px;
+}
+/* Opt-in native switch; Naive NSwitch uses its own accessible structure. */
+:where(input[type='checkbox'][role='switch'], input.ds-switch) {
+  appearance: none;
+  width: var(--ds-control-switch-width);
+  height: var(--ds-control-switch-height);
+  min-width: var(--ds-control-switch-width);
+  min-height: var(--ds-control-switch-height);
+  margin: 0;
+  border: 1px solid var(--ds-control-border);
+  border-radius: 999px;
+  background: var(--ds-control-disabled-bg);
+  cursor: pointer;
+}
+:where(input[type='checkbox'][role='switch'], input.ds-switch)::before {
+  content: '';
+  display: block;
+  width: calc(var(--ds-control-switch-height) - 6px);
+  height: calc(var(--ds-control-switch-height) - 6px);
+  margin: 2px;
+  border-radius: 50%;
+  background: var(--ds-control-text);
+  transition: translate var(--ds-motion-fast);
+}
+:where(input[type='checkbox'][role='switch'], input.ds-switch):checked { background: var(--ds-primary); border-color: var(--ds-primary); }
+:where(input[type='checkbox'][role='switch'], input.ds-switch):checked::before {
+  background: var(--ds-primary-contrast);
+  translate: calc(var(--ds-control-switch-width) - var(--ds-control-switch-height)) 0;
+}
+:where(input[type='checkbox'][role='switch'], input.ds-switch):hover:not(:disabled, :checked) { border-color: var(--ds-control-border-hover); }
+:where(input[type='checkbox'][role='switch'], input.ds-switch):disabled { cursor: not-allowed; opacity: .6; }
+:where(input[type='checkbox'][role='switch'], input.ds-switch):focus-visible { outline: 2px solid var(--ds-control-focus); outline-offset: 2px; }
+/* Naive status/focus/border are controlled by theme, including the input icon. */
+.n-input .n-icon { color: var(--ds-control-placeholder); }
+:where(.n-checkbox, .n-radio, .n-switch) { color: var(--ds-control-text); font-size: var(--ds-control-font-size); }
+
+/* FC03: one file-picker contract for Product images, User avatars and Import.
+ * File is NOT a text input: the browser supplies a filename + chooser button.
+ * Style that whole visible control like NSelect without touching the chooser's
+ * native file-selection/accept behavior. A visually hidden input over a
+ * custom trigger is the only variant; its button/chrome are drawn by the
+ * shared .ds-file-trigger below, never by a feature component. */
+:where(label:has(> input[type='file'])):not(.ds-file-trigger) {
+  display: grid;
+  gap: var(--ds-control-label-gap);
+  min-width: 0;
+}
+:where(input[type='file']):not(.ds-file-trigger input) {
+  display: block;
+  width: 100%;
+  min-width: 0;
+  min-height: var(--ds-control-height);
+  height: var(--ds-control-height);
+  padding: 0 var(--ds-control-padding-inline) 0 0;
+  border: 1px solid var(--ds-control-border);
+  border-radius: var(--ds-control-radius);
+  background: var(--ds-control-bg);
+  color: var(--ds-control-text);
+  font-family: inherit;
+  font-size: var(--ds-control-font-size);
+  font-weight: var(--ds-control-font-weight);
+  line-height: calc(var(--ds-control-height) - 2px);
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  overflow: hidden;
+  outline: none;
+  box-shadow: none;
+  cursor: pointer;
+  transition: border-color var(--ds-motion-normal) ease,
+    box-shadow var(--ds-motion-normal) ease;
+}
+:where(input[type='file']):not(.ds-file-trigger input)::file-selector-button {
+  height: calc(var(--ds-control-height) - 2px);
+  margin: 0 var(--ds-control-padding-inline) 0 0;
+  padding: 0 var(--ds-control-padding-inline);
+  border: 0;
+  border-right: 1px solid var(--ds-control-border);
+  border-radius: 0;
+  background: var(--ds-bg-subtle);
+  color: var(--ds-control-text);
+  font: inherit;
+  font-weight: var(--ds-control-label-weight);
+  cursor: pointer;
+}
+:where(input[type='file']):not(.ds-file-trigger input):hover:not(:disabled, [aria-invalid='true']) {
+  border-color: var(--ds-control-border-hover);
+}
+:where(input[type='file']):not(.ds-file-trigger input):focus-visible {
+  border-color: var(--ds-control-focus);
+  box-shadow: 0 0 0 2px var(--ds-control-shadow-focus);
+}
+:where(input[type='file']):not(.ds-file-trigger input)[aria-invalid='true']:not(:disabled) {
+  border-color: var(--ds-control-error);
+}
+:where(input[type='file']):not(.ds-file-trigger input)[aria-invalid='true']:focus-visible {
+  border-color: var(--ds-control-error);
+  box-shadow: 0 0 0 2px var(--ds-control-shadow-error);
+}
+:where(input[type='file']):not(.ds-file-trigger input):disabled {
+  border-color: var(--ds-control-border);
+  background: var(--ds-control-disabled-bg);
+  color: var(--ds-control-disabled-text);
+  cursor: not-allowed;
+  box-shadow: none;
+}
+:where(input[type='file']):not(.ds-file-trigger input):disabled::file-selector-button {
+  color: var(--ds-control-disabled-text);
+  cursor: not-allowed;
+}
+
+/* File picker as a compact action: the file input remains focusable and
+ * handles native keyboard/pointer interaction through an invisible overlay. */
+.ds-file-trigger {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 0;
+  min-height: var(--ds-control-height);
+  padding: 0 var(--ds-control-padding-inline);
+  border: 1px solid var(--ds-control-border);
+  border-radius: var(--ds-control-radius);
+  background: var(--ds-control-bg);
+  color: var(--ds-control-text);
+  font: inherit;
+  font-size: var(--ds-control-font-size);
+  font-weight: var(--ds-control-label-weight);
+  line-height: var(--ds-line-height);
+  cursor: pointer;
+  transition: border-color var(--ds-motion-normal) ease,
+    box-shadow var(--ds-motion-normal) ease;
+}
+.ds-file-trigger:hover:not(:has(input:disabled)) {
+  border-color: var(--ds-control-border-hover);
+}
+.ds-file-trigger:focus-within {
+  border-color: var(--ds-control-focus);
+  box-shadow: 0 0 0 2px var(--ds-control-shadow-focus);
+}
+.ds-file-trigger:has(input:disabled) {
+  border-color: var(--ds-control-border);
+  background: var(--ds-control-disabled-bg);
+  color: var(--ds-control-disabled-text);
+  cursor: not-allowed;
+}
+.ds-file-trigger > input[type='file'] {
+  position: absolute;
+  inset: 0;
+  display: block;
+  width: 100%;
+  height: 100%;
+  margin: 0;
+  padding: 0;
+  opacity: 0;
+  cursor: pointer;
+}
+.ds-file-trigger > input[type='file']:disabled { cursor: not-allowed; }
+:where(input[type='range'], input[type='color']):focus-visible {
+  outline: 2px solid var(--ds-control-focus);
+  outline-offset: 2px;
+}
+
+/* Form layout and validation; workflow/page layout live in their own owners. */
 .ds-dialog-form-fields { display: grid; align-content: start; gap: var(--ds-space-3); min-width: 0; }
 .ds-dialog-host .ds-dialog-surface :is(.ds-form-grid, .form-grid, .ds-detail-form-grid) {
   display: grid;
@@ -98,25 +327,6 @@
 .ds-toolbar { display: flex; flex-wrap: wrap; align-items: center; gap: var(--ds-space-2); padding: var(--ds-space-3) var(--ds-space-4); border-bottom: 1px solid var(--ds-border-subtle); }
 .form-actions { display: flex; justify-content: flex-end; gap: var(--ds-space-2); margin-top: var(--ds-space-2); }
 
-/* Workflow action's notification editor is the same form subsection for
- * supplier and other resources. No duplicate feature-level CSS is necessary. */
-.workflow-notify-section { display: grid; min-width: 0; gap: var(--ds-space-3); padding-top: var(--ds-space-4); border-top: 1px solid var(--ds-border-subtle); }
-.workflow-notify-heading { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 10px; min-width: 0; }
-.workflow-notify-title { flex: 1 1 230px; min-width: 0; }
-.workflow-notify-title p, .workflow-notify-hint { margin: 6px 0 0; font-size: var(--ds-font-xs); line-height: 1.6; color: var(--ds-text-secondary); overflow-wrap: anywhere; }
-.workflow-notify-toggle { flex: 0 0 auto; }
-.workflow-notify-editor { display: grid; gap: var(--ds-space-3); min-width: 0; padding: var(--ds-space-3); border: 1px solid var(--ds-border-subtle); border-radius: var(--ds-radius-sm); background: var(--ds-bg-subtle); }
-.workflow-assignee-label { color: var(--ds-text-secondary); font-size: var(--ds-font-sm); font-weight: 600; }
-.workflow-notify-controls { display: flex; align-items: center; flex-wrap: wrap; justify-content: space-between; gap: 10px; color: var(--ds-text-secondary); font-size: var(--ds-font-xs); }
-.workflow-notify-retry { display: grid; justify-items: start; gap: var(--ds-space-2); }
-.workflow-error, .workflow-unsaved-notice { margin: 0; color: var(--ds-danger); font-size: var(--ds-font-xs); overflow-wrap: anywhere; }
-.workflow-success { margin: 0; color: var(--ds-success); font-size: var(--ds-font-xs); }
-
-/* Existing page-level UI primitives stay available; not modal chrome. */
-.ds-page-panel { display: grid; min-width: 0; gap: 14px; padding: 18px 20px 20px; }
-.ds-page-panel--relaxed { gap: var(--ds-space-4); }
-.ds-page-toolbar { display: flex; align-items: end; justify-content: space-between; gap: 10px; flex-wrap: wrap; min-width: 0; }
-
 /* Respond to modal width, not the entire viewport. Nested and narrow dialogs
  * can use a single field column even on a wide desktop monitor. */
 @container ds-dialog (max-width: 560px) {
@@ -128,7 +338,3 @@
   .ds-dialog-surface .ds-detail-form-wide { grid-column: auto; }
 }
 @media (max-width: 700px) { .ds-form-grid, .ds-detail-form-grid { grid-template-columns: minmax(0, 1fr); } }
-@media (max-width: 560px) {
-  .workflow-notify-heading { flex-direction: column; align-items: stretch; }
-  .workflow-notify-toggle { align-self: flex-start; }
-}

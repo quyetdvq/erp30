@@ -47,6 +47,12 @@
 .ds-detail-tabs > button[aria-selected='true'] {
   border-bottom-color: var(--ds-primary); color: var(--ds-primary); font-weight: 700;
 }
+/* Other detail layouts reuse the same tab skin and focus/selected states.
+ * Only placement changes by modifier; no feature may redraw tab buttons. */
+.ds-detail-tabs--flat { background: transparent; }
+.ds-detail-tabs--flush { padding: 0; }
+.ds-detail-tabs--employee { margin: var(--ds-space-5) 0 0; padding-inline: var(--ds-space-5); }
+.ds-detail-tabs--nested { padding: 0; border-bottom: 0; background: transparent; }
 /* Security/Workflow detail tabs use the same states at a roomier density. */
 .ds-detail-tabs--spaced { gap: var(--ds-space-6); padding: 0 var(--ds-space-6); }
 .ds-detail-tabs--spaced > button { padding: 13px 2px 11px; font-size: var(--ds-font-xs); }

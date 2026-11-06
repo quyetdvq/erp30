@@ -28,7 +28,7 @@ const css=read('src/styles/buttons.css')
 const {inspectMaskRegistry} = require('./action-mask-registry.cjs')
 
 test('all native action buttons and 40 modal Close headers have canonical data-ds-icon',()=>{
- assert.equal(tags.length,313,'existing button declarations must not change during visual-only migration')
+ assert.equal(tags.length,314,'PR02 adds exactly one shared Save action to the Product editor heading')
  const labeled=tags.filter(semanticAttr)
  assert.ok(labeled.length>=250,`Only ${labeled.length} action buttons have semantic metadata`)
  const modal=tags.filter(b=>b.attrs.includes('modal-card-button-close'))

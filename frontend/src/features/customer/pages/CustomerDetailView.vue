@@ -496,7 +496,7 @@ onMounted(async () => {
             <label><span>{{ t('customer.province') }} <span class="ds-detail-required customer-required-star" aria-hidden="true">*</span></span>
               <SearchableSelect :model-value="String(form.province_id ?? '')" :options="provinceOptions"
                 :placeholder="t('contact.selectProvince')" :aria-label="t('customer.province')"
-                :aria-required="editing" :aria-invalid="!!profileErrors.province_id"
+                :aria-required="editing" :status="profileErrors.province_id ? 'error' : undefined" :aria-invalid="!!profileErrors.province_id"
                 :disabled="!editing" @update:model-value="updateProfileProvince" />
               <small v-if="profileErrors.province_id" class="ds-detail-error customer-field-error">{{ t('customer.fieldRequired') }}</small>
             </label>
@@ -505,7 +505,7 @@ onMounted(async () => {
                 :model-value="String(form.ward_id ?? '')" :selected-options="profileSelectedWardOptions"
                 :search="searchProfileWards" :placeholder="t('contact.selectWard')"
                 :aria-label="t('customer.ward')" :aria-required="editing"
-                :aria-invalid="!!profileErrors.ward_id" :disabled="!editing || !form.province_id"
+                :status="profileErrors.ward_id ? 'error' : undefined" :aria-invalid="!!profileErrors.ward_id" :disabled="!editing || !form.province_id"
                 @update:model-value="updateProfileWard" />
               <small v-if="profileErrors.ward_id" class="ds-detail-error customer-field-error">{{ t('customer.fieldRequired') }}</small>
             </label>
@@ -538,8 +538,8 @@ onMounted(async () => {
               {{ t('customer.addContact') }}
             </button>
           </header>
-          <div class="customer-table-scroll">
-            <table class="data-table customer-data-table customer-contact-table">
+          <div class="customer-table-scroll ds-table-scroll">
+            <table class="data-table customer-data-table customer-contact-table ds-table ds-table--contacts ds-table--valign-top">
               <thead><tr>
                 <th>{{ t('customer.recipient') }}</th><th>{{ t('customer.email') }}</th>
                 <th>{{ t('customer.phone') }}</th><th>{{ t('customer.mobile') }}</th>
@@ -697,17 +697,13 @@ onMounted(async () => {
    retains its existing natural height. Only the shared body scrolls. */
 .customer-profile-form, .customer-contact-form { margin: 0; }
 .customer-checkbox { display: flex !important; align-items: center; gap: 9px; font-weight: 500 !important; }
-.customer-checkbox input { flex: 0 0 auto; width: 16px; height: 16px; }
+.customer-checkbox input { flex: 0 0 auto; }
 .customer-company-list { border: 1px solid var(--ds-border-subtle); border-radius: 6px; padding: 12px; }
 .customer-company-list legend { padding: 0 6px; font-size: 12px; font-weight: 700; color: var(--ds-text-secondary); }
 .customer-company-options { display: flex; flex-wrap: wrap; gap: 12px 20px; }
 .customer-tab-panel { display: grid; gap: 16px; }
 .customer-tab-heading { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
 .customer-tab-heading h3, .customer-tab-panel > h3 { margin: 0; color: var(--ds-text-primary); font-size: 16px; }
-.customer-table-scroll { overflow-x: auto; }
-.customer-data-table { width: 100%; min-width: 700px; }
-.customer-data-table th, .customer-data-table td { padding: 10px; }
-.customer-contact-table td { vertical-align: top; }
 .customer-contact-name { font-weight: 600; color: var(--ds-text-primary); }
 .customer-contact-meta { margin-top: 3px; color: var(--ds-text-secondary); font-size: 12px; }
 .customer-contact-tags { margin-top: 8px; display: flex; flex-wrap: wrap; gap: 6px; }
@@ -719,5 +715,5 @@ onMounted(async () => {
 .customer-activity-actions { display: flex; justify-content: flex-end; margin-top: 12px; }
 .customer-activity-item { display: grid; gap: 4px; border-bottom: 1px solid var(--ds-border-subtle); padding: 12px 2px; }
 .customer-activity-item p { margin: 0; white-space: pre-wrap; overflow-wrap: anywhere; }
-.inline-error { color: var(--ds-danger); font-size: 12px; }
+
 </style>

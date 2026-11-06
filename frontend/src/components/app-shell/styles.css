@@ -319,6 +319,14 @@
   background: var(--ds-bg-canvas);
 }
 
+/* The Naive NLayout scroll container owns workspace vertical scrolling.
+ * Reserve its gutter even when overflow changes between short/long content;
+ * otherwise classic Windows scrollbars can resize the entire workspace and
+ * appear as a horizontal table-row jump. Do not alter table cell geometry. */
+.workspace-layout :deep(.n-layout-scroll-container) {
+  scrollbar-gutter: stable;
+}
+
 .workspace-tabs-wrap {
   display: flex;
   align-items: center;
@@ -337,11 +345,19 @@
   margin-bottom: 0;
 }
 
+/* NLayout's .n-layout-scroll-container is the sole vertical workspace
+ * scroll owner. Keep horizontal clipping without creating a second scrollport
+ * (overflow-x: hidden would make overflow-y: visible compute to auto).
+ * flow-root preserves the original formatting context/margin containment. */
 .workspace-content {
-  overflow-x: hidden;
-  overflow-y: auto;
+  display: flow-root;
+  overflow-x: clip;
+  overflow-y: visible;
   min-width: 0;
-  padding: 26px clamp(18px, 2.2vw, 36px) 48px;
+  /* The former 48px bottom padding generated ~47px of artificial scrolling
+   * on compact 4-row lists at 125% display scaling. Panels retain their own
+   * internal padding; long content still scrolls through NLayout. */
+  padding: 26px clamp(18px, 2.2vw, 36px) 0;
 }
 
 .workspace-content > :deep(.page-heading),
@@ -387,10 +403,6 @@
 
 .command-search-input {
   margin-top: 2px;
-}
-
-.command-search-input :deep(.n-input__input-el) {
-  font-size: 14px;
 }
 
 .command-list {
@@ -538,7 +550,7 @@
   }
 
   .workspace-content {
-    padding: 18px 14px 36px;
+    padding: 18px 14px 0;
   }
 }
 

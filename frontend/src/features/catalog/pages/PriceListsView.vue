@@ -554,6 +554,7 @@ onMounted(() => void load())
       :error="state.queryState.error.value"
     >
       <ListTable
+        class="list-table-wrap--sticky-actions list-table-wrap--price"
         :rows="state.rows.value"
         :columns="columns"
         :sort="state.query.sort"
@@ -752,8 +753,8 @@ onMounted(() => void load())
           <p v-if="canEditItems" class="field-note">{{ t('pricing.itemRules') }}</p>
           <p v-if="itemError" class="inline-error" role="alert">{{ t('pricing.requestError') }}</p>
           <p v-if="itemBusy" class="field-note">{{ t('common.loading') }}</p>
-          <div class="table-wrap">
-            <table class="detail-table">
+          <div class="table-wrap ds-table-scroll">
+            <table class="detail-table ds-table ds-table--detail">
               <thead>
                 <tr>
                   <th>{{ t('pricing.product') }}</th>
@@ -838,36 +839,6 @@ onMounted(() => void load())
 
 <style scoped>
 
-/* Eight price-list columns need enough width to remain legible. The shared
-   ListTable wrapper provides horizontal scrolling; only the action cell sticks. */
-.pricing-panel :deep(.list-table) {
-  min-width: 1080px;
-}
-
-/* On narrow workspaces the action cell must remain reachable without
-   relying on nested horizontal scroll gestures (notably WebKit). */
-.pricing-panel :deep(.list-table th:last-child),
-.pricing-panel :deep(.list-table td:last-child) {
-  position: sticky;
-  right: 0;
-  z-index: 1;
-  background: var(--ds-bg-surface);
-  box-shadow: -1px 0 0 var(--ds-border-subtle);
-}
-
-.pricing-panel :deep(.list-table th:last-child) {
-  z-index: 2;
-  background: var(--ds-bg-subtle);
-}
-
-/* Keyboard focus highlights the full row; the sticky Actions cell must
-   match the same hover/focus surface in both light and dark mode. */
-.pricing-panel :deep(.list-table tbody tr:focus-within td),
-.pricing-panel :deep(.list-table tbody tr:hover td:last-child),
-.pricing-panel :deep(.list-table tbody tr:focus-within td:last-child) {
-  background: var(--ds-bg-hover);
-}
-
 .pricing-query-toolbar { min-width: 0; }
 
 .pricing-refresh {
@@ -938,41 +909,6 @@ onMounted(() => void load())
   margin: 0;
   color: var(--ds-text-secondary);
   font-size: 12px;
-}
-
-.table-wrap {
-  overflow-x: auto;
-  border: 1px solid var(--ds-border-subtle);
-  border-radius: 6px;
-}
-
-.detail-table {
-  width: 100%;
-  min-width: 760px;
-  border-collapse: collapse;
-  font-size: 13px;
-}
-
-.detail-table th,
-.detail-table td {
-  padding: 9px 10px;
-  border-bottom: 1px solid var(--ds-border-subtle);
-  text-align: start;
-  vertical-align: middle;
-}
-
-.detail-table th {
-  background: var(--ds-bg-subtle);
-  color: var(--ds-text-secondary);
-  font-size: 12px;
-}
-
-.detail-table input {
-  min-height: 34px;
-  width: 100%;
-  border: 1px solid var(--ds-border);
-  border-radius: 4px;
-  padding: 7px 9px;
 }
 
 .danger {

@@ -100,7 +100,7 @@ onMounted(() => { void load() })
     <button data-ds-icon="add" v-if="hasBasePermission('supplier', 'create')" type="button" class="primary-button"
       @click="router.push('/suppliers/new')">{{ t('common.create') }}</button>
   </div>
-  <section class="content-panel supplier-list-panel">
+  <section class="content-panel supplier-list-panel ds-page-panel">
     <div class="supplier-list-toolbar">
       <ListQueryControls :show-page-size="false" :model-value="state.query" :filters="filters" :page-size-options="CUSTOMER_PAGE_SIZE_OPTIONS"
         :extra-field-count="hasBasePermission('organization', 'view') ? 1 : 0"
@@ -131,7 +131,7 @@ onMounted(() => { void load() })
           {{ t(row.supplier_type === 'COMPANY' ? 'supplier.companyType' : 'supplier.individualType') }}
         </template>
         <template #cell-status="{ row }">
-          <span class="supplier-status-cell"><TableStatus :status="row.status" />{{ statusLabel(row.status) }}</span>
+          <span class="supplier-status-cell ds-table-status-with-label"><TableStatus :status="row.status" />{{ statusLabel(row.status) }}</span>
         </template>
         <template #cell-actions="{ row }">
           <span class="supplier-row-actions">
@@ -156,9 +156,7 @@ onMounted(() => { void load() })
 <style scoped>
 /* The shared list query grid owns responsive field/action layout.
  * Supplier keeps only panel spacing and feature-specific statuses here. */
-.supplier-list-panel { display: grid; gap: 14px; min-width: 0; padding: 18px 20px 20px; }
 .supplier-list-toolbar { min-width: 0; }
-.supplier-status-cell { display: inline-flex; align-items: center; gap: 6px; }
 .supplier-row-actions { display: inline-flex; align-items: center; gap: 4px; white-space: nowrap; }
 .supplier-error { color: var(--ds-danger); font-size: 12px; }
 </style>

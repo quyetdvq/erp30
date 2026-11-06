@@ -19,9 +19,14 @@
   color: var(--ds-text-muted);
   font-size: 13px;
 }
+/* Existing page-level UI primitives stay available; not modal chrome. */
+.ds-page-panel { display: grid; min-width: 0; gap: 14px; padding: 18px 20px 20px; }
+.ds-page-panel--relaxed { gap: var(--ds-space-4); }
+.ds-page-toolbar { display: flex; align-items: end; justify-content: space-between; gap: 10px; flex-wrap: wrap; min-width: 0; }
+
 .content-panel {
   border: 1px solid var(--ds-border-subtle);
-  border-radius: 6px;
+  border-radius: var(--ds-radius-sm);
   background: var(--ds-bg-surface);
   box-shadow: var(--ds-shadow-popover);
 }
@@ -39,7 +44,7 @@
 .metric-card {
   padding: 17px;
   border: 1px solid var(--ds-border-subtle);
-  border-radius: 6px;
+  border-radius: var(--ds-radius-sm);
   background: var(--ds-bg-surface);
 }
 .metric-card small {
@@ -78,34 +83,8 @@
   min-height: 100vh;
   display: grid;
   place-items: center;
-  padding: 24px;
+  padding: var(--ds-space-6);
   background: var(--ds-bg-canvas);
-}
-.profile-layout {
-  display: grid;
-  grid-template-columns: 240px 1fr;
-  gap: 18px;
-}
-.profile-summary {
-  padding: 22px;
-  text-align: center;
-}
-.profile-summary strong {
-  display: block;
-  color: var(--ds-text-primary);
-}
-.profile-summary small {
-  display: block;
-  margin-top: 5px;
-  color: var(--ds-text-muted);
-}
-.form-panel {
-  padding: 22px;
-}
-.form-panel h2 {
-  margin: 0 0 20px;
-  color: var(--ds-text-primary);
-  font-size: 17px;
 }
 @media (max-width: 900px) {
   .metric-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
@@ -113,6 +92,6 @@
 @media (max-width: 700px) {
   .page-heading { display: block; }
   .page-heading .primary-button { margin-top: 14px; }
-  .metric-grid, .profile-layout { grid-template-columns: minmax(0, 1fr); }
-  .content-panel { overflow-x: auto; }
+  .metric-grid { grid-template-columns: minmax(0, 1fr); }
+  /* Only table/list wrappers own horizontal scrolling. Panels never create a second scrollport. */
 }

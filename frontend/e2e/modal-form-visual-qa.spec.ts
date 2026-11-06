@@ -134,7 +134,37 @@ for (const theme of ['light', 'dark'] as const) {
           const input = page.locator('.native-test')
           const before = await input.boundingBox()
           await input.focus()
-          await expect(input).toHaveCSS('outline-style', 'solid')
+          // FC02/FC03 native inputs match Naive Select: focus is a 1px
+          // semantic border plus a non-layout-shifting shadow, NOT an outline.
+          await expect(input).toHaveCSS('outline-style', 'none')
+          // Poll until the token-colored border transition completes; reading
+          // immediately after focus captures intermediate Chromium colors.
+          const focusColor = await page.evaluate(() => {
+            const probe = document.createElement('span')
+            probe.style.color = 'var(--ds-control-focus)'
+            document.body.append(probe)
+            const resolved = getComputedStyle(probe).color
+            probe.remove()
+            return resolved
+          })
+          await expect(input).toHaveCSS('border-top-color', focusColor)
+          const focusAppearance = await input.evaluate((node) => {
+            const style = getComputedStyle(node)
+            const tokenProbe = document.createElement('span')
+            tokenProbe.style.color = 'var(--ds-control-focus)'
+            document.body.append(tokenProbe)
+            const token = getComputedStyle(tokenProbe).color
+            tokenProbe.remove()
+            return {
+              border: style.borderTopColor,
+              borderWidth: style.borderTopWidth,
+              shadow: style.boxShadow,
+              token,
+            }
+          })
+          expect(focusAppearance.border).toBe(focusAppearance.token)
+          expect(focusAppearance.borderWidth).toBe('1px')
+          expect(focusAppearance.shadow).not.toBe('none')
           const after = await input.boundingBox()
           expect(after!.height).toBeCloseTo(before!.height, 1)
           await expect(page.locator('input:disabled')).toBeDisabled()

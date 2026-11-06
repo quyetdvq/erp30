@@ -563,7 +563,6 @@ onMounted(() => void load())
     </ListShell>
   </section>
 
-
   <AppDialogHost :open="Boolean(detailOpen && selected)" size="xl" @close="closeDetails" variant="detail">
     <section v-if="detailOpen && selected" class="ds-dialog-surface modal-card tabbed-detail-workspace" role="dialog" aria-modal="true"
       :aria-label="`${t('users.detailTitle')}: ${selected.username}`">
@@ -605,7 +604,6 @@ onMounted(() => void load())
         </dl>
       </div>
 
-
       <div v-else-if="tab === 'groups'" class="modal-card__body security-editor">
         <p class="security-note">{{ t('security.userMembershipSourceNote') }}</p>
         <p v-if="groupMembershipConflict" class="inline-error" role="alert">
@@ -619,7 +617,6 @@ onMounted(() => void load())
             :disabled="busy || groupDetailState !== 'ready' || !hasBasePermission('authorization_group', 'assign_member')"
             @change="toggleGroup(String(group.id))" /><span>{{ group.name }} ({{ group.code }})</span></label>
       </div>
-
 
       <div v-else class="modal-card__body security-editor">
         <p class="security-note">{{ t('security.permissionSourceNote') }}</p>
@@ -656,7 +653,6 @@ onMounted(() => void load())
         </div>
       </div>
 
-
       <footer class="modal-card__footer">
         <template v-if="tab === 'overview'">
           <button v-if="hasBasePermission('user', 'edit') && selected.allowed_actions?.edit === true" type="button" class="secondary-button" :disabled="busy"
@@ -678,13 +674,11 @@ onMounted(() => void load())
           </button>
         </template>
 
-
         <button v-else-if="tab === 'groups'" type="button" class="primary-button"
           :disabled="busy || groupMembershipConflict || groupDetailState !== 'ready' || changedGroupIds.length === 0 || !hasBasePermission('authorization_group', 'assign_member')" @click="void saveMembership()" data-ds-icon="save">
 
           {{ busy ? t('common.saving') : t('security.saveMembers') }}
         </button>
-
 
         <button v-else type="button" class="primary-button"
           :disabled="busy || directPermissionState !== 'ready' || !permissionCatalogLoaded || !hasBasePermission('user', 'assign_permission')" @click="void savePermissions()" data-ds-icon="save">
@@ -693,10 +687,8 @@ onMounted(() => void load())
         </button>
       </footer>
 
-
     </section>
   </AppDialogHost>
-
 
   <AppDialogHost :open="formOpen" size="lg" @close="closeForm()" variant="standard">
     <section v-if="formOpen" class="ds-dialog-surface modal-card" role="dialog" aria-modal="true" :aria-label="t('security.userForm')">
@@ -784,8 +776,6 @@ onMounted(() => void load())
     </section>
   </AppDialogHost>
 
-
-
   <AppDialogHost :open="passwordOpen" size="sm" @close="passwordOpen = false" variant="standard">
     <section v-if="passwordOpen" class="ds-dialog-surface modal-card" role="dialog" aria-modal="true" :aria-label="t('security.resetPassword')">
       <header class="modal-card__header">
@@ -829,21 +819,14 @@ onMounted(() => void load())
   font-size: 12px;
 }
 
-.inline-error {
-  margin: 0 0 12px;
-  color: var(--ds-danger);
-  font-size: 12px;
-}
+.inline-error { margin: 0 0 12px; }
 
 .security-editor {
   display: grid;
   gap: 12px;
 }
 
-.security-note {
-  color: var(--ds-text-secondary);
-  font-size: 13px;
-}
+
 
 .check-row {
   display: flex;

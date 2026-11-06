@@ -11,6 +11,9 @@
   --ds-bg-elevated: #ffffff;
   --ds-bg-subtle: #f1f5fa;
   --ds-bg-hover: #B1E3F2;
+  /* Table hover is intentionally softer than the shared button/menu hover.
+   * Selected rows keep their distinct --ds-bg-selected surface. */
+  --ds-table-row-hover: #eaf2fc;
   --ds-bg-selected: #e6f3f5;
   /* Text highlight must never reuse the subtle hover/selected surface. */
   --ds-selection-bg: #075c99;
@@ -68,6 +71,8 @@
   --ds-space-5: 20px;
   --ds-space-6: 24px;
   --ds-space-8: 32px;
+  /* Same typeface for the application and isolated table surfaces. */
+  --ds-font-family-ui: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
   --ds-font-xs: 12px;
   --ds-font-sm: 13px;
   --ds-font-md: 14px;
@@ -82,6 +87,34 @@
   --ds-query-columns: minmax(0, 1fr); /* Fallback; each list computes its desktop filter tracks. */
   --ds-button-height-sm: 32px;
   --ds-button-height-md: 36px;
+  /* One control contract, 36px single line, 14px text, 6px radius. */
+  --ds-control-height: var(--ds-button-height-md);
+  --ds-control-padding-block: 6px;
+  --ds-control-padding-inline: 12px; /* Naive single-select text starts at 12px. */
+  --ds-control-radius: var(--ds-radius-sm);
+  --ds-control-font-size: var(--ds-font-md);
+  --ds-control-font-weight: 400;
+  --ds-control-label-gap: 6px;
+  --ds-control-label-size: var(--ds-font-sm);
+  --ds-control-label-weight: 600;
+  --ds-control-label-color: var(--ds-text-secondary);
+  --ds-control-bg: var(--ds-bg-surface);
+  --ds-control-text: var(--ds-text-primary);
+  --ds-control-placeholder: var(--ds-text-muted);
+  --ds-control-border: var(--ds-border);
+  --ds-control-border-hover: var(--ds-border-strong);
+  --ds-control-focus: var(--ds-focus-ring);
+  /* Match Naive InternalSelection's focus/error border glow (20% alpha). */
+  --ds-control-shadow-focus: color-mix(in srgb, var(--ds-primary) 20%, transparent);
+  --ds-control-shadow-error: color-mix(in srgb, var(--ds-danger) 20%, transparent);
+  --ds-control-error: var(--ds-danger);
+  --ds-control-disabled-bg: var(--ds-bg-subtle);
+  --ds-control-disabled-text: var(--ds-text-secondary);
+  --ds-control-readonly-bg: var(--ds-bg-subtle);
+  --ds-control-readonly-text: var(--ds-text-secondary);
+  --ds-control-check-size: 18px;
+  --ds-control-switch-width: 36px;
+  --ds-control-switch-height: 20px;
   --ds-button-height-lg: 40px;
   --ds-icon-size: 18px;
   --ds-icon-gap: 8px;
@@ -109,6 +142,7 @@
   --ds-bg-elevated: #1c2b39;
   --ds-bg-subtle: #223242;
   --ds-bg-hover: #2b4052;
+  --ds-table-row-hover: #263948;
   --ds-bg-modal-header: #2b4052;
   --ds-bg-selected: #1d4650;
   --ds-selection-bg: #9ed6ff;

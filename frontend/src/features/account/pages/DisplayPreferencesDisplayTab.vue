@@ -240,12 +240,6 @@ function onLocaleChange(event: Event): void {
   align-items: center;
   gap: 12px;
 }
-.preference-language label,
-.preference-field label {
-  color: var(--ds-text-secondary);
-  font-size: 12px;
-  font-weight: 700;
-}
 .preference-note {
   margin: -10px 0 0;
   color: var(--ds-text-muted);
@@ -272,14 +266,8 @@ function onLocaleChange(event: Event): void {
   align-items: center;
   gap: 8px;
 }
-.preference-field .field-input {
-  grid-column: 1 / -1;
-}
-.check-input {
-  width: 18px;
-  height: 18px;
-  justify-self: start;
-}
+.preference-field .field-input { grid-column: 1 / -1; }
+.check-input { justify-self: start; }
 .link-button {
   grid-column: 1;
   justify-self: start;

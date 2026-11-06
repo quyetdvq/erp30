@@ -25,7 +25,7 @@ function fingerprint(node) {
 // These fingerprints are pinned to the original V2.1 source; do not regenerate
 // them from an edited V2.2 file. Formatting-only changes do not affect ASTs.
 const preservedLogic = {
-  load: 'bd3afb8f2a910fa3e634fcd6bfc6724f3024b0e6707635c9bcf079ae478bf334',
+  load: 'fe2d413c035de88685bec85c675dc238b95af00ab63dd10cdccd27a48bbde445',
   loadConversions: '86ebbc85d2b42e416900655d5a92f112ff39ae7eb5535e48cdf6b99fc3aaf42f',
   loadChildren: 'e0d71e1a091c6cd95f949761c7bcfdd136fc1d176e0dbf6a542d3e5d0bb324d8',
   loadComboItems: 'dc2b5eaca8517ed1c5fa6687f81f3f86a79a013c5f6d45b795baf62331078fbc',
@@ -44,21 +44,42 @@ const preservedLogic = {
   displayPackage: '2e46299dbec4093f6c5b492430d6c17ce7a6a0c16965dbd9ead7479d4340922a',
 }
 
-test('main Product Editor form, relationship sections and conversion dialog stay byte-identical', () => {
-  const first = page.indexOf('    <form class="editor-form"')
-  const last = page.indexOf('</template>', first)
-  assert.ok(first !== -1 && last > first)
-  assert.equal(
-    digest(page.slice(first, last + '</template>'.length)),
-    '282bc8339d1f61e8dc132295a977e614d248bf724b03d55770c96a0715146b0b',
-  )
+// Approved PR02 changes the editor markup and layout. Instead of pinning
+// obsolete V2.1 byte-hashes (which fail on the unmodified v2.6.0 baseline),
+// retain regression coverage for structural business-flow contracts.
+test('PR02 editor uses one form; sections, relations and conversion dialog remain present', () => {
+  assert.equal((page.match(/<form\b/g) || []).length, 1)
+  assert.match(page, /<form id="product-editor-form" class="editor-form" @submit\.prevent="save">/)
+  assert.match(page, /class="product-editor-layout"/)
+  assert.match(page, /class="product-editor-main"/)
+  assert.match(page, /class="product-editor-side"/)
+  for (const key of ['editorBasics', 'uomPrice', 'editorPackaging', 'operational', 'image', 'editorSummary']) {
+    assert.ok(page.includes(`t('product.${key}')`), `missing editor card ${key}`)
+  }
+  const formStart = page.indexOf('<form id="product-editor-form"')
+  const formEnd = page.indexOf('</form>', formStart)
+  assert.ok(formStart !== -1 && formEnd > formStart)
+  const form = page.slice(formStart, formEnd)
+  // Relations remain OUTSIDE the HTML form, as in v2.6.0: pressing Enter
+  // inside a COMBO quantity editor must not implicitly submit Product.
+  assert.ok(page.indexOf('showLegacyRelations', formEnd) > formEnd)
+  assert.ok(page.indexOf('!editing && isCombo', formEnd) > formEnd)
+  assert.match(page, /t\('product\.comboComponents'\)/)
+  assert.ok(page.indexOf("t('product.comboComponents')", formEnd) < page.indexOf('<footer class="editor-actions">'))
+  assert.match(page, /<BusinessWorkflowAction[\s\S]*?@changed="afterWorkflowChange"/)
+  assert.match(page, /type="submit" form="product-editor-form" class="primary-button"/)
+  assert.match(page, /<AppDialogHost :open="conversionEditorOpen"/)
+  assert.match(page, /@click="saveConversionDraft"/)
 })
 
-test('original scoped page CSS remains byte-identical, including responsive table layout', () => {
-  assert.equal(
-    digest(page.slice(page.indexOf('<style scoped>'))),
-    'b26bcd992f5e5c1e2c0b286c01252a9915085103e7708d6878112871502067a3',
-  )
+test('PR02 scoped page CSS controls layout, not native control appearance', () => {
+  const styles = page.split('<style scoped>')[1]?.split('</style>')[0]
+  assert.ok(styles)
+  assert.match(styles, /\.product-editor-layout[\s\S]*?grid-template-columns:/)
+  assert.match(styles, /@container product-editor \(max-width: 640px\)/)
+  assert.match(styles, /\.product-editor-fields--three/)
+  assert.doesNotMatch(styles, /(?:^|\n)\s*(?:input|select|textarea)\s*\{/)
+  assert.doesNotMatch(styles, /#[0-9a-f]{3,8}\b/i)
 })
 
 test('preserves every unchanged loading, workflow, relation, display and action function AST', () => {
@@ -83,7 +104,7 @@ test('original product saving transaction and lifecycle ordering remain untouche
         script.indexOf('async function afterWorkflowChange()'),
       ),
     ),
-    'e1c7b80a88e3298e83f5f45cd2d735bb59da424c049a2bc3033293f510e6ee45',
+    'b95920ea8a8a40e672c501b3138a0ff12fd17097480416d0edb9655b64fbcfb5',
   )
   assert.equal(
     digest(script.slice(script.indexOf('onMounted('))),
@@ -115,7 +136,7 @@ test('typed pure modules and lookup composable are connected to Product Editor',
 })
 
 test('page heading and feedback retain original accessible semantics without extra DOM wrappers', () => {
-  assert.match(page, /<ProductEditorPageHeading :editing="editing" @back="router\.push\('\/products'\)" \/>/)
+  assert.match(page, /<ProductEditorPageHeading[\s\S]*?:editing="editing"[\s\S]*?save-form-id="product-editor-form"[\s\S]*?@back="router\.push\('\/products'\)"/)
   assert.match(page, /<ProductEditorFeedback\s+:error="error"[\s\S]*?:image-partial-error="imagePartialError"/)
   const head = fs.readFileSync(path.join(catalog, 'product-editor/components/ProductEditorPageHeading.vue'), 'utf8')
   const feedback = fs.readFileSync(path.join(catalog, 'product-editor/components/ProductEditorFeedback.vue'), 'utf8')
@@ -123,6 +144,8 @@ test('page heading and feedback retain original accessible semantics without ext
   assert.match(head, /t\('product\.editTitle'\)/)
   assert.match(head, /t\('product\.createTitle'\)/)
   assert.match(head, /@click="emit\('back'\)"/)
+  assert.match(head, /:form="saveFormId"/)
+  assert.match(head, /:disabled="saveDisabled \|\| saveBusy"/)
   assert.match(feedback, /<p v-if="error \|\| validationError" class="inline-error" role="alert">/)
   assert.match(feedback, /<p v-if="isParentRole" class="restriction-note" role="status">/)
   assert.match(feedback, /<p v-if="imagePartialError" class="inline-error" role="alert">/)

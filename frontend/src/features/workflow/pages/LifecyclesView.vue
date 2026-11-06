@@ -472,7 +472,7 @@ onMounted(() => void load())
               {{ t('workflow.addState') }}
             </button>
           </div>
-          <table class="workflow-table ds-data-grid">
+          <table class="workflow-table ds-data-grid ds-table">
             <caption class="sr-only">
               {{
                 t('workflow.statesTable')
@@ -521,7 +521,7 @@ onMounted(() => void load())
               {{ t('workflow.addTransition') }}
             </button>
           </div>
-          <table class="workflow-table ds-data-grid">
+          <table class="workflow-table ds-data-grid ds-table">
             <caption class="sr-only">
               {{
                 t('workflow.transitionsTable')
@@ -720,11 +720,7 @@ onMounted(() => void load())
 }
 
 .inline-error,
-.field-error {
-  margin: 0;
-  color: var(--ds-danger);
-  font-size: 12px;
-}
+.field-error { margin: 0; }
 
 .workflow-overview dl {
   display: grid;
@@ -755,15 +751,9 @@ onMounted(() => void load())
   color: var(--ds-danger);
 }
 
-.checkbox-field {
-  display: flex !important;
-  grid-template-columns: auto 1fr;
-  align-items: start;
-  gap: 8px !important;
-}
+.checkbox-field { align-items: start; }
 
 .checkbox-field input {
-  min-height: auto !important;
   margin-top: 2px;
 }
 

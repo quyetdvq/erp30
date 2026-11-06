@@ -1,0 +1,18 @@
+/* Workflow action's notification editor is the same form subsection for
+ * supplier and other resources. No duplicate feature-level CSS is necessary. */
+.workflow-notify-section { display: grid; min-width: 0; gap: var(--ds-space-3); padding-top: var(--ds-space-4); border-top: 1px solid var(--ds-border-subtle); }
+.workflow-notify-heading { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: var(--ds-space-3); min-width: 0; }
+.workflow-notify-title { flex: 1 1 230px; min-width: 0; }
+.workflow-notify-title p, .workflow-notify-hint { margin: 6px 0 0; font-size: var(--ds-font-xs); line-height: 1.6; color: var(--ds-text-secondary); overflow-wrap: anywhere; }
+.workflow-notify-toggle { flex: 0 0 auto; }
+.workflow-notify-editor { display: grid; gap: var(--ds-space-3); min-width: 0; padding: var(--ds-space-3); border: 1px solid var(--ds-border-subtle); border-radius: var(--ds-radius-sm); background: var(--ds-bg-subtle); }
+.workflow-notify-controls { display: flex; align-items: center; flex-wrap: wrap; justify-content: space-between; gap: var(--ds-space-3); color: var(--ds-text-secondary); font-size: var(--ds-font-xs); }
+.workflow-notify-retry { display: grid; justify-items: start; gap: var(--ds-space-2); }
+.workflow-error, .workflow-unsaved-notice { margin: 0; color: var(--ds-danger); font-size: var(--ds-font-xs); overflow-wrap: anywhere; }
+.workflow-success { margin: 0; color: var(--ds-success); font-size: var(--ds-font-xs); }
+
+
+@media (max-width: 560px) {
+  .workflow-notify-heading { flex-direction: column; align-items: stretch; }
+  .workflow-notify-toggle { align-self: flex-start; }
+}

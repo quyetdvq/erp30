@@ -133,7 +133,7 @@ defineExpose({ commit })
       <strong>{{ t('product.image') }}</strong>
       <p class="product-image-hint">{{ t('product.imageHint') }}</p>
       <div v-if="editable" class="product-image-actions">
-        <label class="image-upload-button" :class="{ disabled: disabled }">
+        <label class="ds-file-trigger">
           {{ t('product.imageChoose') }}
           <input
             type="file"
@@ -145,7 +145,7 @@ defineExpose({ commit })
         </label>
         <button
           v-if="displayedUrl || selectedFile || (hasStoredImage && !removing)"
-          class="image-remove-button"
+          class="ds-button ds-button--danger-outline"
           type="button"
           :disabled="disabled"
           @click="removeImage"
@@ -208,41 +208,6 @@ defineExpose({ commit })
   gap: 10px;
   flex-wrap: wrap;
   margin-top: 12px;
-}
-.image-upload-button,
-.image-remove-button {
-  position: relative;
-  display: inline-flex;
-  align-items: center;
-  min-height: var(--ds-button-height-md);
-  padding: 6px 10px;
-  background: var(--ds-bg-surface);
-  border: 1px solid var(--ds-border);
-  border-radius: var(--ds-radius-sm);
-  font: inherit;
-  font-size: 13px;
-  color: var(--ds-primary);
-  cursor: pointer;
-}
-.image-upload-button input {
-  position: absolute;
-  inset: 0;
-  width: 100%;
-  height: 100%;
-  opacity: 0;
-  cursor: pointer;
-}
-.image-upload-button:focus-within {
-  outline: 2px solid var(--ds-primary);
-  outline-offset: 2px;
-}
-.image-upload-button.disabled,
-.image-remove-button:disabled {
-  opacity: 0.5;
-  cursor: not-allowed;
-}
-.image-remove-button {
-  color: var(--ds-danger);
 }
 .product-image-error {
   color: var(--ds-danger);

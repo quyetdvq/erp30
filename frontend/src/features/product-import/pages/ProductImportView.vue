@@ -99,7 +99,7 @@ async function submit(file: File, mode: ImportMode): Promise<void> {
 .eyebrow {margin:0 0 4px;color:var(--ds-primary);font-size:11px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;}
 .guidance {padding:14px 16px;border-left:3px solid var(--ds-primary);background:var(--ds-primary-soft);}
 .guidance ul {display:grid;gap:6px;margin:10px 0 0;padding-left:20px;color:var(--ds-text-secondary);font-size:13px;}
-.inline-error {margin:0;color:var(--ds-danger);}
+.inline-error { margin:0; }
 .import-summary {margin:0;padding:12px;border:1px solid var(--ds-success);background:var(--ds-success-soft);color:var(--ds-success);}
 .cancel {justify-self:end;}
 @media(max-width:640px){.page-header {align-items:stretch;flex-direction:column;}}

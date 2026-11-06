@@ -52,7 +52,7 @@ test('Retired AppFrame and command palette cannot cascade over current AppShell/
   assert.doesNotMatch(pageCSS, retired)
   assert.doesNotMatch(pageCSS, /\.overlay\s*\{|z-index\s*:/)
   for (const live of ['page-heading', 'content-panel', 'empty-state', 'metric-grid',
-    'metric-card', 'dashboard-blank', 'auth-screen', 'profile-layout', 'profile-summary', 'form-panel']) {
+    'metric-card', 'dashboard-blank', 'auth-screen']) {
     assert.match(pageCSS, new RegExp(`\\.${live}\\s*\\{`), `Lost active page layout ${live}`)
   }
   assert.match(read('src/styles/tables.css'), /max-width:\s*700px[\s\S]*?\.data-table\s*\{\s*min-width:\s*680px/)

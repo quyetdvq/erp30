@@ -296,7 +296,7 @@ onMounted(() => void load())
               :target-id="String(selected.id)" :busy="mutationBusy" variant="button" @changed="afterWorkflowChange" />
           </div>
         </header>
-        <div class="detail-tabs" role="tablist">
+        <div class="detail-tabs ds-detail-tabs ds-detail-tabs--flat ds-detail-tabs--flush" role="tablist">
           <button type="button" role="tab" :aria-selected="activeTab === 'overview'" @click="activeTab = 'overview'">
             {{ t('organization.overview') }}</button><button type="button" role="tab"
             :aria-selected="activeTab === 'contacts'" @click="activeTab = 'contacts'">
@@ -517,27 +517,6 @@ onMounted(() => void load())
   align-items: center;
 }
 
-.detail-tabs {
-  display: flex;
-  gap: 4px;
-  border-bottom: 1px solid var(--ds-border-subtle);
-}
-
-.detail-tabs button {
-  border: 0;
-  border-bottom: 2px solid transparent;
-  padding: 10px 12px;
-  background: transparent;
-  color: var(--ds-text-secondary);
-  cursor: pointer;
-}
-
-.detail-tabs button[aria-selected='true'] {
-  border-bottom-color: var(--ds-primary);
-  color: var(--ds-primary);
-  font-weight: 700;
-}
-
 .detail-grid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -590,11 +569,6 @@ onMounted(() => void load())
   margin: 0;
 }
 
-.form-grid {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 12px;
-}
 
 .company-fields {
   display: grid;
@@ -609,11 +583,7 @@ onMounted(() => void load())
   font-size: 14px;
 }
 
-.inline-error {
-  margin: 0;
-  color: var(--ds-danger);
-  font-size: 12px;
-}
+.inline-error { margin: 0; }
 
 @media (max-width: 900px) {
   .organization-layout {
@@ -631,7 +601,6 @@ onMounted(() => void load())
 
 @media (max-width: 600px) {
 
-  .form-grid,
   .detail-grid {
     grid-template-columns: 1fr;
   }

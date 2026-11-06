@@ -126,14 +126,13 @@ async function submit(): Promise<void> {
 .step-heading h2 {margin:0;}
 .step-heading p {margin:4px 0 0;color:var(--ds-text-secondary);}
 .step-number {display:inline-flex;align-items:center;justify-content:center;width:30px;height:30px;border-radius:50%;background:var(--ds-primary);color:var(--ds-primary-contrast);font-weight:700;}
-.file-field,fieldset {display:grid;gap:8px;}
-.file-field span,legend {color:var(--ds-text-secondary);font-size:13px;font-weight:700;}
-.file-field input {min-height:38px;}
+fieldset {display:grid;gap:8px;}
+legend {color:var(--ds-text-secondary);font-size:13px;font-weight:700;}
 .file-field small {color:var(--ds-text-secondary);}
 fieldset {grid-template-columns:repeat(3,minmax(0,1fr));border:0;padding:0;}
 legend {grid-column:1/-1;}
 fieldset label {display:flex;align-items:center;gap:8px;min-height:40px;padding:0 10px;border:1px solid var(--ds-border);border-radius:4px;}
-.inline-error {margin:0;color:var(--ds-danger);}
+.inline-error { margin:0; }
 .permission-note {margin:0;color:var(--ds-warning);}
 footer {display:flex;justify-content:flex-end;}
 @media(max-width:640px) {fieldset {grid-template-columns:1fr;}}

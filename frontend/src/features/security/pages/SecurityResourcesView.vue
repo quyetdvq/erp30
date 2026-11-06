@@ -361,7 +361,6 @@ onMounted(() => {
     </ListShell>
   </section>
 
-
   <AppDialogHost :open="Boolean(detailOpen && selected)" size="lg" @close="detailOpen = false" variant="detail">
     <section v-if="detailOpen && selected" class="ds-dialog-surface modal-card tabbed-detail-workspace" role="dialog" aria-modal="true"
       :aria-label="`${t('security.resource')}: ${selected.name}`">
@@ -496,7 +495,6 @@ onMounted(() => {
     </section>
   </AppDialogHost>
 
-
   <AppDialogHost :open="actionModalOpen" size="md" @close="actionModalOpen = false" variant="standard">
     <section v-if="actionModalOpen" class="ds-dialog-surface modal-card" role="dialog" aria-modal="true" :aria-label="t('security.actionForm')">
       <header class="modal-card__header">
@@ -570,12 +568,7 @@ onMounted(() => {
   font-weight: 400;
 }
 
-.security-note {
-  margin: 0;
-  color: var(--ds-text-secondary);
-  font-size: 12px;
-  line-height: 1.6;
-}
+.security-note { margin: 0; }
 
 .detail-actions {
   display: flex;
@@ -624,11 +617,7 @@ onMounted(() => {
   gap: 6px;
 }
 
-.inline-error {
-  margin: 0 0 12px;
-  color: var(--ds-danger);
-  font-size: 12px;
-}
+.inline-error { margin: 0 0 12px; }
 
 code {
   font-family: ui-monospace, SFMono-Regular, Consolas, monospace;

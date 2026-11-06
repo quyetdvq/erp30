@@ -1,46 +1,129 @@
-/* DS3: one visual contract for list tables, search, pagination, row actions
- * and statuses. Behavior, row authorization and query state stay in Vue. */
-.data-table,
-.list-table {
+/* DinkERP table chrome -- single owner for list, detail, relation and workflow.
+ * Every table opts into .ds-table. Legacy .list-table/.data-table/.ds-data-grid
+ * remain compatible for existing consumers and isolated CSS fixtures.
+ * Feature CSS may arrange contents, never duplicate cell/header/hover chrome. */
+:is(.ds-table, .list-table, .data-table, .ds-data-grid) {
   width: 100%;
   border-collapse: collapse;
   color: var(--ds-text-primary);
   font-size: var(--ds-font-sm);
 }
-/* Opt-in grid for hierarchy and non-standard action columns (e.g. Products). */
-.ds-data-grid { width: 100%; border-collapse: collapse; color: var(--ds-text-primary); font-size: var(--ds-font-sm); }
-.ds-data-grid th, .ds-data-grid td { padding: 10px 12px; border-bottom: 1px solid var(--ds-border-subtle); vertical-align: middle; text-align: start; }
-.ds-data-grid th { background: var(--ds-bg-subtle); color: var(--ds-text-secondary); font-size: var(--ds-font-xs); font-weight: 700; }
-.ds-data-grid tbody tr:last-child td { border-bottom: 0; }
-.data-table th,
-.list-table th {
+:is(.ds-table, .list-table, .data-table, .ds-data-grid) :is(th, td) {
+  padding: 10px 12px;
+  border-bottom: 1px solid var(--ds-border-subtle);
+  text-align: start;
+  vertical-align: middle;
+}
+/* Paint-only hover easing; never animate geometry, borders or text.
+ * Pointer focus is not a keyboard focus indicator: :focus-within kept a
+ * previously clicked action row tinted while another row was hovered.
+ * :focus-visible on the row OR its focused descendant preserves keyboard
+ * navigation while mouse-focused actions never paint a stale second row. */
+:is(.ds-table, .list-table, .data-table, .ds-data-grid) td {
+  transition: background-color var(--ds-motion-fast) ease;
+}
+:is(.ds-table, .list-table, .data-table, .ds-data-grid) th {
   background: var(--ds-bg-subtle);
   color: var(--ds-text-secondary);
   font-size: var(--ds-font-xs);
   font-weight: 700;
-  text-align: start;
 }
-.data-table th, .data-table td { padding: 11px 13px; }
-.data-table td { border-top: 1px solid var(--ds-border-subtle); vertical-align: middle; }
-.data-table tbody tr:hover td { background: var(--ds-bg-hover); }
+:is(.ds-table, .list-table, .data-table, .ds-data-grid) tbody tr:is(:hover, :focus-visible, :has(:focus-visible)) > td {
+  background: var(--ds-table-row-hover);
+}
+:is(.ds-table, .list-table, .data-table, .ds-data-grid) tbody tr:last-child > td {
+  border-bottom: 0;
+}
 .list-table-wrap,
 .ds-table-scroll {
   overflow-x: auto;
   border: 1px solid var(--ds-border-subtle);
   border-radius: var(--ds-radius-sm);
 }
-/* Wide list pages opt in by setting a minimum through their table wrapper.
- * The default remains unchanged for compact catalogs. */
+/* Explicit width variants: widths are behavior, not local copies of skin. */
 .list-table { min-width: var(--ds-list-table-min-width); }
-.list-table th,
-.list-table td { padding: 10px 12px; border-bottom: 1px solid var(--ds-border-subtle); vertical-align: middle; }
-.list-table tbody tr:hover td { background: var(--ds-bg-hover); }
-.list-table tbody tr:last-child td { border-bottom: 0; }
+.ds-table--master { min-width: 1100px; }
+.ds-table--detail { min-width: 760px; }
+.ds-table--product-relations { min-width: 780px; }
+.ds-table--contacts { min-width: 700px; }
+.ds-table--authorization { min-width: 560px; }
+.ds-table--relationship { min-width: 760px; }
+.ds-table--valign-top td { vertical-align: top; }
+.ds-table--sticky-header th { position: sticky; top: 0; z-index: 1; white-space: nowrap; }
+/* Price Lists uses the same sticky Actions code as Customer, with its own width. */
+.list-table-wrap--sticky-actions.list-table-wrap--price { --ds-list-table-min-width: 1080px; }
+/* My Workflow: a specialized responsive card presentation, centrally owned. */
+.ds-table-scroll--workflow { width: 100%; max-width: 100%; border-top: 0; border-radius: 0 0 7px 7px; background: var(--ds-bg-surface); }
+@media (max-width: 760px) {
+  .ds-table-scroll--workflow { overflow-x: visible; border: 0; background: transparent; }
+  .ds-table--responsive-cards, .ds-table--responsive-cards tbody { display: block; }
+  .ds-table--responsive-cards thead { display: none; }
+  .ds-table--responsive-cards tbody tr {
+    display: grid; gap: 10px; margin: 10px 0; padding: 14px;
+    border: 1px solid var(--ds-border-subtle); border-radius: var(--ds-radius-md);
+    background: var(--ds-bg-surface);
+  }
+  .ds-table--responsive-cards tbody tr > td {
+    display: grid; grid-template-columns: 100px minmax(0, 1fr);
+    align-items: start; gap: 8px; padding: 0; border: 0;
+  }
+  .ds-table--responsive-cards td::before {
+    content: attr(data-label); color: var(--ds-text-secondary);
+    font-size: var(--ds-font-xs); font-weight: 600;
+  }
+  .ds-table--responsive-cards tbody tr:is(:hover, :focus-visible, :has(:focus-visible)) > td { background: transparent; }
+  .data-table.ds-table--relationship { min-width: 640px; }
+}
+@media (max-width: 700px) {
+  .data-table { min-width: 680px; }
+  .data-table.ds-table--assignment { min-width: 820px; }
+  .data-table.ds-table--contacts { min-width: 700px; }
+}
 
 /* Customer-like wide tables: keep row actions visible while the table scrolls.
- * This is opt-in; Price Lists and other feature tables keep their own contracts.
+ * This is opt-in; Price Lists sets its width modifier on the same wrapper.
  * The cell always reserves its border, so hover/focus cannot shift columns. */
-.list-table-wrap--sticky-actions { --ds-list-table-min-width: 1040px; }
+/* Sticky Actions overlays horizontally scrolled columns. A cell background
+ * transition passes through transparent/intermediate colors on mount/hover,
+ * exposing content underneath and repainting out of phase with other cells.
+ * Keep the shared row palette but paint the entire opt-in table atomically.
+ * Ordinary (non-sticky) tables retain their existing eased hover. */
+/* Sticky-action lists are a typography boundary between AppShell and data
+ * cells. Typography normally inherits (including line-height, weight and
+ * letter-spacing); a changing outer context must not resize the rows/icons.
+ * Keep the intentional theme tokens, responsive width and sticky behavior.
+ * Do not use `all: unset` / `all: initial`: those also reset scroll/focus/UI. */
+.list-table-wrap--sticky-actions {
+  --ds-list-table-min-width: 1040px;
+  font-family: var(--ds-font-family-ui);
+  font-size: var(--ds-font-sm);
+  font-style: normal;
+  font-weight: 400;
+  /* Match the existing table line box while stopping AppShell inheritance. */
+  line-height: normal;
+  letter-spacing: normal;
+  text-transform: none;
+  text-indent: 0;
+  text-shadow: none;
+  white-space: normal;
+  text-align: start;
+  color: var(--ds-text-primary);
+}
+/* Three icon buttons have fixed geometry independent of inherited line boxes.
+ * The shared :hover/:focus-visible skins and keyboard affordances remain. */
+/* A transient PBAC snapshot refresh can remove all three action buttons
+ * (fail closed) while the table remains mounted. Reserve the 32px action row
+ * slot even when its flex container is empty. The vertical-align is essential:
+ * min-height alone changes an empty inline-flex baseline and makes rows 4px
+ * TALLER; both properties together preserve the normal 53px table row. */
+.list-table-wrap--sticky-actions .table-row-actions {
+  white-space: nowrap;
+  line-height: normal;
+  min-height: var(--ds-button-height-sm);
+  vertical-align: middle;
+}
+
+.list-table-wrap--sticky-actions .list-table tbody td { transition: none; }
 .list-table-wrap--sticky-actions .list-table :is(th, td):last-child {
   position: sticky;
   right: 0;
@@ -54,9 +137,9 @@
   z-index: 2;
   background: var(--ds-bg-subtle);
 }
-.list-table-wrap--sticky-actions .list-table tbody tr:focus-within td,
+.list-table-wrap--sticky-actions .list-table tbody tr:is(:focus-visible, :has(:focus-visible)) td,
 .list-table-wrap--sticky-actions .list-table tbody tr:hover td:last-child {
-  background: var(--ds-bg-hover);
+  background: var(--ds-table-row-hover);
 }
 
 .list-table__sort {
@@ -70,7 +153,7 @@
 .list-table__sort:hover:not(:disabled) { color: var(--ds-primary); }
 .list-table__sort:disabled { cursor: wait; opacity: .65; }
 .list-table__sort:focus-visible { outline: 2px solid var(--ds-focus-ring); outline-offset: 2px; }
-.table-actions { text-align: end !important; }
+:is(.ds-table, .data-table, .list-table, .ds-data-grid) :is(th, td).table-actions { text-align: end; }
 
 /* One owner for responsive LIST search/filter/action layout (DS5 HF9).
  * Form is the inline-size container; all fields precede the actions row.
@@ -87,32 +170,12 @@
   gap: 12px 14px; align-items: end;
 }
 .list-query-controls__field {
-  display: grid; gap: var(--ds-space-1);
+  display: grid;
   min-width: 0; width: 100%;
-  color: var(--ds-text-secondary); font-size: var(--ds-font-xs); font-weight: 600;
 }
 .list-query-controls__field > * { min-width: 0; max-width: 100%; }
 .list-query-controls__search { min-width: 0; }
 .list-query-controls__field--wide { min-width: 0; }
-.list-query-controls__field > :is(input, select),
-.list-pagination__size select {
-  min-height: var(--ds-button-height-md);
-  padding: 6px 10px;
-  border: 1px solid var(--ds-border);
-  border-radius: var(--ds-radius-sm);
-  background: var(--ds-bg-surface);
-  color: var(--ds-text-primary);
-  font: inherit;
-  font-size: var(--ds-font-md);
-}
-.list-query-controls__field > :is(input, select):hover:not(:disabled),
-.list-pagination__size select:hover:not(:disabled) { border-color: var(--ds-border-strong); }
-.list-query-controls__field > :is(input, select):focus-visible,
-.list-pagination__size select:focus-visible {
-  border-color: var(--ds-focus-ring);
-  outline: 2px solid var(--ds-focus-ring);
-  outline-offset: 1px;
-}
 .list-query-controls__actions {
   display: flex; flex-wrap: wrap; align-items: center;
   width: 100%; min-width: 0; gap: var(--ds-space-2);
@@ -146,12 +209,10 @@
   .list-query-controls--dense .list-query-controls__field { grid-column: span 6; }
   .list-query-controls__actions > :nth-child(3) { margin-inline-start: 0; }
 }
-.list-query-controls__field > :is(input, select):disabled { cursor: not-allowed; opacity: .58; }
 
 .list-pagination { display: flex; align-items: center; justify-content: space-between; gap: var(--ds-space-3); flex-wrap: wrap; color: var(--ds-text-secondary); font-size: var(--ds-font-sm); }
 .list-pagination__size { display: inline-flex; align-items: center; gap: var(--ds-space-2); }
 .list-pagination__size span { font-size: var(--ds-font-xs); }
-.list-pagination__size select { min-height: var(--ds-button-height-sm); padding: 4px 8px; }
 .list-pagination__actions { display: inline-flex; align-items: center; gap: var(--ds-space-1); }
 .list-pagination__actions span { min-width: var(--ds-button-height-sm); text-align: center; font-weight: 700; }
 
@@ -164,6 +225,10 @@
 .list-shell__refreshing { color: var(--ds-text-secondary); font-size: var(--ds-font-sm); }
 .list-shell__retry { display: block; margin-top: var(--ds-space-2); padding: 4px 0; border: 0; background: transparent; color: var(--ds-primary); text-decoration: underline; cursor: pointer; }
 .list-shell__retry:focus-visible { outline: 2px solid var(--ds-focus-ring); outline-offset: 2px; }
+
+/* A status icon followed by a text label has one shared geometry in all
+ * transactional list views. Standalone TableStatus icons remain unchanged. */
+.ds-table-status-with-label { display: inline-flex; align-items: center; gap: 6px; }
 
 .table-row-actions { display: inline-flex; align-items: center; gap: var(--ds-space-1); }
 /* TableRowActions keeps its geometry here. The shared .ds-state-toggle
@@ -185,10 +250,12 @@
   .list-query-controls__actions button { flex: 1 1 auto; }
 }
 
-@media (prefers-reduced-motion: reduce) { .table-row-action { transition: none; } }
-
-/* Preserve the legacy compact-screen width in the table system owner. */
-@media (max-width: 700px) { .data-table { min-width: 680px; } }
+@media (prefers-reduced-motion: reduce) {
+  .table-row-action { transition: none; }
+  :is(.ds-table, .list-table, .data-table, .ds-data-grid) td {
+    transition: none;
+  }
+}
 
 /* Bespoke query bars use the same field-first, action-second contract. */
 .ds-filter-container { container: ds-filter / inline-size; min-width: 0; width: 100%; }
@@ -197,7 +264,7 @@
   display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 175px), 1fr));
   align-items: end; gap: 12px 14px; min-width: 0;
 }
-.ds-filter-fields > label { display: grid; gap: 6px; min-width: 0; width: 100%; }
+.ds-filter-fields > label { display: grid; min-width: 0; width: 100%; }
 .ds-filter-fields > label > :is(input, select),
 .ds-filter-fields > label > :is(.n-select, .n-input) { min-width: 0; width: 100%; max-width: 100%; }
 .ds-filter-field--wide { grid-column: span 2; }

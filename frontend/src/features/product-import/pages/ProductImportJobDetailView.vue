@@ -263,9 +263,6 @@ onMounted(() => {
   align-items: center;
   gap: 6px;
 }
-.inline-error {
-  color: var(--ds-danger);
-}
 
 @media (max-width: 640px) {
   .page-header {

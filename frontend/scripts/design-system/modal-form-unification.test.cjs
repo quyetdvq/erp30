@@ -77,7 +77,7 @@ test('Exactly three central stylesheets own chrome, controls and detail-workspac
   assert.match(modal, /--ds-dialog-body-padding/)
   assert.match(modal, /\.ds-dialog-host--utility/)
   assert.doesNotMatch(modal, /input:where|\.field-input|\.field-select/)
-  assert.match(forms, /input:where/)
+  assert.match(forms, /:where\(input:not\(/)
   assert.match(forms, /\.ds-dialog-host \.ds-dialog-surface :is\(\.ds-form-grid, \.form-grid, \.ds-detail-form-grid\)/)
   assert.match(forms, /@container ds-dialog/)
   assert.doesNotMatch(forms, /\.ds-dialog-host[^\n]*>\s*(?:header|footer)/)
@@ -101,9 +101,11 @@ test('Feature components do not redefine shared modal chrome or native form widg
 
 test('Native control geometry is consistent and does not alter checkboxes, textareas or Naive internals', () => {
   const forms = read('src/styles/forms.css')
-  assert.match(forms, /--ds-button-height-md/)
-  assert.match(forms, /:is\(input, select\):is\(\.ds-input, \.ds-select, \.field-input, \.field-select\)/,
-    'Height must not force textarea.field-input to a single line')
+  assert.match(read('src/styles/tokens.css'), /--ds-control-height:\s*var\(--ds-button-height-md\)/)
+  assert.match(forms, /:where\(input:not\(/)
+  assert.match(forms, /select, textarea\):not\(\.n-base-selection \*, \.n-input \*\)/)
+  assert.match(forms, /&:not\(textarea\) \{ height: var\(--ds-control-height\); \}/,
+    'One-line input/select are 36px; textarea keeps its intrinsic rows')
   for (const inputType of ['checkbox', 'radio', 'file', 'hidden', 'range', 'color', 'button', 'submit', 'reset']) {
     assert.match(forms, new RegExp(`\\[type='${inputType}'\\]`), `${inputType} excluded from native text fields`)
   }
@@ -137,13 +139,16 @@ test('Tokens control spacing and Light/Dark palette; invalid scrollbar rules are
   }
 })
 
-test('Workflow notification editor shares one stylesheet across Supplier and workflow actions', () => {
+test('Workflow notification editor is lazy-loaded once by each action owner', () => {
   const forms = read('src/styles/forms.css')
-  assert.match(forms, /\.workflow-notify-editor\s*\{/)
-  assert.match(forms, /\.workflow-notify-heading\s*\{/)
+  const workflow = read('src/styles/workflow-notify.css')
+  assert.doesNotMatch(forms, /\.workflow-notify-editor\s*\{/)
+  assert.match(workflow, /\.workflow-notify-editor\s*\{/)
+  assert.match(workflow, /\.workflow-notify-heading\s*\{/)
   for (const component of ['src/components/lists/BusinessWorkflowAction.vue',
     'src/features/supplier/components/SupplierStateAction.vue']) {
     const source = read(component)
+    assert.match(source, /import '@\/styles\/workflow-notify\.css'/)
     assert.match(source, /class="workflow-notify-editor"/)
     assert.doesNotMatch(source.split(/<style\b/)[1] || '', /\.workflow-notify-editor\s*\{/)
   }

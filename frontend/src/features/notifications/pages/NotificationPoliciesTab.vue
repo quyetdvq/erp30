@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import '../styles/notificationSettings.css'
 import { computed, onMounted, ref } from 'vue'
 import axios from 'axios'
 import { useUnsavedChanges } from '@/composables/useUnsavedChanges'
@@ -96,7 +97,7 @@ onMounted(() => void load())
 </script>
 
 <template>
-  <section class="content-panel m11-panel">
+  <section class="content-panel m11-panel m11-panel--policies">
     <header class="m11-heading">
       <div>
         <h1>{{ t('notificationSettings.systemTitle') }}</h1>
@@ -145,22 +146,3 @@ onMounted(() => void load())
     </section>
   </section>
 </template>
-
-<style scoped>
-.m11-panel { padding: 18px; display: grid; gap: 16px; }
-.m11-heading { display: flex; justify-content: space-between; gap: 16px; align-items: flex-start; flex-wrap: wrap; }
-.m11-heading h1, .m11-group h2 { margin: 0; }
-.m11-heading p, .m11-group p { margin: 6px 0 0; opacity: .78; }
-.m11-heading button { white-space: nowrap; }
-.m11-group { border: 1px solid var(--ds-border-subtle); border-radius: 10px; padding: 16px; display: grid; gap: 12px; min-width: 0; }
-.m11-group h2 { font-size: 1.1rem; }
-.m11-row { display: grid; grid-template-columns: minmax(170px,2fr) minmax(140px,1fr) minmax(140px,1fr) auto; gap: 14px; align-items: center; border-top: 1px solid var(--ds-border-subtle); padding-top: 12px; min-width: 0; }
-.m11-detail { display: grid; gap: 3px; min-width: 0; }
-.m11-row small { overflow-wrap: anywhere; opacity: .76; }
-.m11-row .m11-unsaved, .m11-row .m11-impact { color: var(--ds-warning); font-weight: 600; opacity: 1; }
-.m11-field { display: flex; gap: 8px; align-items: center; }
-.m11-row button { min-height: 34px; padding: 6px 12px; }
-.m11-notice { margin: 0; font-weight: 600; }
-@media(max-width:850px) { .m11-row { grid-template-columns: repeat(2, minmax(0,1fr)); } }
-@media(max-width:540px) { .m11-row { grid-template-columns: 1fr; } .m11-row button { justify-self: start; } }
-</style>

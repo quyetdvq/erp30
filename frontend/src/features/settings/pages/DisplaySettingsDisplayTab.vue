@@ -486,11 +486,6 @@ onMounted(async () => {
   gap: 10px;
   flex-wrap: wrap;
 }
-.context-toolbar label {
-  color: var(--ds-text-secondary);
-  font-size: 12px;
-  font-weight: 700;
-}
 .context-select {
   width: min(280px, 100%);
 }
@@ -524,25 +519,13 @@ onMounted(async () => {
 .display-field-main {
   min-width: 0;
 }
-.display-field-main label {
-  display: block;
-  color: var(--ds-text-secondary);
-  font-size: 13px;
-  font-weight: 700;
-}
+.display-field-main label { display: block; }
 .setting-key {
   display: block;
   margin-top: 4px;
   color: var(--ds-text-muted);
   font-family: ui-monospace, SFMono-Regular, Consolas, monospace;
   font-size: 10px;
-}
-.display-control .field-input {
-  width: 100%;
-}
-.check-input {
-  width: 18px;
-  height: 18px;
 }
 .display-field-meta {
   display: flex;

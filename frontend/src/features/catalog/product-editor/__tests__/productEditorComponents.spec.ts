@@ -17,6 +17,20 @@ describe('Product Editor presentational components', () => {
     expect(wrapper.emitted('back')).toHaveLength(1)
   })
 
+  it('links the top Save button to the editor form without mutating the submit handler', async () => {
+    const wrapper = mount(ProductEditorPageHeading, {
+      props: { editing: false, saveFormId: 'product-editor-form', saveDisabled: true },
+      global: { plugins: [i18n] },
+    })
+    const save = wrapper.get('button[form="product-editor-form"]')
+    expect(save.attributes('type')).toBe('submit')
+    expect(save.attributes('disabled')).toBeDefined()
+    expect(save.text()).toBe(i18n.global.t('product.editorSaveProduct'))
+    await wrapper.setProps({ editing: true, saveDisabled: false })
+    expect(save.attributes('disabled')).toBeUndefined()
+    expect(save.text()).toBe(i18n.global.t('product.editorSaveChanges'))
+  })
+
   it('renders the same fallback and validation alerts without an enclosing DOM element', () => {
     const wrapper = mount(ProductEditorFeedback, {
       props: {

@@ -13,6 +13,9 @@ const fileProduct = {
   sku: 'SIMPLE-30',
   image_available: false,
   price: '1200.00',
+  // An edit-route Product must carry its per-record action hints; otherwise
+  // ProductEditorView correctly hides the image input despite login permissions.
+  allowed_actions: { edit: true, setstate: false },
 }
 
 // Route handlers live outside tests, so each test's assertions stay unconditional.
@@ -73,9 +76,10 @@ test('Product Editor uploads a representative image through authorized multipart
   })
   await page.goto('/products/30')
   await expect(page.getByText('Ảnh minh họa').first()).toBeVisible()
-  await page
-    .getByLabel('Chọn ảnh')
-    .setInputFiles({ name: 'sample.png', mimeType: 'image/png', buffer: png })
+  const uploadInput = page.getByLabel('Chọn ảnh', { exact: true })
+  await expect(uploadInput).toHaveAttribute('type', 'file')
+  await expect(uploadInput).toBeEnabled()
+  await uploadInput.setInputFiles({ name: 'sample.png', mimeType: 'image/png', buffer: png })
   await expect(page.locator('.product-image-field img')).toBeVisible()
   await page.getByRole('button', { name: 'Lưu' }).first().click()
   await expect.poll(() => uploaded).toBe(true)

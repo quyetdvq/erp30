@@ -106,6 +106,25 @@ const {
   baseUomName,
   parentRow,
 } = useProductEditorLookups(id, form, comboItems, t)
+// Read-only presentation summaries. The canonical Product validator, payload and
+// image commit are deliberately unchanged; optional Group/Image are not errors.
+const groupSummary = computed(() =>
+  groupOptions.value.find((option) => option.value === form.value.product_group_id)?.label
+  ?? t('product.editorNotSelected'),
+)
+const uomSummary = computed(() =>
+  uomOptions.value.find((option) => option.value === form.value.base_uom_id)?.label
+  ?? t('product.editorNotSelected'),
+)
+const editorNameComplete = computed(() =>
+  Boolean((isChild.value ? form.value.product_child_name : form.value.product_name).trim()),
+)
+const imageSummary = computed(() => imageDirty.value
+  ? t('product.editorImagePending')
+  : productHasImage(product.value)
+    ? t('product.editorImagePresent')
+    : t('product.editorImageAbsent'),
+)
 function businessStateLabel(code: string | null | undefined): string {
   if (!code) return t('list.noValue')
   const key = `status.${code.toLowerCase()}`
@@ -350,183 +369,253 @@ watch(
 </script>
 
 <template>
-  <ProductEditorPageHeading :editing="editing" @back="router.push('/products')" />
-  <section class="content-panel editor-panel">
+  <ProductEditorPageHeading
+    :editing="editing"
+    save-form-id="product-editor-form"
+    :save-disabled="busy || !canEdit || !lookupsReady"
+    :save-busy="busy"
+    @back="router.push('/products')"
+  />
+  <section class="editor-panel" :aria-label="t('product.editorWorkspace')">
     <ProductEditorFeedback
       :error="error"
       :validation-error="validationError"
       :is-parent-role="isParentRole"
       :image-partial-error="imagePartialError"
     />
-    <form class="editor-form" @submit.prevent="save">
-      <fieldset>
-        <legend>{{ t('product.image') }}</legend>
-        <ProductImageField
-          ref="imageField"
-          :product-id="id ?? (product ? String(product.id) : undefined)"
-          :image-available="productHasImage(product)"
-          :image-path="product?.image_url"
-          :editable="canEdit"
-          :disabled="busy"
-          @dirty="onImageDirty"
-        />
-      </fieldset>
-      <fieldset :disabled="!canEdit || busy">
-        <legend>{{ t('product.identity') }}</legend>
-        <div class="form-grid">
-          <label
-            ><span>{{ t('product.productCode') }}</span
-            ><input v-model="form.product_code" /></label
-          ><label
-            ><span>{{ t('product.sku') }}</span
-            ><input v-model="form.sku" /></label
-          ><label
-            ><span>{{ t('product.barcode') }}</span
-            ><input v-model="form.barcode" /></label
-          ><label
-            ><span>{{ t('product.type') }}</span
-            ><select v-model="form.product_type" :disabled="editing || isChild">
-              <option value="STANDARD">{{ t('product.standard') }}</option>
-              <option value="COMBO">{{ t('product.combo') }}</option>
-            </select></label
-          >
+    <form id="product-editor-form" class="editor-form" @submit.prevent="save">
+      <div class="product-editor-layout">
+        <div class="product-editor-main">
+          <section class="product-editor-card" aria-labelledby="product-editor-basics-title">
+            <div class="product-editor-card__heading">
+              <span class="product-editor-card__index" aria-hidden="true">01</span>
+              <h2 id="product-editor-basics-title">{{ t('product.editorBasics') }}</h2>
+            </div>
+            <fieldset class="product-editor-card__body" :disabled="!canEdit || busy">
+              <legend class="sr-only">{{ t('product.editorBasics') }}</legend>
+              <div class="product-editor-fields product-editor-fields--two">
+                <label class="ds-field product-editor-field">
+                  <span>{{ t('product.productCode') }}</span>
+                  <input v-model="form.product_code" />
+                </label>
+                <label class="ds-field product-editor-field">
+                  <span>{{ t('product.sku') }}</span>
+                  <input v-model="form.sku" />
+                </label>
+                <label class="ds-field product-editor-field">
+                  <span>{{ t('product.barcode') }}</span>
+                  <input v-model="form.barcode" />
+                </label>
+                <label class="ds-field product-editor-field">
+                  <span>{{ t('product.editorProductType') }}</span>
+                  <select v-model="form.product_type" :disabled="editing || isChild">
+                    <option value="STANDARD">{{ t('product.standard') }}</option>
+                    <option value="COMBO">{{ t('product.combo') }}</option>
+                  </select>
+                </label>
+                <label v-if="!isChild" class="ds-field product-editor-field">
+                  <span>{{ t('product.productName') }} <span class="required-mark" aria-hidden="true">*</span></span>
+                  <input v-model="form.product_name" required />
+                </label>
+                <label v-else class="ds-field product-editor-field">
+                  <span>{{ t('product.parentProduct') }} <span class="required-mark" aria-hidden="true">*</span></span>
+                  <RemoteSearchableSelect
+                    :model-value="form.parent_product_id"
+                    :disabled="!canEdit || busy"
+                    :selected-options="parentSelectOptions"
+                    :search="searchParentProducts"
+                    :aria-label="t('product.parentProduct')"
+                    @update:model-value="(value) => void parentChanged(value)"
+                  />
+                </label>
+                <label v-if="isChild" class="ds-field product-editor-field">
+                  <span>{{ t('product.childName') }} <span class="required-mark" aria-hidden="true">*</span></span>
+                  <input v-model="form.product_child_name" required />
+                </label>
+                <label class="ds-field product-editor-field">
+                  <span>{{ t('product.productGroup') }}</span>
+                  <SearchableSelect
+                    :model-value="form.product_group_id"
+                    :disabled="!canEdit || busy"
+                    :options="groupOptions"
+                    :placeholder="t('list.all')"
+                    :aria-label="t('product.productGroup')"
+                    @update:model-value="(value) => (form.product_group_id = typeof value === 'string' ? value : '')"
+                  />
+                </label>
+              </div>
+              <p v-if="isChild" class="field-note product-editor-child-note">
+                {{ t('product.childFullName', { name: `${parentRow?.full_name ?? ''} - ${form.product_child_name}` }) }}
+              </p>
+            </fieldset>
+          </section>
+
+          <section class="product-editor-card" aria-labelledby="product-editor-price-title">
+            <div class="product-editor-card__heading">
+              <span class="product-editor-card__index" aria-hidden="true">02</span>
+              <h2 id="product-editor-price-title">{{ t('product.uomPrice') }}</h2>
+            </div>
+            <fieldset class="product-editor-card__body" :disabled="!canEdit || busy">
+              <legend class="sr-only">{{ t('product.uomPrice') }}</legend>
+              <p v-if="isParentRole" class="field-note">{{ t('product.parentNoUomPrice') }}</p>
+              <div v-else class="product-editor-fields product-editor-fields--two">
+                <label class="ds-field product-editor-field">
+                  <span>{{ t('product.editorBaseUom') }} <span class="required-mark" aria-hidden="true">*</span></span>
+                  <SearchableSelect
+                    :model-value="form.base_uom_id"
+                    :disabled="!canEdit || busy"
+                    :options="uomOptions"
+                    :aria-label="t('product.editorBaseUom')"
+                    @update:model-value="(value) => (form.base_uom_id = typeof value === 'string' ? value : '')"
+                  />
+                  <small>{{ t('product.baseUomRequired') }}</small>
+                </label>
+                <label class="ds-field product-editor-field">
+                  <span>{{ t('product.defaultPrice') }}</span>
+                  <DecimalInput
+                    v-model="form.price"
+                    kind="money"
+                    :max-decimals="2"
+                    :aria-label="t('product.defaultPrice')"
+                  />
+                </label>
+              </div>
+            </fieldset>
+          </section>
+
+          <section class="product-editor-card" aria-labelledby="product-editor-package-title">
+            <div class="product-editor-card__heading">
+              <span class="product-editor-card__index" aria-hidden="true">03</span>
+              <h2 id="product-editor-package-title">{{ t('product.editorPackaging') }}</h2>
+            </div>
+            <fieldset class="product-editor-card__body" :disabled="!canEdit || busy">
+              <legend class="sr-only">{{ t('product.editorPackaging') }}</legend>
+              <div class="product-editor-fields product-editor-fields--two">
+                <label class="ds-field product-editor-field">
+                  <span>{{ t('product.netWeight') }}</span>
+                  <DecimalInput v-model="form.net_weight_g" :max-decimals="3" :aria-label="t('product.netWeight')" />
+                </label>
+                <label class="ds-field product-editor-field">
+                  <span>{{ t('product.packageGrossWeight') }}</span>
+                  <DecimalInput v-model="form.package_gross_weight_g" :max-decimals="3" :aria-label="t('product.packageGrossWeight')" />
+                </label>
+              </div>
+              <div class="product-editor-fields product-editor-fields--three">
+                <label class="ds-field product-editor-field">
+                  <span>{{ t('product.packageLength') }}</span>
+                  <DecimalInput v-model="form.package_length_mm" :max-decimals="3" :aria-label="t('product.packageLength')" />
+                </label>
+                <label class="ds-field product-editor-field">
+                  <span>{{ t('product.packageWidth') }}</span>
+                  <DecimalInput v-model="form.package_width_mm" :max-decimals="3" :aria-label="t('product.packageWidth')" />
+                </label>
+                <label class="ds-field product-editor-field">
+                  <span>{{ t('product.packageHeight') }}</span>
+                  <DecimalInput v-model="form.package_height_mm" :max-decimals="3" :aria-label="t('product.packageHeight')" />
+                </label>
+              </div>
+            </fieldset>
+          </section>
+
+          <section class="product-editor-card" aria-labelledby="product-editor-operations-title">
+            <div class="product-editor-card__heading">
+              <span class="product-editor-card__index" aria-hidden="true">04</span>
+              <h2 id="product-editor-operations-title">{{ t('product.operational') }}</h2>
+            </div>
+            <fieldset class="product-editor-card__body" :disabled="!canEdit || busy">
+              <legend class="sr-only">{{ t('product.operational') }}</legend>
+              <p v-if="!editing" class="workflow-initial-note product-editor-status-note" role="note">
+                {{ t('workflow.initialManaged') }}
+                <strong v-if="workflowStates.initial.value">{{ workflowStates.initial.value }}</strong>
+              </p>
+              <label v-if="!isParentRole" class="checkbox-field product-editor-serial">
+                <input v-model="form.serial_management_enabled" type="checkbox" :disabled="isCombo" />
+                <span>{{ t('product.serial') }}<small v-if="isCombo">{{ t('product.comboSerialLocked') }}</small></span>
+              </label>
+              <p v-else class="field-note">{{ t('product.parentSerialLocked') }}</p>
+              <label class="ds-field product-editor-field">
+                <span>{{ t('product.description') }}</span>
+                <textarea v-model="form.description" rows="3" />
+              </label>
+            </fieldset>
+          </section>
         </div>
-      </fieldset>
-      <fieldset :disabled="!canEdit || busy">
-        <legend>{{ t('product.classification') }}</legend>
-        <div class="form-grid">
-          <label v-if="!isChild"
-            ><span>{{ t('product.productName') }}</span
-            ><input v-model="form.product_name" required /></label
-          ><label v-else
-            ><span>{{ t('product.parentProduct') }}</span
-            ><RemoteSearchableSelect
-              :model-value="form.parent_product_id"
-              :selected-options="parentSelectOptions"
-              :search="searchParentProducts"
-              :aria-label="t('product.parentProduct')"
-              @update:model-value="(value) => void parentChanged(value)" /></label
-          ><label v-if="isChild"
-            ><span>{{ t('product.childName') }}</span
-            ><input v-model="form.product_child_name" required /></label
-          ><label
-            ><span>{{ t('product.productGroup') }}</span
-            ><SearchableSelect
-              :model-value="form.product_group_id"
-              :options="groupOptions"
-              :placeholder="t('list.all')"
-              :aria-label="t('product.productGroup')"
-              @update:model-value="
-                (value) => (form.product_group_id = typeof value === 'string' ? value : '')
-              "
-          /></label>
-        </div>
-        <p v-if="isChild" class="field-note">
-          {{
-            t('product.childFullName', {
-              name: `${parentRow?.full_name ?? ''} - ${form.product_child_name}`,
-            })
-          }}
-        </p>
-      </fieldset>
-      <fieldset :disabled="!canEdit || busy">
-        <legend>{{ t('product.uomPrice') }}</legend>
-        <p v-if="isParentRole" class="field-note">{{ t('product.parentNoUomPrice') }}</p>
-        <div v-else class="form-grid">
-          <label
-            ><span>{{ t('product.baseUom') }}</span
-            ><SearchableSelect
-              :model-value="form.base_uom_id"
-              :options="uomOptions"
-              :aria-label="t('product.baseUom')"
-              @update:model-value="
-                (value) => (form.base_uom_id = typeof value === 'string' ? value : '')
-              "
-            /><small v-if="!isParentRole">{{ t('product.baseUomRequired') }}</small></label
-          ><label
-            ><span>{{ t('product.defaultPrice') }}</span
-            ><DecimalInput
-              v-model="form.price"
-              kind="money"
-              :max-decimals="2"
-              :aria-label="t('product.defaultPrice')"
-          /></label>
-        </div>
-      </fieldset>
-      <fieldset :disabled="!canEdit || busy">
-        <legend>{{ t('product.package') }}</legend>
-        <div class="form-grid">
-          <label
-            ><span>{{ t('product.netWeight') }}</span
-            ><DecimalInput
-              v-model="form.net_weight_g"
-              :max-decimals="3"
-              :aria-label="t('product.netWeight')" /></label
-          ><label
-            ><span>{{ t('product.packageGrossWeight') }}</span
-            ><DecimalInput
-              v-model="form.package_gross_weight_g"
-              :max-decimals="3"
-              :aria-label="t('product.packageGrossWeight')" /></label
-          ><label
-            ><span>{{ t('product.packageLength') }}</span
-            ><DecimalInput
-              v-model="form.package_length_mm"
-              :max-decimals="3"
-              :aria-label="t('product.packageLength')" /></label
-          ><label
-            ><span>{{ t('product.packageWidth') }}</span
-            ><DecimalInput
-              v-model="form.package_width_mm"
-              :max-decimals="3"
-              :aria-label="t('product.packageWidth')" /></label
-          ><label
-            ><span>{{ t('product.packageHeight') }}</span
-            ><DecimalInput
-              v-model="form.package_height_mm"
-              :max-decimals="3"
-              :aria-label="t('product.packageHeight')"
-          /></label>
-        </div>
-      </fieldset>
-      <fieldset :disabled="!canEdit || busy">
-        <legend>{{ t('product.operational') }}</legend>
-        <div class="form-grid">
-          <p v-if="!editing" class="workflow-initial-note" role="note">
-            {{ t('workflow.initialManaged') }}
-            <strong v-if="workflowStates.initial.value">{{ workflowStates.initial.value }}</strong>
-          </p>
-          <label v-if="!isParentRole" class="checkbox-field"
-            ><input
-              v-model="form.serial_management_enabled"
-              type="checkbox"
-              :disabled="isCombo"
-            /><span
-              >{{ t('product.serial')
-              }}<small v-if="isCombo">{{ t('product.comboSerialLocked') }}</small></span
-            ></label
-          >
-          <p v-else class="field-note">{{ t('product.parentSerialLocked') }}</p>
-        </div>
-        <label
-          ><span>{{ t('product.description') }}</span
-          ><textarea v-model="form.description" rows="3" />
-        </label>
-      </fieldset>
-      <footer class="editor-actions">
-        <button data-ds-icon="cancel" type="button" class="secondary-button" @click="router.push('/products')">
-          {{ t('common.cancel') }}</button
-        ><button data-ds-icon="save" type="submit" class="primary-button" :disabled="busy || !canEdit || !lookupsReady">
-          {{ busy ? t('common.saving') : t('common.save') }}</button
-        ><BusinessWorkflowAction
-          v-if="editing && product && canSetState"
-          resource="product"
-          :target-id="String(product.id)"
-          :busy="busy"
-          variant="button"
-          @changed="afterWorkflowChange"
-        />
-      </footer>
+
+        <aside class="product-editor-side" :aria-label="t('product.editorSidebar')">
+          <section class="product-editor-card" aria-labelledby="product-editor-image-title">
+            <div class="product-editor-card__heading">
+              <span class="product-editor-card__index" aria-hidden="true">05</span>
+              <h2 id="product-editor-image-title">{{ t('product.editorImageCard') }}</h2>
+            </div>
+            <div class="product-editor-card__body">
+              <ProductImageField
+                ref="imageField"
+                :product-id="id ?? (product ? String(product.id) : undefined)"
+                :image-available="productHasImage(product)"
+                :image-path="product?.image_url"
+                :editable="canEdit"
+                :disabled="busy"
+                @dirty="onImageDirty"
+              />
+            </div>
+          </section>
+
+          <section class="product-editor-card" aria-labelledby="product-editor-summary-title">
+            <div class="product-editor-card__heading">
+              <span class="product-editor-card__index" aria-hidden="true">06</span>
+              <h2 id="product-editor-summary-title">{{ t('product.editorSummary') }}</h2>
+            </div>
+            <dl class="product-editor-summary">
+              <div class="product-editor-summary__row">
+                <dt>{{ t('product.editorProductType') }}</dt>
+                <dd class="product-editor-summary__value is-success">{{ form.product_type }}</dd>
+              </div>
+              <div class="product-editor-summary__row">
+                <dt>{{ isChild ? t('product.childName') : t('product.productName') }}</dt>
+                <dd :class="['product-editor-summary__value', editorNameComplete ? 'is-success' : 'is-required']">
+                  {{ editorNameComplete ? (isChild ? form.product_child_name : form.product_name) : t('product.editorRequired') }}
+                </dd>
+              </div>
+              <div class="product-editor-summary__row">
+                <dt>{{ t('product.productGroup') }}</dt>
+                <dd class="product-editor-summary__value">{{ groupSummary }}</dd>
+              </div>
+              <div v-if="!isParentRole" class="product-editor-summary__row">
+                <dt>{{ t('product.editorBaseUom') }}</dt>
+                <dd :class="['product-editor-summary__value', form.base_uom_id ? 'is-success' : 'is-required']">
+                  {{ uomSummary }}
+                </dd>
+              </div>
+              <div class="product-editor-summary__row">
+                <dt>{{ t('product.serial') }}</dt>
+                <dd class="product-editor-summary__value">
+                  {{ !isCombo && !isParentRole && form.serial_management_enabled ? t('product.editorOn') : t('product.editorOff') }}
+                </dd>
+              </div>
+              <div class="product-editor-summary__row">
+                <dt>{{ t('product.image') }}</dt>
+                <dd class="product-editor-summary__value">{{ imageSummary }}</dd>
+              </div>
+              <div v-if="isCombo" class="product-editor-summary__row">
+                <dt>{{ t('product.comboComponents') }}</dt>
+                <dd class="product-editor-summary__value">{{ comboItems.length }}</dd>
+              </div>
+            </dl>
+          </section>
+
+          <section class="product-editor-card" aria-labelledby="product-editor-notes-title">
+            <div class="product-editor-card__heading">
+              <span class="product-editor-card__index" aria-hidden="true">07</span>
+              <h2 id="product-editor-notes-title">{{ t('product.editorTips') }}</h2>
+            </div>
+            <ul class="product-editor-tips">
+              <li>{{ t('product.editorTipCombo') }}</li>
+              <li>{{ t('product.editorTipConversions') }}</li>
+              <li>{{ t('product.editorTipWorkflow') }}</li>
+            </ul>
+          </section>
+        </aside>
+      </div>
     </form>
     <section
       v-if="
@@ -551,8 +640,8 @@ watch(
           {{ t('product.addChild') }}
         </button>
       </header>
-      <div class="data-table-wrap">
-        <table class="data-table">
+      <div class="data-table-wrap ds-table-scroll">
+        <table class="data-table ds-table ds-table--relationship">
           <caption class="sr-only">
             {{
               t('product.children')
@@ -647,8 +736,8 @@ watch(
       <p v-if="conversionError" class="inline-error" role="alert">
         {{ t('product.requestError') }}
       </p>
-      <div class="data-table-wrap">
-        <table class="data-table">
+      <div class="data-table-wrap ds-table-scroll">
+        <table class="data-table ds-table ds-table--relationship">
           <caption class="sr-only">
             {{
               t('product.conversions')
@@ -734,8 +823,8 @@ watch(
         </button>
       </header>
       <p v-if="comboError" class="inline-error" role="alert">{{ t('product.requestError') }}</p>
-      <div class="data-table-wrap">
-        <table class="data-table">
+      <div class="data-table-wrap ds-table-scroll">
+        <table class="data-table ds-table ds-table--relationship">
           <caption class="sr-only">
             {{
               t('product.comboComponents')
@@ -799,6 +888,21 @@ watch(
         {{ comboBusy ? t('common.saving') : t('common.save') }}
       </button>
     </section>
+
+      <footer class="editor-actions">
+        <button data-ds-icon="cancel" type="button" class="secondary-button" @click="router.push('/products')">
+          {{ t('common.cancel') }}</button
+        ><button data-ds-icon="save" type="submit" form="product-editor-form" class="primary-button" :disabled="busy || !canEdit || !lookupsReady">
+          {{ busy ? t('common.saving') : t('common.save') }}</button
+        ><BusinessWorkflowAction
+          v-if="editing && product && canSetState"
+          resource="product"
+          :target-id="String(product.id)"
+          :busy="busy"
+          variant="button"
+          @changed="afterWorkflowChange"
+        />
+      </footer>
   </section>
   <AppDialogHost :open="conversionEditorOpen" size="md" @close="conversionEditorOpen = false" variant="standard">
     <section v-if="conversionEditorOpen"
@@ -894,134 +998,187 @@ watch(
 </template>
 
 <style scoped>
+/* PR02: page-only composition. Form control chrome remains in forms.css. */
 .editor-panel {
+  container: product-editor / inline-size;
   display: grid;
-  gap: 18px;
-  padding: 20px;
+  gap: var(--ds-space-4);
+  min-width: 0;
 }
 .editor-form {
   display: grid;
-  gap: 18px;
+  gap: var(--ds-space-4);
+  min-width: 0;
 }
-fieldset {
+.product-editor-layout {
   display: grid;
-  gap: 12px;
+  grid-template-columns: minmax(0, 1.65fr) minmax(295px, 1fr);
+  gap: var(--ds-space-4);
+  min-width: 0;
+  align-items: start;
+}
+.product-editor-main,
+.product-editor-side {
+  display: grid;
+  align-content: start;
+  gap: var(--ds-space-3);
+  min-width: 0;
+}
+.product-editor-card,
+.editor-panel > .relationship-section {
+  min-width: 0;
+  background: var(--ds-bg-surface);
   border: 1px solid var(--ds-border-subtle);
-  border-radius: 6px;
-  padding: 16px;
+  border-radius: var(--ds-radius-md);
+  box-shadow: var(--ds-shadow-card);
+  overflow: hidden;
 }
-legend {
-  padding: 0 6px;
-  color: var(--ds-text-primary);
-  font-weight: 700;
-}
-.editor-form .form-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
-  gap: 12px;
-}
-/* Standalone product page editor; dialog labels use the shared form contract. */
-.editor-form label { display: grid; gap: 5px; color: var(--ds-text-secondary); font-size: var(--ds-font-sm); font-weight: 600; }
-/* On the full-page editor only. Modal controls are owned by forms.css. */
-.editor-form :is(input:not([type='checkbox'], [type='radio']), select, textarea) {
-  min-height: var(--ds-button-height-md);
-  border: 1px solid var(--ds-border);
-  border-radius: var(--ds-radius-sm);
-  padding: 7px 10px;
-  color: var(--ds-text-primary);
-  font: inherit;
-}
-.checkbox-field {
+.product-editor-card__heading {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: var(--ds-space-2);
+  min-width: 0;
+  padding: var(--ds-space-3) var(--ds-space-4);
+  border-bottom: 1px solid var(--ds-border-subtle);
 }
-.checkbox-field input {
-  min-height: auto;
+.product-editor-card__heading h2 {
+  margin: 0;
+  color: var(--ds-text-primary);
+  font-size: var(--ds-font-lg);
+  font-weight: 700;
+  line-height: 1.35;
 }
+.product-editor-card__index {
+  display: inline-grid;
+  place-items: center;
+  flex: 0 0 27px;
+  width: 27px;
+  height: 27px;
+  border-radius: var(--ds-radius-sm);
+  background: var(--ds-primary-soft);
+  color: var(--ds-primary);
+  font-size: var(--ds-font-xs);
+  font-weight: 700;
+}
+.product-editor-card__body {
+  display: grid;
+  gap: var(--ds-space-3);
+  min-width: 0;
+  margin: 0;
+  padding: var(--ds-space-4);
+  border: 0;
+}
+.product-editor-fields {
+  display: grid;
+  gap: var(--ds-space-3);
+  min-width: 0;
+}
+.product-editor-fields--two {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+.product-editor-fields--three {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+.product-editor-field { align-content: start; min-width: 0; }
+.product-editor-field > small,
+.product-editor-child-note,
 .checkbox-field small,
 .field-note,
 .restriction-note {
   color: var(--ds-text-secondary);
-  font-size: 12px;
+  font-size: var(--ds-font-xs);
+  font-weight: 400;
 }
-.inline-error {
+.product-editor-child-note { margin: 0; }
+.product-editor-status-note {
   margin: 0;
-  color: var(--ds-danger);
-  font-size: 12px;
+  padding: var(--ds-space-2) var(--ds-space-3);
+  background: var(--ds-info-soft);
+  color: var(--ds-text-primary);
+  border-radius: var(--ds-radius-sm);
+  font-size: var(--ds-font-sm);
 }
+.product-editor-status-note strong { color: var(--ds-primary); }
+.product-editor-serial { justify-self: start; }
+.product-editor-serial small { display: block; margin-top: 2px; }
+.product-editor-summary { display: grid; gap: 0; margin: 0; padding: var(--ds-space-2) var(--ds-space-4); }
+.product-editor-summary__row {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--ds-space-3);
+  min-width: 0;
+  padding: var(--ds-space-3) 0;
+  border-bottom: 1px solid var(--ds-border-subtle);
+  font-size: var(--ds-font-sm);
+}
+.product-editor-summary__row:last-child { border-bottom: 0; }
+.product-editor-summary__row dt { flex: 0 0 auto; color: var(--ds-text-secondary); }
+.product-editor-summary__value {
+  margin: 0;
+  min-width: 0;
+  max-width: 60%;
+  color: var(--ds-text-primary);
+  font-weight: 600;
+  text-align: end;
+  overflow-wrap: anywhere;
+}
+.product-editor-summary__value.is-success { color: var(--ds-success); }
+.product-editor-summary__value.is-required { color: var(--ds-danger); }
+.product-editor-tips {
+  display: grid;
+  gap: var(--ds-space-3);
+  margin: 0;
+  padding: var(--ds-space-4) var(--ds-space-4) var(--ds-space-4) var(--ds-space-8);
+  color: var(--ds-text-secondary);
+  background: var(--ds-bg-subtle);
+  font-size: var(--ds-font-sm);
+  line-height: var(--ds-line-height);
+}
+.product-editor-tips li::marker { color: var(--ds-primary); }
+.inline-error { margin: 0; }
 .editor-actions,
 .relationship-section header {
   display: flex;
   align-items: center;
   justify-content: flex-end;
   flex-wrap: wrap;
-  gap: 8px;
+  gap: var(--ds-space-2);
+}
+.editor-actions {
+  padding: var(--ds-space-3) var(--ds-space-4);
+  background: var(--ds-bg-surface);
+  border: 1px solid var(--ds-border-subtle);
+  border-radius: var(--ds-radius-md);
 }
 .relationship-section {
   display: grid;
-  gap: 12px;
-  border-top: 1px solid var(--ds-border-subtle);
-  padding-top: 18px;
+  gap: var(--ds-space-3);
+  padding: var(--ds-space-4);
 }
-.relationship-section header {
-  justify-content: space-between;
-}
-.relationship-section h2 {
-  margin: 0;
-  font-size: 18px;
-}
-.data-table-wrap {
-  overflow-x: auto;
-  border: 1px solid var(--ds-border-subtle);
-  border-radius: 6px;
-}
-.data-table {
-  width: 100%;
-  min-width: 760px;
-  border-collapse: collapse;
-  color: var(--ds-text-primary);
-  font-size: 13px;
-}
-.data-table th,
-.data-table td {
-  padding: 10px 12px;
-  border-bottom: 1px solid var(--ds-border-subtle);
-  text-align: start;
-  vertical-align: middle;
-}
-.data-table th {
-  background: var(--ds-bg-subtle);
-  color: var(--ds-text-secondary);
-  font-size: 12px;
-  font-weight: 700;
-}
-.data-table tbody tr:last-child td {
-  border-bottom: 0;
-}
-
-/* Preserve the shared icon control's 36px border-box and hover/focus box. */
+.relationship-section header { justify-content: space-between; }
+.relationship-section h2 { margin: 0; font-size: var(--ds-font-lg); }
+/* Preserve shared button chrome and icon geometry. */
 .icon-button { color: var(--ds-primary); }
-.danger-button {
-  color: var(--ds-danger);
+.danger-button { color: var(--ds-danger); }
+.parent-summary p { margin: 0; color: var(--ds-text-primary); }
+.modal-card header { display: flex; align-items: center; justify-content: space-between; }
+.modal-card h2 { margin: 0; font-size: var(--ds-font-lg); }
+/* Conversion editor grid is owned by forms.css, including its dialog-width @container. */
+@container product-editor (max-width: 1040px) {
+  .product-editor-layout { grid-template-columns: minmax(0, 1fr); }
+  .product-editor-side { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .product-editor-side > :first-child { grid-column: 1 / -1; }
 }
-.parent-summary p {
-  margin: 0;
-  color: var(--ds-text-primary);
-}
-.modal-card header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-}
-.modal-card h2 {
-  margin: 0;
-  font-size: 18px;
-}
-
-@media (max-width: 760px) {
-  .data-table {
-    min-width: 640px;
-  }
+@container product-editor (max-width: 640px) {
+  .product-editor-fields--two,
+  .product-editor-fields--three,
+  .product-editor-side { grid-template-columns: minmax(0, 1fr); }
+  .product-editor-card__body { padding: var(--ds-space-3); }
+  .product-editor-card__heading { padding: var(--ds-space-3); }
+  .product-editor-side > :first-child { grid-column: auto; }
+  .product-editor-summary { padding-inline: var(--ds-space-3); }
+  .editor-actions { justify-content: stretch; }
+  .editor-actions > button { flex: 1 1 130px; }
 }
 </style>

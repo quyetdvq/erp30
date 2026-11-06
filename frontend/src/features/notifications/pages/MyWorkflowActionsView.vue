@@ -171,8 +171,8 @@ onBeforeUnmount(() => { ++requestSerial; activeController?.abort() })
         <span>{{ t('myWork.availableCount') }}: <strong>{{ availableActionCount }}</strong></span>
         <span>{{ t('myWork.typeCount') }}: <strong>{{ kindCount }}</strong></span>
       </div>
-      <div v-if="displayedRows.length" class="my-work-table-scroll">
-        <table class="my-work-table">
+      <div v-if="displayedRows.length" class="my-work-table-scroll ds-table-scroll ds-table-scroll--workflow">
+        <table class="my-work-table ds-table ds-table--responsive-cards">
           <thead>
             <tr>
               <th scope="col">{{ t('myWork.record') }}</th>
@@ -237,15 +237,8 @@ onBeforeUnmount(() => { ++requestSerial; activeController?.abort() })
 .my-work-heading h1 { font-size: 1.65rem; margin: 0 0 8px; }
 .my-work-description { max-width: 900px; margin: 0; line-height: 1.6; color: var(--ds-text-secondary); }
 .my-work-toolbar { margin: 24px 0 16px; }
-.my-work-control { font-size: 12px; font-weight: 600; color: var(--ds-text-secondary); }
-.my-work-control :is(select, input) { width: 100%; min-height: 38px; padding: 8px 10px; border: 1px solid var(--ds-border); border-radius: 6px; background: var(--ds-bg-surface); color: var(--ds-text-primary); font: inherit; font-size: 13px; }
 .my-work-summary { display: flex; flex-wrap: wrap; gap: 8px 20px; padding: 12px 16px; border: 1px solid var(--ds-border-subtle); border-radius: 7px 7px 0 0; background: var(--ds-bg-subtle); color: var(--ds-text-secondary); font-size: 13px; }
 .my-work-summary strong { color: var(--ds-text-primary); }
-.my-work-table-scroll { width: 100%; max-width: 100%; overflow-x: auto; border: 1px solid var(--ds-border-subtle); border-top: 0; border-radius: 0 0 7px 7px; background: var(--ds-bg-surface); }
-.my-work-table { width: 100%; border-collapse: collapse; font-size: 13px; text-align: start; }
-.my-work-table th { padding: 12px; text-align: start; white-space: nowrap; color: var(--ds-text-secondary); background: var(--ds-bg-subtle); border-bottom: 1px solid var(--ds-border-subtle); }
-.my-work-table td { padding: 14px 12px; border-top: 1px solid var(--ds-border-subtle); vertical-align: middle; }
-.my-work-table tbody tr:hover { background: var(--ds-bg-hover); }
 .my-work-record { display: grid; justify-items: start; gap: 5px; min-width: 180px; max-width: 340px; }
 .my-work-type { padding: 3px 7px; border-radius: 4px; font-size: 11px; background: var(--ds-info-soft); color: var(--ds-info); }
 .my-work-name { color: var(--ds-text-primary); overflow-wrap: anywhere; font-size: 14px; }
@@ -264,12 +257,6 @@ onBeforeUnmount(() => { ++requestSerial; activeController?.abort() })
 .my-work-more { display: flex; justify-content: center; padding: 12px; }
 @media (max-width: 760px) {
   .my-work-actions { padding: 12px; }
-  .my-work-table-scroll { overflow-x: visible; border: 0; background: transparent; }
-  .my-work-table, .my-work-table tbody { display: block; }
-  .my-work-table thead { display: none; }
-  .my-work-table tbody tr { display: grid; gap: 10px; margin: 10px 0; padding: 14px; border: 1px solid var(--ds-border-subtle); border-radius: 8px; background: var(--ds-bg-surface); }
-  .my-work-table td { display: grid; grid-template-columns: 100px minmax(0, 1fr); align-items: start; gap: 8px; padding: 0; border: 0; }
-  .my-work-table td::before { content: attr(data-label); color: var(--ds-text-secondary); font-size: 12px; font-weight: 600; }
   .my-work-record { min-width: 0; }
   .my-work-time { white-space: normal; }
 }

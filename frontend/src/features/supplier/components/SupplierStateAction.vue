@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import '@/styles/workflow-notify.css'
 import AppDialogHost from '@/components/ui/AppDialogHost.vue'
 import { computed, nextTick, onBeforeUnmount, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
@@ -221,7 +222,7 @@ onBeforeUnmount(() => { ++requestSequence; ++assigneeSequence; if (returnFocusTo
 
 <template>
   <button v-if="authorized" type="button"
-    :class="variant === 'icon' ? 'supplier-state-action-icon' : 'secondary-button'"
+    :class="variant === 'icon' ? 'supplier-state-action-icon ds-icon-control ds-icon-control--warning' : 'secondary-button'"
     :disabled="disabled" :title="t('workflow.changeState')" :aria-label="t('workflow.changeState')"
     @click="void openDialog()" data-ds-icon="changestate">
 
@@ -333,14 +334,8 @@ onBeforeUnmount(() => { ++requestSequence; ++assigneeSequence; if (returnFocusTo
 
 <style scoped>
 
-.supplier-state-action-icon {
-  display: inline-flex; align-items: center; justify-content: center;
-  width: 30px; height: 30px; padding: 0; border: 1px solid var(--ds-border-subtle);
-  border-radius: 4px; background: var(--ds-bg-surface); color: var(--ds-warning); cursor: pointer; font-size: 17px;
-}
-.supplier-state-action-icon:hover:not(:disabled),
-.supplier-state-action-icon:focus-visible { border-color: var(--ds-warning); }
-.supplier-state-action-icon:disabled { opacity: 0.5; cursor: not-allowed; }
+/* Icon-only Supplier transitions use the same shared 32px warning surface as
+ * Customer/People workflow actions; this component owns the CAS dialog only. */
 
 .supplier-state-dialog__body {
   display: grid; align-content: start; gap: 18px;

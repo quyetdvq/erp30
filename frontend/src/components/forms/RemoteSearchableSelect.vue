@@ -13,6 +13,7 @@ const props = withDefaults(
     ariaLabel?: string
     placeholder?: string
     disabled?: boolean
+    status?: 'error' | 'warning' | 'success'
   }>(),
   {
     modelValue: null,
@@ -86,6 +87,7 @@ onUnmounted(() => {
     :options="options"
     :placeholder="placeholder"
     :disabled="disabled"
+    :status="props.status"
     :filterable="true"
     :remote="true"
     :loading="busy"
@@ -106,8 +108,5 @@ onUnmounted(() => {
 .remote-searchable-select {
   width: 100%;
   min-width: 0;
-}
-.remote-searchable-select :deep(.n-base-selection) {
-  min-height: 34px;
 }
 </style>

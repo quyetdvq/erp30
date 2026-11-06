@@ -801,7 +801,7 @@ watch(canConfigure, (authorized) => {
             <input v-model="seqWidth" type="number" min="1" max="18" inputmode="numeric" />
           </label>
           <div class="pattern-builder__tokens">
-            <button v-for="token in tokens" :key="token.value" type="button" class="token-button"
+            <button v-for="token in tokens" :key="token.value" type="button" class="ds-button ds-button--secondary ds-button--sm"
               :aria-label="`${t('numbering.insertToken')}: ${t(token.labelKey)}`" @click="insertToken(token.value)">
               {{ token.value }}
             </button>
@@ -895,7 +895,6 @@ watch(canConfigure, (authorized) => {
 .numbering-query-controls { min-width: 0; }
 .numbering-query-controls label { min-width: 0; }
 .numbering-resource-filter { max-width: 480px; }
-.numbering-query-controls .numbering-resource-filter :deep(.n-base-selection) { min-height: var(--ds-button-height-md); }
 .permission-note,
 .immutable-note {
   margin: 0;
@@ -903,15 +902,6 @@ watch(canConfigure, (authorized) => {
   font-size: 12px;
 }
 
-.checkbox-field {
-  display: flex !important;
-  align-items: center;
-  gap: 8px !important;
-}
-
-.checkbox-field input {
-  min-height: auto;
-}
 
 .pattern-builder,
 .validation-panel {
@@ -933,17 +923,6 @@ watch(canConfigure, (authorized) => {
   flex-wrap: wrap;
 }
 
-.token-button {
-  min-height: 30px;
-  border: 1px solid var(--ds-border-subtle);
-  border-radius: 4px;
-  padding: 4px 8px;
-  background: var(--ds-bg-surface);
-  color: var(--ds-text-primary);
-  cursor: pointer;
-  font: inherit;
-  font-size: 12px;
-}
 
 .validation-panel__header {
   display: flex;

@@ -297,7 +297,7 @@ onMounted(async () => {
               </label>
               <label>
                 <span>{{ t('supplier.name') }} <span class="ds-detail-required supplier-required-star" aria-hidden="true">*</span></span>
-                <input v-model="draft.name" maxlength="255" required :aria-invalid="profileErrors.name" />
+                <input v-model="draft.name" maxlength="255" required :aria-invalid="Boolean(profileErrors.name)" />
                 <small v-if="profileErrors.name" class="ds-detail-error supplier-field-error">{{ t('supplier.fieldRequired') }}</small>
               </label>
               <label><span>{{ t('supplier.type') }}</span>
@@ -314,18 +314,18 @@ onMounted(async () => {
               </label>
               <label><span>{{ t('supplier.tax') }}</span><input v-model="draft.tax_code" maxlength="50" /></label>
               <label><span>{{ t('supplier.phone') }} <span class="ds-detail-required supplier-required-star" aria-hidden="true">*</span></span>
-                <input v-model="draft.phone" type="tel" autocomplete="tel" maxlength="50" required :aria-invalid="profileErrors.phone" />
+                <input v-model="draft.phone" type="tel" autocomplete="tel" maxlength="50" required :aria-invalid="Boolean(profileErrors.phone)" />
                 <small v-if="profileErrors.phone" class="ds-detail-error supplier-field-error">{{ t('supplier.phoneInvalid') }}</small>
               </label>
               <label><span>{{ t('supplier.email') }}</span><input v-model="draft.email" type="email" maxlength="255" /></label>
               <label class="ds-detail-form-wide supplier-form-wide"><span>{{ t('supplier.address') }} <span class="ds-detail-required supplier-required-star" aria-hidden="true">*</span></span>
-                <textarea v-model="draft.address" rows="2" required :aria-invalid="profileErrors.address" />
+                <textarea v-model="draft.address" rows="2" required :aria-invalid="Boolean(profileErrors.address)" />
                 <small v-if="profileErrors.address" class="ds-detail-error supplier-field-error">{{ t('supplier.fieldRequired') }}</small>
               </label>
               <label><span>{{ t('supplier.province') }} <span class="ds-detail-required supplier-required-star" aria-hidden="true">*</span></span>
                 <SearchableSelect :model-value="draft.province_id" :options="provinceOptions"
                   :placeholder="t('supplier.choose')" :aria-label="t('supplier.province')"
-                  :aria-invalid="profileErrors.province" @update:model-value="changeProvince" />
+                  :status="profileErrors.province ? 'error' : undefined" :aria-invalid="Boolean(profileErrors.province)" @update:model-value="changeProvince" />
                 <small v-if="profileErrors.province" class="ds-detail-error supplier-field-error">{{ t('supplier.fieldRequired') }}</small>
               </label>
               <label><span>{{ t('supplier.ward') }} <span class="ds-detail-required supplier-required-star" aria-hidden="true">*</span></span>
@@ -334,7 +334,7 @@ onMounted(async () => {
                   :disabled="!draft.province_id || !canSaveProfile || busy"
                   :selected-options="draft.ward_id && wardLabel ? [{ value: draft.ward_id, label: wardLabel }] : []"
                   :placeholder="t('supplier.choose')" :aria-label="t('supplier.ward')"
-                  :aria-invalid="profileErrors.ward" @update:model-value="(value) => { draft.ward_id = value }" />
+                  :status="profileErrors.ward ? 'error' : undefined" :aria-invalid="Boolean(profileErrors.ward)" @update:model-value="(value) => { draft.ward_id = value }" />
                 <small v-if="profileErrors.ward" class="ds-detail-error supplier-field-error">{{ t('supplier.fieldRequired') }}</small>
               </label>
             </div>
@@ -424,7 +424,7 @@ onMounted(async () => {
 }
 .supplier-company-section h3 { margin: 0; color: var(--ds-text-primary); font-size: 16px; }
 .supplier-checkbox { display: inline-flex; align-items: center; gap: 9px; color: var(--ds-text-secondary); font-size: 13px; }
-.supplier-checkbox input { flex: 0 0 auto; width: 16px; height: 16px; }
+.supplier-checkbox input { flex: 0 0 auto; }
 .supplier-chips { display: flex; flex-wrap: wrap; gap: 8px; }
 .supplier-chip {
   display: inline-flex; align-items: center; gap: 7px; padding: 4px 8px;

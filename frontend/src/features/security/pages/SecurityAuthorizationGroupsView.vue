@@ -342,7 +342,6 @@ onMounted(() => void load())
         </button>
       </nav>
 
-
       <div v-if="tab === 'overview'" class="modal-card__body security-detail-copy">
         <p>{{ selected.description || t('security.noDescription') }}</p>
         <p class="security-note">{{ t('security.basePermissionNote') }}</p>
@@ -351,7 +350,7 @@ onMounted(() => void load())
       <div v-else-if="tab === 'members'" class="modal-card__body security-editor">
         <p class="security-note">{{ t('security.memberSourceNote') }}</p>
         <div v-if="members.length" class="detail-table-wrap ds-table-scroll">
-          <table class="detail-table ds-data-grid">
+          <table class="detail-table ds-data-grid ds-table ds-table--authorization">
             <caption class="sr-only">
               {{
                 t('security.memberList')
@@ -387,11 +386,10 @@ onMounted(() => void load())
         <p v-else class="empty-state">{{ t('security.noUsersForMembers') }}</p>
       </div>
 
-
       <div v-else class="modal-card__body security-editor">
         <p class="security-note">{{ t('security.permissionSourceNote') }}</p>
         <div v-if="permissionRows.length" class="detail-table-wrap ds-table-scroll">
-          <table class="detail-table ds-data-grid">
+          <table class="detail-table ds-data-grid ds-table ds-table--authorization">
             <caption class="sr-only">
               {{
                 t('security.permissionList')
@@ -423,7 +421,6 @@ onMounted(() => void load())
         </div>
         <p v-else class="empty-state">{{ t('security.noPermissions') }}</p>
 
-
         <div class="permission-grid">
           <div v-for="group in actionGroups" :key="group.resourceId" class="permission-group">
 
@@ -436,15 +433,11 @@ onMounted(() => void load())
               <input type="checkbox" :checked="hasPermission(action.id)" @change="togglePermission(action.id)" />
               {{ action.code }}
 
-
             </label>
-
-
 
           </div>
         </div>
       </div>
-
 
       <footer class="modal-card__footer">
         <button type="button" class="secondary-button" @click="detailOpen = false" data-ds-icon="close">
@@ -506,7 +499,7 @@ onMounted(() => void load())
   </AppDialogHost>
 </template>
 
-<style scoped>.detail-table { min-width: 560px; }
+<style scoped>
 
 .authorization-group-modal__header-actions {
   display: flex;
@@ -521,12 +514,7 @@ onMounted(() => void load())
   gap: 12px;
 }
 
-.security-note {
-  margin: 0;
-  color: var(--ds-text-secondary);
-  font-size: 12px;
-  line-height: 1.6;
-}
+.security-note { margin: 0; }
 
 .check-row {
   display: flex;
@@ -567,11 +555,7 @@ onMounted(() => void load())
   font-weight: 700;
 }
 
-.inline-error {
-  margin: 0 0 12px;
-  color: var(--ds-danger);
-  font-size: 12px;
-}
+.inline-error { margin: 0 0 12px; }
 
 .sr-only {
   position: absolute;

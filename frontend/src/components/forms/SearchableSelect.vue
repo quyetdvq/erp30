@@ -16,6 +16,7 @@ const props = withDefaults(
     options: readonly SearchableSelectOption[]
     placeholder?: string
     disabled?: boolean
+    status?: 'error' | 'warning' | 'success'
     clearable?: boolean
     multiple?: boolean
     id?: string
@@ -63,6 +64,7 @@ function updateValue(next: string | number | Array<string | number> | null): voi
     :options="options"
     :placeholder="props.placeholder"
     :disabled="props.disabled"
+    :status="props.status"
     :clearable="props.clearable"
     :multiple="props.multiple"
     :filterable="true"

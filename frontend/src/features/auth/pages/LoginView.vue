@@ -420,19 +420,6 @@ function handleLanguageTrigger(event: MouseEvent): void {
   margin-bottom: 16px;
 }
 
-.auth-form-wrap :deep(.n-form-item-label) {
-  color: var(--ds-text-secondary);
-  font-size: 12px;
-  font-weight: 700;
-}
-
-.auth-form-wrap :deep(.n-input) {
-  border-radius: 7px;
-}
-
-.auth-form-wrap :deep(.n-input .n-icon) {
-  color: var(--ds-text-muted);
-}
 
 .form-options {
   display: flex;

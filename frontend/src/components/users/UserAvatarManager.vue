@@ -101,6 +101,8 @@ onBeforeUnmount(clearSelection)
       <img v-if="localPreview" :src="localPreview" :alt="t('security.avatarPreview')" class="avatar-manager__local" />
       <UserAvatar v-else :user-id="userId" :has-avatar="hasAvatar" :avatar-url="currentAvatarUrl" :fallback="label" :revision="revision" size="large" />
     </div>
+    <!-- Optional identity content: private profile can place name between preview and actions. -->
+    <slot name="identity" />
     <div v-if="canEdit" class="avatar-manager__actions">
       <label class="avatar-manager__file">
         <span>{{ t('security.avatarChoose') }}</span>
@@ -121,8 +123,7 @@ onBeforeUnmount(clearSelection)
 .avatar-manager__preview { width: 82px; height: 82px; border-radius: 50%; overflow: hidden; }
 .avatar-manager__local { width: 82px; height: 82px; border-radius: 50%; object-fit: cover; }
 .avatar-manager__actions { display: grid; gap: 8px; min-width: 200px; flex: 1; }
-.avatar-manager__file { display: grid; gap: 5px; }
 .avatar-manager__file input { width: 100%; max-width: 300px; }
 .avatar-manager__buttons { display: flex; gap: 8px; flex-wrap: wrap; }
-.inline-error { color: var(--ds-danger); font-size: 12px; }
+
 </style>

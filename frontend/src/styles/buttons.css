@@ -178,6 +178,15 @@
 .ds-icon-control:disabled { cursor: not-allowed; opacity: .58; }
 .ds-icon-control--danger { color: var(--ds-danger); }
 .ds-icon-control--danger:hover:not(:disabled) { border-color: var(--ds-danger); background: var(--ds-danger-soft); color: var(--ds-danger); }
+/* Multi-state workflow icons use the same 32px geometry as all table actions.
+ * Warning is semantic; the shared button stylesheet owns its chrome/hover. */
+.ds-icon-control--warning { color: var(--ds-warning); }
+.ds-icon-control--warning:hover:not(:disabled) {
+  border-color: var(--ds-warning);
+  background: var(--ds-warning-soft);
+  color: var(--ds-warning);
+}
+.ds-icon-control--warning:focus-visible { border-color: var(--ds-warning); }
 
 /* DS5 HF19: the COLOR represents the record's CURRENT status, while the
  * data-ds-icon mask still indicates the NEXT action (Ban / Power).

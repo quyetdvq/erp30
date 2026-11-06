@@ -358,9 +358,5 @@ onMounted(async () => {
   gap: 8px;
   white-space: nowrap;
 }
-.inline-error {
-  margin: 0;
-  color: var(--ds-danger);
-  font-size: 12px;
-}
+.inline-error { margin: 0; }
 </style>

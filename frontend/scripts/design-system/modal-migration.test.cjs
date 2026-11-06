@@ -124,20 +124,20 @@ test('Native modal controls are styled in forms.css without touching Naive inter
   const modal = read('src/styles/modal.css')
   const base = read('src/styles/base.css')
   assert.doesNotMatch(modal, /:is\(input|input:where/, 'modal.css must not own native controls')
-  const selectors = [...forms.matchAll(/([^{}]+)\{[^{}]*\}/g)].map((m) => m[1])
-    .filter((selector) => selector.includes('.ds-dialog-host .ds-dialog-surface') && selector.includes('input:where'))
-  assert.ok(selectors.length >= 5, 'native states include base, placeholder, hover, focus, disabled and error')
-  for (const selector of selectors) {
-    assert.match(selector, /:not\(\.n-base-selection \*, \.n-input \*\)/,
-      `Naive internals must not be styled: ${selector}`)
+  assert.equal((forms.match(/:where\(input:not\(/g) || []).length, 1,
+    'exactly one native selector; states are nested within')
+  assert.match(forms, /:where\(input:not\([\s\S]*?select, textarea\):not\(\.n-base-selection \*, \.n-input \*\)/)
+  for (const state of ['&:not(textarea)', '&:is(input, textarea)::placeholder', '&:hover',
+    '&:is(:focus, :active)', '&:disabled', '&:is(input, textarea):read-only',
+    "&[aria-invalid='true']"]) assert.ok(forms.includes(state), `missing nested ${state}`)
+  for (const type of ['checkbox', 'radio', 'file', 'hidden', 'range', 'color']) {
+    assert.ok(forms.includes(`[type='${type}']`), `special input type excluded: ${type}`)
   }
-  for (const inputType of ['checkbox', 'radio', 'file', 'hidden', 'range', 'color']) {
-    assert.ok(forms.includes(`[type='${inputType}']`), `special input excluded: ${inputType}`)
-  }
-  assert.match(forms, /:is\(\.n-base-selection, \.n-input\)\s*\{[^}]*min-height:\s*var\(--ds-button-height-md\)/s)
-  assert.match(forms, /border: 1px solid var\(--ds-border\)/)
+  assert.match(forms, /:where\(\.n-input, \.n-base-selection\) \{ min-height: var\(--ds-control-height\); \}/)
+  assert.match(forms, /border:\s*1px solid var\(--ds-control-border\)/)
   assert.match(forms, /:read-only/)
   assert.match(forms, /\[aria-invalid='true'\]/)
-  assert.match(base, /input:not\(\.n-base-selection \*, \.n-input \*\)/)
-  assert.match(base, /textarea:not\(\.n-input \*\)/)
+  assert.doesNotMatch(base, /input:not\(\.n-base-selection \*, \.n-input \*\)/)
+  assert.doesNotMatch(base, /textarea:not\(\.n-input \*\)/)
+  assert.doesNotMatch(base, /:where\(input, select, textarea\)/)
 })

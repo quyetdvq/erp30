@@ -8,7 +8,9 @@ import { readFileSync } from 'node:fs'
 import { resolve } from 'node:path'
 
 const read = (file: string): string => readFileSync(resolve(process.cwd(), file), 'utf8')
-const styles = ['tokens.css', 'base.css', 'buttons.css', 'tables.css']
+// Reuse the production form owner: without forms.css native select stays
+// 19px while the Company control is 36px, creating a false layout failure.
+const styles = ['tokens.css', 'base.css', 'buttons.css', 'forms.css', 'tables.css']
   .map((file) => read(`src/styles/${file}`))
 const supplierCSS = read('src/features/supplier/pages/SuppliersView.vue')
   .match(/<style scoped>([\s\S]*?)<\/style>/)?.[1]

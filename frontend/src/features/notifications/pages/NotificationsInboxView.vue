@@ -143,8 +143,6 @@ async function markAll(): Promise<void> {
 .m11-filters, .m11-notice-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 12px; }
 .m11-filters { margin: 16px 0; }
 .m11-advanced-filters { margin: 14px 0; }
-.m11-advanced-filters label { font-size: .85rem; }
-.m11-advanced-filters select, .m11-advanced-filters input { min-height: 34px; padding: 5px 8px; border: 1px solid var(--ds-border-subtle); border-radius: 6px; background: var(--ds-bg-surface); color: inherit; }
 .m11-notices { display: grid; gap: 10px; margin: 12px 0; }
 .m11-notice { display: flex; gap: 18px; justify-content: space-between; padding: 16px; border: 1px solid var(--ds-border-subtle); border-radius: 10px; }
 .m11-notice p { margin: 8px 0; }

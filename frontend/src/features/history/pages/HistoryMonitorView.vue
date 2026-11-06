@@ -255,8 +255,6 @@ onBeforeUnmount(() => { ++generation })
 .history-monitor-page { display: grid; gap: 12px; }
 .history-monitor-note { margin: 0; color: var(--ds-text-secondary); font-size: 12px; }
 .history-monitor-filters { padding: 16px; background: var(--ds-bg-surface); border: 1px solid var(--ds-border-subtle); border-radius: var(--ds-radius-sm); }
-.history-monitor-filters label { display: grid; gap: 5px; color: var(--ds-text-secondary); font-size: 12px; }
-.history-monitor-filters input, .history-monitor-filters select { min-height: var(--ds-button-height-md); min-width: 0; width: 100%; border: 1px solid var(--ds-border); border-radius: var(--ds-radius-sm); padding: 5px 8px; background: var(--ds-bg-surface); color: var(--ds-text-primary); font-size: var(--ds-font-sm); }
 .history-monitor-controls { align-items: center; }
 .history-monitor-error { color: var(--ds-danger); font-size: 13px; }
 .history-monitor-results { display: grid; gap: 14px; padding: 16px; }

@@ -1,0 +1,24 @@
+/* Shared Notifications Settings appearance; imported only by Policy/Preferences.
+ * --m11-row-columns is the explicit module-specific variant. */
+.m11-panel { --m11-row-columns: minmax(170px, 2fr) minmax(140px, 1fr) minmax(140px, 1fr) auto; padding: var(--ds-space-4); display: grid; gap: var(--ds-space-4); }
+.m11-panel--preferences { --m11-row-columns: minmax(170px, 2fr) minmax(125px, 1fr) minmax(140px, 1fr) auto; }
+.m11-panel .m11-heading { display: flex; justify-content: space-between; gap: var(--ds-space-4); align-items: flex-start; flex-wrap: wrap; }
+.m11-panel :is(.m11-heading h1, .m11-group h2) { margin: 0; }
+.m11-panel :is(.m11-heading p, .m11-group p) { margin: 6px 0 0; opacity: .78; }
+.m11-panel .m11-heading button { white-space: nowrap; }
+.m11-panel .m11-group { border: 1px solid var(--ds-border-subtle); border-radius: var(--ds-radius-lg); padding: var(--ds-space-4); display: grid; gap: var(--ds-space-3); min-width: 0; }
+.m11-panel .m11-group h2 { font-size: var(--ds-font-lg); }
+.m11-panel .m11-row { display: grid; grid-template-columns: var(--m11-row-columns); gap: 14px; align-items: center; border-top: 1px solid var(--ds-border-subtle); padding-top: var(--ds-space-3); min-width: 0; }
+.m11-panel .m11-detail, .m11-panel .m11-effective { display: grid; gap: 3px; min-width: 0; }
+.m11-panel .m11-row small { overflow-wrap: anywhere; opacity: .76; }
+.m11-panel .m11-row :is(.m11-unsaved, .m11-impact) { color: var(--ds-warning); font-weight: 600; opacity: 1; }
+.m11-panel--policies .m11-field { display: flex; gap: var(--ds-space-2); align-items: center; }
+.m11-panel--preferences .m11-field { max-width: 250px; }
+.m11-panel .m11-notice { margin: 0; font-weight: 600; }
+@media (max-width: 850px) {
+  .m11-panel { --m11-row-columns: repeat(2, minmax(0, 1fr)); }
+}
+@media (max-width: 540px) {
+  .m11-panel { --m11-row-columns: minmax(0, 1fr); }
+  .m11-panel .m11-row button { justify-self: start; }
+}

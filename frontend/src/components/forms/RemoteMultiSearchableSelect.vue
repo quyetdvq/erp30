@@ -13,6 +13,7 @@ const props = withDefaults(defineProps<{
   ariaLabel: string
   placeholder?: string
   disabled?: boolean
+  status?: 'error' | 'warning' | 'success'
   maxSelections?: number
   popupTarget?: string | HTMLElement | false
   emptyLabel?: string
@@ -125,6 +126,7 @@ onUnmounted(() => { ++serial; if (debounce) clearTimeout(debounce) })
     :clearable="true"
     :loading="loading"
     :disabled="props.disabled"
+    :status="props.status"
     :placeholder="props.placeholder"
     :aria-label="props.ariaLabel"
     :max-tag-count="3"
@@ -149,8 +151,6 @@ onUnmounted(() => { ++serial; if (debounce) clearTimeout(debounce) })
 <style scoped>
 .remote-multi-select-field { display: grid; gap: 8px; width: 100%; min-width: 0; }
 .remote-multi-searchable-select { display: block; width: 100%; min-width: 0; max-width: 100%; }
-.remote-multi-searchable-select :deep(.n-base-selection) { min-height: 36px; min-width: 0; }
-.remote-multi-select-field :deep(.n-base-selection-tags) { min-width: 0; }
 .remote-select-feedback { margin: 0; display: flex; align-items: center; flex-wrap: wrap; gap: 8px;
   font-size: 12px; color: var(--ds-text-secondary); overflow-wrap: anywhere; }
 .remote-select-feedback[role='alert'] { color: var(--ds-danger); }

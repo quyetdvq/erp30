@@ -540,7 +540,7 @@ watch(
           {{ t('product.backToParent') }}
         </button>
       </div>
-      <nav class="detail-tabs" role="tablist" :aria-label="t('product.detailTabs')">
+      <nav class="detail-tabs ds-detail-tabs ds-detail-tabs--flat" role="tablist" :aria-label="t('product.detailTabs')">
         <button
           v-for="tab in tabItems"
           :key="tab.key"
@@ -614,8 +614,8 @@ watch(
             </button>
           </header>
           <p v-if="comboError" class="inline-error" role="alert">{{ t('product.requestError') }}</p>
-          <div class="table-wrap">
-            <table class="detail-table">
+          <div class="table-wrap ds-table-scroll">
+            <table class="detail-table ds-table ds-table--detail">
               <thead>
                 <tr>
                   <th>{{ t('product.componentProduct') }}</th>
@@ -686,8 +686,8 @@ watch(
               {{ t('product.addChild') }}
             </button>
           </header>
-          <div class="table-wrap">
-            <table class="detail-table">
+          <div class="table-wrap ds-table-scroll">
+            <table class="detail-table ds-table ds-table--detail">
               <thead>
                 <tr>
                   <th>{{ t('product.productCode') }}</th>
@@ -757,8 +757,8 @@ watch(
           <p v-if="conversionError" class="inline-error" role="alert">
             {{ t('product.requestError') }}
           </p>
-          <div class="table-wrap">
-            <table class="detail-table">
+          <div class="table-wrap ds-table-scroll">
+            <table class="detail-table ds-table ds-table--detail">
               <thead>
                 <tr>
                   <th>{{ t('product.alternateUom') }}</th>
@@ -1067,27 +1067,6 @@ watch(
 .detail-back {
   padding: 10px 20px 0;
 }
-.detail-tabs {
-  display: flex;
-  gap: 4px;
-  overflow-x: auto;
-  padding: 8px 20px 0;
-  border-bottom: 1px solid var(--ds-border-subtle);
-}
-.detail-tabs button {
-  border: 0;
-  border-bottom: 2px solid transparent;
-  padding: 10px 12px;
-  background: transparent;
-  color: var(--ds-text-secondary);
-  cursor: pointer;
-  white-space: nowrap;
-}
-.detail-tabs button.active {
-  border-bottom-color: var(--ds-primary);
-  color: var(--ds-primary);
-  font-weight: 700;
-}
 .detail-body {
   flex: 1 1 auto;
   min-height: 0;
@@ -1120,30 +1099,6 @@ watch(
 .detail-grid dd {
   color: var(--ds-text-primary);
 }
-.table-wrap {
-  overflow-x: auto;
-  border: 1px solid var(--ds-border-subtle);
-  border-radius: 6px;
-}
-.detail-table {
-  width: 100%;
-  min-width: 760px;
-  border-collapse: collapse;
-  color: var(--ds-text-primary);
-  font-size: 13px;
-}
-.detail-table th,
-.detail-table td {
-  padding: 9px 10px;
-  border-bottom: 1px solid var(--ds-border-subtle);
-  text-align: start;
-  vertical-align: middle;
-}
-.detail-table th {
-  background: var(--ds-bg-subtle);
-  color: var(--ds-text-secondary);
-  font-size: 12px;
-}
 .child-price {
   text-align: right !important;
   font-variant-numeric: tabular-nums;
@@ -1163,20 +1118,10 @@ watch(
   gap: 6px;
   font-size: 12px;
 }
-.detail-table tbody tr:hover {
-  background: var(--ds-bg-subtle);
-}
-.detail-table tbody tr:last-child td {
-  border-bottom: 0;
-}
-.detail-table small {
-  display: block;
-  color: var(--ds-text-secondary);
-}
+.detail-table small { display: block; color: var(--ds-text-secondary); }
 @media (max-width: 600px) {
   .product-detail-title { font-size: 16px; }
   .product-detail-role { display: none; }
-  .detail-tabs { padding-inline: 10px; }
   .section-header { flex-wrap: wrap; }
 }
 
@@ -1192,11 +1137,7 @@ watch(
 .danger {
   color: var(--ds-danger);
 }
-.inline-error {
-  margin: 0;
-  color: var(--ds-danger);
-  font-size: 12px;
-}
+.inline-error { margin: 0; }
 .field-note {
   margin: 0;
   color: var(--ds-text-secondary);

@@ -17,7 +17,9 @@ test('Auto Numbering filter is a shared searchable select, not an unstyled nativ
   assert.match(select, /:filter="searchableSelectFilter"/)
   assert.doesNotMatch(view, /<select v-model="selectedResourceId"/)
   assert.match(view, /\.numbering-resource-filter \{ max-width: 480px; \}/)
-  assert.match(view, /\.numbering-query-controls \.numbering-resource-filter :deep\(\.n-base-selection\) \{ min-height: var\(--ds-button-height-md\); \}/)
+  // The selection chrome belongs to forms.css and Naive theme, not this screen.
+  assert.doesNotMatch(view, /\.numbering-query-controls \.numbering-resource-filter :deep\(\.n-base-selection\)/)
+  assert.match(read('src/styles/forms.css'), /:where\(\.n-input, \.n-base-selection\) \{ min-height: var\(--ds-control-height\); \}/)
 })
 
 test('All resource remains empty filter and searching only exposes backend authorized resources', () => {

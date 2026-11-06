@@ -146,7 +146,7 @@ onMounted(() => { void reload() })
 .group { border: 1px solid var(--ds-border-subtle); border-radius: 10px; padding: 18px; }
 .flag { display: flex; align-items: flex-start; gap: 12px; padding: 10px 0; cursor: pointer; }
 .flag + .flag { border-top: 1px solid var(--ds-border-subtle); }
-.flag input { margin-top: 4px; width: 18px; height: 18px; }
+.flag input { margin-top: 4px; }
 .flag span { display: flex; flex-direction: column; gap: 4px; overflow-wrap: anywhere; }
 .flag small { opacity: .75; }
 .key { font-family: monospace; }

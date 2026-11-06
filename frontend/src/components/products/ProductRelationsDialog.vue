@@ -111,8 +111,8 @@ watch(
           <p v-else-if="products.length === 0" class="relation-empty">
             {{ t('product.relationEmpty') }}
           </p>
-          <div v-else class="relation-table-scroll">
-            <table class="relation-table">
+          <div v-else class="relation-table-scroll ds-table-scroll">
+            <table class="relation-table ds-table ds-table--product-relations ds-table--sticky-header">
               <thead>
                 <tr>
                   <th>{{ t('product.productCode') }}</th>
@@ -181,39 +181,6 @@ watch(
   margin: 8px 0 0;
   color: var(--ds-text-secondary);
   font-size: 13px;
-}
-.relation-table-scroll {
-  overflow: auto;
-  border: 1px solid var(--ds-border-subtle);
-  border-radius: 8px;
-}
-.relation-table {
-  width: 100%;
-  min-width: 780px;
-  border-collapse: collapse;
-  font-size: 13px;
-}
-.relation-table th,
-.relation-table td {
-  padding: 12px 13px;
-  border-bottom: 1px solid var(--ds-border-subtle);
-  text-align: start;
-  vertical-align: middle;
-}
-.relation-table th {
-  position: sticky;
-  top: 0;
-  background: var(--ds-bg-subtle);
-  color: var(--ds-text-secondary);
-  font-size: 12px;
-  font-weight: 700;
-  white-space: nowrap;
-}
-.relation-table tbody tr:last-child td {
-  border-bottom: 0;
-}
-.relation-table tbody tr:hover {
-  background: var(--ds-bg-subtle);
 }
 .relation-name-cell {
   min-width: 240px;

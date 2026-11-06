@@ -472,7 +472,7 @@ onMounted(() => {
               </option>
             </select>
 
-            <button v-if="canWriteForm" type="button" class="icon-button action-delete-button" :aria-label="t('common.delete')"
+            <button v-if="canWriteForm" type="button" class="ds-icon-control ds-icon-control--danger" :aria-label="t('common.delete')"
               :title="t('common.delete')" @click="removeAction(index)" data-ds-icon="delete">
 
             </button>
@@ -536,18 +536,9 @@ onMounted(() => {
 .policy-view-fields dt { color: var(--ds-text-secondary); font-size: 12px; font-weight: 600; }
 .policy-view-fields dd { margin: 4px 0 0; overflow-wrap: anywhere; }
 .policy-view-action { display: flex; gap: 12px; padding: 6px 0; }
-.security-note {
-  margin: 0;
-  color: var(--ds-text-secondary);
-  font-size: 12px;
-  line-height: 1.6;
-}
+.security-note { margin: 0; }
 
-.inline-error {
-  margin: 0 0 12px;
-  color: var(--ds-danger);
-  font-size: 12px;
-}
+.inline-error { margin: 0 0 12px; }
 
 .duplicate-scope-notice {
   display: flex;
@@ -566,11 +557,6 @@ onMounted(() => {
   margin: 0;
 }
 
-.form-grid {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 12px;
-}
 
 .action-editor {
   display: grid;
@@ -594,16 +580,6 @@ onMounted(() => {
   align-items: center;
 }
 
-.action-delete-button {
-  display: inline-grid;
-  width: 34px;
-  height: 34px;
-  place-items: center;
-  border: 1px solid var(--ds-border-subtle);
-  border-radius: 5px;
-  color: var(--ds-danger);
-  font-size: 18px;
-}
 
 code {
   font-family: ui-monospace, SFMono-Regular, Consolas, monospace;
@@ -612,7 +588,6 @@ code {
 
 @media (max-width: 700px) {
 
-  .form-grid,
   .action-edit-row,
   .policy-view-fields {
     grid-template-columns: 1fr;

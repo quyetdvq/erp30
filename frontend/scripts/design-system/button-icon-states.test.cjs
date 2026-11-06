@@ -30,8 +30,8 @@ function luminosity(color) {
 const contrast=(a,b)=>{const x=luminosity(a),y=luminosity(b);return (Math.max(x,y)+.05)/(Math.min(x,y)+.05)}
 
 test('DS4 inventory accounts for shared native modal Close button; handlers remain intact',()=>{
-  assert.equal(allButtons.length,313)
-  assert.equal(allButtons.filter(x=>x.tag==='button').length,288)
+  assert.equal(allButtons.length,314)
+  assert.equal(allButtons.filter(x=>x.tag==='button').length,289)
   assert.equal(allButtons.filter(x=>x.tag==='NButton').length,25)
   assert.equal(new Set(allButtons.map(x=>x.file)).size,66)
 })
